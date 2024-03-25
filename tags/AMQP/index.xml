@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>AMQP on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/AMQP/</link>
+    <description>Recent content in AMQP on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Thu, 10 Oct 2019 17:41:30 +0800</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/AMQP/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>AMQP重连机制实现</title>
+      <link>https://www.yeqown.xyz/2019/10/10/AMQP%E9%87%8D%E8%BF%9E%E6%9C%BA%E5%88%B6%E5%AE%9E%E7%8E%B0-Go/</link>
+      <pubDate>Thu, 10 Oct 2019 17:41:30 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2019/10/10/AMQP%E9%87%8D%E8%BF%9E%E6%9C%BA%E5%88%B6%E5%AE%9E%E7%8E%B0-Go/</guid>
+      <description>文中代码基于 https://github.com/streadway/amqp 实现。此方式简单暴力，但没有做到最小成本迁移（可以选择分别包装Producer和Consumer）。
+文中所有代码参见：https://github.com/yeqown/infrastructure/tree/master/framework/amqp
+基本知识 AMQP AMQP，即Advanced Message Queuing Protocol,一个提供统一消息服务的应用层标准高级消息队列协议，是应用层协议的一个开放标准,为面向消息的中间件设计。基于此协议的客户端与消息中间件可传递消息，并不受客户端/中间件同产品，不同的开发语言等条件的限制。用下图简单描述下AMQP模型：
+背景 -问题 生产环境中使用了RabbitMQ做异步消息分发，隔一段时间会出现：发送接口报错；发送成功后未被消费等情况。重启服务后恢复。
+-问题代码 生产者：
+// producer.go // NewClient . func NewClient(cfg *types.RabbitMQConfig) *Client { // init MQ connection return &amp;amp;Client{ ch: ch, // *amqp.Channel cfg: cfg, } } // Client . type Client struct { ch *amqp.Channel cfg *types.RabbitMQConfig } // Send . send by routing func (c *Client) Send(payload *types.Payload) error { var routing string switch payload.Typ { case types.</description>
+    </item>
+    
+  </channel>
+</rss>

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Tracing on Yeqown</title>
+    <link>https://www.yeqown.xyz/categories/Tracing/</link>
+    <description>Recent content in Tracing on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Wed, 15 Dec 2021 16:16:05 +0800</lastBuildDate><atom:link href="https://www.yeqown.xyz/categories/Tracing/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Sentry&#43;OpenTelemetry前后端全链路打通总结</title>
+      <link>https://www.yeqown.xyz/2021/12/15/Sentry-OpenTelemetry%E5%89%8D%E5%90%8E%E7%AB%AF%E5%85%A8%E9%93%BE%E8%B7%AF%E6%89%93%E9%80%9A%E6%80%BB%E7%BB%93/</link>
+      <pubDate>Wed, 15 Dec 2021 16:16:05 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2021/12/15/Sentry-OpenTelemetry%E5%89%8D%E5%90%8E%E7%AB%AF%E5%85%A8%E9%93%BE%E8%B7%AF%E6%89%93%E9%80%9A%E6%80%BB%E7%BB%93/</guid>
+      <description>自从微服务大行其道，容器化和k8s编排一统天下之后，&amp;ldquo;可观测性&amp;rdquo; 便被提出来。这个概念是指，对于应用或者容器的运行状况的掌控程度，其中分为了三个模块：Metrics、Tracing、Logging。Metrics 指应用采集的指标；Tracing 指应用的追踪；Logging 指应用的日志。
+日志自不用多说，这是最原始的调试和数据采集能力。Metrics 比较火的方案就是 Prometheus + Grafana，思路就是通过应用内埋入SDK，选择 Pull 或者 Push 的方式将数据收集到 prometheus 中，然后通过 Grafana 实现可视化，当然这不是本文的重点就此略过。
+Tracing 也并不是可观测性提出后才诞生的概念，在微服务化的进程中就已经有Google的Dapper落地实践，并慢慢形成 OpenTracing 规范，这一规范又被多家第三方框架所支持，如 Jaeger、Zipkin 等。OpenTelemetry 就是结合了 OpenTracing + OpenCensus 规范，约定并提供完成的可观测性套件，只是目前（2021-12-15）稳定下来的只有 Tracing 这一部分而已。对 OpenTelemetry 发展历史感兴趣的可以自行了解。
+效果预览 链路总览，包含了前端页面的生命周期 + 整个了链路采集到的Span聚合。
+前端页面指标采集概览，包含了该页面生命周期内的动作和日志等。
+服务端链路细节，包含了服务端链路采集的标签和日志（事件）等信息。
+propagation兼容jaeger效果，保证jaeger侧链路完整，使用一致的 traceId检索。因为服务侧 sentry 是渐进更新的，因此没有接入的应用并不会展示在sentry侧， 等到完全更新后就会完整。
+背景 目前运行中的链路追踪组件是采用 opentracing + jaeger 实现，这套方案唯二的不足就是：
+opentracing 已经被 opentelemetry 兼容，且 opentelemetry 在可观测性上更全面，更灵活。 浏览器侧支持不完善（可以参见 https://github.com/jaegertracing/jaeger-client-javascript ）【恰恰我司有这方面的需求 🤪】。 前端采用 sentry 来采集前端页面数据（APP + WEB 都支持很好），因此才有了这么一个 前后端链路打通的需求。
+经过调研，我发现 sentry 也并不完美，详情参见 附录/sentry作为链路采集组件的优缺点</description>
+    </item>
+    
+    <item>
+      <title>Opentracing实战</title>
+      <link>https://www.yeqown.xyz/2020/08/06/opentracing%E5%AE%9E%E6%88%98/</link>
+      <pubDate>Thu, 06 Aug 2020 08:34:45 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2020/08/06/opentracing%E5%AE%9E%E6%88%98/</guid>
+      <description>背景 在没有链路追踪系统的情况下，如果只要少数几个服务，或许还可以通过日志来排查定位问题。但是如果服务一旦超过10个，那么再想通过日志来定位分析问题将无比繁琐。 因为，你先要从大量的日志中删筛选出某次请求的日志数据，才能进行后续的定位分析。 倘若日志系统也不够完善，日志对于调试毫无帮助，那又得退回到最原始的方式，通过代码断点和增加日志，等待问题复现，或者通过肉眼检查代码。 不是说这种方式不行，而是大部分的程序员的业务需求比较紧张，这样的排查手段效率和收益远远达不到要求（如果你有时间，当我没说 🐶）。
+在实际场景中，我也遇到了这样的问题：
+日志系统里包含了过少的信息，对于调试几乎没有帮助 (几乎只有错误日志，缺少输出上下文的日志)。 服务调用复杂，一个请求失败，只能透过错误码和错误信息进行判断是否存在调用失败的情况。 调用链路复杂的情况下，想要对某个请求进行优化，无从下手。 这里只列举了跟trace相关的一些原始场景，当然从上面的描述中还能发现日志系统不够完善，对调试不友好，不过这里首要解决的问题是链路追踪问题。
+如果对路链路追踪没有概念，还望自行查阅资料，这里不会过多介绍～
+Opentracing 注意：Opentracing 是一套标准接口，而不是具体实现。
+这里就实战opentracing + jaeger 的链路追踪方案。其中 opentracing 是一套标准接口，而jaeger是包含了 opentracing 的实现的一套工具。 Trace链路简单示例如下：
+Trace 描述在分布式系统中的一次&amp;quot;事务&amp;quot;。
+Span 表示工作流的一部分的命名和定时操作。可以接受标签(Tag Key:Value)，以及附加到特定span实例的标注(Annotation)，如时间戳和结构化日志。
+SpanContext 追踪伴随分布式事务的信息，包括它通过网络或通过消息总线将服务传递给服务的时间。span上下文包含TraceId、SpanId和追踪系统需要传播到下游服务的其他数据。
+实战 这里我准备的是 Go 项目，服务之间通过gRPC通信。链路如下：
++-- process internal trace2 | +---&amp;gt; process internal trace1 | | +---&amp;gt; server-b trace(gRPC) entry(HTTP) ---&amp;gt; server-a trace--gRPC--| +---&amp;gt; server-c trace(gRPC) | +----&amp;gt; process internal trace3 从上图中可以明确，我们的目标是：实践跨服务调用和服务内部调用的链路追踪，配合jaeger我们还可以将链路信息可视化。
+我有了服务，怎么实施落地？ 为了回答这个问题，我把这个问题结合opentracing的概念再分解一下：
+ParentSpan 从哪儿来？ ChildSpan由ParentSpan创建，那么什么时候创建？ 链路Tracer从哪儿来？ Trace信息怎么传递？ 链路信息如何搜集？ Parent-Span 从哪儿来？链路从哪里开始。 在上述的实践目标中，我们只有一个入口服务，那么很明显每一次的&amp;quot;事务&amp;quot;都是在这个入口（http entry）开启的。我写了如下的中间件（基于gin）。</description>
+    </item>
+    
+  </channel>
+</rss>

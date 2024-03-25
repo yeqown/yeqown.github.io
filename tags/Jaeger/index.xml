@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Jaeger on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/Jaeger/</link>
+    <description>Recent content in Jaeger on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Thu, 06 Aug 2020 08:34:45 +0800</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/Jaeger/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Opentracing实战</title>
+      <link>https://www.yeqown.xyz/2020/08/06/opentracing%E5%AE%9E%E6%88%98/</link>
+      <pubDate>Thu, 06 Aug 2020 08:34:45 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2020/08/06/opentracing%E5%AE%9E%E6%88%98/</guid>
+      <description>背景 在没有链路追踪系统的情况下，如果只要少数几个服务，或许还可以通过日志来排查定位问题。但是如果服务一旦超过10个，那么再想通过日志来定位分析问题将无比繁琐。 因为，你先要从大量的日志中删筛选出某次请求的日志数据，才能进行后续的定位分析。 倘若日志系统也不够完善，日志对于调试毫无帮助，那又得退回到最原始的方式，通过代码断点和增加日志，等待问题复现，或者通过肉眼检查代码。 不是说这种方式不行，而是大部分的程序员的业务需求比较紧张，这样的排查手段效率和收益远远达不到要求（如果你有时间，当我没说 🐶）。
+在实际场景中，我也遇到了这样的问题：
+日志系统里包含了过少的信息，对于调试几乎没有帮助 (几乎只有错误日志，缺少输出上下文的日志)。 服务调用复杂，一个请求失败，只能透过错误码和错误信息进行判断是否存在调用失败的情况。 调用链路复杂的情况下，想要对某个请求进行优化，无从下手。 这里只列举了跟trace相关的一些原始场景，当然从上面的描述中还能发现日志系统不够完善，对调试不友好，不过这里首要解决的问题是链路追踪问题。
+如果对路链路追踪没有概念，还望自行查阅资料，这里不会过多介绍～
+Opentracing 注意：Opentracing 是一套标准接口，而不是具体实现。
+这里就实战opentracing + jaeger 的链路追踪方案。其中 opentracing 是一套标准接口，而jaeger是包含了 opentracing 的实现的一套工具。 Trace链路简单示例如下：
+Trace 描述在分布式系统中的一次&amp;quot;事务&amp;quot;。
+Span 表示工作流的一部分的命名和定时操作。可以接受标签(Tag Key:Value)，以及附加到特定span实例的标注(Annotation)，如时间戳和结构化日志。
+SpanContext 追踪伴随分布式事务的信息，包括它通过网络或通过消息总线将服务传递给服务的时间。span上下文包含TraceId、SpanId和追踪系统需要传播到下游服务的其他数据。
+实战 这里我准备的是 Go 项目，服务之间通过gRPC通信。链路如下：
++-- process internal trace2 | +---&amp;gt; process internal trace1 | | +---&amp;gt; server-b trace(gRPC) entry(HTTP) ---&amp;gt; server-a trace--gRPC--| +---&amp;gt; server-c trace(gRPC) | +----&amp;gt; process internal trace3 从上图中可以明确，我们的目标是：实践跨服务调用和服务内部调用的链路追踪，配合jaeger我们还可以将链路信息可视化。
+我有了服务，怎么实施落地？ 为了回答这个问题，我把这个问题结合opentracing的概念再分解一下：
+ParentSpan 从哪儿来？ ChildSpan由ParentSpan创建，那么什么时候创建？ 链路Tracer从哪儿来？ Trace信息怎么传递？ 链路信息如何搜集？ Parent-Span 从哪儿来？链路从哪里开始。 在上述的实践目标中，我们只有一个入口服务，那么很明显每一次的&amp;quot;事务&amp;quot;都是在这个入口（http entry）开启的。我写了如下的中间件（基于gin）。</description>
+    </item>
+    
+  </channel>
+</rss>

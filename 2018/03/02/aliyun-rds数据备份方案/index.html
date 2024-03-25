@@ -1,0 +1,325 @@
+<!DOCTYPE HTML>
+
+<html lang='en'>
+
+<head>
+	<title>aliyun-rds数据备份方案 &middot; Yeqown
+	</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	
+	
+	
+	<link rel="stylesheet" href="/assets/css/main.min.css">
+	
+	
+	<link rel="shortcut icon" href="/favicon.ico">
+	
+	
+	<noscript>
+		<link rel="stylesheet" href='/assets/css/noscript.css' />
+	</noscript>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/rainbow.min.css">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>`
+	<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+		<meta name="referrer" content="no-referrer-when-downgrade"></head>
+
+<body lang='en' class="is-preload">
+
+    
+    <div id="wrapper">
+
+        
+<header id="header">
+    <a href='/' class="logo">Yeqown</a>
+    </header>
+
+        
+
+<nav id="nav">
+    <ul class="links">
+        <li class="active"><a href='/'>Yeqown</a></li>
+        <li><a href="/tags/">tags</a></li>
+        <li><a href="/categories/">categories</a></li>
+        
+        <li><a href='/#footer'>Contact</a></li>
+        
+        
+    </ul>
+    
+    <ul class="icons">
+        
+        <li><a href="https://twitter.com/yeqown" class="icon fa-twitter"><span class="label">Twitter</span></a></li>
+        
+        
+        
+        
+        
+        <li><a href="https://github.com/yeqown" class="icon fa-github"><span class="label">GitHub</span></a></li>
+        
+        
+        
+        
+        
+        
+        <li><a href="/index.xml" class="icon fa-rss"><span class="label">RSS</span></a></li>
+        
+
+    </ul>
+    
+</nav>
+
+        
+        <div id="main">
+
+            
+            <section class="post">
+                <header class="major">
+                    
+                    <span class="date">
+                        March 2, 2018 
+                        
+                        <span id="busuanzi_container_page_pv">本文阅读量<span id="busuanzi_value_page_pv"></span>次</span>
+                    </span>
+                    
+
+
+
+                    <h1>aliyun-rds数据备份方案</h1>
+                    <p>总结下在使用aliyun-rds数据备份方案过程中的心得。</p>
+                </header>
+                
+                <p>本文主要是总结下在使用aliyun-rds数据备份方案过程中的心得。</p>
+<p>高可用一直都是线上服务维护用户体验的关键之一。为了达到高可用，业界已经有了很多方案。最典型的就是“冗余备份+自动故障转移”。冗余备份是说，当一个节点服务不可用时，有其他服务能够代替其工作。除此之外，如果服务出现了必须人工介入解决的故障，也会影响系统的高可用特性。</p>
+<!-- more -->
+<blockquote>
+<p>本文着重介绍数据的高可用方案</p>
+</blockquote>
+<h3 id="数据库冗余">数据库冗余</h3>
+<p>如果是单节点的数据库，还用的着说吗？要保证服务高可用，除了主-从数据库之外，还需要从备份数据库，当然不能保证说一定不会遇到所有的备份数据库，都挂掉的情况&hellip;。阿里云提供了<a href="https://www.aliyun.com/product/rds/mysql?spm=5176.11065259.765261.323.44034a1drJY3dc">RDS-高可用版本</a>和<a href="https://www.aliyun.com/product/rds/mysql?spm=5176.11065259.765261.323.44034a1drJY3dc">RDS-单机版</a>,两者的区别见下图：
+<img src="http://docs-aliyun.cn-hangzhou.oss.aliyun-inc.com/assets/pic/48980/cn_zh/1512034470993/%E5%9F%BA%E7%A1%80%E7%89%88%E6%8B%93%E6%89%91%E5%9B%BE.png" alt="基础版和高可用">
+这就算最基本的冗余了，没有主从复制，没有读写分离。但是能保证主库在换掉的时候，还能使用备库提供服务。如果服务对于数据库性能和可用性有一定要求，那么可以在这个基础上升个级，见下图：
+<img src="https://docs-aliyun.cn-hangzhou.oss.aliyun-inc.com/cn/rds/1.0.112/assets/qs/rds_qs_mysql_00024.png" alt="灾备方案"></p>
+<h3 id="数据故障自动转移">数据故障自动转移</h3>
+<p>已经有了冗余的数据库节点了，那么接下来要做的事情就是怎么感知数据库异常，并实现自动切换到备份实例中? 阿里云灾备方案的文档是这样描述的：</p>
+<blockquote>
+<p>主实例和灾备实例均搭建主备高可用架构，当主实例所在区域发生突发性自然灾害等状况，主节点（Master）和备节点（Slave）均无法连接时，可将异地灾备实例切换为主实例，在应用端修改数据库链接地址后，即可快速恢复应用的业务访问。</p>
+</blockquote>
+<p>对于主节点全部不可用的情况对应用服务是可见的，因此应用服务可以通过指定一些异常判断，在判定主节点不可用的时候，主动切换数据库连接地址来获取数据，提供服务。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// sql-detect.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> (
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;database/sql&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;fmt&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;sync&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;time&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">_</span> <span style="color:#e6db74">&#34;github.com/go-sql-driver/mysql&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">_</span> <span style="color:#e6db74">&#34;github.com/mxk/go-sqlite&#34;</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">var</span> (
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mysqlAvailable</span> <span style="color:#66d9ef">bool</span>    = <span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mutex</span>                  = <span style="color:#a6e22e">sync</span>.<span style="color:#a6e22e">Mutex</span>{}
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">db</span>             <span style="color:#f92672">*</span><span style="color:#a6e22e">sql</span>.<span style="color:#a6e22e">DB</span> = <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">MysqlDetection</span>(<span style="color:#a6e22e">db</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">sql</span>.<span style="color:#a6e22e">DB</span>, <span style="color:#a6e22e">ticker</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Ticker</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">select</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">case</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">ticker</span>.<span style="color:#a6e22e">C</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">e</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">Ping</span>(); <span style="color:#a6e22e">e</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>                <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;got error&#34;</span>, <span style="color:#a6e22e">e</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>                <span style="color:#a6e22e">mutex</span>.<span style="color:#a6e22e">Lock</span>()
+</span></span><span style="display:flex;"><span>                <span style="color:#a6e22e">mysqlAvailable</span> = <span style="color:#66d9ef">false</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#a6e22e">mutex</span>.<span style="color:#a6e22e">Unlock</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            } <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>                <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;status ok&#34;</span>)
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">MysqlSwitch</span>() {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">mutex</span>.<span style="color:#a6e22e">Lock</span>()
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">mysqlAvailable</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;Switch Sqlite3&#34;</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">db</span>, <span style="color:#a6e22e">_</span> = <span style="color:#a6e22e">sql</span>.<span style="color:#a6e22e">Open</span>(<span style="color:#e6db74">&#34;sqlite3&#34;</span>, <span style="color:#e6db74">&#34;./foo.db&#34;</span>)
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">mutex</span>.<span style="color:#a6e22e">Unlock</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Sleep</span>(<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Second</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">4</span>)
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">c</span> <span style="color:#f92672">:=</span> make(<span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">bool</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">db</span>, <span style="color:#a6e22e">_</span> = <span style="color:#a6e22e">sql</span>.<span style="color:#a6e22e">Open</span>(<span style="color:#e6db74">&#34;mysql&#34;</span>, <span style="color:#e6db74">&#34;yeqiang:yeqiang@/test_yeqiang&#34;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">ticker</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">NewTicker</span>(<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Second</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">2</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">go</span> <span style="color:#a6e22e">MysqlDetection</span>(<span style="color:#a6e22e">db</span>, <span style="color:#a6e22e">ticker</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">go</span> <span style="color:#a6e22e">MysqlSwitch</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">c</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>测试截图：</p>
+<p><img src="/images/sql-detect.png" alt="测试截图"></p>
+<!--  -->
+<blockquote>
+<p>阿里云高可用版本的RDS，会自动检测主节点和备节点是否正常提供服务。通过8-10秒的心跳，检测模块可以在30秒内完成异常切换，对于应用服务来说是透明的。</p>
+</blockquote>
+<h3 id="阿里云dbs">阿里云DBS</h3>
+<p><a href="https://www.aliyun.com/product/dbs?spm=5176.10695662.765261.341.1176c31ceb26yI">DBS</a>，这是阿里云新出的备份服务，目前处于公测阶段。文档中提到的实时备份和增量备份，倒是很吸引人。
+<img src="https://gw.alicdn.com/tfs/TB1yMNkhwoQMeJjy1XaXXcSsFXa-1430-600.png" alt="DBS"></p>
+<blockquote>
+<p>图片多源于阿里云</p>
+</blockquote>
+
+
+                
+            </section>
+
+            
+            <section class="comment">
+                <div id="gitalk-container"></div>
+                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+                <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+                <script>
+                    const gitalk = new Gitalk({
+                        clientID: '7d8c8c91ae6aff3e46e7',
+                        clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+                        repo: 'yeqown.github.io',
+                        owner: 'yeqown',
+                        admin: ['yeqown'],
+                        id: "aliyun-rds-backup-plans", 
+                        distractionFreeMode: false 
+                    });
+                    (function () {
+                        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+                            document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+                            return;
+                        }
+                        gitalk.render('gitalk-container');
+                    })();
+                </script>
+            </section>
+        </div>
+
+        
+
+<footer id="footer">
+  <section>
+    <form method="post" action="Page%28/posts/aliyun-rds%e6%95%b0%e6%8d%ae%e5%a4%87%e4%bb%bd%e6%96%b9%e6%a1%88.md%29">
+      <div class="fields">
+        <div class="field">
+          <label for="name">Name</label>
+          <input type="text" name="name" id="name" />
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="text" name="email" id="email" />
+        </div>
+        <div class="field">
+          <label for="message">Message</label>
+          <textarea name="message" id="message" rows="3"></textarea>
+        </div>
+      </div>
+      <ul class="actions">
+        <li><input type="submit" value='Send A Message' /></li>
+      </ul>
+    </form>
+  </section>
+
+  <section class="split contact">
+    
+    <section class="alt">
+      <h3>Address</h3>
+      <p>
+        
+         Chengdu · China
+        
+         <br />  This is a city that comes and doesn&#39;t want to go
+        
+      </p>
+    </section>
+    
+    
+    <section>
+      <h3>Phone</h3>
+      <p><a href="tel:no%20way">no way</a></p>
+    </section>
+    
+    
+    <section>
+      <h3>Email</h3>
+      <p><a href="mailto:yeqown@gmail.com">yeqown@gmail.com</a></p>
+    </section>
+    
+    
+    <section>
+      <h3>Social</h3>
+      <ul class="icons alt">
+        
+        <li><a href="https://twitter.com/yeqown" class="icon alt fa-twitter"><span class="label">Twitter</span></a></li>
+        
+        
+        
+        
+        
+        <li><a href="https://github.com/yeqown" class="icon alt fa-github"><span class="label">GitHub</span></a></li>
+        
+        
+        
+        
+        
+      </ul>
+    </section>
+    
+  </section>
+</footer>
+        
+<div id="copyright">
+    <ul>
+        <li>&copy; Yeqown</li>
+        <li>Design: <a href="https://html5up.net">HTML5 UP</a></li>
+        <li>Hugo Port: <a href="https://curtistimson.co.uk">curttimson</a></li>
+    </ul>
+
+    
+    <ul>
+        <li>
+            <span id="busuanzi_container_site_pv">
+                总访问量<span id="busuanzi_value_site_pv"></span>次
+            </span>
+        </li>
+        <li>
+            <span id="busuanzi_container_site_uv">
+                访客数<span id="busuanzi_value_site_uv"></span>人次
+            </span>
+        </li>
+    </ul></div>
+
+    </div>
+    
+    
+
+
+
+
+
+
+
+
+
+
+<script src='/assets/js/bundle.js'></script>
+</body>
+
+</html>

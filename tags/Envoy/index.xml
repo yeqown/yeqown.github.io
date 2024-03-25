@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Envoy on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/Envoy/</link>
+    <description>Recent content in Envoy on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Mon, 25 Mar 2024 09:37:25 +0800</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/Envoy/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Istio Idle Timeout问题复现和解决</title>
+      <link>https://www.yeqown.xyz/2024/03/25/istio-idle-timeout%E9%97%AE%E9%A2%98%E5%A4%8D%E7%8E%B0%E5%92%8C%E8%A7%A3%E5%86%B3/</link>
+      <pubDate>Mon, 25 Mar 2024 09:37:25 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2024/03/25/istio-idle-timeout%E9%97%AE%E9%A2%98%E5%A4%8D%E7%8E%B0%E5%92%8C%E8%A7%A3%E5%86%B3/</guid>
+      <description>问题描述 在 kubernetes 集群中使用 istio 时，开发同学反馈经常会出现 “invalid connection” 错误，导致业务逻辑错误，而在没有使用 istio 的情况下，这个问题并不会出现。通过查看日志，发现这种错误常发生在集群外的服务连接，如：memcached、redis, mysql, mongodb 等。
+通过上述的描述，首先怀疑的是 istio 的 sidecar 代理导致的问题，因为这种错误只有在使用 istio 时才会出现。
+Istio 和 envoy 的基本概念 Istio 服务网格从逻辑上分为数据面和控制面，其中数据面由 Envoy 代理组成，控制面由 Pilot、Citadel、Galley 等组件组成。数据面是由 Envoy 代理组成的，负责实际的流量代理和控制。
+也就是说，当我们在 kubernetes 集群中部署了 istio 时，每个 pod 都会有一个 sidecar 容器，这个容器中就包含了 Envoy 代理，会劫持 pod 中的所有流量。再回到上面的问题，在没有这个代理的情况下，这个问题并不会出现，所以这个问题很有可能是由 Envoy 代理导致的。
+猜测问题原因 数据库连接超时 这里使用的开发语言为 go，&amp;ldquo;invalid connection&amp;rdquo; 错误往往发生在“连接超时”的情况下（连接被服务端单方面关闭，而客户端还在使用）。在数据库连接场景中，往往还会有“连接池”这个概念，连接池会在连接空闲一段时间后关闭连接，与此同时服务端也会设置相应的超时时间，当连接空闲时间超过这个时间时，服务端会主动关闭连接。
+如：
+mysql 的 wait_timeout 参数，当连接空闲时间超过这个时间时，服务端会主动关闭连接。 mongodb 的 maxIdleTimeMS 参数，连接在池中可保持空闲状态的最大毫秒数，超过这个时间后，连接会被删除或关闭。 在外部没有代理的情况时，如果出现 “invalid connection” 错误，很有可能是由于连接超时导致的。可以检查下客户端和服务端的连接超时时间是否合理设置了（服务端的超时时间要大于客户端的超时时间）。
+envoy 关闭连接 根据上面的描述，我们可以猜测这个问题是由于 Envoy 代理产生的，那么经过在网上查找资料，发现这个问题可能是由于 Envoy 的 tcp_idle_timeout 导致的。</description>
+    </item>
+    
+    <item>
+      <title>在istio服务网格中扩展自定义功能</title>
+      <link>https://www.yeqown.xyz/2023/11/17/%E5%9C%A8istio%E6%9C%8D%E5%8A%A1%E7%BD%91%E6%A0%BC%E4%B8%AD%E6%89%A9%E5%B1%95%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8A%9F%E8%83%BD/</link>
+      <pubDate>Fri, 17 Nov 2023 22:48:59 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2023/11/17/%E5%9C%A8istio%E6%9C%8D%E5%8A%A1%E7%BD%91%E6%A0%BC%E4%B8%AD%E6%89%A9%E5%B1%95%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8A%9F%E8%83%BD/</guid>
+      <description>前提 本文假设你已经对 Kubernetes、istio 和 Envoy 有一定的了解，如果你还不了解，可以先阅读下面的文章：
+Kubernetes: https://kubernetes.io/docs/concepts/overview/what-is-kubernetes/ istio: https://istio.io/latest/docs/concepts/what-is-istio/ Envoy: https://www.envoyproxy.io/docs/envoy/latest/intro/what_is_envoy 当然不仅限于知道这些，还需要对其有一定的实践经验，这样才能更好的理解本文的内容。当然本文也不会涉及太深，只是作为 istio 的一个入门扩展教程。
+为什么要扩展功能？#背景 用通俗的话去理解 istio 的作用就是，对我们部署在 kubernetes 上的应用进行流量控制（代理），给我们提供了：流量控制、流量监控、流量安全等功能。但是在实际的使用中，我们还是会遇到一些特殊的场景，需要我们自己基于自己的业务场景去扩展一些功能，比如：ip 白名单、ip 黑名单、统一认证等。这些功能往往和具体公司的业务场景有关，因此 istio 无法直接提供这些功能，需要我们自己去扩展。
+传统的扩展方式 在传统架构中，常常通过 API 网关这一组件来实现这一些扩展能力，常用的 API 网关有：kong、apisix、openresty，而扩展的原理就是插件，或者像 nginx/openresty 在请求链中的不同阶段提供了不同的 hook，我们可以基于这些 hook 来实现扩展功能。
+就我个人的经历来说，网关要么自己定制开发，要么基于openresty来实现，又或者使用一些开源的网关，如：kong、apisix，在此基础上进行二次开发。不过这些方式都是在传统API网关中去实现的，随着 Service Mesh 的发展，API网关的某些功能也被 Sidecar 代理所取代，比如：流量控制、流量监控、流量安全等。目前 Mesh 发展的趋势也是进一步在 Sidecar 代理中实现更多的功能，而不是在 API 网关中实现。
+Envoy 的扩展能力 https://www.envoyproxy.io/docs/envoy/latest/extending/extending https://www.youtube.com/watch?v=XdWmm_mtVXI envoy 提供了丰富的扩展能力，Access Logger, Access Log Filter, Clusters, Listen Filter, Network Filter, HTTP Filter 等等。这一块内容非常多，如果想要了解更多，请参考官方文档。
+istio 的扩展能力 https://istio.io/latest/docs/reference/config/networking/envoy-filter/
+istio 作为一个 Service Mesh 框架，其底层的代理是 Envoy，因此 istio 也继承了 Envoy 的扩展能力。istio 提供了 EnvoyFilter 这样一种自定义 istio Pilot 生成的 Envoy 配置的机制。可以修改某些字段的值、添加特定过滤器。对于特定命名空间中的给定工作负载，可以存在任意数量的 EnvoyFilter。这些 EnvoyFilter 的应用顺序如下：配置根命名空间中的所有 EnvoyFilter，然后是工作负载命名空间中的所有匹配的 EnvoyFilter。</description>
+    </item>
+    
+  </channel>
+</rss>

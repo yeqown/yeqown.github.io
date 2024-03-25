@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>sidecar on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/sidecar/</link>
+    <description>Recent content in sidecar on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Mon, 25 Mar 2024 09:37:25 +0800</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/sidecar/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Istio Idle Timeout问题复现和解决</title>
+      <link>https://www.yeqown.xyz/2024/03/25/istio-idle-timeout%E9%97%AE%E9%A2%98%E5%A4%8D%E7%8E%B0%E5%92%8C%E8%A7%A3%E5%86%B3/</link>
+      <pubDate>Mon, 25 Mar 2024 09:37:25 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2024/03/25/istio-idle-timeout%E9%97%AE%E9%A2%98%E5%A4%8D%E7%8E%B0%E5%92%8C%E8%A7%A3%E5%86%B3/</guid>
+      <description>问题描述 在 kubernetes 集群中使用 istio 时，开发同学反馈经常会出现 “invalid connection” 错误，导致业务逻辑错误，而在没有使用 istio 的情况下，这个问题并不会出现。通过查看日志，发现这种错误常发生在集群外的服务连接，如：memcached、redis, mysql, mongodb 等。
+通过上述的描述，首先怀疑的是 istio 的 sidecar 代理导致的问题，因为这种错误只有在使用 istio 时才会出现。
+Istio 和 envoy 的基本概念 Istio 服务网格从逻辑上分为数据面和控制面，其中数据面由 Envoy 代理组成，控制面由 Pilot、Citadel、Galley 等组件组成。数据面是由 Envoy 代理组成的，负责实际的流量代理和控制。
+也就是说，当我们在 kubernetes 集群中部署了 istio 时，每个 pod 都会有一个 sidecar 容器，这个容器中就包含了 Envoy 代理，会劫持 pod 中的所有流量。再回到上面的问题，在没有这个代理的情况下，这个问题并不会出现，所以这个问题很有可能是由 Envoy 代理导致的。
+猜测问题原因 数据库连接超时 这里使用的开发语言为 go，&amp;ldquo;invalid connection&amp;rdquo; 错误往往发生在“连接超时”的情况下（连接被服务端单方面关闭，而客户端还在使用）。在数据库连接场景中，往往还会有“连接池”这个概念，连接池会在连接空闲一段时间后关闭连接，与此同时服务端也会设置相应的超时时间，当连接空闲时间超过这个时间时，服务端会主动关闭连接。
+如：
+mysql 的 wait_timeout 参数，当连接空闲时间超过这个时间时，服务端会主动关闭连接。 mongodb 的 maxIdleTimeMS 参数，连接在池中可保持空闲状态的最大毫秒数，超过这个时间后，连接会被删除或关闭。 在外部没有代理的情况时，如果出现 “invalid connection” 错误，很有可能是由于连接超时导致的。可以检查下客户端和服务端的连接超时时间是否合理设置了（服务端的超时时间要大于客户端的超时时间）。
+envoy 关闭连接 根据上面的描述，我们可以猜测这个问题是由于 Envoy 代理产生的，那么经过在网上查找资料，发现这个问题可能是由于 Envoy 的 tcp_idle_timeout 导致的。</description>
+    </item>
+    
+  </channel>
+</rss>

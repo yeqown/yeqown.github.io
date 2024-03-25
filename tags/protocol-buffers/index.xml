@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>protocol-buffers on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/protocol-buffers/</link>
+    <description>Recent content in protocol-buffers on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Tue, 25 Jan 2022 13:46:36 +0800</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/protocol-buffers/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>protoc-gen-fieldmask插件</title>
+      <link>https://www.yeqown.xyz/2022/01/25/protoc-gen-fieldmask%E6%8F%92%E4%BB%B6/</link>
+      <pubDate>Tue, 25 Jan 2022 13:46:36 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2022/01/25/protoc-gen-fieldmask%E6%8F%92%E4%BB%B6/</guid>
+      <description>背景 gRPC 作为服务端的常用框架，它通过 protocol-buffers 语言来定义服务，同时也约定了请求和响应的格式，这样在服务端和客户端之间就可以通过 protoc 生成的代码直接运行而不用考虑编码传输问题了。
+但是，可能会遇到这样的场景：
+RPC 响应中 无用的字段过多 , 浪费带宽和无效计算，如下图所示：
+这里的无用字段是指，在响应中，没有用到的字段，这些字段可以忽略掉，不会影响客户端的使用。
+或许 拆分接口 是一个好的办法，但是可能会因为这样那样的原因（信息粒度降低导致接口太多了，有些地方就是需要聚合信息；细粒度的API设计同时会导致代码重复增加），可能无法推动拆分改造。同时如果没有拆分标准，亦或团队内成员不能严格遵守标准，那么拆分也只是重复问题而已。
+RPC 增量更新时，如何判断零值字段是否需要更新？
+对于 unset 和 zero value 不好区分的语言中（比如：go），在提供服务的一方遇到 增量更新 的场景时就会遇到这样的情况：
+对于这种情况当然可以也有一些方法来解决，比如：使用指针来定义数据基本类型，那么在使用的时候如果判定为 nil 就说明没有设置，如果不为 nil 且为零值，那么就说明也是需要更新的。不过这样解决的缺点就是，nil refference panic 的概率又增加了，在使用时也稍微麻烦了一点。
+·
+解决方案 其实我们在思考上述两种场景的时候，把 客户端 和 服务端 的角色提取出来，就会发现这两个场景都是从 服务端 的视角遇到的问题，两个场景都是类似的：
+客户端需要哪些字段，服务端不知道 客户端更新了哪些字段，服务端也不知道 但是，其实客户端是知道的，因此让客户端把这部分信息传递给服务端就行了。因此我们可以用 FieldMask 字段，用来传递客户端需要的字段，服务端就只返回需要的字段；客户端的告诉服务端需要哪些字段，服务端就更新哪些字段。
+但是 FieldMask 只是一个定义，在具体的使用场景中还需要开发者自己编写一些辅助方法，来实现功能。那么是不是可以提供一个插件，让开发者可以只编写 proto 文件，便可以自动生成一些辅助方法呢？答案是肯定的，预览效果如下：
+message UserInfoRequest { string user_id = 1; google.protobuf.FieldMask field_mask = 2 [ (fieldmask.option.Option).in = {gen: true}, (fieldmask.</description>
+    </item>
+    
+  </channel>
+</rss>

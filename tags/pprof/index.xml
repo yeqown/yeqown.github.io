@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>pprof on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/pprof/</link>
+    <description>Recent content in pprof on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Fri, 17 Jan 2020 13:20:17 +0800</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/pprof/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>一次gRPC使用不当导致goroutine泄漏排查记录</title>
+      <link>https://www.yeqown.xyz/2020/01/17/%E8%AE%B0%E4%B8%80%E6%AC%A1%E6%8E%92%E6%9F%A5gRPC%E4%BD%BF%E7%94%A8%E4%B8%8D%E5%BD%93%E5%AF%BC%E8%87%B4%E7%9A%84goroutine%E6%B3%84%E6%BC%8F/</link>
+      <pubDate>Fri, 17 Jan 2020 13:20:17 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2020/01/17/%E8%AE%B0%E4%B8%80%E6%AC%A1%E6%8E%92%E6%9F%A5gRPC%E4%BD%BF%E7%94%A8%E4%B8%8D%E5%BD%93%E5%AF%BC%E8%87%B4%E7%9A%84goroutine%E6%B3%84%E6%BC%8F/</guid>
+      <description>由于保留必要的“罪证”，因此某些异常只能通过文字来描述了～
+背景 昨晚上10点左右，前端童鞋反映开发环境接口响应超时，但过了几分钟后又恢复了，于是有了这一篇文章。
+其实很久以前就出现了内存占用异常的情况～，只是占用并不高也就是50MB左右，加上当时还忙着写业务需求就没有急着加上pprof来检查。
+首先通过运维平台(k8s based)直观发现了该pod数量从1变成了2, 再结合新增pod的启动时间，我发现该时间正好是前端童鞋反映状况的时间节点，稍后我检查了下该服务的资源限制如下图：
+那么前端童鞋反映的问题就很明显了，由于某种原因导致了pod内存超限，触发了运维平台对于内存超限的“容忍机制”。表现为: 新增一个pod用于缓解服务压力，老服务由于无法申请更多内存会导致崩溃或其他异常（无法响应客户端请求），这与反映的情况一致。
+pprof排查 知道了服务内存异常，想要具体定位的话，这时候就需要pprof上场了。
+如果你需要重启服务才能开启pprof的话，那么只能等待复现了。这里我在开发环境和测试环境一直开启了pprof，因此可以直接检查。个人觉得，这样还可以帮助开发和测试，完成最初的性能分析😼。
+内存检查 go tool pprof --http=:8080 https://service.host.com/debug/pprof/heap 这个命令是在本地打开一个web服务，直接可视化该服务的内存占用情况。也可以使用:
+go tool pprof https://service.host.com/debug/pprof/heap 使用交互模式来分析。通过这个步骤定位到了 grpc相关的包内存占用异常分为两个部分：
+50MB+ google.golang.org/grpc/internal/transport.newBufWriter 50MB+ bufio.NewReaderSize http2 相关库的占用也比较多 这一切都指向了我们使用的gRPC，可是为啥使用gRPC会用到这么“多”内存呢？接着分析
+goroutine检查 打开一看 https://service.host.com/debug/pprof/一看，goroutine和heap居“高”(4000+)不下，虽然对于动辄10W+的别人家的服务来说，这点根本不算事，但在我们这种小作坊里可就算异常了。点开看goroutine查看详情，有四个部分的goroutine分别有900个左右，这里就算初步定位了“gRPC客户端使用了较多的goroutine，但是却没有正确的结束掉”，如下图（这是解决后的截的图）：
+pprof总结 服务中使用的gRPC客户端出了某些故障，导致了goroutine泄漏，引发了OOM（Out Of Memory）。如下图：
+代码排查 上一步已经定位到是gRPC客户端的问题，那么就可以直接从代码上手了。我心里已经有一个“嫌疑犯”了，如下：
+var ( defaultHandler *handler timeout = 5 * time.Second // _ pb.UserServiceClient = &amp;amp;handler{} ) // Init of usersvc.handler func Init(rpcAddr string) error { // ... 略去不表 } type handler struct { // rpc configs rpcAddr string client pb.</description>
+    </item>
+    
+  </channel>
+</rss>

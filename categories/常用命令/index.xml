@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>常用命令 on Yeqown</title>
+    <link>https://www.yeqown.xyz/categories/%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4/</link>
+    <description>Recent content in 常用命令 on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Thu, 11 Jan 2018 19:23:35 +0000</lastBuildDate><atom:link href="https://www.yeqown.xyz/categories/%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>git命令清单</title>
+      <link>https://www.yeqown.xyz/2018/01/11/git%E5%91%BD%E4%BB%A4%E6%B8%85%E5%8D%95/</link>
+      <pubDate>Thu, 11 Jan 2018 19:23:35 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/01/11/git%E5%91%BD%E4%BB%A4%E6%B8%85%E5%8D%95/</guid>
+      <description>git命令清单
+基本命令 git help &amp;lt;command&amp;gt; # 显示command的help git show # 显示某次提交的内容 git show $id git co -- &amp;lt;file&amp;gt; # 抛弃工作区修改 git co . # 抛弃工作区修改 git add &amp;lt;file&amp;gt; # 将工作文件修改提交到本地暂存区 git add . # 将所有修改过的工作文件提交暂存区 git rm &amp;lt;file&amp;gt; # 从版本库中删除文件 git rm &amp;lt;file&amp;gt; --cached # 从版本库中删除文件，但不删除文件 git reset &amp;lt;file&amp;gt; # 从暂存区恢复到工作文件 git reset -- . # 从暂存区恢复到工作文件 git reset --hard # 恢复最近一次提交过的状态，即放弃上次提交后的所有本次修改 # git ci &amp;lt;file&amp;gt; git ci . git ci -a # 将git add, git rm和git ci等操作都合并在一起做 git ci -am &amp;#34;some comments&amp;#34; git ci --amend # 修改最后一次提交记录 git revert &amp;lt;$id&amp;gt; # 恢复某次提交的状态，恢复动作本身也创建次提交对象 git revert HEAD # 恢复最后一次提交的状态 查看文件(diff) git diff &amp;lt;file&amp;gt; # 比较当前文件和暂存区文件差异 git diff git diff &amp;lt;id1&amp;gt;&amp;lt;id1&amp;gt;&amp;lt;id2&amp;gt; # 比较两次提交之间的差异 git diff &amp;lt;branch1&amp;gt;.</description>
+    </item>
+    
+  </channel>
+</rss>

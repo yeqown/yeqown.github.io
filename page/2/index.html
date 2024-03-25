@@ -1,0 +1,772 @@
+<!DOCTYPE HTML>
+
+<html lang='en'>
+
+<head>
+	<meta name="generator" content="Hugo 0.121.1">
+	<title>Yeqown
+	</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	
+	
+	
+	<link rel="stylesheet" href="/assets/css/main.min.css">
+	
+	
+	<link rel="shortcut icon" href="/favicon.ico">
+	
+	
+	<noscript>
+		<link rel="stylesheet" href='/assets/css/noscript.css' />
+	</noscript>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/rainbow.min.css">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>`
+	<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+		<meta name="referrer" content="no-referrer-when-downgrade"></head>
+	<body lang='en' class="is-preload">
+
+		
+		
+
+		
+		
+		
+
+		
+
+		
+		
+		
+
+		
+
+		
+			
+		
+		
+
+		
+
+		
+			<div id="wrapper" class="fade-in" data-pfn="posts" data-ps="6" data-pfp="true">
+
+				
+
+				
+<header id="header">
+    <a href='/' class="logo">Yeqown</a>
+    <link rel="alternate" type="application/rss+xml" href="https://www.yeqown.xyz/index.xml" title="Yeqown" />
+    </header>
+
+				
+
+<nav id="nav">
+    <ul class="links">
+        <li class="active"><a href='/'>Yeqown</a></li>
+        <li><a href="/tags/">tags</a></li>
+        <li><a href="/categories/">categories</a></li>
+        
+        <li><a href='/#footer'>Contact</a></li>
+        
+        
+    </ul>
+    
+    <ul class="icons">
+        
+        <li><a href="https://twitter.com/yeqown" class="icon fa-twitter"><span class="label">Twitter</span></a></li>
+        
+        
+        
+        
+        
+        <li><a href="https://github.com/yeqown" class="icon fa-github"><span class="label">GitHub</span></a></li>
+        
+        
+        
+        
+        
+        
+        <li><a href="/index.xml" class="icon fa-rss"><span class="label">RSS</span></a></li>
+        
+
+    </ul>
+    
+</nav>
+
+				
+					<div id="main">
+
+						
+						
+
+
+<article class="post featured">
+    <header class="major">
+        
+        <span class="date">March 25, 2024</span>
+        
+
+        <h2><a href="https://www.yeqown.xyz/2024/03/25/istio-idle-timeout%E9%97%AE%E9%A2%98%E5%A4%8D%E7%8E%B0%E5%92%8C%E8%A7%A3%E5%86%B3/">Istio Idle Timeout问题复现和解决</a></h2>
+        
+        <p>在使用 istio 时，有时候会遇到连接超时的问题，这个问题可能是由于 envoy 的 tcp_idle_timeout 导致的，本文将介绍如何复现和解决这个问题。</p>
+        
+    </header>
+    
+
+    <ul style="display: flex; align-items: flex-start; list-style: none;">
+    
+    <li class="tag"><a href="https://www.yeqown.xyz/tags/Istio/">#Istio</a></li>
+    
+    <li class="tag"><a href="https://www.yeqown.xyz/tags/sidecar/">#sidecar</a></li>
+    
+    <li class="tag"><a href="https://www.yeqown.xyz/tags/Envoy/">#Envoy</a></li>
+    
+    <li class="tag"><a href="https://www.yeqown.xyz/tags/kubenertes/">#kubenertes</a></li>
+    
+    <li class="tag"><a href="https://www.yeqown.xyz/tags/service-mesh/">#service mesh</a></li>
+    
+</ul>
+
+    <ul class="actions">
+        <li><a href="https://www.yeqown.xyz/2024/03/25/istio-idle-timeout%E9%97%AE%E9%A2%98%E5%A4%8D%E7%8E%B0%E5%92%8C%E8%A7%A3%E5%86%B3/" class="button big">Full Story</a></li>
+    </ul>
+</article>
+
+						
+
+						
+							
+
+<section class="posts">
+    
+    <article>
+        <header>
+            
+            <span class="date">July 25, 2022</span>
+            
+            <h2><a href="https://www.yeqown.xyz/2022/07/25/%E5%9C%A8parent-shell%E4%B8%AD%E6%89%A7%E8%A1%8C%E5%86%85%E7%BD%AE%E5%91%BD%E4%BB%A4%E7%9A%84%E6%96%B9%E6%B3%95/">在Parent Shell中执行内置命令的方法</a></h2>
+        </header>
+        
+        
+        <p>编写了一个二进制程序，想要替用户自动切换当前 Shell-Session 的工作路径，在程序内执行 `chdir` 系统调用却发现毫无作用。为什么没有产生作用？那应该怎么做才能产生作用？本文就此记录下解决这个问题的经历。</p>
+        
+
+        <ul style="display: flex; align-items: flex-start; list-style: none;">
+    
+    <li class="tag"><a href="https://www.yeqown.xyz/tags/c/">#c</a></li>
+    
+    <li class="tag"><a href="https://www.yeqown.xyz/tags/POSIX/">#POSIX</a></li>
+    
+    <li class="tag"><a href="https://www.yeqown.xyz/tags/Golang/">#Golang</a></li>
+    
+    <li class="tag"><a href="https://www.yeqown.xyz/tags/CGO/">#CGO</a></li>
+    
+</ul>
+
+        <ul class="actions">
+            <li><a href="https://www.yeqown.xyz/2022/07/25/%E5%9C%A8parent-shell%E4%B8%AD%E6%89%A7%E8%A1%8C%E5%86%85%E7%BD%AE%E5%91%BD%E4%BB%A4%E7%9A%84%E6%96%B9%E6%B3%95/" class="button">Full Story</a></li>
+        </ul>
+    </article>
+    
+    <article>
+        <header>
+            
+            <span class="date">January 27, 2022</span>
+            
+            <h2><a href="https://www.yeqown.xyz/2022/01/27/%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%88%86%E5%B8%83%E5%BC%8F%E5%AE%9A%E6%97%B6%E4%BB%BB%E5%8A%A1%E7%B3%BB%E7%BB%9F/">设计一个分布式定时任务系统</a></h2>
+        </header>
+        
+        
+        <p>尝试设计一个 &#34;分布式&#34; 定时任务系统，&#34;功能设计&#34; 和 &#34;分布式设计&#34; 作为切入点。不含任何的代码，只是一个设计思路。</p>
+        
+
+        <ul style="display: flex; align-items: flex-start; list-style: none;">
+    
+    <li class="tag"><a href="https://www.yeqown.xyz/tags/Distributed/">#Distributed</a></li>
+    
+    <li class="tag"><a href="https://www.yeqown.xyz/tags/CronJob/">#CronJob</a></li>
+    
+    <li class="tag"><a href="https://www.yeqown.xyz/tags/k8s/">#k8s</a></li>
+    
+    <li class="tag"><a href="https://www.yeqown.xyz/tags/raft/">#raft</a></li>
+    
+    <li class="tag"><a href="https://www.yeqown.xyz/tags/Golang/">#Golang</a></li>
+    
+</ul>
+
+        <ul class="actions">
+            <li><a href="https://www.yeqown.xyz/2022/01/27/%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%88%86%E5%B8%83%E5%BC%8F%E5%AE%9A%E6%97%B6%E4%BB%BB%E5%8A%A1%E7%B3%BB%E7%BB%9F/" class="button">Full Story</a></li>
+        </ul>
+    </article>
+    
+    <article>
+        <header>
+            
+            <span class="date">January 25, 2022</span>
+            
+            <h2><a href="https://www.yeqown.xyz/2022/01/25/protoc-gen-fieldmask%E6%8F%92%E4%BB%B6/">protoc-gen-fieldmask插件</a></h2>
+        </header>
+        
+        
+        <p>动手做一个 protoc-gen-fieldmask 插件来解决，gRPC在服务侧的增量更新和屏蔽字段的场景问题；同时总结下使用 PG* 开发 protoc 插件的一些经验。</p>
+        
+
+        <ul style="display: flex; align-items: flex-start; list-style: none;">
+    
+    <li class="tag"><a href="https://www.yeqown.xyz/tags/Golang/">#Golang</a></li>
+    
+    <li class="tag"><a href="https://www.yeqown.xyz/tags/protocol-buffers/">#protocol-buffers</a></li>
+    
+    <li class="tag"><a href="https://www.yeqown.xyz/tags/Fieldmask/">#Fieldmask</a></li>
+    
+    <li class="tag"><a href="https://www.yeqown.xyz/tags/gRPC/">#gRPC</a></li>
+    
+</ul>
+
+        <ul class="actions">
+            <li><a href="https://www.yeqown.xyz/2022/01/25/protoc-gen-fieldmask%E6%8F%92%E4%BB%B6/" class="button">Full Story</a></li>
+        </ul>
+    </article>
+    
+    <article>
+        <header>
+            
+            <span class="date">December 15, 2021</span>
+            
+            <h2><a href="https://www.yeqown.xyz/2021/12/15/Sentry-OpenTelemetry%E5%89%8D%E5%90%8E%E7%AB%AF%E5%85%A8%E9%93%BE%E8%B7%AF%E6%89%93%E9%80%9A%E6%80%BB%E7%BB%93/">Sentry&#43;OpenTelemetry前后端全链路打通总结</a></h2>
+        </header>
+        
+        
+        <p>Sentry&#43;OpenTelemetry前后端全链路打通, 从后端的角度去思考链路的构建，为 otel-collector 实现定制的 trace exporter。</p>
+        
+
+        <ul style="display: flex; align-items: flex-start; list-style: none;">
+    
+    <li class="tag"><a href="https://www.yeqown.xyz/tags/Golang/">#Golang</a></li>
+    
+    <li class="tag"><a href="https://www.yeqown.xyz/tags/Sentry/">#Sentry</a></li>
+    
+    <li class="tag"><a href="https://www.yeqown.xyz/tags/OpenTelemetry/">#OpenTelemetry</a></li>
+    
+</ul>
+
+        <ul class="actions">
+            <li><a href="https://www.yeqown.xyz/2021/12/15/Sentry-OpenTelemetry%E5%89%8D%E5%90%8E%E7%AB%AF%E5%85%A8%E9%93%BE%E8%B7%AF%E6%89%93%E9%80%9A%E6%80%BB%E7%BB%93/" class="button">Full Story</a></li>
+        </ul>
+    </article>
+    
+    <article>
+        <header>
+            
+            <span class="date">September 27, 2020</span>
+            
+            <h2><a href="https://www.yeqown.xyz/2020/09/27/WebSocket-Implemention-With-Go/">WebSocket Implemention With Go</a></h2>
+        </header>
+        
+        
+        <p>使用Go来实现WebSocket协议</p>
+        
+
+        <ul style="display: flex; align-items: flex-start; list-style: none;">
+    
+    <li class="tag"><a href="https://www.yeqown.xyz/tags/Golang/">#Golang</a></li>
+    
+    <li class="tag"><a href="https://www.yeqown.xyz/tags/Tools/">#Tools</a></li>
+    
+</ul>
+
+        <ul class="actions">
+            <li><a href="https://www.yeqown.xyz/2020/09/27/WebSocket-Implemention-With-Go/" class="button">Full Story</a></li>
+        </ul>
+    </article>
+    
+    <article>
+        <header>
+            
+            <span class="date">September 22, 2020</span>
+            
+            <h2><a href="https://www.yeqown.xyz/2020/09/22/Kubernetes%E4%B8%ADgRPC-Load-Balancing%E5%88%86%E6%9E%90%E5%92%8C%E8%A7%A3%E5%86%B3/">Kubernetes中gRPC Load Balancing分析和解决</a></h2>
+        </header>
+        
+        
+        <p>在k8s集群中部署gRPC服务并使用k8s中的Service来对外暴露服务，这是比较常见的用法，但是这种方式却会导致gRPC服务负载不均衡，进而影响整个系统的负载能力甚至‘雪崩’。</p>
+        
+
+        <ul style="display: flex; align-items: flex-start; list-style: none;">
+    
+    <li class="tag"><a href="https://www.yeqown.xyz/tags/Kubernetes/">#Kubernetes</a></li>
+    
+    <li class="tag"><a href="https://www.yeqown.xyz/tags/gRPC/">#gRPC</a></li>
+    
+    <li class="tag"><a href="https://www.yeqown.xyz/tags/Load-Balancing/">#Load Balancing</a></li>
+    
+</ul>
+
+        <ul class="actions">
+            <li><a href="https://www.yeqown.xyz/2020/09/22/Kubernetes%E4%B8%ADgRPC-Load-Balancing%E5%88%86%E6%9E%90%E5%92%8C%E8%A7%A3%E5%86%B3/" class="button">Full Story</a></li>
+        </ul>
+    </article>
+    
+</section>
+						
+
+						
+						
+						
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<footer>
+    <div class="pagination">
+        <ul class="pagination">
+
+            
+            
+                
+                <li>
+                    <a href="/" class="extra first">
+                        First
+                    </a>
+                </li>
+                
+            
+            
+            
+            <li>
+                <a href="/" class="previous">
+                    Prev
+                </a>
+            </li>
+            
+
+            
+            
+                
+
+                
+                
+
+                    
+                    
+                    
+
+                        
+                        
+                            
+                        
+
+                    
+                    
+                    
+
+                
+                
+
+                
+                
+                <li>
+                    <a href="/" class="page">
+                        1 
+                    </a>
+                </li>
+                
+
+            
+                
+
+                
+                
+
+                    
+                    
+                    
+
+                        
+                        
+                            
+                        
+
+                    
+                    
+                    
+
+                
+                
+
+                
+                
+                <li>
+                    <a href="/page/2/" class="page active">
+                        2 
+                    </a>
+                </li>
+                
+
+            
+                
+
+                
+                
+
+                    
+                    
+                    
+
+                        
+                        
+                            
+                        
+
+                    
+                    
+                    
+
+                
+                
+
+                
+                
+                <li>
+                    <a href="/page/3/" class="page">
+                        3 
+                    </a>
+                </li>
+                
+
+            
+                
+
+                
+                
+
+                    
+                    
+                    
+
+                        
+                        
+                            
+                        
+
+                    
+                    
+                    
+
+                
+                
+
+                
+                
+                <li>
+                    <a href="/page/4/" class="page">
+                        4 
+                    </a>
+                </li>
+                
+
+            
+                
+
+                
+                
+
+                    
+                    
+                    
+
+                        
+                        
+                            
+                        
+
+                    
+                    
+                    
+
+                
+                
+
+                
+                
+                <li>
+                    <a href="/page/5/" class="page">
+                        5 
+                    </a>
+                </li>
+                
+
+            
+                
+
+                
+                
+
+                    
+                    
+                    
+
+                        
+                        
+
+                    
+                    
+                    
+
+                
+                
+
+                
+                
+
+            
+                
+
+                
+                
+
+                    
+                    
+                    
+
+                        
+                        
+
+                    
+                    
+                    
+
+                
+                
+
+                
+                
+
+            
+                
+
+                
+                
+
+                    
+                    
+                    
+
+                        
+                        
+
+                    
+                    
+                    
+
+                
+                
+
+                
+                
+
+            
+                
+
+                
+                
+
+                    
+                    
+                    
+
+                        
+                        
+
+                    
+                    
+                    
+
+                
+                
+
+                
+                
+
+            
+                
+
+                
+                
+
+                    
+                    
+                    
+
+                        
+                        
+
+                    
+                    
+                    
+
+                
+                
+
+                
+                
+
+            
+
+            
+            
+            <li>
+                <a href="/page/3/" class="next">
+                    Next
+                </a>
+            </li>
+            
+
+            
+            
+                
+                <li>
+                    <a href="/page/10/" class="extra last">
+                        Last
+                    </a>
+                </li>
+                
+            
+        </ul>
+    </div>
+</footer>
+
+
+					</div>
+
+					
+
+<footer id="footer">
+  <section>
+    <form method="post" action="Page%28%22Yeqown%22%29">
+      <div class="fields">
+        <div class="field">
+          <label for="name">Name</label>
+          <input type="text" name="name" id="name" />
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="text" name="email" id="email" />
+        </div>
+        <div class="field">
+          <label for="message">Message</label>
+          <textarea name="message" id="message" rows="3"></textarea>
+        </div>
+      </div>
+      <ul class="actions">
+        <li><input type="submit" value='Send A Message' /></li>
+      </ul>
+    </form>
+  </section>
+
+  <section class="split contact">
+    
+    <section class="alt">
+      <h3>Address</h3>
+      <p>
+        
+         Chengdu · China
+        
+         <br />  This is a city that comes and doesn&#39;t want to go
+        
+      </p>
+    </section>
+    
+    
+    <section>
+      <h3>Phone</h3>
+      <p><a href="tel:no%20way">no way</a></p>
+    </section>
+    
+    
+    <section>
+      <h3>Email</h3>
+      <p><a href="mailto:yeqown@gmail.com">yeqown@gmail.com</a></p>
+    </section>
+    
+    
+    <section>
+      <h3>Social</h3>
+      <ul class="icons alt">
+        
+        <li><a href="https://twitter.com/yeqown" class="icon alt fa-twitter"><span class="label">Twitter</span></a></li>
+        
+        
+        
+        
+        
+        <li><a href="https://github.com/yeqown" class="icon alt fa-github"><span class="label">GitHub</span></a></li>
+        
+        
+        
+        
+        
+      </ul>
+    </section>
+    
+  </section>
+</footer>
+					
+<div id="copyright">
+    <ul>
+        <li>&copy; Yeqown</li>
+        <li>Design: <a href="https://html5up.net">HTML5 UP</a></li>
+        <li>Hugo Port: <a href="https://curtistimson.co.uk">curttimson</a></li>
+    </ul>
+
+    
+    <ul>
+        <li>
+            <span id="busuanzi_container_site_pv">
+                总访问量<span id="busuanzi_value_site_pv"></span>次
+            </span>
+        </li>
+        <li>
+            <span id="busuanzi_container_site_uv">
+                访客数<span id="busuanzi_value_site_uv"></span>人次
+            </span>
+        </li>
+    </ul></div>
+
+					<a href="#navPanel" id="navPanelToggle">Menu</a>
+			</div>
+
+			
+			
+
+
+
+
+
+
+
+
+
+
+<script src='/assets/js/bundle.js'></script>
+
+	</body>
+</html>

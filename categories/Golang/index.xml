@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Golang on Yeqown</title>
+    <link>https://www.yeqown.xyz/categories/Golang/</link>
+    <description>Recent content in Golang on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Mon, 25 Jul 2022 10:05:09 +0800</lastBuildDate><atom:link href="https://www.yeqown.xyz/categories/Golang/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>在Parent Shell中执行内置命令的方法</title>
+      <link>https://www.yeqown.xyz/2022/07/25/%E5%9C%A8parent-shell%E4%B8%AD%E6%89%A7%E8%A1%8C%E5%86%85%E7%BD%AE%E5%91%BD%E4%BB%A4%E7%9A%84%E6%96%B9%E6%B3%95/</link>
+      <pubDate>Mon, 25 Jul 2022 10:05:09 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2022/07/25/%E5%9C%A8parent-shell%E4%B8%AD%E6%89%A7%E8%A1%8C%E5%86%85%E7%BD%AE%E5%91%BD%E4%BB%A4%E7%9A%84%E6%96%B9%E6%B3%95/</guid>
+      <description>背景 最近在为 大仓项目(Monorepo) 制作一个脚手架，其中构思了一个自动替用户切换工作路径的工具（代码是通过模板初始化的，在结构上基本一致，但是代码文件较深，想要在terminal去和文件交互时，只能使用 cd 命令，费时费力），因此我期望一个小工具，能比较方便的帮我跳转到目标路径。预期的使用效果如下：
+这个命令执行后，你可以从当前路径（任意路径）跳转到目标路径，那我就不用记我应该先跳转到根目录再前往目标目录了，少敲击很多次 tab。
+PS: 后续计划给这个命令扩展一下历史记录，可以通过筛选匹配历史快速补全命令，提高效率。
+chdir没作用？ 这个小工具是通过Go来编写的，我从文档中看到 os.Chdir 这个调用, 因此用它来试试：
+// Chdir changes the current working directory to the named directory. // If there is an error, it will be of type *PathError. func Chdir(dir string) error 结果我发现没有效果，通过 os.Getwd() 却能看到当前路径已经被改变了。这个切换的需求还没解决，我却产生了几个新的疑问：
+cd 命令怎么实现的？ chdir 系统调用的使用和原理？ 通过执行如下的命令，会发现 cd 命令并不是通过一个独立的可执行文件来实现的，而是内置在 bash 等 shell 程序中，其次通过查阅资料可以发现 大部分Linux发行版都部分符合 POSIX 标准。如果再检索一下shell程序的原理，我们会得出如下的结论：
+$ which cd cd: shell built-in command shell 程序在执行内建命令时，是通过调用内部的函数的执行。而非内建的命令（如 git / gcc / gdb）都是通过 fork 一个进程来执行；cd 命令是通过 chdir [IEEE Std 1003.</description>
+    </item>
+    
+    <item>
+      <title>protoc-gen-fieldmask插件</title>
+      <link>https://www.yeqown.xyz/2022/01/25/protoc-gen-fieldmask%E6%8F%92%E4%BB%B6/</link>
+      <pubDate>Tue, 25 Jan 2022 13:46:36 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2022/01/25/protoc-gen-fieldmask%E6%8F%92%E4%BB%B6/</guid>
+      <description>背景 gRPC 作为服务端的常用框架，它通过 protocol-buffers 语言来定义服务，同时也约定了请求和响应的格式，这样在服务端和客户端之间就可以通过 protoc 生成的代码直接运行而不用考虑编码传输问题了。
+但是，可能会遇到这样的场景：
+RPC 响应中 无用的字段过多 , 浪费带宽和无效计算，如下图所示：
+这里的无用字段是指，在响应中，没有用到的字段，这些字段可以忽略掉，不会影响客户端的使用。
+或许 拆分接口 是一个好的办法，但是可能会因为这样那样的原因（信息粒度降低导致接口太多了，有些地方就是需要聚合信息；细粒度的API设计同时会导致代码重复增加），可能无法推动拆分改造。同时如果没有拆分标准，亦或团队内成员不能严格遵守标准，那么拆分也只是重复问题而已。
+RPC 增量更新时，如何判断零值字段是否需要更新？
+对于 unset 和 zero value 不好区分的语言中（比如：go），在提供服务的一方遇到 增量更新 的场景时就会遇到这样的情况：
+对于这种情况当然可以也有一些方法来解决，比如：使用指针来定义数据基本类型，那么在使用的时候如果判定为 nil 就说明没有设置，如果不为 nil 且为零值，那么就说明也是需要更新的。不过这样解决的缺点就是，nil refference panic 的概率又增加了，在使用时也稍微麻烦了一点。
+·
+解决方案 其实我们在思考上述两种场景的时候，把 客户端 和 服务端 的角色提取出来，就会发现这两个场景都是从 服务端 的视角遇到的问题，两个场景都是类似的：
+客户端需要哪些字段，服务端不知道 客户端更新了哪些字段，服务端也不知道 但是，其实客户端是知道的，因此让客户端把这部分信息传递给服务端就行了。因此我们可以用 FieldMask 字段，用来传递客户端需要的字段，服务端就只返回需要的字段；客户端的告诉服务端需要哪些字段，服务端就更新哪些字段。
+但是 FieldMask 只是一个定义，在具体的使用场景中还需要开发者自己编写一些辅助方法，来实现功能。那么是不是可以提供一个插件，让开发者可以只编写 proto 文件，便可以自动生成一些辅助方法呢？答案是肯定的，预览效果如下：
+message UserInfoRequest { string user_id = 1; google.protobuf.FieldMask field_mask = 2 [ (fieldmask.option.Option).in = {gen: true}, (fieldmask.</description>
+    </item>
+    
+    <item>
+      <title>WebSocket Implemention With Go</title>
+      <link>https://www.yeqown.xyz/2020/09/27/WebSocket-Implemention-With-Go/</link>
+      <pubDate>Sun, 27 Sep 2020 11:32:15 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2020/09/27/WebSocket-Implemention-With-Go/</guid>
+      <description>什么是WS协议 The WebSocket Protocol enables two-way communication between a client running untrusted code in a controlled environment to a remote host that has opted-in to communications from that code. The security model used for this is the origin-based security model commonly used by web browsers. The protocol consists of an opening handshake followed by basic message framing, layered over TCP.
+The goal of this technology is to provide a mechanism for browser-based applications that need two-way communication with servers that does not rely on opening multiple HTTP connections (e.</description>
+    </item>
+    
+    <item>
+      <title>goswagger入门手册</title>
+      <link>https://www.yeqown.xyz/2019/03/30/goswagger%E5%85%A5%E9%97%A8%E6%89%8B%E5%86%8C/</link>
+      <pubDate>Sat, 30 Mar 2019 09:22:55 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2019/03/30/goswagger%E5%85%A5%E9%97%A8%E6%89%8B%E5%86%8C/</guid>
+      <description>本文旨在记录使用goswagger过程中遇到的一些问题（只在生成文档方面，不涉及其他功能）：
+如何在go1.11+以上（支持Go Module）版本中的应用swagger 一些注解上的注意事项 如何在团队中管理API文档（主要涵盖了：swagger-ui的部署和使用） 关于swagger swagger涵盖WebAPI的一整套工具：API设计，API实现（代码生成），API文档，API测试及API规范。更多信息请参见官网
+准备工作 一个Golang web项目，并软连接到GOPATH/src下。【毕竟是支持Gomodule的项目，还放在GOPATH下就不科学了😄】 安装swagger工具. 参见安装 环境： ➜ swagger-demo git:(master) ✗ go version go version go1.11.5 darwin/amd64 ➜ swagger-demo git:(master) ✗ swagger version version: v0.18.0 commit: 6b23bb61413826ce42c3b14a37bf5870caf91e0b 编写注释 元信息包含了这个应用的基本信息。一般新建一个doc.go放在你的API根目录下；还有一定要注意这句话：
+You give it a main file and it will parse all the files that are reachable by that main package to produce a swagger specification.To use you can add a go:generate comment to your main file。</description>
+    </item>
+    
+    <item>
+      <title>QRCode Generator based Golang</title>
+      <link>https://www.yeqown.xyz/2018/11/26/QR-Code%E7%94%9F%E6%88%90%E5%99%A8forgolang/</link>
+      <pubDate>Mon, 26 Nov 2018 14:07:07 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/11/26/QR-Code%E7%94%9F%E6%88%90%E5%99%A8forgolang/</guid>
+      <description>项目地址：yeqown/go-qrcode 同类项目：skip2/go-qrcode 纠错算法和bitset使用了该库，后续可能会考虑自己实现一遍
+go-qrcode 示例 link to CODE
+package main import ( &amp;#34;fmt&amp;#34; qrcode &amp;#34;github.com/yeqown/go-qrcode&amp;#34; ) func main() { qrc, err := qrcode.New(&amp;#34;https://github.com/yeqown/go-qrcode&amp;#34;) if err != nil { fmt.Printf(&amp;#34;could not generate QRCode: %v&amp;#34;, err) } // save file if err := qrc.Save(&amp;#34;../testdata/repo-qrcode.jpeg&amp;#34;); err != nil { fmt.Printf(&amp;#34;could not save image: %v&amp;#34;, err) } } 生成结果如图： QR Code 基本原理 1 数据分析（data analysis）： 分析输入数据，根据数据决定要使用的QR码版本、容错级别和编码模式。低版本的QR码无法编码过长的数据，含有非数字字母字符的数据要使用扩展字符编码模式。
+2 编码数据（data encoding）： 根据选择的编码模式，将输入的字符串转换成比特流，插入模式标识码（mode indicator）和终止标识符（terminator），把比特流切分成八比特的字节，加入填充字节来满足标准的数据字码数要求。
+3 计算纠错码（error correction coding）： 对步骤二产生的比特流计算纠错码，附在比特流之后。高版本的编码方式可能需要将数据流切分成块（block）再分别进行纠错码计算。</description>
+    </item>
+    
+    <item>
+      <title>go-get遇到🧱的解决方法</title>
+      <link>https://www.yeqown.xyz/2018/11/19/go-get%E9%81%87%E5%88%B0%E5%A2%99%E7%9A%84%E8%A7%A3%E5%86%B3%E6%96%B9%E6%B3%95/</link>
+      <pubDate>Mon, 19 Nov 2018 11:33:24 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/11/19/go-get%E9%81%87%E5%88%B0%E5%A2%99%E7%9A%84%E8%A7%A3%E5%86%B3%E6%96%B9%E6%B3%95/</guid>
+      <description>解决方法有两种，在网上也很好找到：
+1. 最简单的，从¥“github.com/golang”找到对应的包并下载到 $GOPATH/src/golang.org/x/ 下 2. 第二种，就是翻过🧱了。 1 问题：翻了🧱，还是没办法直接使用go get来下载呢？ 先说原因，因为go get并没有走你的代理啊！！！！那么如何设置代理呢？
+export http_proxy=http://ip:port go get golang.org/xxx 其他设置代理的方式，自行参见 参考
+2 如果你的代理不支持http || https协议，可咋整？ 那么想办法支持http或者把http再代理到你可以使用的协议（socks5~），那么可以使用cow。
+cow 推荐使用方式：
+go get 下载安装（因为刚开始图简单，使用程序的时候运行报错了，go get 安装方式并不会有这样的困扰）。 配置的时候也很简单，编辑配置文件 ～/.cow/rc，配置http socks5代理服务和监听代理端口。
+listen = http://127.0.0.1:7777 proxy = socks5://127.0.0.1:1080 3 运行 配置完成之后就可以直接运行了
+./cow # 另开一个Terminal export http_proxy=http://ip:port go get golang.org/xxx 写在后面 知道了go get无法翻🧱的原因之后，就可以发挥自己的想象力来解决问题了，这样解决还是挺繁琐的。虽然cow可以配置开机启动，但对于一个懒癌晚期）的人来说（如果不是因为升级Go到了1.11，go-module机制让我无法开心的玩耍，我也不会去考虑为啥翻🧱了go get还是不能用，明明有代理却还有使用另外一个代理～。
+友情提示：vscode-go 也可以设置proxy哦
+参考： go get 使用代理 cow cow配置文件说明 vscode-go设置proxy </description>
+    </item>
+    
+    <item>
+      <title>Golang适用的DTO工具</title>
+      <link>https://www.yeqown.xyz/2018/08/29/Golang%E9%80%82%E7%94%A8%E7%9A%84DTO%E5%B7%A5%E5%85%B7/</link>
+      <pubDate>Wed, 29 Aug 2018 09:27:36 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/08/29/Golang%E9%80%82%E7%94%A8%E7%9A%84DTO%E5%B7%A5%E5%85%B7/</guid>
+      <description>DTO (Data Transfer Object) 是Java中的概念，起到数据封装和隔离的作用。在使用Golang开发Web应用的过程中，也会有类似的需求。先贴项目地址 github.com/yeqown/server-common/tree/master/dbs/tools
+举个例子 现在有一个用户数据结构如下,
+type UserModel struct { ID int64 `gorm:&amp;#34;column:id&amp;#34;` Name string `gorm:&amp;#34;column:name&amp;#34;` Password string `gorm:&amp;#34;column:password&amp;#34;` } // 问题1: 现在要求是想要JSON格式返回用户数据，并且不希望其中包含有Password字段 // 解决1:
+type UserModel struct { ID int64 `gorm:&amp;#34;column:id&amp;#34; json:&amp;#34;id&amp;#34;` Name string `gorm:&amp;#34;column:name&amp;#34; json:&amp;#34;name&amp;#34;` Password string `gorm:&amp;#34;column:password&amp;#34; json:&amp;#34;-&amp;#34;` } // 问题2: 同样是JSON数据格式，并且希望额外返回用户的身份标示Ident（假设必须要跟用户数据放在一起） // 解决2: （这也是我的场景）
+type UserDTO struct { ID int64 `json:&amp;#34;id&amp;#34;` Name string `json:&amp;#34;name&amp;#34;` Password string `json:&amp;#34;-&amp;#34;` Ident string `json:&amp;#34;ident&amp;#34;` } func LoadUserDTOFromModel(data *UserMolde) *UserDTO { ident := genUserIdent(data) return &amp;amp;{ ID data.</description>
+    </item>
+    
+    <item>
+      <title>使用golang 实现JSON-RPC2.0</title>
+      <link>https://www.yeqown.xyz/2018/05/18/%E4%BD%BF%E7%94%A8golang-%E5%AE%9E%E7%8E%B0JSON-RPC2-0/</link>
+      <pubDate>Fri, 18 May 2018 17:52:18 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/05/18/%E4%BD%BF%E7%94%A8golang-%E5%AE%9E%E7%8E%B0JSON-RPC2-0/</guid>
+      <description>什么是RPC？ 远程过程调用（英语：Remote Procedure Call，缩写为 RPC）是一个计算机通信协议。该协议允许运行于一台计算机的程序调用另一台计算机的子程序，而程序员无需额外地为这个交互作用编程。如果涉及的软件采用面向对象编程，那么远程过程调用亦可称作远程调用或远程方法调用。
+远程过程调用是一个分布式计算的客户端-服务器（Client/Server）的例子，它简单而又广受欢迎。远程过程调用总是由客户端对服务器发出一个执行若干过程请求，并用客户端提供的参数。执行结果将返回给客户端。由于存在各式各样的变体和细节差异，对应地派生了各式远程过程调用协议，而且它们并不互相兼容。——————源自维基百科
+什么又是JSON-RPC? JSON-RPC，是一个无状态且轻量级的远程过程调用（RPC）传送协议，其传递内容通过 JSON 为主。相较于一般的 REST 通过网址（如 GET /user）调用远程服务器，JSON-RPC 直接在内容中定义了欲调用的函数名称（如 {&amp;ldquo;method&amp;rdquo;: &amp;ldquo;getUser&amp;rdquo;}），这也令开发者不会陷于该使用 PUT 或者 PATCH 的问题之中。 更多JSON-RPC约定参见：https://zh.wikipedia.org/wiki/JSON-RPC
+问题 服务端注册及调用 约定如**net/rpc**：
+the method&amp;rsquo;s type is exported. the method is exported. the method has two arguments, both exported (or builtin) types. the method&amp;rsquo;s second argument is a pointer. the method has return type error. // 这就是约定 func (t *T) MethodName(argType T1, replyType *T2) error 那么问题来了:
+问题1: Server怎么来注册`t.</description>
+    </item>
+    
+    <item>
+      <title>gorm使用记录</title>
+      <link>https://www.yeqown.xyz/2018/04/20/gorm%E4%BD%BF%E7%94%A8%E8%AE%B0%E5%BD%95/</link>
+      <pubDate>Fri, 20 Apr 2018 16:23:38 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/04/20/gorm%E4%BD%BF%E7%94%A8%E8%AE%B0%E5%BD%95/</guid>
+      <description>关于Gorm gorm文档
+遇见问题 无法通过结构体的方式更新或查询零值 这里零值是说，各个类型的默认值。 关于这一点是在这里中注明了的，也提供了解决方案：
+WARNING when update with struct, GORM will only update those fields that with non blank value
+For below Update, nothing will be updated as &amp;ldquo;&amp;rdquo;, 0, false are blank values of their types
+NOTE When query with struct, GORM will only query with those fields has non-zero value, that means if your field’s value is 0, &amp;lsquo;&amp;rsquo;, false or other zero values, it won’t be used to build query conditions,</description>
+    </item>
+    
+    <item>
+      <title>golang热重载工具</title>
+      <link>https://www.yeqown.xyz/2018/04/17/golang%E7%83%AD%E9%87%8D%E8%BD%BD%E5%B7%A5%E5%85%B7/</link>
+      <pubDate>Tue, 17 Apr 2018 14:05:09 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/04/17/golang%E7%83%AD%E9%87%8D%E8%BD%BD%E5%B7%A5%E5%85%B7/</guid>
+      <description>运行截图 项目地址 https://github.com/yeqown/gw
+本项目由https://github.com/silenceper/gowatch改造而来。不同之处在于:
+本gw任意指定重新执行的命令。 而原来的gw默认是重新编译打包go程序。</description>
+    </item>
+    
+    <item>
+      <title>Golang学习笔记</title>
+      <link>https://www.yeqown.xyz/2018/04/08/Golang%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</link>
+      <pubDate>Sun, 08 Apr 2018 15:01:33 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/04/08/Golang%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</guid>
+      <description>目录 Channel Goroutine Channel 一开始是在看channel的源码，结果发现里面含有一些抽象的描述（可能也就是我觉得。。。毕竟没有深入）
+Do not change another G&amp;rsquo;s status while holding this lock (in particular, do not ready a G), as this can deadlock with stack shrinking.
+其中G是啥？我看着是很懵逼的，去google了一下，其实是goroutine相关的知识，那就把goroutine理解了先。
+2020-04-13 填坑
+channel in go
+Goroutine G: 表示goroutine，存储了goroutine的执行stack信息、goroutine状态以及goroutine的任务函数等；另外G对象是可以重用的。 P: 表示逻辑processor，P的数量决定了系统内最大可并行的G的数量（前提：系统的物理cpu核数&amp;gt;=P的数量）；P的最大作用还是其拥有的各种G对象队列、链表、一些cache和状态。 M: 代表着真正的执行计算资源。在绑定有效的p后，进入schedule循环；而schedule循环的机制大致是从各种队列、p的本地队列中获取G，切换到G的执行栈上并执行G的函数，调用goexit做清理工作并回到m，如此反复。M并不保留G状态，这是G可以跨M调度的基础。M必须关联了P才能执行Go代码。
+结合下图更方便理解： &amp;ndash;源于Tonybai的博客，见参考资料。 参考资料 runtime/runtime2.go Tonybai-goroutine调度器 </description>
+    </item>
+    
+  </channel>
+</rss>

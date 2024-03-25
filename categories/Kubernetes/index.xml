@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Kubernetes on Yeqown</title>
+    <link>https://www.yeqown.xyz/categories/Kubernetes/</link>
+    <description>Recent content in Kubernetes on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Mon, 25 Mar 2024 09:37:25 +0800</lastBuildDate><atom:link href="https://www.yeqown.xyz/categories/Kubernetes/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Istio Idle Timeout问题复现和解决</title>
+      <link>https://www.yeqown.xyz/2024/03/25/istio-idle-timeout%E9%97%AE%E9%A2%98%E5%A4%8D%E7%8E%B0%E5%92%8C%E8%A7%A3%E5%86%B3/</link>
+      <pubDate>Mon, 25 Mar 2024 09:37:25 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2024/03/25/istio-idle-timeout%E9%97%AE%E9%A2%98%E5%A4%8D%E7%8E%B0%E5%92%8C%E8%A7%A3%E5%86%B3/</guid>
+      <description>问题描述 在 kubernetes 集群中使用 istio 时，开发同学反馈经常会出现 “invalid connection” 错误，导致业务逻辑错误，而在没有使用 istio 的情况下，这个问题并不会出现。通过查看日志，发现这种错误常发生在集群外的服务连接，如：memcached、redis, mysql, mongodb 等。
+通过上述的描述，首先怀疑的是 istio 的 sidecar 代理导致的问题，因为这种错误只有在使用 istio 时才会出现。
+Istio 和 envoy 的基本概念 Istio 服务网格从逻辑上分为数据面和控制面，其中数据面由 Envoy 代理组成，控制面由 Pilot、Citadel、Galley 等组件组成。数据面是由 Envoy 代理组成的，负责实际的流量代理和控制。
+也就是说，当我们在 kubernetes 集群中部署了 istio 时，每个 pod 都会有一个 sidecar 容器，这个容器中就包含了 Envoy 代理，会劫持 pod 中的所有流量。再回到上面的问题，在没有这个代理的情况下，这个问题并不会出现，所以这个问题很有可能是由 Envoy 代理导致的。
+猜测问题原因 数据库连接超时 这里使用的开发语言为 go，&amp;ldquo;invalid connection&amp;rdquo; 错误往往发生在“连接超时”的情况下（连接被服务端单方面关闭，而客户端还在使用）。在数据库连接场景中，往往还会有“连接池”这个概念，连接池会在连接空闲一段时间后关闭连接，与此同时服务端也会设置相应的超时时间，当连接空闲时间超过这个时间时，服务端会主动关闭连接。
+如：
+mysql 的 wait_timeout 参数，当连接空闲时间超过这个时间时，服务端会主动关闭连接。 mongodb 的 maxIdleTimeMS 参数，连接在池中可保持空闲状态的最大毫秒数，超过这个时间后，连接会被删除或关闭。 在外部没有代理的情况时，如果出现 “invalid connection” 错误，很有可能是由于连接超时导致的。可以检查下客户端和服务端的连接超时时间是否合理设置了（服务端的超时时间要大于客户端的超时时间）。
+envoy 关闭连接 根据上面的描述，我们可以猜测这个问题是由于 Envoy 代理产生的，那么经过在网上查找资料，发现这个问题可能是由于 Envoy 的 tcp_idle_timeout 导致的。</description>
+    </item>
+    
+    <item>
+      <title>Kubernetes中gRPC Load Balancing分析和解决</title>
+      <link>https://www.yeqown.xyz/2020/09/22/Kubernetes%E4%B8%ADgRPC-Load-Balancing%E5%88%86%E6%9E%90%E5%92%8C%E8%A7%A3%E5%86%B3/</link>
+      <pubDate>Tue, 22 Sep 2020 13:33:20 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2020/09/22/Kubernetes%E4%B8%ADgRPC-Load-Balancing%E5%88%86%E6%9E%90%E5%92%8C%E8%A7%A3%E5%86%B3/</guid>
+      <description>背景 第一次，线上遇到大量接口RT超过10s触发了系统告警，运维反馈k8s集群无异常，负载无明显上升。将报警接口相关的服务重启一番后发现并无改善。但是开发人员使用链路追踪系统发现，比较慢的请求总是某个gRPC服务中的几个POD导致，由其他POD处理的请求并不会出现超时告警。
+第二次，同样遇到接口RT超过阈值触发告警，从k8s中查到某个gRPC服务（关键服务）重启次数异常，查看重启原因时发现是OOM Killed，OOM killed并不是负载不均衡直接导致的，但是也有一定的关系，这个后面再说。前两次由于监控不够完善（于我而言，运维的很多面板都没有权限，没办法排查）。期间利用pprof分析了该服务内存泄漏点，并修复上线观察。经过第二次问题并解决之后，线上超时告警恢复正常水平，但是该 deployment 下的几个POD占用资源（Mem / CPU / Network-IO），差距甚大。
+第二张图是运维第一次发现该服务OOM killed 之后调整了内存上限从 512MB =&amp;gt; 1G，然而只是让它死得慢一点而已。 从上面两张图能够石锤的是该服务一定存在内存泄漏。Go项目内存占用的分析，我总结了如下的排查步骤：
+1. 代码泄漏（pprof）（可能原因 goroutine泄漏；闭包） 2. Go Runtime + Linux 内核（RSS虚高导致OOM）https://github.com/golang/go/issues/23687 3. 采集指标不正常（container_memory_working_set_bytes） 2，3 是基于第1点能基本排除代码问题的后续步骤。 解决和排查手段： 1. pprof 通过heap + goroutine 是否异常，来定位泄漏点 运行`go tool pprof`命令时加上--nodefration=0.05参数，表示如果调用的子函数使用的CPU、memory不超过 5%，就忽略它。 2. 确认go版本和内核版本，确认是否开启了MADV_FREE，导致RSS下降不及时(1.12+ 和 linux内核版本大于 4.5)。 3. RSS + Cache 内存检查 &amp;gt; Cache 过大的原因 https://www.cnblogs.com/zh94/p/11922714.html // IO密集：手动释放或者定期重启 查看服务器内存使用情况： `free -g` 查看进程内存情况： `pidstat -rI -p 13744` 查看进程打开的文件： `lsof -p 13744` 查看容器内的PID： `docker inspect --format &amp;#34;{{ .</description>
+    </item>
+    
+  </channel>
+</rss>

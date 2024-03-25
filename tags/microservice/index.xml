@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>microservice on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/microservice/</link>
+    <description>Recent content in microservice on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Tue, 23 Oct 2018 17:20:48 +0000</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/microservice/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>etcd与service-registration-discovery</title>
+      <link>https://www.yeqown.xyz/2018/10/23/etcd-service-registration-discovery/</link>
+      <pubDate>Tue, 23 Oct 2018 17:20:48 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/10/23/etcd-service-registration-discovery/</guid>
+      <description>声明：本文对etcd的原理，实现细节，性能等均不考虑，仅将etcd作为一个分布式的K-V存储组件。本文提价代码均在： github.com/yeqown/server-common/tree/master/framework/etcd
+一个核心 etcd, 分布式Key-Value存储工具。详细资料由此去
+etcd下载安装 两个对象 服务提供者（在测试环境中，我定义为单独的服务实例），也就是服务的提供者，需要向其他服务暴露自己的ip和端口，方便调用。 服务调用者（同样地，在测试环境中我定义为反向代理网关程序），也就是服务的调用者，需要获取到 可使用 地服务地址并调用。 关于服务注册与发现 就具体场景而言：我们的生产环境中使用了一个代理网关服务器，用于转发移动端和PC端的API请求，并完成其他功能。所有的服务实例配置都是硬编码在网关程序中，顶多就是抽离出来成了一个配置文件。这样做的缺点很明显：“非动态”。也就意味着，一旦有服务Down掉，那么用户访问则可能异常，甚至导致整个服务的崩溃；其次，需要对服务进行扩容的情况下，则需要先进行服务部署再更新网关程序，步骤繁琐且容易出错。
+那么如果我们设计成为如下图的样子： 对于新添加的服务实例，只需要启动新的服务，并注册到etcd相应的路径下就行了。
+注册：对于同一组服务，配置一个统一的前缀（如图上的&amp;quot;/specServer&amp;quot;），不同实例使用ID加以区分。
+将现行服务改造成为上述模式需要解决的问题： etcd 配置安装 网关程序改造（监听etcd的节点夹子/prefix;适配动态的服务实例调用） 服务实例改造（注册服务实例到etcd;心跳更新;其他配套设施，异常退出删除注册信息） etcd安装配置在github.com已经非常详细了。在这里贴一下我在本地测试时候启动的脚本（这部分是从etcd-demo获取到的，做了针对端口的改动）：
+#!/bin/bash # For each machine TOKEN=token-01 CLUSTER_STATE=new NAME_1=machine1 NAME_2=machine2 NAME_3=machine3 HOST_1=127.0.0.1 HOST_2=127.0.0.1 HOST_3=127.0.0.1 CLUSTER=${NAME_1}=http://${HOST_1}:2380,${NAME_2}=http://${HOST_2}:2381,${NAME_3}=http://${HOST_3}:2382 # For machine 1 THIS_NAME=${NAME_1} THIS_IP=${HOST_1} etcd --data-dir=machine1.etcd --name ${THIS_NAME} \ --initial-advertise-peer-urls http://${THIS_IP}:2380 --listen-peer-urls http://${THIS_IP}:2380 \ --advertise-client-urls http://${THIS_IP}:2377 --listen-client-urls http://${THIS_IP}:2377 \ --initial-cluster ${CLUSTER} \ --initial-cluster-state ${CLUSTER_STATE} --initial-cluster-token ${TOKEN} &amp;amp; # For machine 2 THIS_NAME=${NAME_2} THIS_IP=${HOST_2} etcd --data-dir=machine2.</description>
+    </item>
+    
+  </channel>
+</rss>

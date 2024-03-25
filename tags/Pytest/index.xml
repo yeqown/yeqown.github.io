@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Pytest on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/Pytest/</link>
+    <description>Recent content in Pytest on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Sat, 13 Jan 2018 15:20:50 +0000</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/Pytest/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>pytest用法小结</title>
+      <link>https://www.yeqown.xyz/2018/01/13/pytest%E7%94%A8%E6%B3%95%E5%B0%8F%E7%BB%93/</link>
+      <pubDate>Sat, 13 Jan 2018 15:20:50 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/01/13/pytest%E7%94%A8%E6%B3%95%E5%B0%8F%E7%BB%93/</guid>
+      <description>pytest最常用法总结，当然不止这一点功能。关于更多更强大的插件，可以根据自己需要来定制。
+安装 pytest 安装和使用都非常简单, 只需pip install pytest
+编写测试代码 使用pytest，不需要像unittest模块一样，pytest使用的是python自带的assert，如：
+def test_global_function(): assert 1 == 1 使用pytest.mark pytest.mark 用于给测试方法打上标签，在稍后的执行中会讲到如何使用marker
+@pytest.mark.marker_self def test_global_function(): assert 1 == 1 使用pytest.fixture @pytest.fixture def google_url(): return &amp;#34;http://google.com&amp;#34; setup 和 teardown setup和teardown方法作用范围，分为全局作用，类作用，方法作用
+全局：作用于全局测试函数 类： 作用于自身类 类方法： 作用于类函数 简单举例: # 全局 def setup_function(function): print(&amp;#34;setup function global&amp;#34;) def teardown_function(function): print(&amp;#34;teardown function global&amp;#34;) # 类 class Test_fixture: @classmethod def setup_class(cls): print(&amp;#34;class setup method&amp;#34;) @classmethod def teardown_class(cls): print(&amp;#34;class teardown method&amp;#34;) # 类方法 def setup_method(self, method): print(&amp;#34;class method setup function&amp;#34;) def teardown_method(self, method): print(&amp;#34;class method teardown function&amp;#34;) pytest配置文件 配置文件名为pytest.</description>
+    </item>
+    
+  </channel>
+</rss>

@@ -1,0 +1,391 @@
+<!DOCTYPE HTML>
+
+<html lang='en'>
+
+<head>
+	<title>Golang适用的DTO工具 &middot; Yeqown
+	</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	
+	
+	
+	<link rel="stylesheet" href="/assets/css/main.min.css">
+	
+	
+	<link rel="shortcut icon" href="/favicon.ico">
+	
+	
+	<noscript>
+		<link rel="stylesheet" href='/assets/css/noscript.css' />
+	</noscript>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/rainbow.min.css">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>`
+	<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+		<meta name="referrer" content="no-referrer-when-downgrade"></head>
+
+<body lang='en' class="is-preload">
+
+    
+    <div id="wrapper">
+
+        
+<header id="header">
+    <a href='/' class="logo">Yeqown</a>
+    </header>
+
+        
+
+<nav id="nav">
+    <ul class="links">
+        <li class="active"><a href='/'>Yeqown</a></li>
+        <li><a href="/tags/">tags</a></li>
+        <li><a href="/categories/">categories</a></li>
+        
+        <li><a href='/#footer'>Contact</a></li>
+        
+        
+    </ul>
+    
+    <ul class="icons">
+        
+        <li><a href="https://twitter.com/yeqown" class="icon fa-twitter"><span class="label">Twitter</span></a></li>
+        
+        
+        
+        
+        
+        <li><a href="https://github.com/yeqown" class="icon fa-github"><span class="label">GitHub</span></a></li>
+        
+        
+        
+        
+        
+        
+        <li><a href="/index.xml" class="icon fa-rss"><span class="label">RSS</span></a></li>
+        
+
+    </ul>
+    
+</nav>
+
+        
+        <div id="main">
+
+            
+            <section class="post">
+                <header class="major">
+                    
+                    <span class="date">
+                        August 29, 2018 
+                        
+                        <span id="busuanzi_container_page_pv">本文阅读量<span id="busuanzi_value_page_pv"></span>次</span>
+                    </span>
+                    
+
+
+
+                    <h1>Golang适用的DTO工具</h1>
+                    <p>DTO (Data Transfer Object) 是Java中的概念，起到数据封装和隔离的作用。在使用Golang开发Web应用的过程中，也会有类似的需求。</p>
+                </header>
+                
+                <blockquote>
+<p>DTO (Data Transfer Object) 是Java中的概念，起到数据封装和隔离的作用。在使用Golang开发Web应用的过程中，也会有类似的需求。先贴项目地址 <a href="https://github.com/yeqown/server-common/tree/master/dbs/tools">github.com/yeqown/server-common/tree/master/dbs/tools</a></p>
+</blockquote>
+<!-- more -->
+<h3 id="举个例子">举个例子</h3>
+<p>现在有一个用户数据结构如下,</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-Golang" data-lang="Golang"><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">UserModel</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">ID</span>          <span style="color:#66d9ef">int64</span>   <span style="color:#e6db74">`gorm:&#34;column:id&#34;`</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Name</span>        <span style="color:#66d9ef">string</span>  <span style="color:#e6db74">`gorm:&#34;column:name&#34;`</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Password</span>    <span style="color:#66d9ef">string</span>  <span style="color:#e6db74">`gorm:&#34;column:password&#34;`</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>// 问题1: 现在要求是想要JSON格式返回用户数据，并且不希望其中包含有Password字段
+// 解决1:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-Golang" data-lang="Golang"><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">UserModel</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">ID</span>          <span style="color:#66d9ef">int64</span>   <span style="color:#e6db74">`gorm:&#34;column:id&#34; json:&#34;id&#34;`</span> 
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Name</span>        <span style="color:#66d9ef">string</span>  <span style="color:#e6db74">`gorm:&#34;column:name&#34; json:&#34;name&#34;`</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Password</span>    <span style="color:#66d9ef">string</span>  <span style="color:#e6db74">`gorm:&#34;column:password&#34; json:&#34;-&#34;`</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>// 问题2: 同样是JSON数据格式，并且希望额外返回用户的身份标示Ident（假设必须要跟用户数据放在一起）
+// 解决2: （这也是我的场景）</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-Golang" data-lang="Golang"><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">UserDTO</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">ID</span>          <span style="color:#66d9ef">int64</span>   <span style="color:#e6db74">`json:&#34;id&#34;`</span> 
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Name</span>        <span style="color:#66d9ef">string</span>  <span style="color:#e6db74">`json:&#34;name&#34;`</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Password</span>    <span style="color:#66d9ef">string</span>  <span style="color:#e6db74">`json:&#34;-&#34;`</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Ident</span>       <span style="color:#66d9ef">string</span>  <span style="color:#e6db74">`json:&#34;ident&#34;`</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">LoadUserDTOFromModel</span>(<span style="color:#a6e22e">data</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">UserMolde</span>) <span style="color:#f92672">*</span><span style="color:#a6e22e">UserDTO</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">ident</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">genUserIdent</span>(<span style="color:#a6e22e">data</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span>{
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">ID</span>          <span style="color:#a6e22e">data</span>.<span style="color:#a6e22e">ID</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">Name</span>        <span style="color:#a6e22e">data</span>.<span style="color:#a6e22e">Name</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">Ident</span>       <span style="color:#a6e22e">ident</span>,
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="背景和需求">背景和需求</h3>
+<p>一般来说我的项目结构如下：其中models和services也就是分开定义Data struct(UserModel)和Object(UserDTO)的文件夹。</p>
+<p><img src="/images/dbtools-web-filetree.png" alt="Web项目结构举例"></p>
+<p>其实DTO的过程对于我来说，就是基于Data Struct生成一个新的Struct结构，并附带一个<code>func LoadDTOTypeFromModel(data *ModelType) *DTOType</code>。在这个过程中，其实除了个别Object结构体需要额外处理以外，大部分都是新换一个tag~。因此这部分工作步骤都是类似的，那么为什么不用一个工具来避免这部分重复的工作呢～？</p>
+<h3 id="思路">思路</h3>
+<p>先说一下思路:</p>
+<p>· 1. 从<code>.go</code>中获取到指定结构体的结构性描述
+· 2. 根据结构性描述来生成新的结构体
+· 3. 根据额外的配置，生成一个新的文件<code>types.go</code></p>
+<p>其中结构性描述如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-Golang" data-lang="Golang"><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">innerStruct</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">fields</span>  []<span style="color:#f92672">*</span><span style="color:#a6e22e">field</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">content</span> <span style="color:#66d9ef">string</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">name</span>    <span style="color:#66d9ef">string</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">pkgName</span> <span style="color:#66d9ef">string</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">field</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">name</span> <span style="color:#66d9ef">string</span> <span style="color:#75715e">// field name string
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">typ</span>  <span style="color:#66d9ef">string</span> <span style="color:#75715e">// field type string
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">tag</span>  <span style="color:#66d9ef">string</span> <span style="color:#75715e">// tag name string
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div><p>在整个流程中比较麻烦的就是，怎么获取到，特定类型结构体的结构性描述？<a href="#Go%E6%96%87%E4%BB%B6%E8%A7%A3%E6%9E%90%E9%83%A8%E5%88%86">Go文件解析部分</a>。这里想记录一个小插曲：最开始我找解析go文件方法的时候，在Google中搜索“如何解析go文件”，出来的结果没有太大帮助，然后我又尝试了“How to parse .go file source code”，结果就提示了<code>parser</code> &amp; <code>loader</code> 两个看起来就很有帮助的包名。。。。这里我选用了<code>loader</code>。</p>
+<h4 id="关于loader包的说明">关于loader包的说明</h4>
+<blockquote>
+<p>Package loader loads a complete Go program from source code, parsing and type-checking the initial packages plus their transitive closure of dependencies.</p>
+</blockquote>
+<p>正好这个包是从源代码去加载Go程序，对初始包进行解析和类型检查等。</p>
+<h3 id="go文件解析部分">Go文件解析部分</h3>
+<p>经过阅读loader包文档，我完成了一个函数用于获取指定的结构体的结构性描述信息：<a href="https://github.com/yeqown/server-common/blob/master/dbs/tools/parser.go#L65">代码在此</a></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-Golang" data-lang="Golang"><span style="display:flex;"><span><span style="color:#75715e">// Exported, and specified type
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">loadGoFiles</span>(<span style="color:#a6e22e">dir</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">filenames</span> <span style="color:#f92672">...</span><span style="color:#66d9ef">string</span>) ([]<span style="color:#f92672">*</span><span style="color:#a6e22e">innerStruct</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">newFilenames</span> <span style="color:#f92672">:=</span> []<span style="color:#66d9ef">string</span>{}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">filename</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">filenames</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">newFilenames</span> = append(<span style="color:#a6e22e">newFilenames</span>, <span style="color:#a6e22e">path</span>.<span style="color:#a6e22e">Join</span>(<span style="color:#a6e22e">dir</span>, <span style="color:#a6e22e">filename</span>))
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">conf</span>.<span style="color:#a6e22e">CreateFromFilenames</span>(<span style="color:#e6db74">&#34;&#34;</span>, <span style="color:#a6e22e">newFilenames</span><span style="color:#f92672">...</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">prog</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">conf</span>.<span style="color:#a6e22e">Load</span>()
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;load program err:&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">loopProgramCreated</span>(<span style="color:#a6e22e">prog</span>.<span style="color:#a6e22e">Created</span>), <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// loopProgramCreated to loo and filter:
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// 1. unexported type
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// 2. bultin types
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// 3. only specified style struct name
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">loopProgramCreated</span>(
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">created</span> []<span style="color:#f92672">*</span><span style="color:#a6e22e">loader</span>.<span style="color:#a6e22e">PackageInfo</span>,
+</span></span><span style="display:flex;"><span>) (<span style="color:#a6e22e">innerStructs</span> []<span style="color:#f92672">*</span><span style="color:#a6e22e">innerStruct</span>) {
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">pkgInfo</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">created</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">pkgName</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">pkgInfo</span>.<span style="color:#a6e22e">Pkg</span>.<span style="color:#a6e22e">Name</span>()
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">defs</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">pkgInfo</span>.<span style="color:#a6e22e">Defs</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> <span style="color:#a6e22e">indent</span>, <span style="color:#a6e22e">obj</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">defs</span> {
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">indent</span>.<span style="color:#a6e22e">IsExported</span>() <span style="color:#f92672">||</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#a6e22e">obj</span> <span style="color:#f92672">==</span> <span style="color:#66d9ef">nil</span> <span style="color:#f92672">||</span>
+</span></span><span style="display:flex;"><span>                !<span style="color:#a6e22e">strings</span>.<span style="color:#a6e22e">HasSuffix</span>(<span style="color:#a6e22e">indent</span>.<span style="color:#a6e22e">Name</span>, <span style="color:#a6e22e">specifiedStructTypeSuffix</span>) {
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">continue</span>
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">// obj.String() 得到的string如：
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#75715e">// type testdata.UserModel struct{Name string &#34;gorm:\&#34;colunm:name\&#34;&#34;; Password string &#34;gorm:\&#34;column:password\&#34;&#34;}
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#a6e22e">is</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">parseStructString</span>(<span style="color:#a6e22e">obj</span>.<span style="color:#a6e22e">String</span>())
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">is</span>.<span style="color:#a6e22e">pkgName</span> = <span style="color:#a6e22e">pkgName</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">is</span>.<span style="color:#a6e22e">pureName</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">isDebug</span> {
+</span></span><span style="display:flex;"><span>                <span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;parse one Model: &#34;</span>, <span style="color:#a6e22e">is</span>.<span style="color:#a6e22e">name</span>, <span style="color:#a6e22e">is</span>.<span style="color:#a6e22e">pkgName</span>, <span style="color:#a6e22e">is</span>.<span style="color:#a6e22e">content</span>)
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">innerStructs</span> = append(<span style="color:#a6e22e">innerStructs</span>, <span style="color:#a6e22e">is</span>)
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>其中<code>parseStructString</code>是对形如***type testdata.UserModel struct{Name string &ldquo;gorm:&quot;colunm:name&quot;&rdquo;; Password string &ldquo;gorm:&quot;column:password&quot;&rdquo;}***的字符串进行处理并整理成为<code>innerStruct</code>数据。</p>
+<h3 id="使用说明">使用说明</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>go get github.com/yeqown/server-common/dbs/tools
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 获取 github.com/yeqown/server-common/tool.main.go, </span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 并选择性的实现自己的 CustomParseTagFunc &amp; CustomGenerateTagFunc</span>
+</span></span><span style="display:flex;"><span>go build -o dbtools tool.main.go
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>➜ ✗ dbtools -h
+</span></span><span style="display:flex;"><span>Usage of ./dbtools:
+</span></span><span style="display:flex;"><span>  -debug
+</span></span><span style="display:flex;"><span>        调试模式开关，调试模式下会输出额外的信息
+</span></span><span style="display:flex;"><span>  -dir string
+</span></span><span style="display:flex;"><span>        指定需要解析的目录
+</span></span><span style="display:flex;"><span>  -filename string
+</span></span><span style="display:flex;"><span>        指定哪些文件需要被解析，如果未设置默认dir路径下所有的.go文件
+</span></span><span style="display:flex;"><span>  -generateDir string
+</span></span><span style="display:flex;"><span>        生成文件存放的目录，默认当前路径
+</span></span><span style="display:flex;"><span>  -generateFilename string
+</span></span><span style="display:flex;"><span>        生成文件名，默认<span style="color:#e6db74">&#34;types.go&#34;</span>
+</span></span><span style="display:flex;"><span>  -generatePkgName string
+</span></span><span style="display:flex;"><span>        生成文件的包名，默认<span style="color:#e6db74">&#34;types&#34;</span>
+</span></span><span style="display:flex;"><span>  -generateStructSuffix string
+</span></span><span style="display:flex;"><span>        替换model struct的后缀，默认无后缀，如UserSuffix <span style="color:#f92672">=</span>&gt; User
+</span></span><span style="display:flex;"><span>  -modelImportPath string
+</span></span><span style="display:flex;"><span>        指明model struct的导入路径, 如my-server/models
+</span></span><span style="display:flex;"><span>  -modelStructSuffix string
+</span></span><span style="display:flex;"><span>        指明特定后缀的model struct需要被解析，默认<span style="color:#e6db74">&#34;Model&#34;</span>
+</span></span></code></pre></div><h3 id="工具测试结果">工具测试结果</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>./bin/dbtools <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>-dir<span style="color:#f92672">=</span>./dbs/tools/testdata <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>-filename<span style="color:#f92672">=</span>type_model.go <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>-generatePkgName<span style="color:#f92672">=</span>main <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>-modelImportPath<span style="color:#f92672">=</span>github.com/yeqown/server-common/dbs/tools/testdata <span style="color:#ae81ff">\
+</span></span></span></code></pre></div><p><img src="/images/dbtools-before-code.png" alt="type_model.go">
+<img src="/images/dbtools-after-types.png" alt="types.go"></p>
+<h3 id="参考链接">参考链接</h3>
+<ul>
+<li><a href="https://godoc.org/golang.org/x/tools/go/loader">loader</a></li>
+<li><a href="https://golang.org/pkg/go/parser/">parser</a></li>
+</ul>
+
+
+                
+            </section>
+
+            
+            <section class="comment">
+                <div id="gitalk-container"></div>
+                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+                <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+                <script>
+                    const gitalk = new Gitalk({
+                        clientID: '7d8c8c91ae6aff3e46e7',
+                        clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+                        repo: 'yeqown.github.io',
+                        owner: 'yeqown',
+                        admin: ['yeqown'],
+                        id: "golang-dto-tool", 
+                        distractionFreeMode: false 
+                    });
+                    (function () {
+                        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+                            document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+                            return;
+                        }
+                        gitalk.render('gitalk-container');
+                    })();
+                </script>
+            </section>
+        </div>
+
+        
+
+<footer id="footer">
+  <section>
+    <form method="post" action="Page%28/posts/Golang%e9%80%82%e7%94%a8%e7%9a%84DTO%e5%b7%a5%e5%85%b7.md%29">
+      <div class="fields">
+        <div class="field">
+          <label for="name">Name</label>
+          <input type="text" name="name" id="name" />
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="text" name="email" id="email" />
+        </div>
+        <div class="field">
+          <label for="message">Message</label>
+          <textarea name="message" id="message" rows="3"></textarea>
+        </div>
+      </div>
+      <ul class="actions">
+        <li><input type="submit" value='Send A Message' /></li>
+      </ul>
+    </form>
+  </section>
+
+  <section class="split contact">
+    
+    <section class="alt">
+      <h3>Address</h3>
+      <p>
+        
+         Chengdu · China
+        
+         <br />  This is a city that comes and doesn&#39;t want to go
+        
+      </p>
+    </section>
+    
+    
+    <section>
+      <h3>Phone</h3>
+      <p><a href="tel:no%20way">no way</a></p>
+    </section>
+    
+    
+    <section>
+      <h3>Email</h3>
+      <p><a href="mailto:yeqown@gmail.com">yeqown@gmail.com</a></p>
+    </section>
+    
+    
+    <section>
+      <h3>Social</h3>
+      <ul class="icons alt">
+        
+        <li><a href="https://twitter.com/yeqown" class="icon alt fa-twitter"><span class="label">Twitter</span></a></li>
+        
+        
+        
+        
+        
+        <li><a href="https://github.com/yeqown" class="icon alt fa-github"><span class="label">GitHub</span></a></li>
+        
+        
+        
+        
+        
+      </ul>
+    </section>
+    
+  </section>
+</footer>
+        
+<div id="copyright">
+    <ul>
+        <li>&copy; Yeqown</li>
+        <li>Design: <a href="https://html5up.net">HTML5 UP</a></li>
+        <li>Hugo Port: <a href="https://curtistimson.co.uk">curttimson</a></li>
+    </ul>
+
+    
+    <ul>
+        <li>
+            <span id="busuanzi_container_site_pv">
+                总访问量<span id="busuanzi_value_site_pv"></span>次
+            </span>
+        </li>
+        <li>
+            <span id="busuanzi_container_site_uv">
+                访客数<span id="busuanzi_value_site_uv"></span>人次
+            </span>
+        </li>
+    </ul></div>
+
+    </div>
+    
+    
+
+
+
+
+
+
+
+
+
+
+<script src='/assets/js/bundle.js'></script>
+</body>
+
+</html>

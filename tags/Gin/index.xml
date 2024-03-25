@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Gin on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/Gin/</link>
+    <description>Recent content in Gin on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Tue, 21 Jan 2020 10:05:57 +0800</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/Gin/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Gin源码简要分析</title>
+      <link>https://www.yeqown.xyz/2020/01/21/gin%E6%BA%90%E7%A0%81%E7%AE%80%E8%A6%81%E5%88%86%E6%9E%90/</link>
+      <pubDate>Tue, 21 Jan 2020 10:05:57 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2020/01/21/gin%E6%BA%90%E7%A0%81%E7%AE%80%E8%A6%81%E5%88%86%E6%9E%90/</guid>
+      <description>概述 通过日常对gin场景出发，深入源码，总结介绍gin的核心设计。包含：Engine / HandlerFunc / RouterGroup(Router) / Context。在日常使用中常见的就以上概念，汇总如下：
+概念 解释 应用意义 Engine 引擎 web server的基础支持，也是服务的入口 和 根级数据结构 RouterGroup(Router) 路由 用于支持gin,REST路由绑定和路由匹配的基础，源于radix-tree数据结构支持 HandlerFunc 处理函数 逻辑处理器和中间件实现的函数签名 Context 上下文 封装了请求和响应的操作，为HandlerFunc的定义和中间件模式提供支持 从DEMO开始 type barForm struct { Foo string `form:&amp;#34;foo&amp;#34; binding:&amp;#34;required&amp;#34;` Bar int `form:&amp;#34;bar&amp;#34; binding:&amp;#34;required&amp;#34;` } func (fooHdl FooHdl) Bar(c *gin.Context) { var bform = new(barForm) if err := c.ShouldBind(bform); err != nil { // true: parse form error return } // handle biz logic and generate response structure // c (gin.</description>
+    </item>
+    
+  </channel>
+</rss>
