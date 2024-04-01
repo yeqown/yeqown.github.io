@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Sentry on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/Sentry/</link>
+    <description>Recent content in Sentry on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Wed, 15 Dec 2021 16:16:05 +0800</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/Sentry/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Sentry&#43;OpenTelemetry前后端全链路打通总结</title>
+      <link>https://www.yeqown.xyz/2021/12/15/Sentry-OpenTelemetry%E5%89%8D%E5%90%8E%E7%AB%AF%E5%85%A8%E9%93%BE%E8%B7%AF%E6%89%93%E9%80%9A%E6%80%BB%E7%BB%93/</link>
+      <pubDate>Wed, 15 Dec 2021 16:16:05 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2021/12/15/Sentry-OpenTelemetry%E5%89%8D%E5%90%8E%E7%AB%AF%E5%85%A8%E9%93%BE%E8%B7%AF%E6%89%93%E9%80%9A%E6%80%BB%E7%BB%93/</guid>
+      <description>自从微服务大行其道，容器化和k8s编排一统天下之后，&amp;ldquo;可观测性&amp;rdquo; 便被提出来。这个概念是指，对于应用或者容器的运行状况的掌控程度，其中分为了三个模块：Metrics、Tracing、Logging。Metrics 指应用采集的指标；Tracing 指应用的追踪；Logging 指应用的日志。
+日志自不用多说，这是最原始的调试和数据采集能力。Metrics 比较火的方案就是 Prometheus + Grafana，思路就是通过应用内埋入SDK，选择 Pull 或者 Push 的方式将数据收集到 prometheus 中，然后通过 Grafana 实现可视化，当然这不是本文的重点就此略过。
+Tracing 也并不是可观测性提出后才诞生的概念，在微服务化的进程中就已经有Google的Dapper落地实践，并慢慢形成 OpenTracing 规范，这一规范又被多家第三方框架所支持，如 Jaeger、Zipkin 等。OpenTelemetry 就是结合了 OpenTracing + OpenCensus 规范，约定并提供完成的可观测性套件，只是目前（2021-12-15）稳定下来的只有 Tracing 这一部分而已。对 OpenTelemetry 发展历史感兴趣的可以自行了解。
+效果预览 链路总览，包含了前端页面的生命周期 + 整个了链路采集到的Span聚合。
+前端页面指标采集概览，包含了该页面生命周期内的动作和日志等。
+服务端链路细节，包含了服务端链路采集的标签和日志（事件）等信息。
+propagation兼容jaeger效果，保证jaeger侧链路完整，使用一致的 traceId检索。因为服务侧 sentry 是渐进更新的，因此没有接入的应用并不会展示在sentry侧， 等到完全更新后就会完整。
+背景 目前运行中的链路追踪组件是采用 opentracing + jaeger 实现，这套方案唯二的不足就是：
+opentracing 已经被 opentelemetry 兼容，且 opentelemetry 在可观测性上更全面，更灵活。 浏览器侧支持不完善（可以参见 https://github.com/jaegertracing/jaeger-client-javascript ）【恰恰我司有这方面的需求 🤪】。 前端采用 sentry 来采集前端页面数据（APP + WEB 都支持很好），因此才有了这么一个 前后端链路打通的需求。
+经过调研，我发现 sentry 也并不完美，详情参见 附录/sentry作为链路采集组件的优缺点</description>
+    </item>
+    
+  </channel>
+</rss>

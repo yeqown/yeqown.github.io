@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>CD on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/CD/</link>
+    <description>Recent content in CD on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Thu, 03 May 2018 16:54:10 +0000</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/CD/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>docker&#43;jenkins&#43;golang持续集成实践</title>
+      <link>https://www.yeqown.xyz/2018/05/03/docker-jenkins-golang%E6%8C%81%E7%BB%AD%E9%9B%86%E6%88%90%E5%AE%9E%E8%B7%B5/</link>
+      <pubDate>Thu, 03 May 2018 16:54:10 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/05/03/docker-jenkins-golang%E6%8C%81%E7%BB%AD%E9%9B%86%E6%88%90%E5%AE%9E%E8%B7%B5/</guid>
+      <description>起因 因为生产需要最近又重新折腾了一下Jenkins和docker。主要目的是想自动编译，打包，部署一些Golang的HttpServer。于是决定使用Jenkins来做这个持续集成的载体，选择Jenkins出于两点原因：
+1. 以前就使用过，上手会更快 2. 社区比较成熟，插件和文档丰富
+安装Docker和Pull Jenkins镜像 这一步，作为前置条件且不是本文主要要描述的步骤，因此略去。网上也有很多参考资料～
+Jenkins &amp;amp; docker-compose配置 为了方便我才用了docker-compose这个工具，docker-compose 基础可以参见我的docker-compose上手。这里直接上配置：
+version: &amp;#39;2&amp;#39; services: jenkins: container_name: jenkins-lts ports: - 9001:8080 - 50000:50000 image: jenkins/jenkins:lts volumes: - /home/worker/jenkins/jenkins_home:/var/jenkins_home 配置也是官方的示例配置。
+Note: 将宿主机的/home/worker/jenkins/jenkins_home挂载为容器的/var/jenkins_home目录。这样做的目的是，如果容器被不小心删除也不至于Jenkins的数据丢失。
+到这里，我们只需要执行docker-compose up -d便可以将Jenkins容器跑起来了，再配置一下Nginx，便可以直接访问到Jenkins页面了，并进行初始化。
+我的目录结构如下：
+➜ jenkins ll total 8.0K -rw-rw-r-- 1 worker worker 220 May 2 17:19 docker-compose.yml drwxrwxr-x 19 worker worker 4.0K May 3 15:53 jenkins_home ➜ jenkins pwd /home/worker/jenkins ➜ jenkins docker-compose up -d # 运行 Publish Over SSH配置 Publish Over SSH配置，由于我们是通过docker运行的Jenkins，因此要特别配置一下SSH，方便Jenkins部署项目。这里先列出步骤：</description>
+    </item>
+    
+    <item>
+      <title>Drone体验</title>
+      <link>https://www.yeqown.xyz/2018/01/27/Drone%E4%BD%93%E9%AA%8C/</link>
+      <pubDate>Sat, 27 Jan 2018 00:24:40 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/01/27/Drone%E4%BD%93%E9%AA%8C/</guid>
+      <description>相较于Jenkins，Gitlab-CI&amp;hellip;等，尝试Drone的首要原因是，天生的docker支持。不用去操心部署CI或者CD的环境配置等等烦心事。只需要上手，如何配置这个CD工具，让我使用更加畅快和顺手。
+安装部署 前提：已经安装了docker，docker-compose，并基本掌握docker用法，基本熟悉docker-compose配置文件
+pull镜像 docker pull drone/drone:0.8 # droner-server 镜像 docker pull dorner/agent:0.8 # drone-agent 镜像 也可以跳过这一步，docker运行的时候，如果匹配不到本地镜像，会自动拉取。
+docker-compose.yml配置文件 为了方便，新建一个Drone文件夹，目录结构如下：
+--Drone # 文件夹 |---docker-compose.yml # docker-compose 配置文件 |---data # 用于挂载的数据文件 |---drone.domain.com # nginx sever 配置文件 `---other.file # 其他文件 已知文件结构后，编写的docker-compose.yml文件如下：
+version: &amp;#39;2&amp;#39; services: drone-server: image: drone/drone:0.8 container_name: drone-server ports: - 8000:8000 - 9000:9000 volumes: - ./data:/var/lib/drone/ # 在没有跟数据库绑定的情况下，默认使用sqlite数据库 restart: always environment: - DRONE_OPEN=false - DRONE_HOST=http://127.0.0.1:8000 # 最好是在服务器上，localhost无法收到webhook的通知 - DRONE_ADMIN=yourname - DRONE_GITHUB=true - DRONE_GITHUB_CLIENT=7bc7971bxxxxx # 需要预先注册一个github oauth应用 - DRONE_GITHUB_SECRET=9456c630xxxxxxxxxxxxxx - DRONE_SECRET=secret - DRONE_DEBUG=false drone-agent: image: drone/agent:0.</description>
+    </item>
+    
+    <item>
+      <title>持续集成-Jenkins</title>
+      <link>https://www.yeqown.xyz/2018/01/13/%E6%8C%81%E7%BB%AD%E9%9B%86%E6%88%90/</link>
+      <pubDate>Sat, 13 Jan 2018 15:23:30 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/01/13/%E6%8C%81%E7%BB%AD%E9%9B%86%E6%88%90/</guid>
+      <description>持续集成是一种软件开发实践，即团队开发成员经常集成它们的工作，通过每个成员每天至少集成一次，也就意味着每天可能会发生多次集成。每次集成都通过自动化的构建（包括编译，发布，自动化测试）来验证，从而尽早地发现集成错误。
+关于持续集成 要素
+. 统一的代码库 . 自动构建 . 自动测试 . 每个人每天都要向代码库主干提交代码 . 每次代码递交后都会在持续集成服务器上触发一次构建 . 保证快速构建 . 模拟生产环境的自动测试 . 每个人都可以很容易的获取最新可执行的应用程序 . 每个人都清楚正在发生的状况 . 自动化的部署
+Jenkins的搭建与使用： 前提：安装好Java环境
+. 下载参见下载地址, 我采用的是java -jar jenkins.war的方式部署 . 可能有用的教程 http://geek.csdn.net/news/detail/95824
+更改jenkins服务端口 使用java -jar jenkins.war这样的命令来启动jenkins时会使用默认的端口8080，有些情况下8080端口已经被我们使用了，这个时候如果希望修改这个端口应该怎么办呢？
+在命令行后面添加 --httpPort=8899，其实就是配置jetty的启动端口。如下：
+set JENKINS_HOME=./ java -Djsse.enableSNIExtension=false -jar path/to/jenkins.war --httpPort=8899 zsh设置Jenkins环境变量 export JENKINS_HOME = &amp;#34;your/jenkins/path&amp;#34; 补充 于2018-1-26日更新
+鉴于尝试了drone和docker, 强烈建议采用docker部署jenkins，或者替换Jenkins为Drone
+最后 写得很简略，没有提供配置时候遇到的坑以及解决方法，遇到之后再补上。。。以上hahah</description>
+    </item>
+    
+  </channel>
+</rss>

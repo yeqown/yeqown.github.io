@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Tools on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/Tools/</link>
+    <description>Recent content in Tools on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Sun, 27 Sep 2020 11:32:15 +0800</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/Tools/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>WebSocket Implemention With Go</title>
+      <link>https://www.yeqown.xyz/2020/09/27/WebSocket-Implemention-With-Go/</link>
+      <pubDate>Sun, 27 Sep 2020 11:32:15 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2020/09/27/WebSocket-Implemention-With-Go/</guid>
+      <description>什么是WS协议 The WebSocket Protocol enables two-way communication between a client running untrusted code in a controlled environment to a remote host that has opted-in to communications from that code. The security model used for this is the origin-based security model commonly used by web browsers. The protocol consists of an opening handshake followed by basic message framing, layered over TCP.
+The goal of this technology is to provide a mechanism for browser-based applications that need two-way communication with servers that does not rely on opening multiple HTTP connections (e.</description>
+    </item>
+    
+    <item>
+      <title>介绍一下snowflake和rc4</title>
+      <link>https://www.yeqown.xyz/2019/04/05/%E4%BB%8B%E7%BB%8D%E4%B8%80%E4%B8%8Bsnowflake%E5%92%8Crc4/</link>
+      <pubDate>Fri, 05 Apr 2019 14:51:46 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2019/04/05/%E4%BB%8B%E7%BB%8D%E4%B8%80%E4%B8%8Bsnowflake%E5%92%8Crc4/</guid>
+      <description>snowflake是twitter公司开源的生成唯一ID的网络服务，具有很强的伸缩性，这里只取用生成唯一ID的算法部分。 rc4（Rivest Cipher 4）是一种流加密算法，密钥长度可变，它的加解密使用相同的密钥，因此也属于对称加密算法。
+为啥要介绍这两种算法？ 其一，snowflake可以生成唯一ID，而相比与UUID，snowflake生成的ID更加“好用”，这个放在后面解释。 其二，UUID和snowflake虽然可以生成唯一ID，但是无法适用于所有场景，譬如说“生成推广码”。生成推广码的时候，希望尽可能短而精，很明显唯一ID都不太短。
+snowflake snowflake的唯一ID是一个64bit的int型数据，相较于UUID来说耗费空间更小，可以更方便的作为数据库主键来索引和排序。
+生成过程： 置0不用 timestamp（41bits）精确到ms。 machine-id（10bits）该部分其实由datacenterId和workerId两部分组成，这两部分是在配置文件中指明的。datacenterId（5bits）方便搭建多个生成uid的service，并保证uid不重复。workerId（5bits）是实际server机器的代号，最大到32，同一个datacenter下的workerId是不能重复的。 sequence-id(12bits)，该id可以表示4096个数字，它是在time相同的情况下，递增该值直到为0，即一个循环结束，此时便只能等到下一个ms到来，一般情况下4096/ms的请求是不太可能出现的，所以足够使用了。 优势和缺陷： 速度快，无依赖，原理和实现简单，也可以根据自己的需求做算法调整 依赖机器时间，如果时间回拨可能导致重复的ID rc4 RC4加密算法也是一种基于密钥流的加密算法。
+首先，rc4根据明文和密钥生成的密钥流，其长度和明文的长度是相等的，也就是说明文的长度是500字节，那么密钥流也是500字节，这也是我们用来生成推广码的原因之一了；其次，rc4是是对称加密完全可以通过密文得到明文，也就是说在生成码的时候把必要信息放在明文中，在使用密文的时候可以不用查库也能得到相关的信息，譬如用户ID，这是原因之二。
+使用场景 现在需要生成一种码，短小易记，且唯一，但并不需要大量。
+上述的snowflake和UUID都很容易实现唯一，但是短小就不符合要求了。因为并不需要大量生成这种码，因此我们考虑用自增ID + RC4来实现：
+package main import ( &amp;#34;crypto/rc4&amp;#34; &amp;#34;encoding/hex&amp;#34; &amp;#34;fmt&amp;#34; &amp;#34;log&amp;#34; ) func main() { cipher, err := rc4.NewCipher([]byte(&amp;#34;thisiskey&amp;#34;)) if err != nil { log.Fatalf(&amp;#34;wrong with NewCipher: %v&amp;#34;, err) } c := map[string]bool{} for i := 0; i &amp;lt; 1000; i++ { src := []byte(fmt.Sprintf(&amp;#34;%7d&amp;#34;, i)) dst := make([]byte, len(src)) cipher.</description>
+    </item>
+    
+    <item>
+      <title>go-watcher-热重载轮子</title>
+      <link>https://www.yeqown.xyz/2019/04/01/go-watcher-%E7%83%AD%E9%87%8D%E8%BD%BD%E8%BD%AE%E5%AD%90/</link>
+      <pubDate>Mon, 01 Apr 2019 22:19:41 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2019/04/01/go-watcher-%E7%83%AD%E9%87%8D%E8%BD%BD%E8%BD%AE%E5%AD%90/</guid>
+      <description>Golang编写的热重载工具，自定义命令，支持监视文件及路径配置，环境变量配置。这是一个重复的轮子～
+安装使用 go install github.com/yeqown/go-watcher/cmd/go-watcher 命令行 ➜ go-watcher git:(master) ✗ ./go-watcher -h NAME: go-watcher - A new cli application USAGE: go-watcher [global options] command [command options] [arguments...] VERSION: 2.0.0 AUTHOR: yeqown@gmail.com COMMANDS: init generate a config file to specified postion run execute a command, and watch the files, if any change to these files, the command will reload help, h Shows a list of commands or help for one command GLOBAL OPTIONS: --help, -h show help --version, -v print the version 配置文件 watcher: # 监视器配置 duration: 2000 # 文件修改时间间隔，只有高于这个间隔才回触发重载 included_filetypes: # 监视的文件扩展类型 - .</description>
+    </item>
+    
+    <item>
+      <title>Golang适用的DTO工具</title>
+      <link>https://www.yeqown.xyz/2018/08/29/Golang%E9%80%82%E7%94%A8%E7%9A%84DTO%E5%B7%A5%E5%85%B7/</link>
+      <pubDate>Wed, 29 Aug 2018 09:27:36 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/08/29/Golang%E9%80%82%E7%94%A8%E7%9A%84DTO%E5%B7%A5%E5%85%B7/</guid>
+      <description>DTO (Data Transfer Object) 是Java中的概念，起到数据封装和隔离的作用。在使用Golang开发Web应用的过程中，也会有类似的需求。先贴项目地址 github.com/yeqown/server-common/tree/master/dbs/tools
+举个例子 现在有一个用户数据结构如下,
+type UserModel struct { ID int64 `gorm:&amp;#34;column:id&amp;#34;` Name string `gorm:&amp;#34;column:name&amp;#34;` Password string `gorm:&amp;#34;column:password&amp;#34;` } // 问题1: 现在要求是想要JSON格式返回用户数据，并且不希望其中包含有Password字段 // 解决1:
+type UserModel struct { ID int64 `gorm:&amp;#34;column:id&amp;#34; json:&amp;#34;id&amp;#34;` Name string `gorm:&amp;#34;column:name&amp;#34; json:&amp;#34;name&amp;#34;` Password string `gorm:&amp;#34;column:password&amp;#34; json:&amp;#34;-&amp;#34;` } // 问题2: 同样是JSON数据格式，并且希望额外返回用户的身份标示Ident（假设必须要跟用户数据放在一起） // 解决2: （这也是我的场景）
+type UserDTO struct { ID int64 `json:&amp;#34;id&amp;#34;` Name string `json:&amp;#34;name&amp;#34;` Password string `json:&amp;#34;-&amp;#34;` Ident string `json:&amp;#34;ident&amp;#34;` } func LoadUserDTOFromModel(data *UserMolde) *UserDTO { ident := genUserIdent(data) return &amp;amp;{ ID data.</description>
+    </item>
+    
+    <item>
+      <title>golang热重载工具</title>
+      <link>https://www.yeqown.xyz/2018/04/17/golang%E7%83%AD%E9%87%8D%E8%BD%BD%E5%B7%A5%E5%85%B7/</link>
+      <pubDate>Tue, 17 Apr 2018 14:05:09 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/04/17/golang%E7%83%AD%E9%87%8D%E8%BD%BD%E5%B7%A5%E5%85%B7/</guid>
+      <description>运行截图 项目地址 https://github.com/yeqown/gw
+本项目由https://github.com/silenceper/gowatch改造而来。不同之处在于:
+本gw任意指定重新执行的命令。 而原来的gw默认是重新编译打包go程序。</description>
+    </item>
+    
+    <item>
+      <title>ShortURL系统实现</title>
+      <link>https://www.yeqown.xyz/2018/01/29/ShortURL%E7%94%9F%E6%88%90%E7%B3%BB%E7%BB%9F/</link>
+      <pubDate>Mon, 29 Jan 2018 10:22:00 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/01/29/ShortURL%E7%94%9F%E6%88%90%E7%B3%BB%E7%BB%9F/</guid>
+      <description>在知乎上看了一个很有启发的回答，因此实际动手来实现短URL生成系统。贴上链接： 知乎 - 短URL系统是如何设计的。其中提到了，要实现短URL生成系统要解决的问题有：
+如何优雅的实现？ 怎么基本实现长对短、一对一？ 如何实现分布式，高并发，高可用？ 储存选用？ 基本原理 数据库自增ID转换62进制
+使用自增ID不会产生重复的短链接。 为了解决自增ID超长和不便记忆，对ID进行62进制编码。所谓62进制就是0-9，a-z，A-Z。 简单计算下：
+62 ^ 4 = 14,776,336 62 ^ 5 = 916,132,832 62 ^ 6 = 56,800,235,584 // 已经足够使用了 总体结构及处理流程 长链接处理流程 获取参数，调用shortURL服务 尝试从缓存中获取，如果命中，则读取短链接(重置过期时间)。跳转第4步 将长链接存储到Mysql数据库，根据ID进行base62编码，组装Domain+Encoded字符串并更新数据库 返回生成的短链接 短链接处理流程 解析短链接为ID 查询ID对应的长链接 以301方式跳转到长链接 长链接与短链接的对应关系 一对多，一个长链接可能对应多个短链接。数据表存储结构如下：
++-----------+--------------+------+-----+---------+----------------+ | Field | Type | Null | Key | Default | Extra | +-----------+--------------+------+-----+---------+----------------+ | id | int(64) | NO | PRI | NULL | auto_increment | | long_url | varchar(100) | NO | | NULL | | | short_url | varchar(40) | YES | | NULL | | +-----------+--------------+------+-----+---------+----------------+ 分布式和高并发设计 ###注：这部分未实现。我的思路如下：</description>
+    </item>
+    
+  </channel>
+</rss>

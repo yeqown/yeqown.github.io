@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>QR Code on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/QR-Code/</link>
+    <description>Recent content in QR Code on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Mon, 26 Nov 2018 14:07:07 +0000</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/QR-Code/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>QRCode Generator based Golang</title>
+      <link>https://www.yeqown.xyz/2018/11/26/QR-Code%E7%94%9F%E6%88%90%E5%99%A8forgolang/</link>
+      <pubDate>Mon, 26 Nov 2018 14:07:07 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/11/26/QR-Code%E7%94%9F%E6%88%90%E5%99%A8forgolang/</guid>
+      <description>项目地址：yeqown/go-qrcode 同类项目：skip2/go-qrcode 纠错算法和bitset使用了该库，后续可能会考虑自己实现一遍
+go-qrcode 示例 link to CODE
+package main import ( &amp;#34;fmt&amp;#34; qrcode &amp;#34;github.com/yeqown/go-qrcode&amp;#34; ) func main() { qrc, err := qrcode.New(&amp;#34;https://github.com/yeqown/go-qrcode&amp;#34;) if err != nil { fmt.Printf(&amp;#34;could not generate QRCode: %v&amp;#34;, err) } // save file if err := qrc.Save(&amp;#34;../testdata/repo-qrcode.jpeg&amp;#34;); err != nil { fmt.Printf(&amp;#34;could not save image: %v&amp;#34;, err) } } 生成结果如图： QR Code 基本原理 1 数据分析（data analysis）： 分析输入数据，根据数据决定要使用的QR码版本、容错级别和编码模式。低版本的QR码无法编码过长的数据，含有非数字字母字符的数据要使用扩展字符编码模式。
+2 编码数据（data encoding）： 根据选择的编码模式，将输入的字符串转换成比特流，插入模式标识码（mode indicator）和终止标识符（terminator），把比特流切分成八比特的字节，加入填充字节来满足标准的数据字码数要求。
+3 计算纠错码（error correction coding）： 对步骤二产生的比特流计算纠错码，附在比特流之后。高版本的编码方式可能需要将数据流切分成块（block）再分别进行纠错码计算。</description>
+    </item>
+    
+  </channel>
+</rss>

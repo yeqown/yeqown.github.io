@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>linux on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/linux/</link>
+    <description>Recent content in linux on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Tue, 10 Oct 2023 20:02:28 +0800</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/linux/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>fsnotify原理探究</title>
+      <link>https://www.yeqown.xyz/2023/10/10/fsnotify%E5%8E%9F%E7%90%86%E6%8E%A2%E7%A9%B6/</link>
+      <pubDate>Tue, 10 Oct 2023 20:02:28 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2023/10/10/fsnotify%E5%8E%9F%E7%90%86%E6%8E%A2%E7%A9%B6/</guid>
+      <description>本文如果没有特殊说明，所有的内容都是指 linux 系统
+起因是从 kratos 群里看到有人问：“测了下kratos的config watch，好像对软链不生效”，他提供的屏幕截图如下类似：
+$ pwd /tmp/testconfig $ ls -l drwxr-xr-x 3 root root 4096 Oct 10 19:48 . drwxr-xr-x 10 root root 4096 Oct 10 19:48 .. drwxr-xr-x 1 root root 11 Oct 10 19:48 ..ver1 drwxr-xr-x 1 root root 11 Oct 10 19:48 ..ver2 lrwxr-xr-x 1 root root 11 Oct 10 19:48 ..data -&amp;gt; ..ver1 drwxr-xr-x 1 root root 11 Oct 10 19:48 data $ $ ll -a data drwxr-xr-x 3 root root 4096 Oct 10 19:48 .</description>
+    </item>
+    
+    <item>
+      <title>Tcp 长连接服务优雅重启的秘密</title>
+      <link>https://www.yeqown.xyz/2023/08/17/tcp-%E9%95%BF%E8%BF%9E%E6%8E%A5%E6%9C%8D%E5%8A%A1%E4%BC%98%E9%9B%85%E9%87%8D%E5%90%AF%E7%9A%84%E7%A7%98%E5%AF%86/</link>
+      <pubDate>Thu, 17 Aug 2023 09:31:49 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2023/08/17/tcp-%E9%95%BF%E8%BF%9E%E6%8E%A5%E6%9C%8D%E5%8A%A1%E4%BC%98%E9%9B%85%E9%87%8D%E5%90%AF%E7%9A%84%E7%A7%98%E5%AF%86/</guid>
+      <description>假设我们有一个长连接服务，我们想要对它进行升级，但是不想让客户端受到影响应该怎么做？这个问题其实是一个很常见的问题，比如我们的游戏服务器，我们的 IM 服务器，推送服务器等等，诸如此类使用tcp长连接的服务，都会遇到这个问题。那么我们应该怎么做呢？
+需求分析 我们可以先来看下这个场景下的需求：
+客户端必须要对这个操作没有感知，也就是说客户端不需要做任何的修改，在服务器升级的过程中不需要配合。 服务器在升级的过程中，不能丢失任何的连接，也就是说，如果有新的连接进来，那么这个连接必须要被接受，如果有旧的连接，那么客户端不能够触发重连。 基本思路 实现思路的讨论范围限制在 linux 服务器上
+为了实现上述的要求，首先在升级流程中我们需要做到以下几点：
+旧的服务器进程在处理完请求前不能退出，而且一旦升级开始就不能再接受新的连接。 旧的服务器进程在所有连接都处理完毕后才能退出。 新的服务器进程在启动时需要继承旧的服务器进程的所有连接，新的连接也应该被新的服务器进程接受。 新的服务器进程也必须监听旧的服务器进程的监听端口，否则新的连接无法被接受。 那么通过 Google 和 ChatGPT 的帮助，我们可以找到一些思路：
+新进程继承旧进程的（监听）套接字，而不是创建新的。
+为什么不创建新的（监听）套接字呢？在 linux 中内核会把处在不同握手阶段的TCP连接放在不同的队列中（半连接/全连接）。服务器的监听套接字会有自己的队列，如果创建新的套接字，那么旧的套接字队列中的连接就会丢失。为了做到客户端无感知，我们需要继承旧的套接字（主要是为了连接队列中的连接不丢失）。
+半连接队列：当客户端发送 SYN 包时，服务器会把这个连接放在半连接队列中，等待服务器的 ACK 包，这个时候连接处于半连接状态。当服务器发送 ACK 包时，这个连接就会从半连接队列中移除，放到全连接队列中，这个时候连接处于全连接状态。当服务器调用 accept 时，就会从全连接队列中取出一个连接，这个时候连接处于 ESTABLISHED 状态。
+实现方式 那么在 linux 中，我们可以通过以如下方式实现：
+通过 fork 创建子进程，子进程继承父进程的所有资源，包括监听套接字; 子进程通过 exec 加载最新的二进制程序执行，这样就实现了新进程继承旧进程的监听套接字。 新进程启动完成后，通知父进程退出。 父进程受到信号后，停止接受新的连接，等待所有的连接处理完毕后退出。 在 Go 里面，我们可以通过如下方式实现：
+type gracefulTcpServer struct { listener *net.TCPListener shutdownChan chan struct{} conns map[net.Conn]struct{} servingConnCount atomic.Int32 serveRunning atomic.Bool } // 普通启动方式 func start(port int) (*gracefulTcpServer, error) { ln, err := net.</description>
+    </item>
+    
+  </channel>
+</rss>

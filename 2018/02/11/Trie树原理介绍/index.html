@@ -1,0 +1,291 @@
+<!DOCTYPE HTML>
+
+<html lang='en'>
+
+<head>
+	<title>Trie树学习 &middot; Yeqown
+	</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	
+	
+	
+	<link rel="stylesheet" href="/assets/css/main.min.css">
+	
+	
+	<link rel="shortcut icon" href="/favicon.ico">
+	
+	
+	<noscript>
+		<link rel="stylesheet" href='/assets/css/noscript.css' />
+	</noscript>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/rainbow.min.css">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>`
+	<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+		<meta name="referrer" content="no-referrer-when-downgrade"></head>
+
+<body lang='en' class="is-preload">
+
+    
+    <div id="wrapper">
+
+        
+<header id="header">
+    <a href='/' class="logo">Yeqown</a>
+    </header>
+
+        
+
+<nav id="nav">
+    <ul class="links">
+        <li class="active"><a href='/'>Yeqown</a></li>
+        <li><a href="/tags/">tags</a></li>
+        <li><a href="/categories/">categories</a></li>
+        
+        <li><a href='/#footer'>Contact</a></li>
+        
+        
+    </ul>
+    
+    <ul class="icons">
+        
+        <li><a href="https://twitter.com/yeqown" class="icon fa-twitter"><span class="label">Twitter</span></a></li>
+        
+        
+        
+        
+        
+        <li><a href="https://github.com/yeqown" class="icon fa-github"><span class="label">GitHub</span></a></li>
+        
+        
+        
+        
+        
+        
+        <li><a href="/index.xml" class="icon fa-rss"><span class="label">RSS</span></a></li>
+        
+
+    </ul>
+    
+</nav>
+
+        
+        <div id="main">
+
+            
+            <section class="post">
+                <header class="major">
+                    
+                    <span class="date">
+                        February 11, 2018 
+                        
+                        <span id="busuanzi_container_page_pv">本文阅读量<span id="busuanzi_value_page_pv"></span>次</span>
+                    </span>
+                    
+
+
+
+                    <h1>Trie树学习</h1>
+                    <p>Trie树(Retrieval Tree)又称前缀树，可以用来保存多个字符串，并且查找效率高。</p>
+                </header>
+                
+                <p>Trie树(Retrieval Tree)又称前缀树，可以用来保存多个字符串，并且查找效率高。在trie中查找一个字符串的时间只取决于组成该串的字符数，与树的节点数无关。Trie树形状如下图：
+<img src="http://img.my.csdn.net/uploads/201209/10/1347267156_9178.jpg" alt="Trie树"></p>
+<!-- more -->
+<h3 id="应用场景">应用场景</h3>
+<ul>
+<li>词频统计（搜索引擎常用）</li>
+<li>前缀单词搜索</li>
+</ul>
+<h3 id="构造trie树">构造Trie树</h3>
+<p>构造Trie树有如下几种方式（非全部）：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// 结构1，简单且直观，但是空间闲置较多，利用率低下
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">TrieNode</span> <span style="color:#66d9ef">struct</span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Char</span>	 <span style="color:#66d9ef">rune</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Children</span> [<span style="color:#ae81ff">27</span>]<span style="color:#f92672">*</span><span style="color:#a6e22e">TrieNode</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 结构二 可变数组Trie树, 减少了闲置指针，但是只能通过遍历来获取下一状态，降低了查询效率
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">TrieNode</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Char</span> <span style="color:#66d9ef">rune</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Children</span> []<span style="color:#f92672">*</span><span style="color:#a6e22e">TrieNode</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 结构3，双数组Trie树，空间和时间上耗费较为均衡，但是动态构建，解决冲突耗费时间较多
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">TrieNode</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Base</span>  []<span style="color:#66d9ef">int</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Check</span> []<span style="color:#66d9ef">int</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h4 id="数组构造方式">数组构造方式</h4>
+<p>这里选择双数组方式来实现Trie树。</p>
+<blockquote>
+<p>基于数组的实现方式，把trie看作一个DFA，树的每个节点对应一个DFA状态，每条从父节点指向子节点的有向边对应一个DFA变换。遍历从根节点开始，字符串的每个字符作为输入用来确定下一个状态，直到叶节点。 &mdash;- 摘自参考资料，Trie数组实现原理</p>
+</blockquote>
+<p><img src="/images/trie_dfa.gif" alt="数组Trie之DFA"></p>
+<p>关于双数组：</p>
+<ul>
+<li>Base数组，表示后即节点的基地址的数组，叶子节点没有后继</li>
+<li>Check数组，用于检查</li>
+</ul>
+<h3 id="trie树应用之前缀搜索">Trie树应用之前缀搜索</h3>
+<p>前缀搜索。也就是给一定的字符串，给出所有以该字符串开始的单词。譬如，Search(&ldquo;go&rdquo;)，得到[&ldquo;go&rdquo;, &ldquo;golang&rdquo;, &ldquo;google&rdquo;, &hellip;]</p>
+<h3 id="三种构造方式的优劣分析">三种构造方式的优劣分析</h3>
+<h4 id="trie树数组trie树">Trie树（数组Trie树）</h4>
+<p>每个节点都含有26个字母指针，但并不是都会使用，内存利用率低。时间复杂度：O(k)， 空间复杂度：O(26^n)</p>
+<h4 id="双数组trie树">双数组Trie树</h4>
+<p>构造调整过程中，每个状态都依赖于其他状态，所以当在词典中插入或删除词语的时候，往往需要对双数组结构进行全局调整,灵活性能较差。双数组已经大幅改善了经典Trie树的空间浪费，但是冲突发生的时候，总是往后寻址，不可避免数组空置。随着数据量增大，冲突的几率也越来越大，字典树的构建也越来越慢。如果核心词典已经预先建立好并且有序的，并且不会添加或删除新词，那么这个缺点是可以忽略的。所以常用双数组Tire树都是载入整个预先建立好的核心分词词典。</p>
+<h4 id="tail-trie树">Tail-Trie树</h4>
+<p>三数组Trie树实在双数组的基础上优化而来，增加了tail节点，就是将非公共前缀的词尾合并成为一个节点，减少节点总数，提升词典树的构建速度。如图：
+<img src="/images/tri_trie_tree.png" alt="Tail-Trie"></p>
+<h3 id="参考资料">参考资料</h3>
+<ul>
+<li><a href="https://linux.thai.net/~thep/datrie/datrie.html">An Implementation of Double-Array Trie</a></li>
+<li><a href="http://blog.csdn.net/Hackbuteer1/article/details/7964147">Trie树详解及应用</a></li>
+<li><a href="http://blog.csdn.net/xlxxcc/article/details/67631988">DoubleArrayTrie</a></li>
+<li><a href="https://pdfs.semanticscholar.org/f2ad/2a67218e458a979afafb311d1d7867f3f624.pdf">An Efficient Implementation of Trie Structures</a></li>
+<li><a href="https://github.com/gansidui/trie/blob/master/trie.go">github.com/gansidui/trie.go</a></li>
+<li><a href="https://github.com/smtc/godat">github.com/smtc/godat</a></li>
+</ul>
+
+
+                
+            </section>
+
+            
+            <section class="comment">
+                <div id="gitalk-container"></div>
+                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+                <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+                <script>
+                    const gitalk = new Gitalk({
+                        clientID: '7d8c8c91ae6aff3e46e7',
+                        clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+                        repo: 'yeqown.github.io',
+                        owner: 'yeqown',
+                        admin: ['yeqown'],
+                        id: "trie-tree-study", 
+                        distractionFreeMode: false 
+                    });
+                    (function () {
+                        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+                            document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+                            return;
+                        }
+                        gitalk.render('gitalk-container');
+                    })();
+                </script>
+            </section>
+        </div>
+
+        
+
+<footer id="footer">
+  <section>
+    <form method="post" action="Page%28/posts/Trie%e6%a0%91%e5%8e%9f%e7%90%86%e4%bb%8b%e7%bb%8d.md%29">
+      <div class="fields">
+        <div class="field">
+          <label for="name">Name</label>
+          <input type="text" name="name" id="name" />
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="text" name="email" id="email" />
+        </div>
+        <div class="field">
+          <label for="message">Message</label>
+          <textarea name="message" id="message" rows="3"></textarea>
+        </div>
+      </div>
+      <ul class="actions">
+        <li><input type="submit" value='Send A Message' /></li>
+      </ul>
+    </form>
+  </section>
+
+  <section class="split contact">
+    
+    <section class="alt">
+      <h3>Address</h3>
+      <p>
+        
+         Chengdu · China
+        
+         <br />  This is a city that comes and doesn&#39;t want to go
+        
+      </p>
+    </section>
+    
+    
+    <section>
+      <h3>Phone</h3>
+      <p><a href="tel:no%20way">no way</a></p>
+    </section>
+    
+    
+    <section>
+      <h3>Email</h3>
+      <p><a href="mailto:yeqown@gmail.com">yeqown@gmail.com</a></p>
+    </section>
+    
+    
+    <section>
+      <h3>Social</h3>
+      <ul class="icons alt">
+        
+        <li><a href="https://twitter.com/yeqown" class="icon alt fa-twitter"><span class="label">Twitter</span></a></li>
+        
+        
+        
+        
+        
+        <li><a href="https://github.com/yeqown" class="icon alt fa-github"><span class="label">GitHub</span></a></li>
+        
+        
+        
+        
+        
+      </ul>
+    </section>
+    
+  </section>
+</footer>
+        
+<div id="copyright">
+    <ul>
+        <li>&copy; Yeqown</li>
+        <li>Design: <a href="https://html5up.net">HTML5 UP</a></li>
+        <li>Hugo Port: <a href="https://curtistimson.co.uk">curttimson</a></li>
+    </ul>
+
+    
+    <ul>
+        <li>
+            <span id="busuanzi_container_site_pv">
+                总访问量<span id="busuanzi_value_site_pv"></span>次
+            </span>
+        </li>
+        <li>
+            <span id="busuanzi_container_site_uv">
+                访客数<span id="busuanzi_value_site_uv"></span>人次
+            </span>
+        </li>
+    </ul></div>
+
+    </div>
+    
+    
+
+
+
+
+
+
+
+
+
+
+<script src='/assets/js/bundle.js'></script>
+</body>
+
+</html>

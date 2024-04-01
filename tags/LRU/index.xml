@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>LRU on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/LRU/</link>
+    <description>Recent content in LRU on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Mon, 12 Aug 2019 20:10:32 +0800</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/LRU/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>LRU和LRU-K</title>
+      <link>https://www.yeqown.xyz/2019/08/12/LRU%E5%92%8CLRU-K/</link>
+      <pubDate>Mon, 12 Aug 2019 20:10:32 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2019/08/12/LRU%E5%92%8CLRU-K/</guid>
+      <description>缓存淘汰机制 缓存淘汰机制在缓存需要被清理的时候使用。主要有以下几种算法：
+FIFO：先入先出，优先清理最先被缓存的数据对象。实现简单，直接使用队列就可以实现。 LRU：最近最久未被使用，优先清理最近没有被使用的对象。使用一个最近使用时间降序的有序队列，优先清理队列对后的数据。与LFU的区别在于：LRU是按照最近使用使用的时间排序，LFU需要维护一个使用频次并用于排序。 LFU：最近最少使用，优先清理最近最少使用的数据对象。使用一个使用次数降序的有序队列，优先清理队列最后的数据。 // 其中LRU和LFU可以通过维护一个Hashmap来提高访问效率。
+LRU / LRU-1 LRU（Least recently used，最近最少使用）算法根据数据的历史访问记录来进行淘汰数据，其核心思想是“如果数据最近被访问过，那么将来被访问的几率也更高”。实现思路也很简单，就不过多赘述了：
+// data to cache type data struct { key int value int } // LRUCache structture to support LRU alg. type LRUCache struct { recoder map[int]*list.Element // key hit for get op O(1) linked *list.List // linked-list rest int // rest capacity } // Constructor ... to generate a LRUCache func Constructor(capacity int) LRUCache { c := LRUCache{ rest: capacity, linked: list.</description>
+    </item>
+    
+  </channel>
+</rss>

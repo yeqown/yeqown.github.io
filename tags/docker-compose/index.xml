@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>docker compose on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/docker-compose/</link>
+    <description>Recent content in docker compose on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Wed, 24 Jan 2018 16:01:02 +0000</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/docker-compose/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>docker-compose上手</title>
+      <link>https://www.yeqown.xyz/2018/01/24/Docker-Compose%E4%B8%8A%E6%89%8B/</link>
+      <pubDate>Wed, 24 Jan 2018 16:01:02 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/01/24/Docker-Compose%E4%B8%8A%E6%89%8B/</guid>
+      <description>docker compose 用于快速在集群中部署分布式应用。按我的理解也可以用于简化部署单个应用。譬如我要使用dock er启动一个nginx服务，需要做端口映射，挂载数据文件，指定镜像&amp;hellip;等等，这种情况下，可以将启动容器的命令整合到docker-compose.yml文件中，可以在多个服务器上运行，瞬间就完成了nginx的安装及配置，再也不用去编译，解决环境依赖了，这种感觉实在是太爽了！！！
+安装 使用pip pip install docker-compose 从官方Github Release下载二进制包文件 其他方法略去 使用场景 在日常工作中，经常会碰到需要多个容器相互配合来完成某项任务的情况。例如要实现一个 Web 项目，除了 Web 服务容器本身，往往还需要再加上后端的数据库服务容器，甚至还包括负载均衡容器等。
+实战场景 需要部署的项目，只有两个docker容器，一个server，一个db。一般的部署方式是，分别启动两个容器，容器间通过互联的方式通信：
+sudo docker run --rm -p 5433:5432 --name postgres -e POSTGRES_PASSWORD=minepwd -e POSTGRES_USER=mineusr -d postgres sudo docker run --rm -p 9091:9091 --link postgres:postgres --name mineserver -d me/mineserver 这两条命令还是有挺麻烦的，如果记不住，当然可以用shell脚本来运行，可以如果其中某一个服务无法如期运行。。。就很监介了。这时候就可以引入docker-compose了。
+编写docker-compose.yml来部署项目 version: &amp;#34;2&amp;#34; # 指定docker-compose版本 services: # 项目依赖的服务 postgres: # 服务名字 image: postgres # 服务需要的docker镜像与docker run命令中的镜像指定方式一致 volumes: # 挂载卷，这里的主要目的是，方便同步数据库和数据脚本 - ./postgres:/var/lib/postgresql/data - ./sh:/usr/src/sh ports: # 端口绑定 - 5433:5432 container_name: postgres environment: # 设置环境变量 POSTGRES_PASSWORD: &amp;#34;minepwd&amp;#34; POSTGRES_USER: &amp;#34;mineusr&amp;#34; POSTGRES_DB: &amp;#34;minedb&amp;#34; mineserver: image: me/mineserver volumes: # 挂载卷，方便查看输出日志 - .</description>
+    </item>
+    
+  </channel>
+</rss>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Levenshtein Distance on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/Levenshtein-Distance/</link>
+    <description>Recent content in Levenshtein Distance on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Sun, 11 Feb 2018 09:57:18 +0000</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/Levenshtein-Distance/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>动态规划之字符串编辑距离</title>
+      <link>https://www.yeqown.xyz/2018/02/11/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B9%8B%E5%AD%97%E7%AC%A6%E4%B8%B2%E7%BC%96%E8%BE%91%E8%B7%9D%E7%A6%BB%E9%97%AE%E9%A2%98-LD/</link>
+      <pubDate>Sun, 11 Feb 2018 09:57:18 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/02/11/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B9%8B%E5%AD%97%E7%AC%A6%E4%B8%B2%E7%BC%96%E8%BE%91%E8%B7%9D%E7%A6%BB%E9%97%AE%E9%A2%98-LD/</guid>
+      <description>问题描述 给定 2 个字符串 a, b. 编辑距离是将 a 转换为 b 的最少操作次数，操作只允许如下 3 种： 插入一个字符，例如：fj -&amp;gt; fxj 删除一个字符，例如：fxj -&amp;gt; fj 替换一个字符，例如：jyj -&amp;gt; fyj
+函数原型：
+func LevenshteinDis(str1, str2 string) int { ... } 算法适用场景 拼写检查 输入联想 语音识别 论文检查 DNA分析 问题分析 假定函数edit_dis(stra, strb)表示，stra到strb的编辑距离。算法问题可以分为四种情况：
+edit_dis(0, 0) = 0 edit_dis(0, strb) = len(strb) edit_dis(stra, strb) = len(stra) edit_dis(stra, strb) = ? 对于4th一般情况，没有办法直接给出求解方式，我们来分析edit_dis(stra+chara, strb+charb)可能的情况：
+stra能转成strb，那么只需要判断chara是不是等于charb (cur_cost = 0 if chara == charb else 1) stra+chara能转成strb, 那么要让stra + chara 转成strb+ charb, 只需要插入charb就行了 如果stra 可以直接转成strb+charb，那么删除chara就可以转换成功了 综上的分析，可以得到如下DP公式：</description>
+    </item>
+    
+  </channel>
+</rss>

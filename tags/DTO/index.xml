@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>DTO on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/DTO/</link>
+    <description>Recent content in DTO on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Wed, 29 Aug 2018 09:27:36 +0000</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/DTO/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Golang适用的DTO工具</title>
+      <link>https://www.yeqown.xyz/2018/08/29/Golang%E9%80%82%E7%94%A8%E7%9A%84DTO%E5%B7%A5%E5%85%B7/</link>
+      <pubDate>Wed, 29 Aug 2018 09:27:36 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/08/29/Golang%E9%80%82%E7%94%A8%E7%9A%84DTO%E5%B7%A5%E5%85%B7/</guid>
+      <description>DTO (Data Transfer Object) 是Java中的概念，起到数据封装和隔离的作用。在使用Golang开发Web应用的过程中，也会有类似的需求。先贴项目地址 github.com/yeqown/server-common/tree/master/dbs/tools
+举个例子 现在有一个用户数据结构如下,
+type UserModel struct { ID int64 `gorm:&amp;#34;column:id&amp;#34;` Name string `gorm:&amp;#34;column:name&amp;#34;` Password string `gorm:&amp;#34;column:password&amp;#34;` } // 问题1: 现在要求是想要JSON格式返回用户数据，并且不希望其中包含有Password字段 // 解决1:
+type UserModel struct { ID int64 `gorm:&amp;#34;column:id&amp;#34; json:&amp;#34;id&amp;#34;` Name string `gorm:&amp;#34;column:name&amp;#34; json:&amp;#34;name&amp;#34;` Password string `gorm:&amp;#34;column:password&amp;#34; json:&amp;#34;-&amp;#34;` } // 问题2: 同样是JSON数据格式，并且希望额外返回用户的身份标示Ident（假设必须要跟用户数据放在一起） // 解决2: （这也是我的场景）
+type UserDTO struct { ID int64 `json:&amp;#34;id&amp;#34;` Name string `json:&amp;#34;name&amp;#34;` Password string `json:&amp;#34;-&amp;#34;` Ident string `json:&amp;#34;ident&amp;#34;` } func LoadUserDTOFromModel(data *UserMolde) *UserDTO { ident := genUserIdent(data) return &amp;amp;{ ID data.</description>
+    </item>
+    
+  </channel>
+</rss>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>fsnotify on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/fsnotify/</link>
+    <description>Recent content in fsnotify on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Tue, 10 Oct 2023 20:02:28 +0800</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/fsnotify/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>fsnotify原理探究</title>
+      <link>https://www.yeqown.xyz/2023/10/10/fsnotify%E5%8E%9F%E7%90%86%E6%8E%A2%E7%A9%B6/</link>
+      <pubDate>Tue, 10 Oct 2023 20:02:28 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2023/10/10/fsnotify%E5%8E%9F%E7%90%86%E6%8E%A2%E7%A9%B6/</guid>
+      <description>本文如果没有特殊说明，所有的内容都是指 linux 系统
+起因是从 kratos 群里看到有人问：“测了下kratos的config watch，好像对软链不生效”，他提供的屏幕截图如下类似：
+$ pwd /tmp/testconfig $ ls -l drwxr-xr-x 3 root root 4096 Oct 10 19:48 . drwxr-xr-x 10 root root 4096 Oct 10 19:48 .. drwxr-xr-x 1 root root 11 Oct 10 19:48 ..ver1 drwxr-xr-x 1 root root 11 Oct 10 19:48 ..ver2 lrwxr-xr-x 1 root root 11 Oct 10 19:48 ..data -&amp;gt; ..ver1 drwxr-xr-x 1 root root 11 Oct 10 19:48 data $ $ ll -a data drwxr-xr-x 3 root root 4096 Oct 10 19:48 .</description>
+    </item>
+    
+  </channel>
+</rss>

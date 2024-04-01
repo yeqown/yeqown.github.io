@@ -1,0 +1,292 @@
+<!DOCTYPE HTML>
+
+<html lang='en'>
+
+<head>
+	<title>RN历险记 &middot; Yeqown
+	</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	
+	
+	
+	<link rel="stylesheet" href="/assets/css/main.min.css">
+	
+	
+	<link rel="shortcut icon" href="/favicon.ico">
+	
+	
+	<noscript>
+		<link rel="stylesheet" href='/assets/css/noscript.css' />
+	</noscript>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/rainbow.min.css">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>`
+	<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+		<meta name="referrer" content="no-referrer-when-downgrade"></head>
+
+<body lang='en' class="is-preload">
+
+    
+    <div id="wrapper">
+
+        
+<header id="header">
+    <a href='/' class="logo">Yeqown</a>
+    </header>
+
+        
+
+<nav id="nav">
+    <ul class="links">
+        <li class="active"><a href='/'>Yeqown</a></li>
+        <li><a href="/tags/">tags</a></li>
+        <li><a href="/categories/">categories</a></li>
+        
+        <li><a href='/#footer'>Contact</a></li>
+        
+        
+    </ul>
+    
+    <ul class="icons">
+        
+        <li><a href="https://twitter.com/yeqown" class="icon fa-twitter"><span class="label">Twitter</span></a></li>
+        
+        
+        
+        
+        
+        <li><a href="https://github.com/yeqown" class="icon fa-github"><span class="label">GitHub</span></a></li>
+        
+        
+        
+        
+        
+        
+        <li><a href="/index.xml" class="icon fa-rss"><span class="label">RSS</span></a></li>
+        
+
+    </ul>
+    
+</nav>
+
+        
+        <div id="main">
+
+            
+            <section class="post">
+                <header class="major">
+                    
+                    <span class="date">
+                        January 11, 2018 
+                        
+                        <span id="busuanzi_container_page_pv">本文阅读量<span id="busuanzi_value_page_pv"></span>次</span>
+                    </span>
+                    
+
+
+
+                    <h1>RN历险记</h1>
+                    <p>讲述配置ReactNative的心酸历程</p>
+                </header>
+                
+                <p>讲述配置ReactNative的心酸历程</p>
+<!-- more -->
+<h2 id="程序猿长征第一步">程序猿长征第一步</h2>
+<p>根据官方文档来安装RN, 以及巨大无比的<code>Xcode Ver9.0.0</code></p>
+<h2 id="错误一build-fail">错误一：Build Fail</h2>
+<p>可能描述不太一致, 但是原因都差不多, 文件缺失。
+菜鸟想必看到这些个报错, 两眼一懵逼, 啥子情况, 怎么和官方的描述不一致, 一个及其简单的RN-Demo, 我就是想跑一下的喂！</p>
+<p>我遇到的情况, 分为两种：</p>
+<blockquote>
+<p>其一是安装很慢, 之后失败
+其二是安装很快, 然后失败</p>
+</blockquote>
+<p>经过反复的“瞎子”调整, 在多次更换react, react-native版本, 求助Google大叔无果之后。我开始了阅读输出日志的漫漫长路, 终于发现了build失败的元凶, <code>boost/xxx.hpp not found</code>为啥找不到呢, 去文件夹一看, 才发现这些文件真的不存在&hellip;&hellip;</p>
+<p>好了知道错误, 就再Google下咯（其实我还去改过这些<code>#includ&lt;boost/config/user.hpp&gt;</code> 0&lt;~&gt;0）这里就直接给出我找的结果吧: <a href="http://cdn2.jianshu.io/p/2ef019a7e82a">http://cdn2.jianshu.io/p/2ef019a7e82a</a></p>
+<p><strong>总的说来, 就是自动下载的的第三方库是残缺的</strong></p>
+<h2 id="错误二cfbundleidentifier-not-found">错误二：CFBundleIdentifier not Found</h2>
+<p>第二错误也是困扰了比较多人, 我遇到的只是导致这个情况的其中之一</p>
+<p>通过查看输出日志, 并没有发现什么有用的信息, 提示的是<code>Command Fail , balabala…</code>
+手动搜索了一下<code>PlistBuddy</code>, 了解了下用法,  然后我手动执行了下命令, 居然可以！！！！什么情况, 那为什么提示错误信息？果断进入到文件夹中查看,果然文件是存在的那么为啥一个可以, 一个不可以呢？到这里, 大致猜到原因了, <code>没有找到文件</code></p>
+<p>再次以此为点求助Google大叔:
+<a href="http://blog.csdn.net/ohyeahhhh/article/details/54691512">http://blog.csdn.net/ohyeahhhh/article/details/54691512</a></p>
+<p>这个坑就是, Xcode编译保存的路径和react-native-cli寻找的路径不一致, 通过修改路径就OK啦, 还有其他原因导致的这个fail 请参阅链接, 先搞清楚<code>react-native run-ios</code>做了啥事.</p>
+<p>中间更多细节”虐“去~~~~, 感谢预先踩坑的前辈, 最终项目成功运行啦！</p>
+<p>心得：</p>
+<pre tabindex="0"><code>~不要怕麻烦, 先看错误日志, 定位错误, 那样检索的时候更有方向, 范围更小
+~对于报错不清楚的command fail, 尽量自己去执行, 明确错误（结合查看文件判断）
+~好好用Google
+~笑着活下去
+</code></pre><table>
+<thead>
+<tr>
+<th>配置</th>
+<th>参数</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OS</td>
+<td>MacPro 10.13.1</td>
+</tr>
+<tr>
+<td>Node</td>
+<td>v8.3.0</td>
+</tr>
+<tr>
+<td>Npm</td>
+<td>v5.6.0</td>
+</tr>
+<tr>
+<td>React-native</td>
+<td>0.46.4</td>
+</tr>
+<tr>
+<td>React-native-cli</td>
+<td>0.2.1</td>
+</tr>
+</tbody>
+</table>
+
+
+                
+            </section>
+
+            
+            <section class="comment">
+                <div id="gitalk-container"></div>
+                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+                <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+                <script>
+                    const gitalk = new Gitalk({
+                        clientID: '7d8c8c91ae6aff3e46e7',
+                        clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+                        repo: 'yeqown.github.io',
+                        owner: 'yeqown',
+                        admin: ['yeqown'],
+                        id: "rn-exploration", 
+                        distractionFreeMode: false 
+                    });
+                    (function () {
+                        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+                            document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+                            return;
+                        }
+                        gitalk.render('gitalk-container');
+                    })();
+                </script>
+            </section>
+        </div>
+
+        
+
+<footer id="footer">
+  <section>
+    <form method="post" action="Page%28/posts/RN%e5%8e%86%e9%99%a9%e8%ae%b0.md%29">
+      <div class="fields">
+        <div class="field">
+          <label for="name">Name</label>
+          <input type="text" name="name" id="name" />
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="text" name="email" id="email" />
+        </div>
+        <div class="field">
+          <label for="message">Message</label>
+          <textarea name="message" id="message" rows="3"></textarea>
+        </div>
+      </div>
+      <ul class="actions">
+        <li><input type="submit" value='Send A Message' /></li>
+      </ul>
+    </form>
+  </section>
+
+  <section class="split contact">
+    
+    <section class="alt">
+      <h3>Address</h3>
+      <p>
+        
+         Chengdu · China
+        
+         <br />  This is a city that comes and doesn&#39;t want to go
+        
+      </p>
+    </section>
+    
+    
+    <section>
+      <h3>Phone</h3>
+      <p><a href="tel:no%20way">no way</a></p>
+    </section>
+    
+    
+    <section>
+      <h3>Email</h3>
+      <p><a href="mailto:yeqown@gmail.com">yeqown@gmail.com</a></p>
+    </section>
+    
+    
+    <section>
+      <h3>Social</h3>
+      <ul class="icons alt">
+        
+        <li><a href="https://twitter.com/yeqown" class="icon alt fa-twitter"><span class="label">Twitter</span></a></li>
+        
+        
+        
+        
+        
+        <li><a href="https://github.com/yeqown" class="icon alt fa-github"><span class="label">GitHub</span></a></li>
+        
+        
+        
+        
+        
+      </ul>
+    </section>
+    
+  </section>
+</footer>
+        
+<div id="copyright">
+    <ul>
+        <li>&copy; Yeqown</li>
+        <li>Design: <a href="https://html5up.net">HTML5 UP</a></li>
+        <li>Hugo Port: <a href="https://curtistimson.co.uk">curttimson</a></li>
+    </ul>
+
+    
+    <ul>
+        <li>
+            <span id="busuanzi_container_site_pv">
+                总访问量<span id="busuanzi_value_site_pv"></span>次
+            </span>
+        </li>
+        <li>
+            <span id="busuanzi_container_site_uv">
+                访客数<span id="busuanzi_value_site_uv"></span>人次
+            </span>
+        </li>
+    </ul></div>
+
+    </div>
+    
+    
+
+
+
+
+
+
+
+
+
+
+<script src='/assets/js/bundle.js'></script>
+</body>
+
+</html>

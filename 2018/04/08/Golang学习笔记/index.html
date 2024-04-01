@@ -1,0 +1,265 @@
+<!DOCTYPE HTML>
+
+<html lang='en'>
+
+<head>
+	<title>Golang学习笔记 &middot; Yeqown
+	</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	
+	
+	
+	<link rel="stylesheet" href="/assets/css/main.min.css">
+	
+	
+	<link rel="shortcut icon" href="/favicon.ico">
+	
+	
+	<noscript>
+		<link rel="stylesheet" href='/assets/css/noscript.css' />
+	</noscript>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/rainbow.min.css">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>`
+	<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+		<meta name="referrer" content="no-referrer-when-downgrade"></head>
+
+<body lang='en' class="is-preload">
+
+    
+    <div id="wrapper">
+
+        
+<header id="header">
+    <a href='/' class="logo">Yeqown</a>
+    </header>
+
+        
+
+<nav id="nav">
+    <ul class="links">
+        <li class="active"><a href='/'>Yeqown</a></li>
+        <li><a href="/tags/">tags</a></li>
+        <li><a href="/categories/">categories</a></li>
+        
+        <li><a href='/#footer'>Contact</a></li>
+        
+        
+    </ul>
+    
+    <ul class="icons">
+        
+        <li><a href="https://twitter.com/yeqown" class="icon fa-twitter"><span class="label">Twitter</span></a></li>
+        
+        
+        
+        
+        
+        <li><a href="https://github.com/yeqown" class="icon fa-github"><span class="label">GitHub</span></a></li>
+        
+        
+        
+        
+        
+        
+        <li><a href="/index.xml" class="icon fa-rss"><span class="label">RSS</span></a></li>
+        
+
+    </ul>
+    
+</nav>
+
+        
+        <div id="main">
+
+            
+            <section class="post">
+                <header class="major">
+                    
+                    <span class="date">
+                        April 8, 2018 
+                        
+                        <span id="busuanzi_container_page_pv">本文阅读量<span id="busuanzi_value_page_pv"></span>次</span>
+                    </span>
+                    
+
+
+
+                    <h1>Golang学习笔记</h1>
+                    <p>留个坑。</p>
+                </header>
+                
+                <h3 id="目录">目录</h3>
+<ul>
+<li><a href="#Channel">Channel</a></li>
+<li><a href="#Goroutine">Goroutine</a></li>
+</ul>
+<!-- more -->
+<h3 id="channel">Channel</h3>
+<p>一开始是在看channel的源码，结果发现里面含有一些抽象的描述（可能也就是我觉得。。。毕竟没有深入）</p>
+<blockquote>
+<p>Do not change another G&rsquo;s status while holding this lock
+(in particular, do not ready a G), as this can deadlock
+with stack shrinking.</p>
+</blockquote>
+<p>其中<code>G</code>是啥？我看着是很懵逼的，去google了一下，其实是goroutine相关的知识，那就把goroutine理解了先。</p>
+<blockquote>
+<p>2020-04-13 填坑</p>
+</blockquote>
+<p><a href="/2020/04/13/channel-in-Go%E5%B0%8F%E7%BB%93/">channel in go</a></p>
+<h3 id="goroutine">Goroutine</h3>
+<blockquote>
+<p>G: 表示goroutine，存储了goroutine的执行stack信息、goroutine状态以及goroutine的任务函数等；另外G对象是可以重用的。
+P: 表示逻辑processor，P的数量决定了系统内最大可并行的G的数量（前提：系统的物理cpu核数&gt;=P的数量）；P的最大作用还是其拥有的各种G对象队列、链表、一些cache和状态。
+M: 代表着真正的执行计算资源。在绑定有效的p后，进入schedule循环；而schedule循环的机制大致是从各种队列、p的本地队列中获取G，切换到G的执行栈上并执行G的函数，调用goexit做清理工作并回到m，如此反复。M并不保留G状态，这是G可以跨M调度的基础。M必须关联了P才能执行Go代码。</p>
+</blockquote>
+<p>结合下图更方便理解： &ndash;源于Tonybai的博客，见参考资料。
+<img src="http://tonybai.com/wp-content/uploads/goroutine-scheduler-model.png" alt="Goroutine调度原理图"></p>
+<h3 id="参考资料">参考资料</h3>
+<ul>
+<li><a href="https://github.com/golang/go/blob/master/src/runtime/runtime2.go">runtime/runtime2.go</a></li>
+<li><a href="https://tonybai.com/2017/06/23/an-intro-about-goroutine-scheduler/">Tonybai-goroutine调度器</a></li>
+</ul>
+
+
+                
+            </section>
+
+            
+            <section class="comment">
+                <div id="gitalk-container"></div>
+                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+                <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+                <script>
+                    const gitalk = new Gitalk({
+                        clientID: '7d8c8c91ae6aff3e46e7',
+                        clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+                        repo: 'yeqown.github.io',
+                        owner: 'yeqown',
+                        admin: ['yeqown'],
+                        id: "golang-learn-note", 
+                        distractionFreeMode: false 
+                    });
+                    (function () {
+                        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+                            document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+                            return;
+                        }
+                        gitalk.render('gitalk-container');
+                    })();
+                </script>
+            </section>
+        </div>
+
+        
+
+<footer id="footer">
+  <section>
+    <form method="post" action="Page%28/posts/Golang%e5%ad%a6%e4%b9%a0%e7%ac%94%e8%ae%b0.md%29">
+      <div class="fields">
+        <div class="field">
+          <label for="name">Name</label>
+          <input type="text" name="name" id="name" />
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="text" name="email" id="email" />
+        </div>
+        <div class="field">
+          <label for="message">Message</label>
+          <textarea name="message" id="message" rows="3"></textarea>
+        </div>
+      </div>
+      <ul class="actions">
+        <li><input type="submit" value='Send A Message' /></li>
+      </ul>
+    </form>
+  </section>
+
+  <section class="split contact">
+    
+    <section class="alt">
+      <h3>Address</h3>
+      <p>
+        
+         Chengdu · China
+        
+         <br />  This is a city that comes and doesn&#39;t want to go
+        
+      </p>
+    </section>
+    
+    
+    <section>
+      <h3>Phone</h3>
+      <p><a href="tel:no%20way">no way</a></p>
+    </section>
+    
+    
+    <section>
+      <h3>Email</h3>
+      <p><a href="mailto:yeqown@gmail.com">yeqown@gmail.com</a></p>
+    </section>
+    
+    
+    <section>
+      <h3>Social</h3>
+      <ul class="icons alt">
+        
+        <li><a href="https://twitter.com/yeqown" class="icon alt fa-twitter"><span class="label">Twitter</span></a></li>
+        
+        
+        
+        
+        
+        <li><a href="https://github.com/yeqown" class="icon alt fa-github"><span class="label">GitHub</span></a></li>
+        
+        
+        
+        
+        
+      </ul>
+    </section>
+    
+  </section>
+</footer>
+        
+<div id="copyright">
+    <ul>
+        <li>&copy; Yeqown</li>
+        <li>Design: <a href="https://html5up.net">HTML5 UP</a></li>
+        <li>Hugo Port: <a href="https://curtistimson.co.uk">curttimson</a></li>
+    </ul>
+
+    
+    <ul>
+        <li>
+            <span id="busuanzi_container_site_pv">
+                总访问量<span id="busuanzi_value_site_pv"></span>次
+            </span>
+        </li>
+        <li>
+            <span id="busuanzi_container_site_uv">
+                访客数<span id="busuanzi_value_site_uv"></span>人次
+            </span>
+        </li>
+    </ul></div>
+
+    </div>
+    
+    
+
+
+
+
+
+
+
+
+
+
+<script src='/assets/js/bundle.js'></script>
+</body>
+
+</html>

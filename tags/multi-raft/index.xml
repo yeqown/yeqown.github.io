@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>multi-raft on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/multi-raft/</link>
+    <description>Recent content in multi-raft on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Mon, 26 Feb 2024 21:30:08 +0800</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/multi-raft/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Nats设计与实现</title>
+      <link>https://www.yeqown.xyz/2024/02/26/nats%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%AE%9E%E7%8E%B0/</link>
+      <pubDate>Mon, 26 Feb 2024 21:30:08 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2024/02/26/nats%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%AE%9E%E7%8E%B0/</guid>
+      <description>NATS设计与实现 NATS 就是一个消息中间件，提供了 Pub/Sub 核心数据流，并基于此构建了 Request/Reply API 和 JetStream 用来提供可靠的分布式存储能力，和更高的 QoS（至少一次 + ACK）。
+1. 核心概念 序号 名词（ENG） 名词（zh-CN） 解释 1 Publish 发布 发布动作，往 subject 中投递一条消息
+2 Subscribe 订阅 订阅动作，表示想要接受发布相应 subject 的消息 3 Subject 主题 唯一标识，用于标识一种或者一类事件的概念。订阅时，可以使用 nats 约定的通匹配符来接收一类 subjects，如 orders.&amp;gt; 。 4 Core Nats NATS 核心 CORE NATS 提供了以下能力：
+- PUB / SUB https://docs.nats.io/nats-concepts/core-nats/pubsub
+- Request / Reply https://docs.nats.io/nats-concepts/core-nats/reqreply
+- Queue Groups https://docs.nats.io/nats-concepts/core-nats/queue
+提供 最多一次 的消息传递保证 5 Request / Reply 请求 / 回复 NATS 基于 PUB / SUB 实现的对 request 异步回复的功能，依赖于消息中的 reply 字段。reply 是内置实现，随机生成一个 “inbox” subject。</description>
+    </item>
+    
+  </channel>
+</rss>

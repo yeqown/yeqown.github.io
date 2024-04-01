@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>drone on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/drone/</link>
+    <description>Recent content in drone on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Sat, 27 Jan 2018 00:24:40 +0000</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/drone/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Drone体验</title>
+      <link>https://www.yeqown.xyz/2018/01/27/Drone%E4%BD%93%E9%AA%8C/</link>
+      <pubDate>Sat, 27 Jan 2018 00:24:40 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/01/27/Drone%E4%BD%93%E9%AA%8C/</guid>
+      <description>相较于Jenkins，Gitlab-CI&amp;hellip;等，尝试Drone的首要原因是，天生的docker支持。不用去操心部署CI或者CD的环境配置等等烦心事。只需要上手，如何配置这个CD工具，让我使用更加畅快和顺手。
+安装部署 前提：已经安装了docker，docker-compose，并基本掌握docker用法，基本熟悉docker-compose配置文件
+pull镜像 docker pull drone/drone:0.8 # droner-server 镜像 docker pull dorner/agent:0.8 # drone-agent 镜像 也可以跳过这一步，docker运行的时候，如果匹配不到本地镜像，会自动拉取。
+docker-compose.yml配置文件 为了方便，新建一个Drone文件夹，目录结构如下：
+--Drone # 文件夹 |---docker-compose.yml # docker-compose 配置文件 |---data # 用于挂载的数据文件 |---drone.domain.com # nginx sever 配置文件 `---other.file # 其他文件 已知文件结构后，编写的docker-compose.yml文件如下：
+version: &amp;#39;2&amp;#39; services: drone-server: image: drone/drone:0.8 container_name: drone-server ports: - 8000:8000 - 9000:9000 volumes: - ./data:/var/lib/drone/ # 在没有跟数据库绑定的情况下，默认使用sqlite数据库 restart: always environment: - DRONE_OPEN=false - DRONE_HOST=http://127.0.0.1:8000 # 最好是在服务器上，localhost无法收到webhook的通知 - DRONE_ADMIN=yourname - DRONE_GITHUB=true - DRONE_GITHUB_CLIENT=7bc7971bxxxxx # 需要预先注册一个github oauth应用 - DRONE_GITHUB_SECRET=9456c630xxxxxxxxxxxxxx - DRONE_SECRET=secret - DRONE_DEBUG=false drone-agent: image: drone/agent:0.</description>
+    </item>
+    
+  </channel>
+</rss>

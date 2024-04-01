@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>im on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/im/</link>
+    <description>Recent content in im on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Wed, 04 Dec 2019 18:37:31 +0800</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/im/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>基于socket.io构建即时通讯系统</title>
+      <link>https://www.yeqown.xyz/2019/12/04/%E5%9F%BA%E4%BA%8Esocket.io%E6%9E%84%E5%BB%BA%E5%8D%B3%E6%97%B6%E9%80%9A%E8%AE%AF%E7%B3%BB%E7%BB%9F/</link>
+      <pubDate>Wed, 04 Dec 2019 18:37:31 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2019/12/04/%E5%9F%BA%E4%BA%8Esocket.io%E6%9E%84%E5%BB%BA%E5%8D%B3%E6%97%B6%E9%80%9A%E8%AE%AF%E7%B3%BB%E7%BB%9F/</guid>
+      <description>本意在总结实现socket.io-app过程中的一些知识。
+背景 现需要替换公司的即时通信框架（之前用的是阿里云的微消息队列，优点在于：简单易接入，问题在于：对于人数和客户端状态感知不够准确，原因后面细说）。在框架选型的时候，基于应用场景（客户端有：小程序/nodeJS/浏览器），有三种方案：
+替换MQTT的架子，针对现有场景下的问题，选用一款更加可控的MQTT服务，如EMQX。 基于现有的技术栈，选择一款golang开发的开源框架，在此基础上进行开发，如goim。 一个大众且稳定的开源框架，语言不限，如socket.io。 综合一系列因素（技术熟悉程度/star数/时间成本/金钱成本/运维成本）选择了socket.io / JS🐶～
+这里想推荐一下goim给golang程序猿。个人看法：goim对团队技术栈更友好；对分布式更友好；架构合理易于扩展；如有兴趣可以去看下：https://juejin.im/post/5cbb9e68e51d456e51614aab @tsingson 的解析，结合源码更容易理解上手。
+关于socket.io的介绍 文档在此socket.io
+通信机制及特点 特点 摘要 可用性 提供 long-polling 和 WebSocket 两种方式，可以自动升级，基于engine.io 自动重连 客户端会一直重连，直到再次链接上服务器 断线检测 客户端和服务端通过心跳维持长链接 二进制消息 任意被序列化的数据结构都可以传输 多路复用 对不同的Namespace,复用底层链接 内置Room概念 理解为聊天室和即可 基于websocket，但不互通 https://github.com/socketio/socket.io-protocol 总结一下：socket.io 已经提供了即时通讯必要的基础，不用关心任何通讯相关的细节，开箱即用。
+分布式 确认socket.io已经提供了通讯基础，那么问题来了：单机性能有限，如何扩展到分布式呢? socket.io的另一个优点adapter机制让socket.io易于扩展，官方提供了redis-adapter来支持消息分发。
+By running socket.io with the socket.io-redis adapter you can run multiple socket.io instances in different processes or servers that can all broadcast and emit events to and from each other.</description>
+    </item>
+    
+  </channel>
+</rss>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Cloudflare on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/Cloudflare/</link>
+    <description>Recent content in Cloudflare on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Tue, 15 Aug 2023 20:31:02 +0800</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/Cloudflare/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Cloudflare Tunnel 使用笔记</title>
+      <link>https://www.yeqown.xyz/2023/08/15/cloudflare-tunnel-%E4%BD%BF%E7%94%A8%E7%AC%94%E8%AE%B0/</link>
+      <pubDate>Tue, 15 Aug 2023 20:31:02 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2023/08/15/cloudflare-tunnel-%E4%BD%BF%E7%94%A8%E7%AC%94%E8%AE%B0/</guid>
+      <description>Cloudflare 自不用多说，Tunnel 是 Cloudflare 提供的一项功能，可以将本地的服务通过 Cloudflare 的网络暴露到公网，这样就可以实现内网穿透，同时还可以通过 Cloudflare 的网络加速服务，提高访问速度。
+初识 Cloudflare Tunnel 最开始接触 Cloudflare Tunnel 是在 Twitter 上看到一个项目cloudflare-tunnel-ingress-controller ，这个项目是一个 Kubernetes 的 Ingress Controller，可以将 Kubernetes 中的服务通过 Cloudflare Tunnel 暴露到公网，这样就可以实现内网穿透，也就是说局域网搭建的服务可以通过 Cloudflare 的网络暴露到公网。
+熟悉内网穿透的小伙伴，应该对这中东西很熟悉，也没什么好说的。
+前提 一个 Cloudflare 账号 一个域名 cloudfalred Mac 上可以通过 brew install cloudflared 安装，安装完成后，可以通过 cloudflared -v 查看版本。
+$ cloudflared -v cloudflared version 2023.7.3 (built 2023-07-25T20:51:49Z) 参考 cloudflared 官方文档 安装。
+$ cloudflared login 使用 我的使用场景除了最开始提到的 Kubernetes Ingress Controller 之外，还有一个就是将局域网内的开发机通过 Cloudflare Tunnel 暴露到公网，方便远程开发。</description>
+    </item>
+    
+  </channel>
+</rss>

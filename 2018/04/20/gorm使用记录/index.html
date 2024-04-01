@@ -1,0 +1,390 @@
+<!DOCTYPE HTML>
+
+<html lang='en'>
+
+<head>
+	<title>gorm使用记录 &middot; Yeqown
+	</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	
+	
+	
+	<link rel="stylesheet" href="/assets/css/main.min.css">
+	
+	
+	<link rel="shortcut icon" href="/favicon.ico">
+	
+	
+	<noscript>
+		<link rel="stylesheet" href='/assets/css/noscript.css' />
+	</noscript>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/rainbow.min.css">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>`
+	<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+		<meta name="referrer" content="no-referrer-when-downgrade"></head>
+
+<body lang='en' class="is-preload">
+
+    
+    <div id="wrapper">
+
+        
+<header id="header">
+    <a href='/' class="logo">Yeqown</a>
+    </header>
+
+        
+
+<nav id="nav">
+    <ul class="links">
+        <li class="active"><a href='/'>Yeqown</a></li>
+        <li><a href="/tags/">tags</a></li>
+        <li><a href="/categories/">categories</a></li>
+        
+        <li><a href='/#footer'>Contact</a></li>
+        
+        
+    </ul>
+    
+    <ul class="icons">
+        
+        <li><a href="https://twitter.com/yeqown" class="icon fa-twitter"><span class="label">Twitter</span></a></li>
+        
+        
+        
+        
+        
+        <li><a href="https://github.com/yeqown" class="icon fa-github"><span class="label">GitHub</span></a></li>
+        
+        
+        
+        
+        
+        
+        <li><a href="/index.xml" class="icon fa-rss"><span class="label">RSS</span></a></li>
+        
+
+    </ul>
+    
+</nav>
+
+        
+        <div id="main">
+
+            
+            <section class="post">
+                <header class="major">
+                    
+                    <span class="date">
+                        April 20, 2018 
+                        
+                        <span id="busuanzi_container_page_pv">本文阅读量<span id="busuanzi_value_page_pv"></span>次</span>
+                    </span>
+                    
+
+
+
+                    <h1>gorm使用记录</h1>
+                    <p>使用gorm的相关笔记。</p>
+                </header>
+                
+                <h3 id="关于gorm">关于Gorm</h3>
+<p><a href="http://doc.gorm.io">gorm文档</a></p>
+<!-- [gorm文档2](http://gorm.io) -->
+<!-- more -->
+<h3 id="遇见问题">遇见问题</h3>
+<h4 id="无法通过结构体的方式更新或查询零值"><strong>无法通过结构体的方式更新或查询零值</strong></h4>
+<pre><code>这里零值是说，各个类型的默认值。
+</code></pre>
+<p>关于这一点是在<a href="http://doc.gorm.io/crud.html#update">这里</a>中注明了的，也提供了解决方案：</p>
+<blockquote>
+<p>WARNING when update with struct, GORM will only update those fields that with non blank value</p>
+</blockquote>
+<blockquote>
+<p>For below Update, nothing will be updated as &ldquo;&rdquo;, 0, false are blank values of their types</p>
+</blockquote>
+<blockquote>
+<p>NOTE When query with struct, GORM will only query with those fields has non-zero value, that means if your field’s value is 0, &lsquo;&rsquo;, false or other zero values, it won’t be used to build query conditions,</p>
+</blockquote>
+<blockquote>
+<p>You could consider to use pointer type or scanner/valuer to avoid this.</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// Use pointer value
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">User</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">gorm</span>.<span style="color:#a6e22e">Model</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">Name</span> <span style="color:#66d9ef">string</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">Age</span>  <span style="color:#f92672">*</span><span style="color:#66d9ef">int</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// Use scanner/valuer
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">User</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">gorm</span>.<span style="color:#a6e22e">Model</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">Name</span> <span style="color:#66d9ef">string</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">Age</span>  <span style="color:#a6e22e">sql</span>.<span style="color:#a6e22e">NullInt64</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>同样适用其他形式的数据来进行更新也是可以，如：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#a6e22e">updateData</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#66d9ef">interface</span>{}{
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;age&#34;</span>: <span style="color:#ae81ff">0</span>,
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;update_time&#34;</span>: <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Now</span>(),
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">Model</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">User</span>{}).<span style="color:#a6e22e">Update</span>(<span style="color:#a6e22e">updateData</span>)
+</span></span></code></pre></div><h4 id="同一个连接无法多次查询"><strong>同一个连接无法多次查询</strong></h4>
+<p>在实际使用过程中遇到的情况跟<a href="https://github.com/jinzhu/gorm/issues/1574">https://github.com/jinzhu/gorm/issues/1574</a>描述类似，但是回复中的解决办法并不能帮我解决问题。</p>
+<p>我的代码如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// mysql.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">var</span> <span style="color:#a6e22e">myDB</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">gorm</span>.<span style="color:#a6e22e">DB</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">GetMyDB</span>() <span style="color:#f92672">*</span><span style="color:#a6e22e">gorm</span>.<span style="color:#a6e22e">DB</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">myDB</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">ConnMysql</span>() {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//... 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">db</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">gorm</span>.<span style="color:#a6e22e">Open</span>(<span style="color:#f92672">...</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">myDB</span> = <span style="color:#a6e22e">db</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>使用</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// models/user.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">User</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Name</span> <span style="color:#66d9ef">string</span> <span style="color:#e6db74">`gorm:&#34;column:name&#34;`</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Age</span>  <span style="color:#66d9ef">int</span>    <span style="color:#e6db74">`gorm:&#34;column:age&#34;`</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">UserColl</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#f92672">*</span><span style="color:#a6e22e">gorm</span>.<span style="color:#a6e22e">DB</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">NewUserColl</span>() <span style="color:#f92672">*</span><span style="color:#a6e22e">UserColl</span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">UserColl</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">DB</span>: <span style="color:#a6e22e">GetMyDB</span>().<span style="color:#a6e22e">Model</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">User</span>{})
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">FindUserWithName</span>(<span style="color:#a6e22e">name</span> <span style="color:#66d9ef">string</span>) (<span style="color:#66d9ef">error</span>, <span style="color:#f92672">*</span><span style="color:#a6e22e">User</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">uc</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">NewUserColl</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">u</span> <span style="color:#f92672">:=</span> new(<span style="color:#a6e22e">User</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">uc</span>.<span style="color:#a6e22e">Where</span>(<span style="color:#e6db74">&#34;name = ?&#34;</span>, <span style="color:#a6e22e">name</span>).<span style="color:#a6e22e">First</span>(<span style="color:#a6e22e">u</span>).<span style="color:#a6e22e">Error</span>; <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span> 	<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">u</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 无法正常使用的函数
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">FindUsersWithNames</span>(<span style="color:#a6e22e">names</span> []<span style="color:#66d9ef">string</span>) (<span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#66d9ef">error</span>, []<span style="color:#f92672">*</span><span style="color:#a6e22e">User</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">uc</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">NewUserColl</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">us</span> <span style="color:#f92672">:=</span> make([]<span style="color:#f92672">*</span><span style="color:#a6e22e">User</span>, len(<span style="color:#a6e22e">names</span>))
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">errs</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#66d9ef">error</span>{}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">name</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">names</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">u</span> <span style="color:#f92672">:=</span> new(<span style="color:#a6e22e">User</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">uc</span>.<span style="color:#a6e22e">Where</span>(<span style="color:#e6db74">&#34;name = ?&#34;</span>, <span style="color:#a6e22e">name</span>).<span style="color:#a6e22e">First</span>(<span style="color:#a6e22e">u</span>).<span style="color:#a6e22e">Error</span>; <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">map</span>[<span style="color:#a6e22e">name</span>] = <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">continue</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">us</span> = append(<span style="color:#a6e22e">us</span>, <span style="color:#a6e22e">u</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">errs</span>, <span style="color:#a6e22e">us</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>上述的<code>FindUsersWithNames</code>在使用过程中,多个查询只有第一个查询是正常的，其他的会报错：“record not found”，但其实数据是存在的。</p>
+<p>进过检索我发现了，在gorm实现中，db是复用的，因此多次查询会在已经存在的结果中查询，那么找不到就能解释了。那么如何解决呢？<code>issue#1574</code>中提到了重新申请一个<code>connection</code>能解决这个问题。因此我尝试了一下更改：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// 更改1 - 无效
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">FindUsersWithNames</span>(<span style="color:#a6e22e">names</span> []<span style="color:#66d9ef">string</span>) (<span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#66d9ef">error</span>, []<span style="color:#f92672">*</span><span style="color:#a6e22e">User</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">us</span> <span style="color:#f92672">:=</span> make([]<span style="color:#f92672">*</span><span style="color:#a6e22e">User</span>, len(<span style="color:#a6e22e">names</span>))
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">errs</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#66d9ef">error</span>{}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">name</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">names</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">uc</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">NewUserColl</span>().<span style="color:#a6e22e">New</span>() <span style="color:#75715e">// 每次loop都调用一次`New`
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">u</span> <span style="color:#f92672">:=</span> new(<span style="color:#a6e22e">User</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">uc</span>.<span style="color:#a6e22e">Where</span>(<span style="color:#e6db74">&#34;name = ?&#34;</span>, <span style="color:#a6e22e">name</span>).<span style="color:#a6e22e">First</span>(<span style="color:#a6e22e">u</span>).<span style="color:#a6e22e">Error</span>; <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">map</span>[<span style="color:#a6e22e">name</span>] = <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">continue</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">us</span> = append(<span style="color:#a6e22e">us</span>, <span style="color:#a6e22e">u</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">errs</span>, <span style="color:#a6e22e">us</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 更改2 - 无效
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">FindUsersWithNames</span>(<span style="color:#a6e22e">names</span> []<span style="color:#66d9ef">string</span>) (<span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#66d9ef">error</span>, []<span style="color:#f92672">*</span><span style="color:#a6e22e">User</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">us</span> <span style="color:#f92672">:=</span> make([]<span style="color:#f92672">*</span><span style="color:#a6e22e">User</span>, len(<span style="color:#a6e22e">names</span>))
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">errs</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#66d9ef">error</span>{}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">name</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">names</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">ConnMysql</span>() <span style="color:#75715e">// 每次loop都重新连接一次数据库
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">uc</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">NewUserColl</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">u</span> <span style="color:#f92672">:=</span> new(<span style="color:#a6e22e">User</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">uc</span>.<span style="color:#a6e22e">Where</span>(<span style="color:#e6db74">&#34;name = ?&#34;</span>, <span style="color:#a6e22e">name</span>).<span style="color:#a6e22e">First</span>(<span style="color:#a6e22e">u</span>).<span style="color:#a6e22e">Error</span>; <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">map</span>[<span style="color:#a6e22e">name</span>] = <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">continue</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">us</span> = append(<span style="color:#a6e22e">us</span>, <span style="color:#a6e22e">u</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">errs</span>, <span style="color:#a6e22e">us</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 更改3 可用
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">FindUsersWithNames</span>(<span style="color:#a6e22e">names</span> []<span style="color:#66d9ef">string</span>) (<span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#66d9ef">error</span>, []<span style="color:#f92672">*</span><span style="color:#a6e22e">User</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">us</span> <span style="color:#f92672">:=</span> make([]<span style="color:#f92672">*</span><span style="color:#a6e22e">User</span>, len(<span style="color:#a6e22e">names</span>))
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">errs</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#66d9ef">error</span>{}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">name</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">names</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">err</span>, <span style="color:#a6e22e">u</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">FindUserWithName</span>(<span style="color:#a6e22e">name</span>) <span style="color:#75715e">// 调用一次函数
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">errs</span>[<span style="color:#a6e22e">name</span>] = <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">continue</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">us</span> = append(<span style="color:#a6e22e">us</span>, <span style="color:#a6e22e">u</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">errs</span>, <span style="color:#a6e22e">us</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>经过以上尝试，找到了一个解决办法。</p>
+<h3 id="后言">后言</h3>
+<p>但是问题并不是到此为止，为什么调用一层函数，就可以解决，而<code>gorm.DB.New</code>却不行呢？大胆分析一下：上述的三种尝试的区别在于，uc在第三种方式中，每次循环都是一个全新的变量，而不是重新赋值，但这依然不能解释为什么<code>New</code>不能解决上述问题。具体的原因后续研究后补上。</p>
+
+
+                
+            </section>
+
+            
+            <section class="comment">
+                <div id="gitalk-container"></div>
+                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+                <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+                <script>
+                    const gitalk = new Gitalk({
+                        clientID: '7d8c8c91ae6aff3e46e7',
+                        clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+                        repo: 'yeqown.github.io',
+                        owner: 'yeqown',
+                        admin: ['yeqown'],
+                        id: "gorm-usage-record", 
+                        distractionFreeMode: false 
+                    });
+                    (function () {
+                        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+                            document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+                            return;
+                        }
+                        gitalk.render('gitalk-container');
+                    })();
+                </script>
+            </section>
+        </div>
+
+        
+
+<footer id="footer">
+  <section>
+    <form method="post" action="Page%28/posts/gorm%e4%bd%bf%e7%94%a8%e8%ae%b0%e5%bd%95.md%29">
+      <div class="fields">
+        <div class="field">
+          <label for="name">Name</label>
+          <input type="text" name="name" id="name" />
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="text" name="email" id="email" />
+        </div>
+        <div class="field">
+          <label for="message">Message</label>
+          <textarea name="message" id="message" rows="3"></textarea>
+        </div>
+      </div>
+      <ul class="actions">
+        <li><input type="submit" value='Send A Message' /></li>
+      </ul>
+    </form>
+  </section>
+
+  <section class="split contact">
+    
+    <section class="alt">
+      <h3>Address</h3>
+      <p>
+        
+         Chengdu · China
+        
+         <br />  This is a city that comes and doesn&#39;t want to go
+        
+      </p>
+    </section>
+    
+    
+    <section>
+      <h3>Phone</h3>
+      <p><a href="tel:no%20way">no way</a></p>
+    </section>
+    
+    
+    <section>
+      <h3>Email</h3>
+      <p><a href="mailto:yeqown@gmail.com">yeqown@gmail.com</a></p>
+    </section>
+    
+    
+    <section>
+      <h3>Social</h3>
+      <ul class="icons alt">
+        
+        <li><a href="https://twitter.com/yeqown" class="icon alt fa-twitter"><span class="label">Twitter</span></a></li>
+        
+        
+        
+        
+        
+        <li><a href="https://github.com/yeqown" class="icon alt fa-github"><span class="label">GitHub</span></a></li>
+        
+        
+        
+        
+        
+      </ul>
+    </section>
+    
+  </section>
+</footer>
+        
+<div id="copyright">
+    <ul>
+        <li>&copy; Yeqown</li>
+        <li>Design: <a href="https://html5up.net">HTML5 UP</a></li>
+        <li>Hugo Port: <a href="https://curtistimson.co.uk">curttimson</a></li>
+    </ul>
+
+    
+    <ul>
+        <li>
+            <span id="busuanzi_container_site_pv">
+                总访问量<span id="busuanzi_value_site_pv"></span>次
+            </span>
+        </li>
+        <li>
+            <span id="busuanzi_container_site_uv">
+                访客数<span id="busuanzi_value_site_uv"></span>人次
+            </span>
+        </li>
+    </ul></div>
+
+    </div>
+    
+    
+
+
+
+
+
+
+
+
+
+
+<script src='/assets/js/bundle.js'></script>
+</body>
+
+</html>

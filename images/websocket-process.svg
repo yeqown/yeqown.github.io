@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="409px" height="440px" viewBox="0 0 409 440" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="background: #FFFFFF;">
+    <title>WebSocket-Go</title>
+    <g id="流程图" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="编组-2" transform="translate(201.000000, 0.000000)">
+            <rect id="矩形" stroke="#979797" fill="#D8D8D8" x="0.5" y="0.5" width="121" height="36" rx="8"></rect>
+            <text id="Begin" font-family="JetBrainsMono-Regular, JetBrains Mono" font-size="12" font-weight="normal" fill="#000000">
+                <tspan x="43" y="23">Begin</tspan>
+            </text>
+        </g>
+        <g id="编组-3" transform="translate(201.000000, 403.000000)">
+            <rect id="矩形备份-2" stroke="#979797" fill="#D8D8D8" x="0.5" y="0.5" width="121" height="36" rx="8"></rect>
+            <text id="End" font-family="JetBrainsMono-Regular, JetBrains Mono" font-size="12" font-weight="normal" fill="#000000">
+                <tspan x="50" y="23">End</tspan>
+            </text>
+        </g>
+        <g id="编组" transform="translate(201.000000, 73.000000)">
+            <rect id="矩形备份" stroke="#979797" fill="#80CAF8" x="0.5" y="0.5" width="121" height="36" rx="8"></rect>
+            <text id="Handshake" font-family="JetBrainsMono-Regular, JetBrains Mono" font-size="12" font-weight="normal" fill="#000000">
+                <tspan x="30" y="23">Handshake</tspan>
+            </text>
+        </g>
+        <path id="直线" d="M261.5,39.5 L261.5,61.5 L265.5,61.5 L261,70.5 L256.5,61.5 L260.5,61.5 L260.5,39.5 L261.5,39.5 Z" fill="#979797" fill-rule="nonzero"></path>
+        <path id="直线备份" d="M262.5,112.5 L262.5,134.5 L266.5,134.5 L262,143.5 L257.5,134.5 L261.5,134.5 L261.5,112.5 L262.5,112.5 Z" fill="#979797" fill-rule="nonzero"></path>
+        <path id="直线备份-2" d="M262.5,204.5 L262.5,226.5 L266.5,226.5 L262,235.5 L257.5,226.5 L261.5,226.5 L261.5,204.5 L262.5,204.5 Z" fill="#979797" fill-rule="nonzero"></path>
+        <path id="直线备份-3" d="M261.5,276.5 L261.5,298.5 L265.5,298.5 L261,307.5 L256.5,298.5 L260.5,298.5 L260.5,276.5 L261.5,276.5 Z" fill="#979797" fill-rule="nonzero"></path>
+        <path id="直线备份-4" d="M262.5,369.5 L262.5,391.5 L266.5,391.5 L262,400.5 L257.5,391.5 L261.5,391.5 L261.5,369.5 L262.5,369.5 Z" fill="#979797" fill-rule="nonzero"></path>
+        <g id="编组-5" transform="translate(201.000000, 146.000000)">
+            <g id="菱形" fill="#D8D8D8" stroke="#979797">
+                <path d="M61,0.551880443 L120.818782,28.5 L61,56.4481196 L1.18121779,28.5 L61,0.551880443 Z" id="矩形"></path>
+            </g>
+            <text id="Handshake-Successful" font-family="JetBrainsMono-Regular, JetBrains Mono" font-size="12" font-weight="normal" fill="#000000">
+                <tspan x="30" y="23">Handshake </tspan>
+                <tspan x="30" y="38">Successful</tspan>
+                <tspan x="30" y="53">	?</tspan>
+            </text>
+        </g>
+        <g id="编组-5备份" transform="translate(200.000000, 310.000000)">
+            <g id="菱形" fill="#D8D8D8" stroke="#979797">
+                <path d="M61,0.551880443 L120.818782,28.5 L61,56.4481196 L1.18121779,28.5 L61,0.551880443 Z" id="矩形"></path>
+            </g>
+            <text id="Is-Close?" font-family="JetBrainsMono-Regular, JetBrains Mono" font-size="12" font-weight="normal" fill="#000000">
+                <tspan x="28" y="33">Is Close?</tspan>
+            </text>
+        </g>
+        <g id="编组-4" transform="translate(201.000000, 238.000000)">
+            <rect id="矩形" stroke="#979797" fill="#FFBABA" x="0.5" y="0.5" width="121" height="35"></rect>
+            <text id="Recive" font-family="JetBrainsMono-Regular, JetBrains Mono" font-size="12" font-weight="normal" fill="#000000">
+                <tspan x="42" y="22">Recive</tspan>
+            </text>
+        </g>
+        <g id="编组-4备份" transform="translate(0.000000, 238.000000)">
+            <rect id="矩形" stroke="#979797" fill="#FBC2A3" x="0.5" y="0.5" width="121" height="35"></rect>
+            <text id="Send" font-family="JetBrainsMono-Regular, JetBrains Mono" font-size="12" font-weight="normal" fill="#000000">
+                <tspan x="42" y="22">Send</tspan>
+            </text>
+        </g>
+        <g id="编组-6" transform="translate(327.000000, 255.000000)">
+            <line x1="0.5" y1="83.5" x2="50.5" y2="83.5" id="直线-2" stroke="#979797" stroke-linecap="square"></line>
+            <line x1="50.5" y1="83.5" x2="50.5" y2="0.5" id="直线-3" stroke="#979797" stroke-linecap="square"></line>
+            <path id="直线-4" d="M9,-4 L9,0 L51,0 L51,1 L9,1 L9,5 L0,0.5 L9,-4 Z" fill="#979797" fill-rule="nonzero"></path>
+        </g>
+        <text id="Y" font-family="PingFangSC-Regular, PingFang SC" font-size="12" font-weight="normal" fill="#000000">
+            <tspan x="274" y="220">Y</tspan>
+        </text>
+        <path id="直线-5" d="M135.5,251.5 L135.5,255.5 L196.5,255.5 L196.5,256.5 L135.5,256.5 L135.5,260.5 L126.5,256 L135.5,251.5 Z" fill="#979797" fill-rule="nonzero"></path>
+        <g id="编组-7" transform="translate(56.000000, 214.000000)">
+            <line x1="0.5" y1="20.8360656" x2="0.5" y2="1.16393443" id="直线-6" stroke="#979797" stroke-linecap="square"></line>
+            <path id="直线-7" d="M192.778571,-3.5 L201.778571,1 L192.778571,5.5 L192.778,1.5 L0.721428571,1.5 L0.221428571,1.5 L0.221428571,0.5 L192.778,0.499 L192.778571,-3.5 Z" fill="#979797" fill-rule="nonzero"></path>
+        </g>
+        <g id="编组-8" transform="translate(267.000000, 174.000000)">
+            <line x1="59.5" y1="0.5" x2="141.5" y2="0.5" id="直线-8" stroke="#979797" stroke-linecap="square"></line>
+            <line x1="141.5" y1="0.5" x2="141.5" y2="211.5" id="直线-9" stroke="#979797" stroke-linecap="square"></line>
+            <path id="直线-10" d="M9,207 L9,211 L142,211 L142,212 L9,212 L9,216 L0,211.5 L9,207 Z" fill="#979797" fill-rule="nonzero"></path>
+        </g>
+        <text id="N" font-family="PingFangSC-Regular, PingFang SC" font-size="12" font-weight="normal" fill="#000000">
+            <tspan x="352" y="165">N</tspan>
+        </text>
+        <text id="Y" font-family="PingFangSC-Regular, PingFang SC" font-size="12" font-weight="normal" fill="#000000">
+            <tspan x="249" y="385">Y</tspan>
+        </text>
+        <text id="N" font-family="PingFangSC-Regular, PingFang SC" font-size="12" font-weight="normal" fill="#000000">
+            <tspan x="352" y="331">N</tspan>
+        </text>
+    </g>
+</svg>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>api-gateway on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/api-gateway/</link>
+    <description>Recent content in api-gateway on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Fri, 08 Jun 2018 10:53:32 +0000</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/api-gateway/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>api-gateway中实现基于权重的轮询调度</title>
+      <link>https://www.yeqown.xyz/2018/06/08/api-gateway%E4%B8%AD%E5%AE%9E%E7%8E%B0%E5%9F%BA%E4%BA%8E%E6%9D%83%E9%87%8D%E7%9A%84%E8%BD%AE%E8%AF%A2%E8%B0%83%E5%BA%A6/</link>
+      <pubDate>Fri, 08 Jun 2018 10:53:32 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/06/08/api-gateway%E4%B8%AD%E5%AE%9E%E7%8E%B0%E5%9F%BA%E4%BA%8E%E6%9D%83%E9%87%8D%E7%9A%84%E8%BD%AE%E8%AF%A2%E8%B0%83%E5%BA%A6/</guid>
+      <description>背景和目标 背景 项目需要在现有项目的基础上实现权限系统，但为了低耦合，选择实现了一个基于ne7ermore/gRBAC的auth-server，用于实现权限，角色，用户的管理，以及提供鉴权服务。在开发环境对接没有问题，正常的鉴权访问。到了线上部署的时候，才发现：
+线上某服务部署在多台机器上; 目前的api-gateway并不支持同一服务配置多个node; 想的办法有：
+序号 描述 优点 缺点 1 api-gateway通过url来转发请求，之前是配置IP加端口 api-gateway改动小 影响web和APP升级 2 api-gateway能支持多台机器，并进行调度 api-gateway功能更强大，把以后要做的事情提前做好基础 好像没啥缺点，只是费点时间支持下多节点配置，并调度 如果没说清，请看下图：
+目标 那么，目标也就明确了，需要实现api-gateway中实现基于权重的调度。为啥要基于权重？其一是仿照nginx基于权重的负载均衡，其二是服务器性能差异。
+轮询调度算法介绍 轮询调度算法: 轮询调度算法的原理是每一次把来自用户的请求轮流分配给内部中的服务器，从1开始，直到N(内部服务器个数)，然后重新开始循环。该算法的优点是其简洁性，它无需记录当前所有连接的状态，所以它是一种无状态调度。
+假设有一组服务器N台，S = {S1, S2, …, Sn}，一个指示变量i表示上一次选择的服务器ID。变量i被初始化为N-1。其算法如下：
+j = i; do { j = (j + 1) mod n; i = j; return Si; } while (j != i); return NULL; 平滑加权轮询调度算法： 上述的轮询调度算法，并没有考虑服务器性能的差异，实际生产环境中，每一台服务器配置和安装的业务并不一定相同，处理能力不完全一样。因此需要根据服务器能力，分配不同的权值，以免服务的超负荷和过分闲余。
+假设有一组服务器S = {S0, S1, …, Sn-1}, 其算法如下：
+// i表示上一次选择的服务器，变量i初始化为-1 // W(Si)表示服务器Si的权值 // cw表示当前调度的权值 cw初始化为0 // max(S)表示集合S中所有服务器的最大权值 // gcd(S)表示集合S中所有服务器权值的最大公约数 while (true) { i = (i + 1) mod n; if (i == 0) { cw = cw - gcd(S); if (cw &amp;lt;= 0) { cw = max(S); if (cw == 0) return NULL; } } if (W(Si) &amp;gt;= cw) return Si; } Nginx基于权重的轮询算法的实现可以参考它的一次代码提交： Upstream: smooth weighted round-robin balancing。</description>
+    </item>
+    
+  </channel>
+</rss>

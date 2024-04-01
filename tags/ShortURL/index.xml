@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>ShortURL on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/ShortURL/</link>
+    <description>Recent content in ShortURL on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Mon, 29 Jan 2018 10:22:00 +0000</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/ShortURL/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>ShortURL系统实现</title>
+      <link>https://www.yeqown.xyz/2018/01/29/ShortURL%E7%94%9F%E6%88%90%E7%B3%BB%E7%BB%9F/</link>
+      <pubDate>Mon, 29 Jan 2018 10:22:00 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/01/29/ShortURL%E7%94%9F%E6%88%90%E7%B3%BB%E7%BB%9F/</guid>
+      <description>在知乎上看了一个很有启发的回答，因此实际动手来实现短URL生成系统。贴上链接： 知乎 - 短URL系统是如何设计的。其中提到了，要实现短URL生成系统要解决的问题有：
+如何优雅的实现？ 怎么基本实现长对短、一对一？ 如何实现分布式，高并发，高可用？ 储存选用？ 基本原理 数据库自增ID转换62进制
+使用自增ID不会产生重复的短链接。 为了解决自增ID超长和不便记忆，对ID进行62进制编码。所谓62进制就是0-9，a-z，A-Z。 简单计算下：
+62 ^ 4 = 14,776,336 62 ^ 5 = 916,132,832 62 ^ 6 = 56,800,235,584 // 已经足够使用了 总体结构及处理流程 长链接处理流程 获取参数，调用shortURL服务 尝试从缓存中获取，如果命中，则读取短链接(重置过期时间)。跳转第4步 将长链接存储到Mysql数据库，根据ID进行base62编码，组装Domain+Encoded字符串并更新数据库 返回生成的短链接 短链接处理流程 解析短链接为ID 查询ID对应的长链接 以301方式跳转到长链接 长链接与短链接的对应关系 一对多，一个长链接可能对应多个短链接。数据表存储结构如下：
++-----------+--------------+------+-----+---------+----------------+ | Field | Type | Null | Key | Default | Extra | +-----------+--------------+------+-----+---------+----------------+ | id | int(64) | NO | PRI | NULL | auto_increment | | long_url | varchar(100) | NO | | NULL | | | short_url | varchar(40) | YES | | NULL | | +-----------+--------------+------+-----+---------+----------------+ 分布式和高并发设计 ###注：这部分未实现。我的思路如下：</description>
+    </item>
+    
+  </channel>
+</rss>
