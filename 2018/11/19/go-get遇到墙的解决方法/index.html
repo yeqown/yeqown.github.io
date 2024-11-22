@@ -1,0 +1,266 @@
+<!DOCTYPE HTML>
+
+<html lang='en'>
+
+<head>
+	<title>go-get遇到🧱的解决方法 &middot; Yeqown
+	</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	
+	
+	
+	<link rel="stylesheet" href="/assets/css/main.min.css">
+	
+	
+	<link rel="shortcut icon" href="/favicon.ico">
+	
+	
+	<noscript>
+		<link rel="stylesheet" href='/assets/css/noscript.css' />
+	</noscript>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/rainbow.min.css">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>`
+	<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+		<meta name="referrer" content="no-referrer-when-downgrade"></head>
+
+<body lang='en' class="is-preload">
+
+    
+    <div id="wrapper">
+
+        
+<header id="header">
+    <a href='/' class="logo">Yeqown</a>
+    </header>
+
+        
+
+<nav id="nav">
+    <ul class="links">
+        <li class="active"><a href='/'>Yeqown</a></li>
+        <li><a href="/tags/">tags</a></li>
+        <li><a href="/categories/">categories</a></li>
+        
+        <li><a href='/#footer'>Contact</a></li>
+        
+        
+    </ul>
+    
+    <ul class="icons">
+        
+        <li><a href="https://twitter.com/yeqown" class="icon fa-twitter"><span class="label">Twitter</span></a></li>
+        
+        
+        
+        
+        
+        <li><a href="https://github.com/yeqown" class="icon fa-github"><span class="label">GitHub</span></a></li>
+        
+        
+        
+        
+        
+        
+        <li><a href="/index.xml" class="icon fa-rss"><span class="label">RSS</span></a></li>
+        
+
+    </ul>
+    
+</nav>
+
+        
+        <div id="main">
+
+            
+            <section class="post">
+                <header class="major">
+                    
+                    <span class="date">
+                        November 19, 2018 
+                        
+                        <span id="busuanzi_container_page_pv">本文阅读量<span id="busuanzi_value_page_pv"></span>次</span>
+                    </span>
+                    
+
+
+
+                    <h1>go-get遇到🧱的解决方法</h1>
+                    <p>解决方法有两种</p>
+                </header>
+                
+                <p>解决方法有两种，在网上也很好找到：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>1. 最简单的，从¥“github.com/golang”找到对应的包并下载到 $GOPATH/src/golang.org/x/ 下
+</span></span><span style="display:flex;"><span>2. 第二种，就是翻过🧱了。
+</span></span></code></pre></div><h3 id="1-问题翻了还是没办法直接使用go-get来下载呢">1 问题：翻了🧱，还是没办法直接使用go get来下载呢？</h3>
+<p>先说原因，因为go get并没有走你的代理啊！！！！那么如何设置代理呢？</p>
+<!-- more -->
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>export http_proxy<span style="color:#f92672">=</span>http://ip:port
+</span></span><span style="display:flex;"><span>go get golang.org/xxx
+</span></span></code></pre></div><p>其他设置代理的方式，自行参见 <a href="##%E5%8F%82%E8%80%83">参考</a></p>
+<h3 id="2-如果你的代理不支持http--https协议可咋整">2 如果你的代理不支持http || https协议，可咋整？</h3>
+<p>那么想办法支持http或者把http再代理到你可以使用的协议（socks5~），那么可以使用<a href="https://github.com/cyfdecyf/cow">cow</a>。</p>
+<p>cow 推荐使用方式：</p>
+<p>go get 下载安装（因为刚开始图简单，使用程序的时候运行报错了，go get 安装方式并不会有这样的困扰）。
+配置的时候也很简单，编辑配置文件 ～/.cow/rc，配置http socks5代理服务和监听代理端口。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>listen <span style="color:#f92672">=</span> http://127.0.0.1:7777
+</span></span><span style="display:flex;"><span>proxy <span style="color:#f92672">=</span> socks5://127.0.0.1:1080
+</span></span></code></pre></div><h3 id="3-运行">3 运行</h3>
+<p>配置完成之后就可以直接运行了</p>
+<pre tabindex="0"><code>    ./cow
+    # 另开一个Terminal
+    export http_proxy=http://ip:port
+    go get golang.org/xxx
+</code></pre><h3 id="写在后面">写在后面</h3>
+<p>知道了go get无法翻🧱的原因之后，就可以发挥自己的想象力来解决问题了，这样解决还是挺繁琐的。虽然cow可以配置开机启动，但对于一个懒癌晚期）的人来说（如果不是因为升级Go到了1.11，go-module机制让我无法开心的玩耍，我也不会去考虑为啥翻🧱了go get还是不能用，明明有代理却还有使用另外一个代理～。</p>
+<p>友情提示：vscode-go 也可以设置proxy哦</p>
+<h3 id="参考">参考：</h3>
+<ul>
+<li><a href="https://blog.csdn.net/zhyhang/article/details/78444974">go get 使用代理</a></li>
+<li><a href="https://github.com/cyfdecyf/cow">cow</a></li>
+<li><a href="https://github.com/cyfdecyf/cow/blob/master/doc/sample-config/rc">cow配置文件说明</a></li>
+<li><a href="https://blog.csdn.net/easy_mind/article/details/78214696">vscode-go设置proxy</a></li>
+</ul>
+
+
+                
+            </section>
+
+            
+            <section class="comment">
+                <div id="gitalk-container"></div>
+                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+                <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+                <script>
+                    const gitalk = new Gitalk({
+                        clientID: '7d8c8c91ae6aff3e46e7',
+                        clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+                        repo: 'yeqown.github.io',
+                        owner: 'yeqown',
+                        admin: ['yeqown'],
+                        id: "go-get-failed-solution", 
+                        distractionFreeMode: false 
+                    });
+                    (function () {
+                        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+                            document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+                            return;
+                        }
+                        gitalk.render('gitalk-container');
+                    })();
+                </script>
+            </section>
+        </div>
+
+        
+
+<footer id="footer">
+  <section>
+    <form method="post" action="Page%28/posts/go-get%e9%81%87%e5%88%b0%e5%a2%99%e7%9a%84%e8%a7%a3%e5%86%b3%e6%96%b9%e6%b3%95.md%29">
+      <div class="fields">
+        <div class="field">
+          <label for="name">Name</label>
+          <input type="text" name="name" id="name" />
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="text" name="email" id="email" />
+        </div>
+        <div class="field">
+          <label for="message">Message</label>
+          <textarea name="message" id="message" rows="3"></textarea>
+        </div>
+      </div>
+      <ul class="actions">
+        <li><input type="submit" value='Send A Message' /></li>
+      </ul>
+    </form>
+  </section>
+
+  <section class="split contact">
+    
+    <section class="alt">
+      <h3>Address</h3>
+      <p>
+        
+         Chengdu · China
+        
+         <br />  This is a city that comes and doesn&#39;t want to go
+        
+      </p>
+    </section>
+    
+    
+    <section>
+      <h3>Phone</h3>
+      <p><a href="tel:no%20way">no way</a></p>
+    </section>
+    
+    
+    <section>
+      <h3>Email</h3>
+      <p><a href="mailto:yeqown@gmail.com">yeqown@gmail.com</a></p>
+    </section>
+    
+    
+    <section>
+      <h3>Social</h3>
+      <ul class="icons alt">
+        
+        <li><a href="https://twitter.com/yeqown" class="icon alt fa-twitter"><span class="label">Twitter</span></a></li>
+        
+        
+        
+        
+        
+        <li><a href="https://github.com/yeqown" class="icon alt fa-github"><span class="label">GitHub</span></a></li>
+        
+        
+        
+        
+        
+      </ul>
+    </section>
+    
+  </section>
+</footer>
+        
+<div id="copyright">
+    <ul>
+        <li>&copy; Yeqown</li>
+        <li>Design: <a href="https://html5up.net">HTML5 UP</a></li>
+        <li>Hugo Port: <a href="https://curtistimson.co.uk">curttimson</a></li>
+    </ul>
+
+    
+    <ul>
+        <li>
+            <span id="busuanzi_container_site_pv">
+                总访问量<span id="busuanzi_value_site_pv"></span>次
+            </span>
+        </li>
+        <li>
+            <span id="busuanzi_container_site_uv">
+                访客数<span id="busuanzi_value_site_uv"></span>人次
+            </span>
+        </li>
+    </ul></div>
+
+    </div>
+    
+    
+
+
+
+
+
+
+
+
+
+
+<script src='/assets/js/bundle.js'></script>
+</body>
+
+</html>

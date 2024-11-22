@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>redis on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/redis/</link>
+    <description>Recent content in redis on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Tue, 22 Aug 2023 10:51:43 +0800</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/redis/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>C和lua互操作实践</title>
+      <link>https://www.yeqown.xyz/2023/08/22/c%E5%92%8Clua%E4%BA%92%E6%93%8D%E4%BD%9C%E5%AE%9E%E8%B7%B5/</link>
+      <pubDate>Tue, 22 Aug 2023 10:51:43 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2023/08/22/c%E5%92%8Clua%E4%BA%92%E6%93%8D%E4%BD%9C%E5%AE%9E%E8%B7%B5/</guid>
+      <description>相信了解 redis 和 openresty 的小伙伴们都知道 lua 代码可以嵌入这两种程序中运行，极大的提高了软件的扩展性；尤其是 openresty 中，通过使用 lua 我们可以很快速（相比c）的定制web服务器，或者增强 nginx 的功能。那么 lua 是如何嵌入到这些程序中的呢？lua 和 c 是如何互操作的呢？
+下文的相关环境和工具版本为：Lua 5.4.6; Mac OS 13.4.1 (Darwin Kernel Version 22.5.0) arm64 M2 pro; Apple clang version 14.0.3 (clang-1403.0.22.14.1)
+redis 中的 lua 下面展示了一段 redis 中操作 lua API 的代码：
+这里出现了很多 lua_ 开头的函数，这些函数都是 lua 库中的函数，redis 通过这些函数来操作 lua 环境， 这里先不展开讲，后面会详细介绍。
+更多的代码，如 luaRegisterRedisAPI 就不展示了，有兴趣的可以去看源码。
+// redis-v7.2/src/eval.c#183 /* 初始化 lua 环境 * * redis 首次启动时调用，此时 setup 为 1, * 这个函数也会在 redis 的其他生命周期中被调用，此时 setup 为 0，但是被简化为 scriptingReset 调用。 */ void scriptingInit(int setup) { lua_State *lua = lua_open(); if (setup) { // 首次启动时，初始化 lua 环境 和 ldb (Lua debugger) 的一些数据结构 lctx.</description>
+    </item>
+    
+  </channel>
+</rss>

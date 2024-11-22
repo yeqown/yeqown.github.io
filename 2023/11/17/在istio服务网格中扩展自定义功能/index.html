@@ -1,0 +1,496 @@
+<!DOCTYPE HTML>
+
+<html lang='en'>
+
+<head>
+	<title>在istio服务网格中扩展自定义功能 &middot; Yeqown
+	</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	
+	
+	
+	<link rel="stylesheet" href="/assets/css/main.min.css">
+	
+	
+	<link rel="shortcut icon" href="/favicon.ico">
+	
+	
+	<noscript>
+		<link rel="stylesheet" href='/assets/css/noscript.css' />
+	</noscript>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/rainbow.min.css">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>`
+	<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+		<meta name="referrer" content="no-referrer-when-downgrade"></head>
+
+<body lang='en' class="is-preload">
+
+    
+    <div id="wrapper">
+
+        
+<header id="header">
+    <a href='/' class="logo">Yeqown</a>
+    </header>
+
+        
+
+<nav id="nav">
+    <ul class="links">
+        <li class="active"><a href='/'>Yeqown</a></li>
+        <li><a href="/tags/">tags</a></li>
+        <li><a href="/categories/">categories</a></li>
+        
+        <li><a href='/#footer'>Contact</a></li>
+        
+        
+    </ul>
+    
+    <ul class="icons">
+        
+        <li><a href="https://twitter.com/yeqown" class="icon fa-twitter"><span class="label">Twitter</span></a></li>
+        
+        
+        
+        
+        
+        <li><a href="https://github.com/yeqown" class="icon fa-github"><span class="label">GitHub</span></a></li>
+        
+        
+        
+        
+        
+        
+        <li><a href="/index.xml" class="icon fa-rss"><span class="label">RSS</span></a></li>
+        
+
+    </ul>
+    
+</nav>
+
+        
+        <div id="main">
+
+            
+            <section class="post">
+                <header class="major">
+                    
+                    <span class="date">
+                        November 17, 2023 
+                        
+                        <span id="busuanzi_container_page_pv">本文阅读量<span id="busuanzi_value_page_pv"></span>次</span>
+                    </span>
+                    
+
+
+
+                    <h1>在istio服务网格中扩展自定义功能</h1>
+                    <p>istio 作为当下火热的服务网格框架，其提供了丰富的功能，但是在实际的使用中，我们还是会遇到一些特殊的场景，需要我们自己基于自己的业务场景去扩展一些功能。本文就简单尝试下如何在 istio 中扩展自定义功能。</p>
+                </header>
+                
+                <h2 id="前提">前提</h2>
+<p>本文假设你已经对 Kubernetes、istio 和 Envoy 有一定的了解，如果你还不了解，可以先阅读下面的文章：</p>
+<ul>
+<li>Kubernetes: <a href="https://kubernetes.io/docs/concepts/overview/what-is-kubernetes/">https://kubernetes.io/docs/concepts/overview/what-is-kubernetes/</a></li>
+<li>istio: <a href="https://istio.io/latest/docs/concepts/what-is-istio/">https://istio.io/latest/docs/concepts/what-is-istio/</a></li>
+<li>Envoy: <a href="https://www.envoyproxy.io/docs/envoy/latest/intro/what_is_envoy">https://www.envoyproxy.io/docs/envoy/latest/intro/what_is_envoy</a></li>
+</ul>
+<p>当然不仅限于知道这些，还需要对其有一定的实践经验，这样才能更好的理解本文的内容。当然本文也不会涉及太深，只是作为 istio 的一个入门扩展教程。</p>
+<h2 id="为什么要扩展功能背景">为什么要扩展功能？#背景</h2>
+<p>用通俗的话去理解 istio 的作用就是，对我们部署在 kubernetes 上的应用进行流量控制（代理），给我们提供了：流量控制、流量监控、流量安全等功能。但是在实际的使用中，我们还是会遇到一些特殊的场景，需要我们自己基于自己的业务场景去扩展一些功能，比如：ip 白名单、ip 黑名单、统一认证等。这些功能往往和具体公司的业务场景有关，因此 istio 无法直接提供这些功能，需要我们自己去扩展。</p>
+<h2 id="传统的扩展方式">传统的扩展方式</h2>
+<p>在传统架构中，常常通过 API 网关这一组件来实现这一些扩展能力，常用的 API 网关有：kong、apisix、openresty，而扩展的原理就是插件，或者像 nginx/openresty 在请求链中的不同阶段提供了不同的 hook，我们可以基于这些 hook 来实现扩展功能。</p>
+<p>就我个人的经历来说，网关要么自己定制开发，要么基于openresty来实现，又或者使用一些开源的网关，如：kong、apisix，在此基础上进行二次开发。不过这些方式都是在传统API网关中去实现的，随着 Service Mesh 的发展，API网关的某些功能也被 Sidecar 代理所取代，比如：流量控制、流量监控、流量安全等。目前 Mesh 发展的趋势也是进一步在 Sidecar 代理中实现更多的功能，而不是在 API 网关中实现。</p>
+<h2 id="envoy-的扩展能力">Envoy 的扩展能力</h2>
+<blockquote>
+<ul>
+<li><a href="https://www.envoyproxy.io/docs/envoy/latest/extending/extending">https://www.envoyproxy.io/docs/envoy/latest/extending/extending</a></li>
+<li><a href="https://www.youtube.com/watch?v=XdWmm_mtVXI">https://www.youtube.com/watch?v=XdWmm_mtVXI</a></li>
+</ul>
+</blockquote>
+<p>envoy 提供了丰富的扩展能力，Access Logger, Access Log Filter, Clusters, Listen Filter, Network Filter, HTTP Filter 等等。这一块内容非常多，如果想要了解更多，请参考官方文档。</p>
+<h2 id="istio-的扩展能力">istio 的扩展能力</h2>
+<blockquote>
+<p><a href="https://istio.io/latest/docs/reference/config/networking/envoy-filter/">https://istio.io/latest/docs/reference/config/networking/envoy-filter/</a></p>
+</blockquote>
+<p>istio 作为一个 Service Mesh 框架，其底层的代理是 Envoy，因此 istio 也继承了 Envoy 的扩展能力。istio 提供了 EnvoyFilter 这样一种自定义 istio Pilot 生成的 Envoy 配置的机制。可以修改某些字段的值、添加特定过滤器。对于特定命名空间中的给定工作负载，可以存在任意数量的 EnvoyFilter。这些 EnvoyFilter 的应用顺序如下：配置根命名空间中的所有 EnvoyFilter，然后是工作负载命名空间中的所有匹配的 EnvoyFilter。</p>
+<blockquote>
+<p>需要谨慎的使用这个功能，因为错误的配置会影响整个网格的稳定性。</p>
+</blockquote>
+<h2 id="实践实现一个请求参数改写请求头的功能">实践：实现一个请求参数改写请求头的功能</h2>
+<p>假设我们有一个业务场景，需要将请求参数中的 <code>cvn</code> 参数的值，改写到请求头中的 <code>x-istio-cvn</code> 参数中，那我们应该怎么做呢？我们可以用伪代码来简单梳理下逻辑：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-lua" data-lang="lua"><span style="display:flex;"><span><span style="color:#66d9ef">function</span> <span style="color:#a6e22e">rewrite_cvn_to_header</span>()
+</span></span><span style="display:flex;"><span>    cvn <span style="color:#f92672">=</span> request.query_params.cvn
+</span></span><span style="display:flex;"><span>    request.headers.set(<span style="color:#e6db74">&#34;x-istio-cvn&#34;</span>, cvn)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">end</span>
+</span></span></code></pre></div><h3 id="编写-envoyfilter">编写 EnvoyFilter</h3>
+<p>从 envoy 的扩展能力中，我们可以知道，我们需要编写一个 HTTP Filter，用于在请求到达 Sidecar 代理时，对请求进行处理，将请求参数中的 <code>cvn</code> 参数的值，改写到请求头中的 <code>x-client-cvn</code> 参数中。而在 istio 中，我们需要编写一个 EnvoyFilter 资源，用于将 HTTP Filter 注入到 Envoy 中。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">networking.istio.io/v1alpha3</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">kind</span>: <span style="color:#ae81ff">EnvoyFilter</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">cvn-rewrite      </span> <span style="color:#75715e"># EnvoyFilter 的名称</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">namespace</span>: <span style="color:#ae81ff">istio-system</span> <span style="color:#75715e"># EnvoyFilter 所在的命名空间, 作用于 ingressgateway</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">spec</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">workloadSelector</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">labels</span>:
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">istio</span>: <span style="color:#ae81ff">ingressgateway</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">configPatches</span>:
+</span></span><span style="display:flex;"><span>        - <span style="color:#f92672">applyTo</span>: <span style="color:#ae81ff">HTTP_FILTER</span> <span style="color:#75715e"># 应用于 HTTP_FILTER</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">match</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">context</span>: <span style="color:#ae81ff">GATEWAY </span> <span style="color:#75715e"># 作用于 GATEWAY</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">listener</span>:
+</span></span><span style="display:flex;"><span>              <span style="color:#f92672">filterChain</span>:
+</span></span><span style="display:flex;"><span>                  <span style="color:#f92672">filter</span>:
+</span></span><span style="display:flex;"><span>                    <span style="color:#f92672">name</span>: <span style="color:#ae81ff">envoy.filters.network.http_connection_manager</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#f92672">subFilter</span>:
+</span></span><span style="display:flex;"><span>                        <span style="color:#f92672">name</span>: <span style="color:#ae81ff">envoy.filters.http.router</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">patch</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">operation</span>: <span style="color:#ae81ff">INSERT_BEFORE</span> <span style="color:#75715e"># 在 envoy.router 之前插入</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">value</span>:
+</span></span><span style="display:flex;"><span>              <span style="color:#f92672">name</span>: <span style="color:#ae81ff">envoy.lua</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#f92672">typed_config</span>:
+</span></span><span style="display:flex;"><span>                  <span style="color:#f92672">&#34;@type&#34;: </span><span style="color:#e6db74">&#34;type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua&#34;</span>
+</span></span><span style="display:flex;"><span>                  <span style="color:#f92672">inlineCode</span>: |<span style="color:#e6db74">
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">                    function envoy_on_request(request_handle)
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">                        local cvn = request_handle:headers():get(&#34;:path&#34;):match(&#34;cvn=([%w%.%-]+)&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">                        if cvn == nil then
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">                            cvn = &#34;default&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">                        end
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">                        request_handle:headers():add(&#34;x-client-cvn&#34;, cvn)
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">                    end</span>                    
+</span></span></code></pre></div><p>如果想要了解 envoy 中关于 lua 更多的扩展内容，一定要先通读下官方文档，地址在此：https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/lua_filter.html#lua</p>
+<h3 id="部署">部署</h3>
+<p>为了方便测试我们可以编写这么一个应用用于打印请求头：</p>
+<p><code>app.py</code> 服务代码：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#f92672">from</span> flask <span style="color:#f92672">import</span> Flask, request
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>app <span style="color:#f92672">=</span> Flask(__name__)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">@app.route</span>(<span style="color:#e6db74">&#34;/&#34;</span>)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">index</span>():
+</span></span><span style="display:flex;"><span>    print(request<span style="color:#f92672">.</span>headers)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    dict <span style="color:#f92672">=</span> {}
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> key, value <span style="color:#f92672">in</span> request<span style="color:#f92672">.</span>headers:
+</span></span><span style="display:flex;"><span>        dict[key] <span style="color:#f92672">=</span> value
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> dict
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> __name__ <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;__main__&#34;</span>:
+</span></span><span style="display:flex;"><span>    app<span style="color:#f92672">.</span>run(host<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;0.0.0.0&#34;</span>, port<span style="color:#f92672">=</span><span style="color:#ae81ff">8080</span>)
+</span></span></code></pre></div><p><code>Dockerfile</code> 文件进行打包：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>nerdctl.lima build -t docker.io/yeqown/istio-envoy-filter-demo:0.0.1 . --build-arg VERSION<span style="color:#f92672">=</span>0.0.1
+</span></span></code></pre></div><blockquote>
+<p>如果不想自己打包，可以直接用我的镜像：docker.io/yeqown/istio-envoy-filter-demo:0.0.1</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-dockerfile" data-lang="dockerfile"><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span><span style="color:#e6db74"> python:3.8-slim-buster</span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">WORKDIR</span><span style="color:#e6db74"> /app</span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">COPY</span> . .<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">RUN</span> pip install flask<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">EXPOSE</span><span style="color:#e6db74"> 8080</span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">CMD</span> [<span style="color:#e6db74">&#34;python&#34;</span>, <span style="color:#e6db74">&#34;app.py&#34;</span>]<span style="color:#960050;background-color:#1e0010">
+</span></span></span></code></pre></div><p>k8s 资源配置 <code>deployment.yaml</code> 文件：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">apps/v1</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">kind</span>: <span style="color:#ae81ff">Deployment</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">istio-envoy-filter-demo</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">namespace</span>: <span style="color:#ae81ff">default</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">labels</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">app</span>: <span style="color:#ae81ff">istio-envoy-filter-demo</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">spec</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">selector</span>:
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">matchLabels</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">app</span>: <span style="color:#ae81ff">istio-envoy-filter-demo</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">replicas</span>: <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">template</span>:
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">metadata</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">labels</span>:
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">app</span>: <span style="color:#ae81ff">istio-envoy-filter-demo</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">spec</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">containers</span>:
+</span></span><span style="display:flex;"><span>            - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">istio-envoy-filter-demo</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#f92672">image</span>: <span style="color:#ae81ff">docker.io/yeqown/istio-envoy-filter-demo:0.0.1</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#f92672">imagePullPolicy</span>: <span style="color:#ae81ff">IfNotPresent</span>
+</span></span><span style="display:flex;"><span>              <span style="color:#f92672">ports</span>:
+</span></span><span style="display:flex;"><span>                  - <span style="color:#f92672">containerPort</span>: <span style="color:#ae81ff">8080</span>
+</span></span><span style="display:flex;"><span>---
+</span></span><span style="display:flex;"><span><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">v1</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">kind</span>: <span style="color:#ae81ff">Service</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">istio-envoy-filter-demo</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">namespace</span>: <span style="color:#ae81ff">default</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">spec</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">selector</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">app</span>: <span style="color:#ae81ff">istio-envoy-filter-demo</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">ports</span>:
+</span></span><span style="display:flex;"><span>        - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">http-port</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">port</span>: <span style="color:#ae81ff">8080</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">targetPort</span>: <span style="color:#ae81ff">8080</span>
+</span></span></code></pre></div><p><code>deployment.networking.yaml</code> istio 配置文件：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">networking.istio.io/v1alpha3</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">kind</span>: <span style="color:#ae81ff">VirtualService</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">istio-envoy-filter-demo</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">namespace</span>: <span style="color:#ae81ff">default</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">spec</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">hosts</span>:
+</span></span><span style="display:flex;"><span>    - <span style="color:#e6db74">&#34;*&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">gateways</span>:
+</span></span><span style="display:flex;"><span>    - <span style="color:#ae81ff">istio-envoy-filter-demo-gateway</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">http</span>:
+</span></span><span style="display:flex;"><span>    - <span style="color:#f92672">name</span>: <span style="color:#e6db74">&#34;istio-envoy-filter-demo&#34;</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">match</span>:
+</span></span><span style="display:flex;"><span>        - <span style="color:#f92672">uri</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">exact</span>: <span style="color:#ae81ff">/istio-envoy-filter-demo</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">rewrite</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">uri</span>: <span style="color:#ae81ff">/</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">route</span>:
+</span></span><span style="display:flex;"><span>        - <span style="color:#f92672">destination</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">host</span>: <span style="color:#ae81ff">istio-envoy-filter-demo.default.svc.cluster.local</span>
+</span></span><span style="display:flex;"><span>---
+</span></span><span style="display:flex;"><span><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">networking.istio.io/v1alpha3</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">kind</span>: <span style="color:#ae81ff">Gateway</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">istio-envoy-filter-demo-gateway</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">namespace</span>: <span style="color:#ae81ff">default</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">spec</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">selector</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">istio</span>: <span style="color:#ae81ff">ingressgateway</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">servers</span>:
+</span></span><span style="display:flex;"><span>    - <span style="color:#f92672">port</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">number</span>: <span style="color:#ae81ff">80</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">name</span>: <span style="color:#ae81ff">http</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">protocol</span>: <span style="color:#ae81ff">HTTP</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">hosts</span>:
+</span></span><span style="display:flex;"><span>        - <span style="color:#e6db74">&#34;*&#34;</span>
+</span></span></code></pre></div><p>将这些文件都部署后，可以通过以下的命令来检查时链路是否通畅：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>INGRESS_HOST<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>kubectl -n istio-system get service istio-ingressgateway -o jsonpath<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;{.status.loadBalancer.ingress[0].ip}&#39;</span><span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>INGRESS_PORT<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>kubectl -n istio-system get service istio-ingressgateway -o jsonpath<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;{.spec.ports[?(@.name==&#34;http2&#34;)].port}&#39;</span><span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>curl -X GET -v http://$INGRESS_HOST:$INGRESS_PORT/istio-envoy-filter-demo
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># &gt; GET /istio-envoy-filter-demo HTTP/1.1</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># &gt; Host: 10.96.133.213</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># &gt; User-Agent: curl/8.4.0</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># &gt; Accept: */*</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># &gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># &lt; HTTP/1.1 200 OK</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># &lt; server: istio-envoy</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># &lt; date: Wed, 27 Dec 2023 06:56:18 GMT</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># &lt; content-type: application/json</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># &lt; content-length: 691</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># &lt; x-envoy-upstream-service-time: 1</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># &lt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># { [691 bytes data]</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 100   691  100   691    0     0   182k      0 --:--:-- --:--:-- --:--:--  224k</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># * Connection #0 to host 10.96.133.213 left intact</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># {</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#   &#34;Accept&#34;: &#34;*/*&#34;,</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#   &#34;Host&#34;: &#34;10.96.133.213&#34;,</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#   &#34;User-Agent&#34;: &#34;curl/8.4.0&#34;,</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#   &#34;X-B3-Parentspanid&#34;: &#34;914dc42200412837&#34;,</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#   &#34;X-B3-Sampled&#34;: &#34;1&#34;,</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#   &#34;X-B3-Spanid&#34;: &#34;8c40029a531c2e93&#34;,</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#   &#34;X-B3-Traceid&#34;: &#34;c992738f6d8be43e914dc42200412837&#34;,</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#   &#34;X-Envoy-Attempt-Count&#34;: &#34;1&#34;,</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#   &#34;X-Envoy-Internal&#34;: &#34;true&#34;,</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#   &#34;X-Envoy-Original-Path&#34;: &#34;/istio-envoy-filter-demo&#34;,</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#   &#34;X-Forwarded-Client-Cert&#34;: &#34;By=spiffe://cluster.local/ns/default/sa/default;Hash=da144c5982372ecb6463dbfed384d2c4430f7ebfd5e4f5183238f19f8efb565a;Subject=\&#34;\&#34;;URI=spiffe://cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account&#34;,</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#   &#34;X-Forwarded-For&#34;: &#34;10.244.0.1&#34;,</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#   &#34;X-Forwarded-Proto&#34;: &#34;http&#34;,</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#   &#34;X-Request-Id&#34;: &#34;f94024c6-8948-9a1c-af4c-aec40c395f8a&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># }</span>
+</span></span></code></pre></div><p>这里我们可以注意到，请求头中除了常见的 <code>Accept</code>, <code>Host</code>, <code>User-Agent</code> 还多了一些，如：<code>X-B3-Parentspanid</code>, <code>X-Request-Id</code> 等，这些都是 istio 为我们提供的功能，用于链路追踪，我们可以通过这些参数来追踪请求的链路。当然其中没有包含 <code>x-client-cvn</code> 因为我们还没有部署 EnvoyFilter。</p>
+<h3 id="部署并测试自定义-envoyfilter">部署并测试自定义 envoyFilter</h3>
+<p>将上面编写的 EnvoyFilter 部署到 k8s 中：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl apply -f envoyfilter.yaml
+</span></span></code></pre></div><p>将这个资源都应用到 k8s 之后，我们再次访问服务，可以看到请求头中多了一个 <code>x-client-cvn</code> 参数，这就是我们自定义的 EnvoyFilter 所做的事情。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>curl -X GET -v http://$INGRESS_HOST:$INGRESS_PORT/istio-envoy-filter-demo?cvn<span style="color:#f92672">=</span>v1.2.3-hotfix
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># * Connected to 10.96.133.213 (10.96.133.213) port 80</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># &gt; GET /istio-envoy-filter-demo?cvn=v1.2.3-hotfix HTTP/1.1</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># &gt; Host: 10.96.133.213</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># &gt; User-Agent: curl/8.4.0</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># &gt; Accept: */*</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># &gt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># &lt; HTTP/1.1 200 OK</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># &lt; server: istio-envoy</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># &lt; date: Wed, 27 Dec 2023 06:55:32 GMT</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># &lt; content-type: application/json</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># &lt; content-length: 715</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># &lt; x-envoy-upstream-service-time: 7</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># &lt;</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># { [715 bytes data]</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 100   715  100   715    0     0  78857      0 --:--:-- --:--:-- --:--:-- 79444</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># * Connection #0 to host 10.96.133.213 left intact</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># {</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#   &#34;Accept&#34;: &#34;*/*&#34;,</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#   &#34;Host&#34;: &#34;10.96.133.213&#34;,</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#   &#34;User-Agent&#34;: &#34;curl/8.4.0&#34;,</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#   &#34;X-B3-Parentspanid&#34;: &#34;ea5a04a5505b30f2&#34;,</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#   &#34;X-B3-Sampled&#34;: &#34;1&#34;,</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#   &#34;X-B3-Spanid&#34;: &#34;579aefbe55ff1859&#34;,</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#   &#34;X-B3-Traceid&#34;: &#34;22daad86fc4471d2ea5a04a5505b30f2&#34;,</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#   &#34;X-Client-Cvn&#34;: &#34;v1.2.3-hotfix&#34;,</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#   &#34;X-Envoy-Attempt-Count&#34;: &#34;1&#34;,</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#   &#34;X-Envoy-Internal&#34;: &#34;true&#34;,</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#   &#34;X-Envoy-Original-Path&#34;: &#34;/istio-envoy-filter-demo?cvn=v1.2.3-hotfix&#34;,</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#   &#34;X-Forwarded-Client-Cert&#34;: &#34;By=spiffe://cluster.local/ns/default/sa/default;Hash=da144c5982372ecb6463dbfed384d2c4430f7ebfd5e4f5183238f19f8efb565a;Subject=\&#34;\&#34;;URI=spiffe://cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account&#34;,</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#   &#34;X-Forwarded-For&#34;: &#34;10.244.0.1&#34;,</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#   &#34;X-Forwarded-Proto&#34;: &#34;http&#34;,</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#   &#34;X-Request-Id&#34;: &#34;c5041ac1-8b18-9999-be44-63bc6fbfa885&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># }</span>
+</span></span></code></pre></div><p>到这里，我们就完成了一个简单的自定义 EnvoyFilter 的功能：<em><strong>在网关处将查询参数 <code>cvn</code> 转请求头 <code>X-Client-Cvn</code></strong></em> ，当然这只是一个简单的例子，实际的使用中，我们可以基于 Envoy 的扩展机制，实现更多的功能，比如：ip 白名单、ip 黑名单、统一认证等。</p>
+<p>所有代码都可以在：https://github.com/yeqown/playground/tree/master/k8s/istio-envoy-filter 找到。</p>
+<h2 id="参考资料">参考资料</h2>
+<ul>
+<li><a href="https://istio.io/latest/docs/reference/config/networking/envoy-filter/">istio: EnvoyFilter</a></li>
+<li><a href="https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/lua_filter">Envoy: Lua Filter</a></li>
+<li><a href="https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/wasm_filter">envoy WASM</a></li>
+</ul>
+
+
+                
+            </section>
+
+            
+            <section class="comment">
+                <div id="gitalk-container"></div>
+                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+                <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+                <script>
+                    const gitalk = new Gitalk({
+                        clientID: '7d8c8c91ae6aff3e46e7',
+                        clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+                        repo: 'yeqown.github.io',
+                        owner: 'yeqown',
+                        admin: ['yeqown'],
+                        id: "", 
+                        distractionFreeMode: false 
+                    });
+                    (function () {
+                        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+                            document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+                            return;
+                        }
+                        gitalk.render('gitalk-container');
+                    })();
+                </script>
+            </section>
+        </div>
+
+        
+
+<footer id="footer">
+  <section>
+    <form method="post" action="Page%28/posts/%e5%9c%a8istio%e6%9c%8d%e5%8a%a1%e7%bd%91%e6%a0%bc%e4%b8%ad%e6%89%a9%e5%b1%95%e8%87%aa%e5%ae%9a%e4%b9%89%e5%8a%9f%e8%83%bd.md%29">
+      <div class="fields">
+        <div class="field">
+          <label for="name">Name</label>
+          <input type="text" name="name" id="name" />
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="text" name="email" id="email" />
+        </div>
+        <div class="field">
+          <label for="message">Message</label>
+          <textarea name="message" id="message" rows="3"></textarea>
+        </div>
+      </div>
+      <ul class="actions">
+        <li><input type="submit" value='Send A Message' /></li>
+      </ul>
+    </form>
+  </section>
+
+  <section class="split contact">
+    
+    <section class="alt">
+      <h3>Address</h3>
+      <p>
+        
+         Chengdu · China
+        
+         <br />  This is a city that comes and doesn&#39;t want to go
+        
+      </p>
+    </section>
+    
+    
+    <section>
+      <h3>Phone</h3>
+      <p><a href="tel:no%20way">no way</a></p>
+    </section>
+    
+    
+    <section>
+      <h3>Email</h3>
+      <p><a href="mailto:yeqown@gmail.com">yeqown@gmail.com</a></p>
+    </section>
+    
+    
+    <section>
+      <h3>Social</h3>
+      <ul class="icons alt">
+        
+        <li><a href="https://twitter.com/yeqown" class="icon alt fa-twitter"><span class="label">Twitter</span></a></li>
+        
+        
+        
+        
+        
+        <li><a href="https://github.com/yeqown" class="icon alt fa-github"><span class="label">GitHub</span></a></li>
+        
+        
+        
+        
+        
+      </ul>
+    </section>
+    
+  </section>
+</footer>
+        
+<div id="copyright">
+    <ul>
+        <li>&copy; Yeqown</li>
+        <li>Design: <a href="https://html5up.net">HTML5 UP</a></li>
+        <li>Hugo Port: <a href="https://curtistimson.co.uk">curttimson</a></li>
+    </ul>
+
+    
+    <ul>
+        <li>
+            <span id="busuanzi_container_site_pv">
+                总访问量<span id="busuanzi_value_site_pv"></span>次
+            </span>
+        </li>
+        <li>
+            <span id="busuanzi_container_site_uv">
+                访客数<span id="busuanzi_value_site_uv"></span>人次
+            </span>
+        </li>
+    </ul></div>
+
+    </div>
+    
+    
+
+
+
+
+
+
+
+
+
+
+<script src='/assets/js/bundle.js'></script>
+</body>
+
+</html>

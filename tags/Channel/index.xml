@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Channel on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/Channel/</link>
+    <description>Recent content in Channel on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Mon, 13 Apr 2020 17:23:45 +0800</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/Channel/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Channel in Go小结</title>
+      <link>https://www.yeqown.xyz/2020/04/13/channel-in-Go%E5%B0%8F%E7%BB%93/</link>
+      <pubDate>Mon, 13 Apr 2020 17:23:45 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2020/04/13/channel-in-Go%E5%B0%8F%E7%BB%93/</guid>
+      <description>在其他编程语言中，如果想要在线程中通信，最常用的手段是共享内存。然而考虑到线程冲突问题，不得不考虑加锁，以保证并发安全，加锁也一定会带来额外的开销，对性能产生影响。
+CSP模型 在 Go 语言中也能使用共享内存加互斥锁进行通信，但是 Go 语言提供了一种不同的并发模型，也就是通信顺序进程（Communicating sequential processes，CSP）1。Goroutine 和 Channel 分别对应 CSP 中的实体和传递信息的媒介，Go 语言中的 Goroutine 会通过 Channel 传递数据。
+使用示例 在使用之前，需要对channel有个整体的印象：
+FIFO (First In First Out) 分为有缓冲和无缓冲两种 在使用过程中会阻塞（无缓冲时，只操作读或写；有缓冲已满时，只操作读或者写） 接受者和发送者都是goroutine 参考下图：
+func main() { // Q: 有缓冲和无缓冲在使用上有什么区别？ // ch := make(chan int) // 无缓冲 ch := make(chan int, 1) // 有缓冲，大小为1 // 发送 ch &amp;lt;- 1 fmt.Println(&amp;lt;-ch) } 注意事项 在使用channel时，需要注意一下事项：
+操作\CH状态 ch为空 ch已关闭 ch正常 发送 ch &amp;lt;- 死锁 panic 成功或阻塞 接收 &amp;lt;-ch 死锁 成功或空值 成功或阻塞 关闭 close(ch) panic panic 成功 Q: 这里考虑下如何优雅的关闭channel (避免panic)?</description>
+    </item>
+    
+  </channel>
+</rss>

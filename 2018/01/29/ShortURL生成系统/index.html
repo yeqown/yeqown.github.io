@@ -1,0 +1,331 @@
+<!DOCTYPE HTML>
+
+<html lang='en'>
+
+<head>
+	<title>ShortURL系统实现 &middot; Yeqown
+	</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	
+	
+	
+	<link rel="stylesheet" href="/assets/css/main.min.css">
+	
+	
+	<link rel="shortcut icon" href="/favicon.ico">
+	
+	
+	<noscript>
+		<link rel="stylesheet" href='/assets/css/noscript.css' />
+	</noscript>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/rainbow.min.css">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>`
+	<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+		<meta name="referrer" content="no-referrer-when-downgrade"></head>
+
+<body lang='en' class="is-preload">
+
+    
+    <div id="wrapper">
+
+        
+<header id="header">
+    <a href='/' class="logo">Yeqown</a>
+    </header>
+
+        
+
+<nav id="nav">
+    <ul class="links">
+        <li class="active"><a href='/'>Yeqown</a></li>
+        <li><a href="/tags/">tags</a></li>
+        <li><a href="/categories/">categories</a></li>
+        
+        <li><a href='/#footer'>Contact</a></li>
+        
+        
+    </ul>
+    
+    <ul class="icons">
+        
+        <li><a href="https://twitter.com/yeqown" class="icon fa-twitter"><span class="label">Twitter</span></a></li>
+        
+        
+        
+        
+        
+        <li><a href="https://github.com/yeqown" class="icon fa-github"><span class="label">GitHub</span></a></li>
+        
+        
+        
+        
+        
+        
+        <li><a href="/index.xml" class="icon fa-rss"><span class="label">RSS</span></a></li>
+        
+
+    </ul>
+    
+</nav>
+
+        
+        <div id="main">
+
+            
+            <section class="post">
+                <header class="major">
+                    
+                    <span class="date">
+                        January 29, 2018 
+                        
+                        <span id="busuanzi_container_page_pv">本文阅读量<span id="busuanzi_value_page_pv"></span>次</span>
+                    </span>
+                    
+
+
+
+                    <h1>ShortURL系统实现</h1>
+                    <p>在知乎上看了一个很有启发的回答，因此实际动手来实现短URL生成系统。</p>
+                </header>
+                
+                <p>在知乎上看了一个很有启发的回答，因此实际动手来实现短URL生成系统。贴上链接：
+<a href="https://www.zhihu.com/question/29270034">知乎 - 短URL系统是如何设计的</a>。其中提到了，要实现短URL生成系统要解决的问题有：</p>
+<ul>
+<li>如何优雅的实现？</li>
+<li>怎么基本实现长对短、一对一？</li>
+<li>如何实现分布式，高并发，高可用？</li>
+<li>储存选用？</li>
+</ul>
+<!-- more -->
+<h3 id="基本原理">基本原理</h3>
+<p><strong>数据库自增ID转换62进制</strong></p>
+<ol>
+<li>使用自增ID不会产生重复的短链接。</li>
+<li>为了解决自增ID超长和不便记忆，对ID进行62进制编码。<em>所谓62进制就是0-9，a-z，A-Z。</em></li>
+</ol>
+<p>简单计算下：</p>
+<pre tabindex="0"><code>62 ^ 4 = 14,776,336
+62 ^ 5 = 916,132,832
+62 ^ 6 = 56,800,235,584 // 已经足够使用了
+</code></pre><h3 id="总体结构及处理流程">总体结构及处理流程</h3>
+<p><img src="/images/service_frame.png" alt="服务结构"></p>
+<h4 id="长链接处理流程">长链接处理流程</h4>
+<ol>
+<li>获取参数，调用shortURL服务</li>
+<li>尝试从缓存中获取，如果命中，则读取短链接(重置过期时间)。跳转第4步</li>
+<li>将长链接存储到Mysql数据库，根据ID进行base62编码，组装Domain+Encoded字符串并更新数据库</li>
+<li>返回生成的短链接</li>
+</ol>
+<h4 id="短链接处理流程">短链接处理流程</h4>
+<ol>
+<li>解析短链接为ID</li>
+<li>查询ID对应的长链接</li>
+<li>以301方式跳转到长链接</li>
+</ol>
+<h3 id="长链接与短链接的对应关系">长链接与短链接的对应关系</h3>
+<p>一对多，一个长链接可能对应多个短链接。数据表存储结构如下：</p>
+<pre><code>+-----------+--------------+------+-----+---------+----------------+
+| Field     | Type         | Null | Key | Default | Extra          |
++-----------+--------------+------+-----+---------+----------------+
+| id        | int(64)      | NO   | PRI | NULL    | auto_increment |
+| long_url  | varchar(100) | NO   |     | NULL    |                |
+| short_url | varchar(40)  | YES  |     | NULL    |                |
++-----------+--------------+------+-----+---------+----------------+
+</code></pre>
+<h3 id="分布式和高并发设计">分布式和高并发设计</h3>
+<p>###注：这部分未实现。我的思路如下：</p>
+<p><img src="/images/shorturl%E9%9B%86%E7%BE%A4%E9%83%A8%E7%BD%B2%E6%80%9D%E8%B7%AF.png" alt="集群部署"></p>
+<p>分布式部署会遇到的问题&quot;ID重复&quot;，关于这一点在回答中也提示了：根据node数来配置自增step。譬如说，有1000个node：</p>
+<p>|节点|1st-URL-ID|2nd-URL-ID|3th-URL-ID|&hellip;|Nth-URL-ID|
+|&mdash;|&mdash;|&mdash;|&mdash;-|&mdash;-|
+|node-1|0|1000|2000|&hellip;| 0 + (N-1) * 1000|
+|||||&hellip;.||
+|node-1000|999|1999|2999|&hellip;|999 + (N-1) * 1000|</p>
+<h3 id="测试">测试</h3>
+<h4 id="单元测试不写单元测试不准push">单元测试（不写单元测试不准push!!）</h4>
+<pre><code>➜  _shorturl git:(master) ✗ go test -v
+=== RUN   Test_Encode
+--- PASS: Test_Encode (0.00s)
+=== RUN   Test_Decode
+--- PASS: Test_Decode (0.00s)
+=== RUN   Test_ProcessEncodeThenDecode
+--- PASS: Test_ProcessEncodeThenDecode (0.00s)
+=== RUN   Test_SetUrlCache
+--- PASS: Test_SetUrlCache (0.01s)
+=== RUN   Test_LoadConfig
+--- PASS: Test_LoadConfig (0.00s)
+=== RUN   Test_GetInstance
+--- PASS: Test_GetInstance (0.00s)
+=== RUN   Test_Insert
+--- PASS: Test_Insert (0.08s)
+=== RUN   Test_QueryUrl
+--- PASS: Test_QueryUrl (0.02s)
+=== RUN   Test_Update
+--- PASS: Test_Update (0.00s)
+=== RUN   Test_RegRouter
+--- PASS: Test_RegRouter (0.00s)
+=== RUN   Test_ShortenAndParse
+2018/02/01 11:23:28 deal with url:  http://www.baidu.com
+--- PASS: Test_ShortenAndParse (0.02s)
+=== RUN   Test_ConnectDB
+--- PASS: Test_ConnectDB (0.00s)
+=== RUN   Test_GetDB
+--- PASS: Test_GetDB (0.00s)
+=== RUN   Test_CloseConnection
+--- PASS: Test_CloseConnection (0.00s)
+PASS
+ok  	shorturl/_shorturl	0.157s
+</code></pre>
+<h4 id="功能测试">功能测试</h4>
+<p>{% dplayer &ldquo;url=/mov/演示短链接功能.mov&rdquo; &ldquo;loop=no&rdquo; &ldquo;theme=#FADFA3&rdquo; &ldquo;autoplay=false&rdquo; &ldquo;token=tokendemo&rdquo; %}</p>
+<h4 id="性能测试">性能测试</h4>
+<p>未使用分布式测试结果截图如下（没有达到最大吞吐量）：
+<img src="/images/wrk_test_result.png" alt="Wrk性能测试结果"></p>
+<h3 id="存储选用">存储选用</h3>
+<p>选择Mysql用于存储数据，Redis作为缓存。</p>
+<h3 id="源码">源码</h3>
+<p><a href="http://github.com/yeqown/shorturl">github.com/yeqown/shorturl</a></p>
+
+
+                
+            </section>
+
+            
+            <section class="comment">
+                <div id="gitalk-container"></div>
+                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+                <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+                <script>
+                    const gitalk = new Gitalk({
+                        clientID: '7d8c8c91ae6aff3e46e7',
+                        clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+                        repo: 'yeqown.github.io',
+                        owner: 'yeqown',
+                        admin: ['yeqown'],
+                        id: "shorturl-system-implementation", 
+                        distractionFreeMode: false 
+                    });
+                    (function () {
+                        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+                            document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+                            return;
+                        }
+                        gitalk.render('gitalk-container');
+                    })();
+                </script>
+            </section>
+        </div>
+
+        
+
+<footer id="footer">
+  <section>
+    <form method="post" action="Page%28/posts/ShortURL%e7%94%9f%e6%88%90%e7%b3%bb%e7%bb%9f.md%29">
+      <div class="fields">
+        <div class="field">
+          <label for="name">Name</label>
+          <input type="text" name="name" id="name" />
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="text" name="email" id="email" />
+        </div>
+        <div class="field">
+          <label for="message">Message</label>
+          <textarea name="message" id="message" rows="3"></textarea>
+        </div>
+      </div>
+      <ul class="actions">
+        <li><input type="submit" value='Send A Message' /></li>
+      </ul>
+    </form>
+  </section>
+
+  <section class="split contact">
+    
+    <section class="alt">
+      <h3>Address</h3>
+      <p>
+        
+         Chengdu · China
+        
+         <br />  This is a city that comes and doesn&#39;t want to go
+        
+      </p>
+    </section>
+    
+    
+    <section>
+      <h3>Phone</h3>
+      <p><a href="tel:no%20way">no way</a></p>
+    </section>
+    
+    
+    <section>
+      <h3>Email</h3>
+      <p><a href="mailto:yeqown@gmail.com">yeqown@gmail.com</a></p>
+    </section>
+    
+    
+    <section>
+      <h3>Social</h3>
+      <ul class="icons alt">
+        
+        <li><a href="https://twitter.com/yeqown" class="icon alt fa-twitter"><span class="label">Twitter</span></a></li>
+        
+        
+        
+        
+        
+        <li><a href="https://github.com/yeqown" class="icon alt fa-github"><span class="label">GitHub</span></a></li>
+        
+        
+        
+        
+        
+      </ul>
+    </section>
+    
+  </section>
+</footer>
+        
+<div id="copyright">
+    <ul>
+        <li>&copy; Yeqown</li>
+        <li>Design: <a href="https://html5up.net">HTML5 UP</a></li>
+        <li>Hugo Port: <a href="https://curtistimson.co.uk">curttimson</a></li>
+    </ul>
+
+    
+    <ul>
+        <li>
+            <span id="busuanzi_container_site_pv">
+                总访问量<span id="busuanzi_value_site_pv"></span>次
+            </span>
+        </li>
+        <li>
+            <span id="busuanzi_container_site_uv">
+                访客数<span id="busuanzi_value_site_uv"></span>人次
+            </span>
+        </li>
+    </ul></div>
+
+    </div>
+    
+    
+
+
+
+
+
+
+
+
+
+
+<script src='/assets/js/bundle.js'></script>
+</body>
+
+</html>

@@ -1,0 +1,311 @@
+<!DOCTYPE HTML>
+
+<html lang='en'>
+
+<head>
+	<title>Redis主从复制 &middot; Yeqown
+	</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	
+	
+	
+	<link rel="stylesheet" href="/assets/css/main.min.css">
+	
+	
+	<link rel="shortcut icon" href="/favicon.ico">
+	
+	
+	<noscript>
+		<link rel="stylesheet" href='/assets/css/noscript.css' />
+	</noscript>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/rainbow.min.css">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>`
+	<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+		<meta name="referrer" content="no-referrer-when-downgrade"></head>
+
+<body lang='en' class="is-preload">
+
+    
+    <div id="wrapper">
+
+        
+<header id="header">
+    <a href='/' class="logo">Yeqown</a>
+    </header>
+
+        
+
+<nav id="nav">
+    <ul class="links">
+        <li class="active"><a href='/'>Yeqown</a></li>
+        <li><a href="/tags/">tags</a></li>
+        <li><a href="/categories/">categories</a></li>
+        
+        <li><a href='/#footer'>Contact</a></li>
+        
+        
+    </ul>
+    
+    <ul class="icons">
+        
+        <li><a href="https://twitter.com/yeqown" class="icon fa-twitter"><span class="label">Twitter</span></a></li>
+        
+        
+        
+        
+        
+        <li><a href="https://github.com/yeqown" class="icon fa-github"><span class="label">GitHub</span></a></li>
+        
+        
+        
+        
+        
+        
+        <li><a href="/index.xml" class="icon fa-rss"><span class="label">RSS</span></a></li>
+        
+
+    </ul>
+    
+</nav>
+
+        
+        <div id="main">
+
+            
+            <section class="post">
+                <header class="major">
+                    
+                    <span class="date">
+                        March 29, 2020 
+                        
+                        <span id="busuanzi_container_page_pv">本文阅读量<span id="busuanzi_value_page_pv"></span>次</span>
+                    </span>
+                    
+
+
+
+                    <h1>Redis主从复制</h1>
+                    <p>redis主从复制是高可用方案中的一部分，那主从复制是如何进行的？又是如何实现的？怎么支撑了redis的高可用性？在主从模式下Master和Slave节点分别做了哪些事情？</p>
+                </header>
+                
+                <p>redis主从复制是高可用方案中的一部分，那主从复制是如何进行的？又是如何实现的？怎么支撑了redis的高可用性？在主从模式下Master和Slave节点分别做了哪些事情？</p>
+<h3 id="redis高可用方案是什么">redis高可用方案是什么？</h3>
+<p>我理解的redis高可用的特点有：</p>
+<ol>
+<li>高QPS，主从 =&gt; 读写分离</li>
+<li>高容量，集群分片 =&gt; 高容量</li>
+<li>故障转移，sentinel =&gt; 故障转移</li>
+<li>故障恢复，数据持久 =&gt; 故障恢复 ～ 这里我简单的理解（RDB + AOF）= 故障恢复</li>
+</ol>
+<h3 id="主从复制">主从复制</h3>
+<blockquote>
+<p>redis 主从复制有两个版本：旧版（Ver2.8-），新版（Ver2.8+，增加PSYNC命令来解决旧版中的问题）</p>
+</blockquote>
+<p>讨论复制时都需要考虑两种场景：</p>
+<ul>
+<li>场景1：从节点刚刚上线，需要去同步主节点时，这部分可以理解为 <strong>全量复制</strong>。</li>
+<li>场景2：从节点掉线，恢复上线后需要同步数据，使自己和主节点达到一致状态。这部分在旧版复制里等价于<strong>全量复制</strong>，在新版里可以理解为<strong>增量复制</strong>。</li>
+</ul>
+<p>当然你肯定会想到如果主节点掉线，这时候会怎么样？这个场景当然也在redis高可用方案中，之时不是本文的重点，属于Sentinel机制的内容了。</p>
+<h4 id="旧版主从复制">旧版主从复制</h4>
+<p>前文说过了，旧版主从复制只有全量复制用于应付上述两个场景，因此下面的流程也只有一份：</p>
+<ol>
+<li>从服务器向主服务器发送sync命令。</li>
+<li>主服务器在收到sync命令之后，调用bgsave命令生成最新的rdb文件，将这个文件同步给从服务器，这样从服务器载入这个rdb文件之后，状态就会和主服务器执行bgsave命令时候的一致。</li>
+<li>主服务器将保存在命令缓冲区中的写命令同步给从服务器，从服务器执行这些命令，这样从服务器的状态就跟主服务器当前状态一致了。</li>
+</ol>
+<blockquote>
+<p>如果你不知道redis中还有个缓冲区的话，建议系统的了解下redis中缓冲区的设计。这里缓冲区特指命令缓冲区，后面还会讲到复制缓冲区。</p>
+</blockquote>
+<img src="/images/redis-mlcopy-1.svg" height="300px"/>
+<p>但是这样的实现在 <strong>场景2</strong> 下的缺点很明显：如果说从节点断线后迅速上线，这段时间内的产生的写命令很少，却要<strong>全量复制</strong>主库的数据，传输了大量重复数据。</p>
+<pre><code>SYNC命令产生的消耗：
+1. 主节点生成RDB，需要消耗大量的CPU，内存和磁盘IO
+2. 网络传输大量字节数据，需要消耗主从服务器的网络资源
+3. 从节点需要从RDB文件恢复，会造成阻塞无法接受客户端请求
+</code></pre>
+<p>优点就是：简单暴力。个人看来在redis架构中不合适的用法，不代表说实际场景中也一定不合适，简单暴力也是一个很大的优点。</p>
+<h4 id="新版主从复制">新版主从复制</h4>
+<p>新版的主从复制跟旧版的区别就在于：对场景2的优化。</p>
+<p>场景2的缺点上文已经提到过了，那么优化的方向就是**“尽量不使用全量复制；增加增量复制(PSYNC)的功能”**。为此还要解决下列问题：</p>
+<ol>
+<li>如果某个从节点断线了，重新上线该从节点如何知道自己是否应该全量还是增量复制呢？</li>
+<li>该从节点断线恢复后，又怎么知道自己缺失了哪些数据呢？</li>
+<li>主节点又如何补偿该从节点在断线期间丢失的那部分数据呢？旧版的复制除了RDB，还有从命令缓冲区中的写命令来保持数据一致。</li>
+</ol>
+<p>为此新版中使用了以下概念：</p>
+<h5 id="运行id---runid">运行ID - runid</h5>
+<p>每个redis服务器都有其runid，runid由服务器在启动时自动生成，主服务器会将自己的runid发送给从服务器，而从服务器会将主服务器的runid保存起来。从服务器redis断线重连之后进行同步时，就是根据runid来判断同步的进度：</p>
+<ol>
+<li>如果前后两次主服务器runid<strong>一致</strong>，则认为这一次断线重连还是之前复制的主服务器，主服务器可以继续尝试部分同步操作。</li>
+<li>如果前后两次主服务器runid<strong>不相同</strong>，则<strong>全同步流程</strong>。</li>
+</ol>
+<h5 id="复制偏移量---offset">复制偏移量 - offset</h5>
+<p>主从节点，分别会维护一个复制偏移量：
+主服务器每次向从服务器同步了N字节数据之后，将修改自己的复制偏移量+N。从服务器每次从主服务器同步了N字节数据之后，将修改自己的复制偏移量+N。通过对比主从节点的偏移量很容易就可以发现，主从节点是否处于一致状态。</p>
+<h5 id="复制积压缓冲区---copybuffer">复制（积压）缓冲区 - copybuffer</h5>
+<p>一个固定长度（可配置）的FIFO队列，默认大小 = 1MB；预测值 = second * write_size_per_second。当从节点重新连上主节点时候，从节点会通过PSYNC命令将自己的复制偏移量（offset）发送给主服务器，主节点会根据偏移量会判断该执行何种同步：</p>
+<ol>
+<li>如果从节点offset之后的数据仍然存在复制缓冲区中，就执行部分重同步。</li>
+<li>反之，如果不存在，那么执行完全重同步。</li>
+</ol>
+<blockquote>
+<p>因为复制缓冲区不可能无限大，因此为了尽可能多的利用部分重同步，需要针对真实场景估算出最合适的复制缓冲区大小。</p>
+</blockquote>
+<p>至此，redis新版PSYNC通过上述概念和流程，解决了场景2下旧版复制中的资源浪费问题，流程图和示例图见下文。</p>
+<img src="/images/redis-mlcopy-2.svg" height="600px" title="PSYNC使用流程图">
+<p>示例图如下，ABCD四个从节点，其中A执行部分中同步，D执行了完整重同步。</p>
+<img src="/images/redis-mlcopy-3.svg" height="600px" title="PSYNC示例图">
+<h3 id="总结">总结</h3>
+<blockquote>
+<p>水平有限，如有错误，欢迎勘误指正🙏。</p>
+</blockquote>
+<h3 id="参考文献">参考文献</h3>
+<ul>
+<li>《redis设计与实现》</li>
+<li><a href="https://zhuanlan.zhihu.com/p/65712373">https://zhuanlan.zhihu.com/p/65712373</a></li>
+</ul>
+
+
+                
+            </section>
+
+            
+            <section class="comment">
+                <div id="gitalk-container"></div>
+                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+                <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+                <script>
+                    const gitalk = new Gitalk({
+                        clientID: '7d8c8c91ae6aff3e46e7',
+                        clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+                        repo: 'yeqown.github.io',
+                        owner: 'yeqown',
+                        admin: ['yeqown'],
+                        id: "redis-master-slave-replication", 
+                        distractionFreeMode: false 
+                    });
+                    (function () {
+                        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+                            document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+                            return;
+                        }
+                        gitalk.render('gitalk-container');
+                    })();
+                </script>
+            </section>
+        </div>
+
+        
+
+<footer id="footer">
+  <section>
+    <form method="post" action="Page%28/posts/redis%e4%b8%bb%e4%bb%8e%e5%a4%8d%e5%88%b6.md%29">
+      <div class="fields">
+        <div class="field">
+          <label for="name">Name</label>
+          <input type="text" name="name" id="name" />
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="text" name="email" id="email" />
+        </div>
+        <div class="field">
+          <label for="message">Message</label>
+          <textarea name="message" id="message" rows="3"></textarea>
+        </div>
+      </div>
+      <ul class="actions">
+        <li><input type="submit" value='Send A Message' /></li>
+      </ul>
+    </form>
+  </section>
+
+  <section class="split contact">
+    
+    <section class="alt">
+      <h3>Address</h3>
+      <p>
+        
+         Chengdu · China
+        
+         <br />  This is a city that comes and doesn&#39;t want to go
+        
+      </p>
+    </section>
+    
+    
+    <section>
+      <h3>Phone</h3>
+      <p><a href="tel:no%20way">no way</a></p>
+    </section>
+    
+    
+    <section>
+      <h3>Email</h3>
+      <p><a href="mailto:yeqown@gmail.com">yeqown@gmail.com</a></p>
+    </section>
+    
+    
+    <section>
+      <h3>Social</h3>
+      <ul class="icons alt">
+        
+        <li><a href="https://twitter.com/yeqown" class="icon alt fa-twitter"><span class="label">Twitter</span></a></li>
+        
+        
+        
+        
+        
+        <li><a href="https://github.com/yeqown" class="icon alt fa-github"><span class="label">GitHub</span></a></li>
+        
+        
+        
+        
+        
+      </ul>
+    </section>
+    
+  </section>
+</footer>
+        
+<div id="copyright">
+    <ul>
+        <li>&copy; Yeqown</li>
+        <li>Design: <a href="https://html5up.net">HTML5 UP</a></li>
+        <li>Hugo Port: <a href="https://curtistimson.co.uk">curttimson</a></li>
+    </ul>
+
+    
+    <ul>
+        <li>
+            <span id="busuanzi_container_site_pv">
+                总访问量<span id="busuanzi_value_site_pv"></span>次
+            </span>
+        </li>
+        <li>
+            <span id="busuanzi_container_site_uv">
+                访客数<span id="busuanzi_value_site_uv"></span>人次
+            </span>
+        </li>
+    </ul></div>
+
+    </div>
+    
+    
+
+
+
+
+
+
+
+
+
+
+<script src='/assets/js/bundle.js'></script>
+</body>
+
+</html>

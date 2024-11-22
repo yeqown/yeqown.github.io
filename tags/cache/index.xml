@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>cache on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/cache/</link>
+    <description>Recent content in cache on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Thu, 14 Nov 2019 09:14:25 +0800</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/cache/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>基于Repository设计缓存方案</title>
+      <link>https://www.yeqown.xyz/2019/11/14/%E5%9F%BA%E4%BA%8ERepository%E8%AE%BE%E8%AE%A1%E7%BC%93%E5%AD%98%E6%96%B9%E6%A1%88/</link>
+      <pubDate>Thu, 14 Nov 2019 09:14:25 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2019/11/14/%E5%9F%BA%E4%BA%8ERepository%E8%AE%BE%E8%AE%A1%E7%BC%93%E5%AD%98%E6%96%B9%E6%A1%88/</guid>
+      <description>场景 Tester—A：这个 getInfo 接口咋这么慢呢？查一下要5+s？QPS竟然只有10！！！！ RD-B ：这是因为getInfo要查库。。。N多库 Tester-B：那优化一下呗？ RD-B ：好的，容我操作一波（给接口加上一个响应缓存），好了你再测试一下 Tester-B：（测试中。。。），速度果然快了不少。诶不对，这个接口里拿到的用户信息不对，我明明已经balaba了，这里没有更新！！！ RD-B ：哦哦哦，我晓得咯，再容我操作一波（缓存加有效时间，个人信息更新的时候再强删缓存），O了 至此开始了针对于QPS+缓存更新的一些列测试。。。剧终。 QPS和响应时间是后（jie）端（kou)工程师非常熟悉的指标，这两个值能比较直观的反映该接口的性能，间接直接影响了前端页面的流畅度。。。
+问题来了 接口查询性能如何提高 除去机器和编程语言的因素之后，肯定要从业务场景出发，分析接口响应缓慢的原因。譬如，最常见的:
+查N多表，表还没有索引orz 无用数据，增加传输的Size 反复查询某些热点数据，但每次都直接打到数据库 上游服务响应缓慢 其他 好了，这里只讨论热点数据的缓存方案，毕竟要具体场景具体分析，而缓存方案是比较通用的。
+缓存方案如何选择 序号 缓存方案 优势 劣势 1 Response缓存 简单暴力 缓存更新时机不好把控，如果面面俱到可能心态崩坏；缓存粒度太大，无法局部更新；针对查询接口有帮助，其他业务下查询数据则毫无帮助 2 Repository缓存 粒度由Repo自行掌握，可控性强；Repo复用场景下会提高应用整体的速度 需要针对各个Repo做缓存的处理；改动较多；其他orz 总的来说，Repository的缓存方案，在上述背景上较简单暴力的中间件缓存法要更加优雅可控～。
+缓存算法 提到缓存就一定会提到缓存替换策略，有最常见的：LRU LFU FIFO MRU(最近频繁使用算法) LRU的多个变种算法 LIRS等。 这里选用了LRU-K（K=2）并基于golang来实现 cached-repository，更多算法的详细信息参见参考文档中的LRU和LRU-K:
+这里分成了两个interface:
+CacheAlgor重点在于与Repo交互，所以只提供了简单的增删改查，底层还是基于Cache来实现的。本意是想实现多种缓存替换算法来丰富cached-repository，orz
+// cache.go // CacheAlgor is an interface implements different alg. type CacheAlgor interface { Put(key, value interface{}) Get(key interface{}) (value interface{}, ok bool) Update(key, value interface{}) Delete(key interface{}) } lru.</description>
+    </item>
+    
+  </channel>
+</rss>

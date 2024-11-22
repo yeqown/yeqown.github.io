@@ -1,0 +1,352 @@
+<!DOCTYPE HTML>
+
+<html lang='en'>
+
+<head>
+	<title>自己写一个手机菜谱APP &middot; Yeqown
+	</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	
+	
+	
+	<link rel="stylesheet" href="/assets/css/main.min.css">
+	
+	
+	<link rel="shortcut icon" href="/favicon.ico">
+	
+	
+	<noscript>
+		<link rel="stylesheet" href='/assets/css/noscript.css' />
+	</noscript>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/rainbow.min.css">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>`
+	<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+		<meta name="referrer" content="no-referrer-when-downgrade"></head>
+
+<body lang='en' class="is-preload">
+
+    
+    <div id="wrapper">
+
+        
+<header id="header">
+    <a href='/' class="logo">Yeqown</a>
+    </header>
+
+        
+
+<nav id="nav">
+    <ul class="links">
+        <li class="active"><a href='/'>Yeqown</a></li>
+        <li><a href="/tags/">tags</a></li>
+        <li><a href="/categories/">categories</a></li>
+        
+        <li><a href='/#footer'>Contact</a></li>
+        
+        
+    </ul>
+    
+    <ul class="icons">
+        
+        <li><a href="https://twitter.com/yeqown" class="icon fa-twitter"><span class="label">Twitter</span></a></li>
+        
+        
+        
+        
+        
+        <li><a href="https://github.com/yeqown" class="icon fa-github"><span class="label">GitHub</span></a></li>
+        
+        
+        
+        
+        
+        
+        <li><a href="/index.xml" class="icon fa-rss"><span class="label">RSS</span></a></li>
+        
+
+    </ul>
+    
+</nav>
+
+        
+        <div id="main">
+
+            
+            <section class="post">
+                <header class="major">
+                    
+                    <span class="date">
+                        May 18, 2018 
+                        
+                        <span id="busuanzi_container_page_pv">本文阅读量<span id="busuanzi_value_page_pv"></span>次</span>
+                    </span>
+                    
+
+
+
+                    <h1>自己写一个手机菜谱APP</h1>
+                    <p>项目地址：github.com/yeqown/recipe</p>
+                </header>
+                
+                <p>需要的技术及工具：</p>
+<ul>
+<li>Python3 + Selenuium</li>
+<li>Golang net/http</li>
+<li>React-Native 相关（使用了react-navigation）</li>
+<li>MongoDB</li>
+<li>Redis</li>
+</ul>
+<p>代码地址：</p>
+<ul>
+<li><a href="https://github.com/yeqown/recipe">github.com/yeqown/recipe</a></li>
+</ul>
+<!-- more -->
+<h3 id="项目构思及构成">项目构思及构成</h3>
+<p>食谱类型的App，应用市场肯定有更好的的食谱APP。所以自己开发的目的，首先是写代码，其次是定制APP～
+好的，现在化身产品经理，设计一下APP有哪些功能：</p>
+<ul>
+<li>每日菜谱推荐，推荐可更换</li>
+<li>每天需要准备的材料提醒</li>
+<li>发现更多菜谱</li>
+<li>分类筛选菜谱</li>
+<li>搜索菜谱</li>
+<li>查看菜谱详情</li>
+<li>设置（不知道设置啥，提前准备吧）</li>
+</ul>
+<blockquote>
+<p>设计稿？不存在的，随心所欲。</p>
+</blockquote>
+<p>现在分析下我需要做的事情：</p>
+<ol>
+<li>能跑起来的APP，与restful web api 交互。</li>
+<li>能跑起来的web-api，提供菜谱数据，筛选，推荐，搜索等功能</li>
+<li>能跑起来的简易spider，从网上获取菜谱信息。（这个爬虫能解析动态生成网站就够用了，姑且称之为爬虫吧）</li>
+</ol>
+<blockquote>
+<p>没有考虑大量数据，因此爬虫并不通用，只适合特定XX网站。</p>
+</blockquote>
+<h3 id="实战爬虫">实战爬虫</h3>
+<p>这个APP里面最重要的就是菜谱数据了，那么开发之前，需要明确的数据格式，如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;name&#34;</span>: <span style="color:#e6db74">&#34;name&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;cat&#34;</span>: <span style="color:#e6db74">&#34;cat&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;img&#34;</span>: <span style="color:#e6db74">&#34;img_url&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;mark_cnt&#34;</span>: <span style="color:#ae81ff">19101</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;view_cnt&#34;</span>: <span style="color:#ae81ff">181891</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;setps&#34;</span>: [
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&#34;desc&#34;</span>: <span style="color:#e6db74">&#34;&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&#34;img&#34;</span>: <span style="color:#e6db74">&#34;&#34;</span>,
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// more step
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    ],
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;material&#34;</span>: {
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&#34;ingredients&#34;</span>: [
+</span></span><span style="display:flex;"><span>            {
+</span></span><span style="display:flex;"><span>                <span style="color:#f92672">&#34;name&#34;</span>: <span style="color:#e6db74">&#34;ingredients_name&#34;</span>,
+</span></span><span style="display:flex;"><span>                <span style="color:#f92672">&#34;weight&#34;</span>: <span style="color:#e6db74">&#34;ingredients_weight&#34;</span>,
+</span></span><span style="display:flex;"><span>            },
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">// more ingredients
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        ],
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&#34;seasoning&#34;</span>: [
+</span></span><span style="display:flex;"><span>            {
+</span></span><span style="display:flex;"><span>                <span style="color:#f92672">&#34;name&#34;</span>: <span style="color:#e6db74">&#34;seasoning_name&#34;</span>,
+</span></span><span style="display:flex;"><span>                <span style="color:#f92672">&#34;weight&#34;</span>: <span style="color:#e6db74">&#34;seasoning_weight&#34;</span>,
+</span></span><span style="display:flex;"><span>            },
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">// more seasoning
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        ],
+</span></span><span style="display:flex;"><span>    },
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;create_time&#34;</span>: <span style="color:#e6db74">&#34;2018xxxxxx&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;update_time&#34;</span>: <span style="color:#e6db74">&#34;2018xxxxxx&#34;</span>,
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h4 id="目标">目标</h4>
+<blockquote>
+<p>前提：无法直接获取到该网站的服务API，才使用爬虫间接获取数据。</p>
+</blockquote>
+<p>目标是某个网站的菜谱，网页层次和结构比较明确，信息也正好。结合需要的数据量级和信息，因此爬虫遵循了以下流程：</p>
+<pre><code>step1. 获取特定分类的入口网址
+step2. 从分类的入口网址获取该分类的的所有菜谱详情网址
+step3. 从单个菜谱详情网址中解析菜谱数据。
+</code></pre>
+<p>使用了redis作为爬虫间的数据通道，主要是为了方便开多个进程爬取。</p>
+<h4 id="问题">问题</h4>
+<h5 id="翻页和判定当前页为最后一页">翻页和判定当前页为最后一页</h5>
+<pre><code>描述：某些分类下不止一页数据，如何进行翻页和下一页的判定。
+原因：无
+解决：点击翻页按钮，观察url的变化（30 * (page-1)）；直接跳转到最后一页，观察页面特征（无“下一页”按钮）
+</code></pre>
+<h4 id="爬取动态页面">爬取动态页面</h4>
+<pre><code>描述：菜谱详情页面是动态生成的，无法直接使用bs4 + requests来爬取。
+原因：无
+解决：查看了requests获取到的页面结构，发现在script标签中，有需要的数据，但是需要额外处理，而且某些数据信息缺失。因此
+开始考虑selenium来加载页面，解析菜谱信息。
+</code></pre>
+<h3 id="实战手机app">实战手机App</h3>
+<p>为了方便高效，没有选用原生的的开发方式，而是选择了React-Native来撸App。App主要运行于Android，吾等吊丝用不起iPhone）。</p>
+<h4 id="运行截图">运行截图</h4>
+<p><img src="https://raw.githubusercontent.com/yeqown/recipe/master/screenshots/WechatIMG83.jpeg" alt="landingpage">
+<img src="/images/app_homepage.jpeg" alt="app_homepage">
+<img src="https://raw.githubusercontent.com/yeqown/recipe/master/screenshots/WechatIMG84.jpeg" alt="发现">
+<img src="https://raw.githubusercontent.com/yeqown/recipe/master/screenshots/WechatIMG86.jpeg" alt="detail"></p>
+<h4 id="问题-1">问题</h4>
+<p>怎么用React-Native来撸一个App的步骤，这里就不多说了。主要记录一下这期间遇到的问题：</p>
+<h5 id="问题一无法访问本地的api服务">问题一：无法访问本地的API服务</h5>
+<pre><code>描述：开发过程中遇到了使用`fetch\axios`均无法访问`localhost`api服务的问题，错误提示“network request failed”，本地的api服务也确实没有接收到任何请求。但是尝试访问其他域名api却可以正常。
+原因：React-Native把自己当成了localhost，因此localhost并没有请求的到真的api服务。
+解决：将localhost替换为`10.0.2.2`便定向到了本地。
+</code></pre>
+<h5 id="问题二tabnavigator无法使用icon">问题二：TabNavigator无法使用icon</h5>
+<pre><code>描述：根据官方文档来设置Icon，一直报错，Icon也看不见。
+原因：不晓得。
+解决：在TabNavigator注册的各个Screen中指定。
+</code></pre>
+<p><code>TabNavigator</code>定义参见：<a href="https://github.com/yeqown/recipe/blob/master/recipes-mobile/index.js#L18">https://github.com/yeqown/recipe/blob/master/recipes-mobile/index.js#L18</a>
+指定代码：<a href="https://github.com/yeqown/recipe/blob/master/recipes-mobile/src/Home.js#L34">https://github.com/yeqown/recipe/blob/master/recipes-mobile/src/Home.js#L34</a></p>
+<h3 id="实战web-api">实战web-api</h3>
+<p><a href="https://github.com/yeqown/recipe/tree/master/recipes-server">代码由此去</a></p>
+<p>这一部分没有啥特别的地方，就略过了。在这里推销一下:
+<a href="https://github.com/yeqown/gweb">github.com/yeqown/gweb</a>一个简易封装的golang web 框架。</p>
+
+
+                
+            </section>
+
+            
+            <section class="comment">
+                <div id="gitalk-container"></div>
+                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+                <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+                <script>
+                    const gitalk = new Gitalk({
+                        clientID: '7d8c8c91ae6aff3e46e7',
+                        clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+                        repo: 'yeqown.github.io',
+                        owner: 'yeqown',
+                        admin: ['yeqown'],
+                        id: "write-a-mobile-cookbook-app", 
+                        distractionFreeMode: false 
+                    });
+                    (function () {
+                        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+                            document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+                            return;
+                        }
+                        gitalk.render('gitalk-container');
+                    })();
+                </script>
+            </section>
+        </div>
+
+        
+
+<footer id="footer">
+  <section>
+    <form method="post" action="Page%28/posts/%e8%87%aa%e5%b7%b1%e5%86%99%e4%b8%80%e4%b8%aa%e6%89%8b%e6%9c%ba%e8%8f%9c%e8%b0%b1APP.md%29">
+      <div class="fields">
+        <div class="field">
+          <label for="name">Name</label>
+          <input type="text" name="name" id="name" />
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="text" name="email" id="email" />
+        </div>
+        <div class="field">
+          <label for="message">Message</label>
+          <textarea name="message" id="message" rows="3"></textarea>
+        </div>
+      </div>
+      <ul class="actions">
+        <li><input type="submit" value='Send A Message' /></li>
+      </ul>
+    </form>
+  </section>
+
+  <section class="split contact">
+    
+    <section class="alt">
+      <h3>Address</h3>
+      <p>
+        
+         Chengdu · China
+        
+         <br />  This is a city that comes and doesn&#39;t want to go
+        
+      </p>
+    </section>
+    
+    
+    <section>
+      <h3>Phone</h3>
+      <p><a href="tel:no%20way">no way</a></p>
+    </section>
+    
+    
+    <section>
+      <h3>Email</h3>
+      <p><a href="mailto:yeqown@gmail.com">yeqown@gmail.com</a></p>
+    </section>
+    
+    
+    <section>
+      <h3>Social</h3>
+      <ul class="icons alt">
+        
+        <li><a href="https://twitter.com/yeqown" class="icon alt fa-twitter"><span class="label">Twitter</span></a></li>
+        
+        
+        
+        
+        
+        <li><a href="https://github.com/yeqown" class="icon alt fa-github"><span class="label">GitHub</span></a></li>
+        
+        
+        
+        
+        
+      </ul>
+    </section>
+    
+  </section>
+</footer>
+        
+<div id="copyright">
+    <ul>
+        <li>&copy; Yeqown</li>
+        <li>Design: <a href="https://html5up.net">HTML5 UP</a></li>
+        <li>Hugo Port: <a href="https://curtistimson.co.uk">curttimson</a></li>
+    </ul>
+
+    
+    <ul>
+        <li>
+            <span id="busuanzi_container_site_pv">
+                总访问量<span id="busuanzi_value_site_pv"></span>次
+            </span>
+        </li>
+        <li>
+            <span id="busuanzi_container_site_uv">
+                访客数<span id="busuanzi_value_site_uv"></span>人次
+            </span>
+        </li>
+    </ul></div>
+
+    </div>
+    
+    
+
+
+
+
+
+
+
+
+
+
+<script src='/assets/js/bundle.js'></script>
+</body>
+
+</html>

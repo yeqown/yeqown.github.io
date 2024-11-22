@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Tunnel on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/Tunnel/</link>
+    <description>Recent content in Tunnel on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Tue, 15 Aug 2023 20:31:02 +0800</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/Tunnel/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Cloudflare Tunnel 使用笔记</title>
+      <link>https://www.yeqown.xyz/2023/08/15/cloudflare-tunnel-%E4%BD%BF%E7%94%A8%E7%AC%94%E8%AE%B0/</link>
+      <pubDate>Tue, 15 Aug 2023 20:31:02 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2023/08/15/cloudflare-tunnel-%E4%BD%BF%E7%94%A8%E7%AC%94%E8%AE%B0/</guid>
+      <description>Cloudflare 自不用多说，Tunnel 是 Cloudflare 提供的一项功能，可以将本地的服务通过 Cloudflare 的网络暴露到公网，这样就可以实现内网穿透，同时还可以通过 Cloudflare 的网络加速服务，提高访问速度。
+初识 Cloudflare Tunnel 最开始接触 Cloudflare Tunnel 是在 Twitter 上看到一个项目cloudflare-tunnel-ingress-controller ，这个项目是一个 Kubernetes 的 Ingress Controller，可以将 Kubernetes 中的服务通过 Cloudflare Tunnel 暴露到公网，这样就可以实现内网穿透，也就是说局域网搭建的服务可以通过 Cloudflare 的网络暴露到公网。
+熟悉内网穿透的小伙伴，应该对这中东西很熟悉，也没什么好说的。
+前提 一个 Cloudflare 账号 一个域名 cloudfalred Mac 上可以通过 brew install cloudflared 安装，安装完成后，可以通过 cloudflared -v 查看版本。
+$ cloudflared -v cloudflared version 2023.7.3 (built 2023-07-25T20:51:49Z) 参考 cloudflared 官方文档 安装。
+$ cloudflared login 使用 我的使用场景除了最开始提到的 Kubernetes Ingress Controller 之外，还有一个就是将局域网内的开发机通过 Cloudflare Tunnel 暴露到公网，方便远程开发。</description>
+    </item>
+    
+    <item>
+      <title>SSH Tunnel小工具</title>
+      <link>https://www.yeqown.xyz/2020/01/08/ssh-tunnel%E5%B0%8F%E5%B7%A5%E5%85%B7/</link>
+      <pubDate>Wed, 08 Jan 2020 14:33:41 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2020/01/08/ssh-tunnel%E5%B0%8F%E5%B7%A5%E5%85%B7/</guid>
+      <description>背景 生产环境数据库不允许直接访问，但是又经常有需要直接操作数据库的需求😂。先不说合不合理，背景就是这个背景，因此只能通过跳板机来连接数据库，一（就）般（我）来（而）说（言）会使用ssh隧道，就轻松能解决这个问题，然鹅，事情并不简单。这里陈述一下：
+生产环境数据库不让直接访问； 跳板机上没有公钥，没有权限； 我一次可能需要开3+个隧道才能启动服务【敲重点】 解决 本着“我不造轮子，谁来造轮子”的想法，这里就造一个小轮子：用Go来实现SSH隧道多开，并支持配置。成果预览： 原理简要分析 如果代理原理有点了解，这里的原理差不多是一样的：Local &amp;lt;-&amp;gt; SSH tunnel &amp;lt;-&amp;gt; Remote Server，对于隧道来说把Local的请求传给Remote, 把Remote的响应告诉Local。直接上代码：
+// Start . // TODO: support random port by using localhost:0 func (tunnel *SSHTunnel) Start() error { listener, err := net.Listen(&amp;#34;tcp&amp;#34;, tunnel.LocalAddr) if err != nil { return err } defer listener.Close() // tunnel.Local.Port = listener.Addr().(*net.TCPAddr).Port for { conn, err := listener.Accept() if err != nil { return err } logger.Infof(tunnel.name() + &amp;#34; accepted connection&amp;#34;) go tunnel.</description>
+    </item>
+    
+  </channel>
+</rss>

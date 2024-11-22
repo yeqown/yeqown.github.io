@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Algorithm on Yeqown</title>
+    <link>https://www.yeqown.xyz/categories/Algorithm/</link>
+    <description>Recent content in Algorithm on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Fri, 05 Apr 2019 14:51:46 +0000</lastBuildDate><atom:link href="https://www.yeqown.xyz/categories/Algorithm/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>介绍一下snowflake和rc4</title>
+      <link>https://www.yeqown.xyz/2019/04/05/%E4%BB%8B%E7%BB%8D%E4%B8%80%E4%B8%8Bsnowflake%E5%92%8Crc4/</link>
+      <pubDate>Fri, 05 Apr 2019 14:51:46 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2019/04/05/%E4%BB%8B%E7%BB%8D%E4%B8%80%E4%B8%8Bsnowflake%E5%92%8Crc4/</guid>
+      <description>snowflake是twitter公司开源的生成唯一ID的网络服务，具有很强的伸缩性，这里只取用生成唯一ID的算法部分。 rc4（Rivest Cipher 4）是一种流加密算法，密钥长度可变，它的加解密使用相同的密钥，因此也属于对称加密算法。
+为啥要介绍这两种算法？ 其一，snowflake可以生成唯一ID，而相比与UUID，snowflake生成的ID更加“好用”，这个放在后面解释。 其二，UUID和snowflake虽然可以生成唯一ID，但是无法适用于所有场景，譬如说“生成推广码”。生成推广码的时候，希望尽可能短而精，很明显唯一ID都不太短。
+snowflake snowflake的唯一ID是一个64bit的int型数据，相较于UUID来说耗费空间更小，可以更方便的作为数据库主键来索引和排序。
+生成过程： 置0不用 timestamp（41bits）精确到ms。 machine-id（10bits）该部分其实由datacenterId和workerId两部分组成，这两部分是在配置文件中指明的。datacenterId（5bits）方便搭建多个生成uid的service，并保证uid不重复。workerId（5bits）是实际server机器的代号，最大到32，同一个datacenter下的workerId是不能重复的。 sequence-id(12bits)，该id可以表示4096个数字，它是在time相同的情况下，递增该值直到为0，即一个循环结束，此时便只能等到下一个ms到来，一般情况下4096/ms的请求是不太可能出现的，所以足够使用了。 优势和缺陷： 速度快，无依赖，原理和实现简单，也可以根据自己的需求做算法调整 依赖机器时间，如果时间回拨可能导致重复的ID rc4 RC4加密算法也是一种基于密钥流的加密算法。
+首先，rc4根据明文和密钥生成的密钥流，其长度和明文的长度是相等的，也就是说明文的长度是500字节，那么密钥流也是500字节，这也是我们用来生成推广码的原因之一了；其次，rc4是是对称加密完全可以通过密文得到明文，也就是说在生成码的时候把必要信息放在明文中，在使用密文的时候可以不用查库也能得到相关的信息，譬如用户ID，这是原因之二。
+使用场景 现在需要生成一种码，短小易记，且唯一，但并不需要大量。
+上述的snowflake和UUID都很容易实现唯一，但是短小就不符合要求了。因为并不需要大量生成这种码，因此我们考虑用自增ID + RC4来实现：
+package main import ( &amp;#34;crypto/rc4&amp;#34; &amp;#34;encoding/hex&amp;#34; &amp;#34;fmt&amp;#34; &amp;#34;log&amp;#34; ) func main() { cipher, err := rc4.NewCipher([]byte(&amp;#34;thisiskey&amp;#34;)) if err != nil { log.Fatalf(&amp;#34;wrong with NewCipher: %v&amp;#34;, err) } c := map[string]bool{} for i := 0; i &amp;lt; 1000; i++ { src := []byte(fmt.Sprintf(&amp;#34;%7d&amp;#34;, i)) dst := make([]byte, len(src)) cipher.</description>
+    </item>
+    
+    <item>
+      <title>Stack实现O(1)的Min和Max</title>
+      <link>https://www.yeqown.xyz/2018/03/01/Stack%E5%AE%9E%E7%8E%B0O1%E7%9A%84Min%E5%92%8CMax/</link>
+      <pubDate>Thu, 01 Mar 2018 16:26:05 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/03/01/Stack%E5%AE%9E%E7%8E%B0O1%E7%9A%84Min%E5%92%8CMax/</guid>
+      <description>栈（Stack）Pop和Push操作只需要对栈顶元素进行操作，就不多加描述了。那么对于Max和Min操作，怎么保证O(1)的时间复杂度?最直接想到的就是设置两个标记位，最小值的最大值，在push和pop的时候更新两个值。那么怎么更新呢，怎么保证最大值和最小值弹出之后还能正确获取到当前所有元素中的最大值和最小值呢？请看下文：
+辅助最大值栈SM 算法描述 type Stack Struct{ data []int } var SMax *Stack = new(Stack) push: 如果当前元素大于等于辅助栈的栈顶元素或者辅助栈为空，那么当前元素push到辅助栈中 pop: 如果当前元素等于辅助栈的栈顶元素，那么从辅助栈中弹出当前元素 举个例子 如果有1，3，6，1，12，512，12，5121，121，412数据放入栈中 Step-1. 元素1入栈，当前SM栈为空，SM栈也同步更新
+Stack: 1 SMax: 1 Step-2. 元素3入栈，3 &amp;gt; 1，SMax栈也同步更新
+Stack: 1, 3 SMax: 1, 3 Step-3. 元素6入栈，6&amp;gt;3，SMax栈也同步更新
+Stack: 1, 3, 6 SMax: 1, 3, 6 &amp;hellip;此处省略更多步骤
+最大值标记法 第一种方式利用辅助栈来标记当前最大值和上一个最大值，并利用栈来实现O(1)复杂度。但是根据上述的例子，可以看到如果插入的元素是依次增大，那么耗费2N+1空间才能实现栈的最大值和最小值在O(1)复杂度。现在介绍的方法，能够很好的减少空间耗费，并保证O(1)时间复杂度。
+算法描述 type Stack struct { data []int max int // default = math.MinInt32 } push: 将(当前元素-Max)放入栈中；如果当前元素大于Max，用当前元素替换Max pop: 如果栈顶元素&amp;gt;0，弹出Max，用Max-栈顶元素替换Max；否则弹出Max+栈顶元素 再举个例子 如果有5, 23, 12, 499, 45, 20, 60入栈 Step-1.</description>
+    </item>
+    
+    <item>
+      <title>Trie树学习</title>
+      <link>https://www.yeqown.xyz/2018/02/11/Trie%E6%A0%91%E5%8E%9F%E7%90%86%E4%BB%8B%E7%BB%8D/</link>
+      <pubDate>Sun, 11 Feb 2018 15:03:31 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/02/11/Trie%E6%A0%91%E5%8E%9F%E7%90%86%E4%BB%8B%E7%BB%8D/</guid>
+      <description>Trie树(Retrieval Tree)又称前缀树，可以用来保存多个字符串，并且查找效率高。在trie中查找一个字符串的时间只取决于组成该串的字符数，与树的节点数无关。Trie树形状如下图： 应用场景 词频统计（搜索引擎常用） 前缀单词搜索 构造Trie树 构造Trie树有如下几种方式（非全部）：
+// 结构1，简单且直观，但是空间闲置较多，利用率低下 type TrieNode struct{ Char	rune Children [27]*TrieNode } // 结构二 可变数组Trie树, 减少了闲置指针，但是只能通过遍历来获取下一状态，降低了查询效率 type TrieNode struct { Char rune Children []*TrieNode } // 结构3，双数组Trie树，空间和时间上耗费较为均衡，但是动态构建，解决冲突耗费时间较多 type TrieNode struct { Base []int Check []int } 数组构造方式 这里选择双数组方式来实现Trie树。
+基于数组的实现方式，把trie看作一个DFA，树的每个节点对应一个DFA状态，每条从父节点指向子节点的有向边对应一个DFA变换。遍历从根节点开始，字符串的每个字符作为输入用来确定下一个状态，直到叶节点。 &amp;mdash;- 摘自参考资料，Trie数组实现原理
+关于双数组：
+Base数组，表示后即节点的基地址的数组，叶子节点没有后继 Check数组，用于检查 Trie树应用之前缀搜索 前缀搜索。也就是给一定的字符串，给出所有以该字符串开始的单词。譬如，Search(&amp;ldquo;go&amp;rdquo;)，得到[&amp;ldquo;go&amp;rdquo;, &amp;ldquo;golang&amp;rdquo;, &amp;ldquo;google&amp;rdquo;, &amp;hellip;]
+三种构造方式的优劣分析 Trie树（数组Trie树） 每个节点都含有26个字母指针，但并不是都会使用，内存利用率低。时间复杂度：O(k)， 空间复杂度：O(26^n)
+双数组Trie树 构造调整过程中，每个状态都依赖于其他状态，所以当在词典中插入或删除词语的时候，往往需要对双数组结构进行全局调整,灵活性能较差。双数组已经大幅改善了经典Trie树的空间浪费，但是冲突发生的时候，总是往后寻址，不可避免数组空置。随着数据量增大，冲突的几率也越来越大，字典树的构建也越来越慢。如果核心词典已经预先建立好并且有序的，并且不会添加或删除新词，那么这个缺点是可以忽略的。所以常用双数组Tire树都是载入整个预先建立好的核心分词词典。
+Tail-Trie树 三数组Trie树实在双数组的基础上优化而来，增加了tail节点，就是将非公共前缀的词尾合并成为一个节点，减少节点总数，提升词典树的构建速度。如图： 参考资料 An Implementation of Double-Array Trie Trie树详解及应用 DoubleArrayTrie An Efficient Implementation of Trie Structures github.</description>
+    </item>
+    
+    <item>
+      <title>动态规划之字符串编辑距离</title>
+      <link>https://www.yeqown.xyz/2018/02/11/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B9%8B%E5%AD%97%E7%AC%A6%E4%B8%B2%E7%BC%96%E8%BE%91%E8%B7%9D%E7%A6%BB%E9%97%AE%E9%A2%98-LD/</link>
+      <pubDate>Sun, 11 Feb 2018 09:57:18 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/02/11/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B9%8B%E5%AD%97%E7%AC%A6%E4%B8%B2%E7%BC%96%E8%BE%91%E8%B7%9D%E7%A6%BB%E9%97%AE%E9%A2%98-LD/</guid>
+      <description>问题描述 给定 2 个字符串 a, b. 编辑距离是将 a 转换为 b 的最少操作次数，操作只允许如下 3 种： 插入一个字符，例如：fj -&amp;gt; fxj 删除一个字符，例如：fxj -&amp;gt; fj 替换一个字符，例如：jyj -&amp;gt; fyj
+函数原型：
+func LevenshteinDis(str1, str2 string) int { ... } 算法适用场景 拼写检查 输入联想 语音识别 论文检查 DNA分析 问题分析 假定函数edit_dis(stra, strb)表示，stra到strb的编辑距离。算法问题可以分为四种情况：
+edit_dis(0, 0) = 0 edit_dis(0, strb) = len(strb) edit_dis(stra, strb) = len(stra) edit_dis(stra, strb) = ? 对于4th一般情况，没有办法直接给出求解方式，我们来分析edit_dis(stra+chara, strb+charb)可能的情况：
+stra能转成strb，那么只需要判断chara是不是等于charb (cur_cost = 0 if chara == charb else 1) stra+chara能转成strb, 那么要让stra + chara 转成strb+ charb, 只需要插入charb就行了 如果stra 可以直接转成strb+charb，那么删除chara就可以转换成功了 综上的分析，可以得到如下DP公式：</description>
+    </item>
+    
+  </channel>
+</rss>

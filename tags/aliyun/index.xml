@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>aliyun on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/aliyun/</link>
+    <description>Recent content in aliyun on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Fri, 02 Mar 2018 17:52:53 +0000</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/aliyun/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>aliyun-rds数据备份方案</title>
+      <link>https://www.yeqown.xyz/2018/03/02/aliyun-rds%E6%95%B0%E6%8D%AE%E5%A4%87%E4%BB%BD%E6%96%B9%E6%A1%88/</link>
+      <pubDate>Fri, 02 Mar 2018 17:52:53 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/03/02/aliyun-rds%E6%95%B0%E6%8D%AE%E5%A4%87%E4%BB%BD%E6%96%B9%E6%A1%88/</guid>
+      <description>本文主要是总结下在使用aliyun-rds数据备份方案过程中的心得。
+高可用一直都是线上服务维护用户体验的关键之一。为了达到高可用，业界已经有了很多方案。最典型的就是“冗余备份+自动故障转移”。冗余备份是说，当一个节点服务不可用时，有其他服务能够代替其工作。除此之外，如果服务出现了必须人工介入解决的故障，也会影响系统的高可用特性。
+本文着重介绍数据的高可用方案
+数据库冗余 如果是单节点的数据库，还用的着说吗？要保证服务高可用，除了主-从数据库之外，还需要从备份数据库，当然不能保证说一定不会遇到所有的备份数据库，都挂掉的情况&amp;hellip;。阿里云提供了RDS-高可用版本和RDS-单机版,两者的区别见下图： 这就算最基本的冗余了，没有主从复制，没有读写分离。但是能保证主库在换掉的时候，还能使用备库提供服务。如果服务对于数据库性能和可用性有一定要求，那么可以在这个基础上升个级，见下图： 数据故障自动转移 已经有了冗余的数据库节点了，那么接下来要做的事情就是怎么感知数据库异常，并实现自动切换到备份实例中? 阿里云灾备方案的文档是这样描述的：
+主实例和灾备实例均搭建主备高可用架构，当主实例所在区域发生突发性自然灾害等状况，主节点（Master）和备节点（Slave）均无法连接时，可将异地灾备实例切换为主实例，在应用端修改数据库链接地址后，即可快速恢复应用的业务访问。
+对于主节点全部不可用的情况对应用服务是可见的，因此应用服务可以通过指定一些异常判断，在判定主节点不可用的时候，主动切换数据库连接地址来获取数据，提供服务。
+// sql-detect.go package main import ( &amp;#34;database/sql&amp;#34; &amp;#34;fmt&amp;#34; &amp;#34;sync&amp;#34; &amp;#34;time&amp;#34; _ &amp;#34;github.com/go-sql-driver/mysql&amp;#34; _ &amp;#34;github.com/mxk/go-sqlite&amp;#34; ) var ( mysqlAvailable bool = true mutex = sync.Mutex{} db *sql.DB = nil ) func MysqlDetection(db *sql.DB, ticker *time.Ticker) { for { select { case &amp;lt;-ticker.C: if e := db.Ping(); e != nil { fmt.Println(&amp;#34;got error&amp;#34;, e) mutex.Lock() mysqlAvailable = false mutex.Unlock() } else { fmt.</description>
+    </item>
+    
+  </channel>
+</rss>

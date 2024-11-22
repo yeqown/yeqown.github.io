@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>分布式 on Yeqown</title>
+    <link>https://www.yeqown.xyz/categories/%E5%88%86%E5%B8%83%E5%BC%8F/</link>
+    <description>Recent content in 分布式 on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Sun, 18 Aug 2024 09:43:35 +0800</lastBuildDate><atom:link href="https://www.yeqown.xyz/categories/%E5%88%86%E5%B8%83%E5%BC%8F/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>ShardingSphere-Proxy问题几则</title>
+      <link>https://www.yeqown.xyz/2024/08/18/shardingsphere-proxy%E9%97%AE%E9%A2%98%E5%87%A0%E5%88%99/</link>
+      <pubDate>Sun, 18 Aug 2024 09:43:35 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2024/08/18/shardingsphere-proxy%E9%97%AE%E9%A2%98%E5%87%A0%E5%88%99/</guid>
+      <description>ShardingSphere Proxy 是 Apache ShardingSphere 的一个子项目，是一个基于 MySQL 协议的数据库中间件，用于实现分库分表、读写分离等功能。在使用过程中，遇到了一些问题，记录如下。
+这里主要针对的是 分库分表 的使用场景。
+问题概述 数据库往往是一个系统最容易出现瓶颈的点，当遇到数据库瓶颈时，我们可以通过数据拆分来缓解问题。数据拆分的方式通常分为横向拆分和纵向拆分，横向拆分即分库分表；纵向拆分即把一个库表中的字段拆分到不同的库表中去。这两种手段并不互斥，而是在实际情况中相辅相成。本文即是横向拆分相关内容。
+常见的部署方式有哪些？ 数据分片规则怎么配置？ 数据分片数应该怎么确定？ 数据分片后唯一索引还有用吗？ 数据分片后数据迁移？ 数据分片后如何确定实际执行 SQL 语句？ 数据分片后后的查询优化？ 0. 常见的部署方式 官方提供了两种部署方式：
+单机部署：将 ShardingSphere Proxy 部署在单台服务器上，用于测试和开发环境。 集群部署：将 ShardingSphere Proxy 部署在多台服务器上，用于生产环境。集群模式下使用 zookeeper 来存储元数据。 关于元数据，元数据是 ShardingSphere Proxy 的核心，用于存储分库分表规则、读写分离规则等信息。 官方建议使用集群模式部署 生产环境的 ShardingSphere Proxy
+如果不按照官方的指引，选择部署了多个 Standalone 模式的 ShardingSphere Proxy，那么需要注意“每个这样的 proxy 节点会有自己的元信息，他们之间并不互通”。这样一些情况下会出现节点之间元数据不一致的问题，参看如下测试：
+# 启动 3 个 standalone 模式的 ShardingSphere Proxy +-------+ | LB | +-------+ | |-------------|--------------| | | | +-------+ +-------+ +-------+ | Node1 | | Node2 | | Node3 | +-------+ +-------+ +-------+ 初始表结构如下：</description>
+    </item>
+    
+    <item>
+      <title>Nats设计与实现</title>
+      <link>https://www.yeqown.xyz/2024/02/26/nats%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%AE%9E%E7%8E%B0/</link>
+      <pubDate>Mon, 26 Feb 2024 21:30:08 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2024/02/26/nats%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%AE%9E%E7%8E%B0/</guid>
+      <description>NATS设计与实现 NATS 就是一个消息中间件，提供了 Pub/Sub 核心数据流，并基于此构建了 Request/Reply API 和 JetStream 用来提供可靠的分布式存储能力，和更高的 QoS（至少一次 + ACK）。
+1. 核心概念 序号 名词（ENG） 名词（zh-CN） 解释 1 Publish 发布 发布动作，往 subject 中投递一条消息
+2 Subscribe 订阅 订阅动作，表示想要接受发布相应 subject 的消息 3 Subject 主题 唯一标识，用于标识一种或者一类事件的概念。订阅时，可以使用 nats 约定的通匹配符来接收一类 subjects，如 orders.&amp;gt; 。 4 Core Nats NATS 核心 CORE NATS 提供了以下能力：
+- PUB / SUB https://docs.nats.io/nats-concepts/core-nats/pubsub
+- Request / Reply https://docs.nats.io/nats-concepts/core-nats/reqreply
+- Queue Groups https://docs.nats.io/nats-concepts/core-nats/queue
+提供 最多一次 的消息传递保证 5 Request / Reply 请求 / 回复 NATS 基于 PUB / SUB 实现的对 request 异步回复的功能，依赖于消息中的 reply 字段。reply 是内置实现，随机生成一个 “inbox” subject。</description>
+    </item>
+    
+    <item>
+      <title>设计一个分布式定时任务系统</title>
+      <link>https://www.yeqown.xyz/2022/01/27/%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%88%86%E5%B8%83%E5%BC%8F%E5%AE%9A%E6%97%B6%E4%BB%BB%E5%8A%A1%E7%B3%BB%E7%BB%9F/</link>
+      <pubDate>Thu, 27 Jan 2022 16:52:24 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2022/01/27/%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%88%86%E5%B8%83%E5%BC%8F%E5%AE%9A%E6%97%B6%E4%BB%BB%E5%8A%A1%E7%B3%BB%E7%BB%9F/</guid>
+      <description>需求和背景分析 一提到定时任务的使用场景，我们肯定能想到很多场景，比如：
+每天晚上12点执行一次清理数据的任务 每天凌晨1点给符合条件的用户发送推广邮件 每个月10号结算工资 每隔5分钟检查一次服务器的状态 每天根据用户的配置，给用户发送站内消息提醒 &amp;hellip; 从常见的场景中，我们可以提炼出一些定时任务的特点：
+序号 特点 说明 1 定时 执行时间有规则 2 可靠 可以延迟执行，但不能不执行；可以不执行，但是不能多执行 3 并发（可能） 某些场景下，可以运行多个 cron 进程来提高执行效率 4 可执行 这个有点废话了，但是这个关系到 cronjob 的设计，因此在这里还是提出来 但是作为一个系统来说，我们需要更多的功能来提升用户体验，保证平台的可靠和稳定。我们设想下以下的场景：
+定时任务已经触发了，但是有没有执行，执行结果是什么？ 如果一个定时任务长时间运行，那么它正常吗？ 一个定时任务还在运行，但是下一个触发时机又到来了，该怎么办？ 如果服务器资源已经处于高位，那么要被触发的任务还触发吗？ &amp;hellip; 最后，基本的访问控制，权限分配和API设计，这些都是系统功能的一部分，但不作为本文的重点考虑对象。
+一些概念 到这里我们可以提取一些概念，来帮助我们设计一个系统：
+序号 名词 解释 1 CronJob 定时任务实例，描述定时任务资源的一个实体 2 Job 执行中的定时任务 3 Scheduler 调度器，负责触发 CronJob 执行和监控 Job 的执行状态；或许还会存储一些 CronJob 的状态 4 JobRuntime job 运行时，准备 Job 运行时需要的资源; 可以参考 k8s CRI 这里 JobRuntime 是抽象化的概念，因为 Job 可以是k8s上的POD，也可以是物理机的进程，还可以是一个进程中的coroutine。
+这几个概念的关联关系如图：</description>
+    </item>
+    
+    <item>
+      <title>etcd与service-registration-discovery</title>
+      <link>https://www.yeqown.xyz/2018/10/23/etcd-service-registration-discovery/</link>
+      <pubDate>Tue, 23 Oct 2018 17:20:48 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/10/23/etcd-service-registration-discovery/</guid>
+      <description>声明：本文对etcd的原理，实现细节，性能等均不考虑，仅将etcd作为一个分布式的K-V存储组件。本文提价代码均在： github.com/yeqown/server-common/tree/master/framework/etcd
+一个核心 etcd, 分布式Key-Value存储工具。详细资料由此去
+etcd下载安装 两个对象 服务提供者（在测试环境中，我定义为单独的服务实例），也就是服务的提供者，需要向其他服务暴露自己的ip和端口，方便调用。 服务调用者（同样地，在测试环境中我定义为反向代理网关程序），也就是服务的调用者，需要获取到 可使用 地服务地址并调用。 关于服务注册与发现 就具体场景而言：我们的生产环境中使用了一个代理网关服务器，用于转发移动端和PC端的API请求，并完成其他功能。所有的服务实例配置都是硬编码在网关程序中，顶多就是抽离出来成了一个配置文件。这样做的缺点很明显：“非动态”。也就意味着，一旦有服务Down掉，那么用户访问则可能异常，甚至导致整个服务的崩溃；其次，需要对服务进行扩容的情况下，则需要先进行服务部署再更新网关程序，步骤繁琐且容易出错。
+那么如果我们设计成为如下图的样子： 对于新添加的服务实例，只需要启动新的服务，并注册到etcd相应的路径下就行了。
+注册：对于同一组服务，配置一个统一的前缀（如图上的&amp;quot;/specServer&amp;quot;），不同实例使用ID加以区分。
+将现行服务改造成为上述模式需要解决的问题： etcd 配置安装 网关程序改造（监听etcd的节点夹子/prefix;适配动态的服务实例调用） 服务实例改造（注册服务实例到etcd;心跳更新;其他配套设施，异常退出删除注册信息） etcd安装配置在github.com已经非常详细了。在这里贴一下我在本地测试时候启动的脚本（这部分是从etcd-demo获取到的，做了针对端口的改动）：
+#!/bin/bash # For each machine TOKEN=token-01 CLUSTER_STATE=new NAME_1=machine1 NAME_2=machine2 NAME_3=machine3 HOST_1=127.0.0.1 HOST_2=127.0.0.1 HOST_3=127.0.0.1 CLUSTER=${NAME_1}=http://${HOST_1}:2380,${NAME_2}=http://${HOST_2}:2381,${NAME_3}=http://${HOST_3}:2382 # For machine 1 THIS_NAME=${NAME_1} THIS_IP=${HOST_1} etcd --data-dir=machine1.etcd --name ${THIS_NAME} \ --initial-advertise-peer-urls http://${THIS_IP}:2380 --listen-peer-urls http://${THIS_IP}:2380 \ --advertise-client-urls http://${THIS_IP}:2377 --listen-client-urls http://${THIS_IP}:2377 \ --initial-cluster ${CLUSTER} \ --initial-cluster-state ${CLUSTER_STATE} --initial-cluster-token ${TOKEN} &amp;amp; # For machine 2 THIS_NAME=${NAME_2} THIS_IP=${HOST_2} etcd --data-dir=machine2.</description>
+    </item>
+    
+    <item>
+      <title>分布式架构入门</title>
+      <link>https://www.yeqown.xyz/2018/04/17/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84%E5%85%A5%E9%97%A8/</link>
+      <pubDate>Tue, 17 Apr 2018 15:01:33 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/04/17/%E5%88%86%E5%B8%83%E5%BC%8F%E6%9E%B6%E6%9E%84%E5%85%A5%E9%97%A8/</guid>
+      <description>在开始之前必须明确的是，分布式和集群的区别，简单的说：
+1.分布式是一种工作方式，把一个系统的不同功能放在不同的机器上； 2.集群是一种物理形态，同一个任务放在不同的机器上； 这样说，也并不是说这两个概念是完全不同，还互相独立，而是实际应用中相辅相成。 我们常说的负载均衡的背后就是集群部署，某些公司为了能扛住突然增长的流量，会采用加很多台服务器的方式来提高性能。看下图： 对于小公司来说，这样部署的方式在于：简单快速，成本在可接受范围。（如果愿意多花点时间进行代码重构和技术再选型或许效果会更好，当然估计要换个不懂技术的老板，然后忽悠他😊）
+但是也不是没有隐患，一方面，集群部署虽然能提高系统的可用性，但是如果多台机器离线，会导致其他机器压力增大，如果严重超过机器负载能力，会导致越来越多的机器离线，一旦解决不及时便会导致整个应用崩溃。其次，集群部署为了保证数据的一致性，一般多采用相同数据源，因此集群并不能无限制扩张。
+分布式系统的应用场景 分布式主要解决的问题是提升应用的负载能力。
+分布式的优缺点 将一个系统的不同模块分别部署在不同的机器上。这里不得不说到微服务，微服务是把系统服务拆分成为独立的服务来部署（这里说的独立，是数据独立和部署独立，不依赖于其他服务）。
+从本质上来说微服务也是分布式部署的一种。只是相比一般分布式应用，拆分更加彻底。
+优点 分成多个模块，并使用接口通信，低耦合； 团队协作开发，事先约定好接口，独立开发，效率更高； 部署更加灵活； 缺点 依赖网络通信，增加额外开发通信接口。 总结 以上说的都是垃圾，只希望打开思路。某邓同志说：能抗住压力的应用才是好应用。
+参考资料 https://blog.csdn.net/boonya/article/details/55046568 https://www.jianshu.com/p/39c1e4ec0d63</description>
+    </item>
+    
+  </channel>
+</rss>

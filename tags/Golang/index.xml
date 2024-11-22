@@ -1,0 +1,443 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Golang on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/Golang/</link>
+    <description>Recent content in Golang on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Mon, 26 Feb 2024 21:30:08 +0800</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/Golang/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Nats设计与实现</title>
+      <link>https://www.yeqown.xyz/2024/02/26/nats%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%AE%9E%E7%8E%B0/</link>
+      <pubDate>Mon, 26 Feb 2024 21:30:08 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2024/02/26/nats%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%AE%9E%E7%8E%B0/</guid>
+      <description>NATS设计与实现 NATS 就是一个消息中间件，提供了 Pub/Sub 核心数据流，并基于此构建了 Request/Reply API 和 JetStream 用来提供可靠的分布式存储能力，和更高的 QoS（至少一次 + ACK）。
+1. 核心概念 序号 名词（ENG） 名词（zh-CN） 解释 1 Publish 发布 发布动作，往 subject 中投递一条消息
+2 Subscribe 订阅 订阅动作，表示想要接受发布相应 subject 的消息 3 Subject 主题 唯一标识，用于标识一种或者一类事件的概念。订阅时，可以使用 nats 约定的通匹配符来接收一类 subjects，如 orders.&amp;gt; 。 4 Core Nats NATS 核心 CORE NATS 提供了以下能力：
+- PUB / SUB https://docs.nats.io/nats-concepts/core-nats/pubsub
+- Request / Reply https://docs.nats.io/nats-concepts/core-nats/reqreply
+- Queue Groups https://docs.nats.io/nats-concepts/core-nats/queue
+提供 最多一次 的消息传递保证 5 Request / Reply 请求 / 回复 NATS 基于 PUB / SUB 实现的对 request 异步回复的功能，依赖于消息中的 reply 字段。reply 是内置实现，随机生成一个 “inbox” subject。</description>
+    </item>
+    
+    <item>
+      <title>fsnotify原理探究</title>
+      <link>https://www.yeqown.xyz/2023/10/10/fsnotify%E5%8E%9F%E7%90%86%E6%8E%A2%E7%A9%B6/</link>
+      <pubDate>Tue, 10 Oct 2023 20:02:28 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2023/10/10/fsnotify%E5%8E%9F%E7%90%86%E6%8E%A2%E7%A9%B6/</guid>
+      <description>本文如果没有特殊说明，所有的内容都是指 linux 系统
+起因是从 kratos 群里看到有人问：“测了下kratos的config watch，好像对软链不生效”，他提供的屏幕截图如下类似：
+$ pwd /tmp/testconfig $ ls -l drwxr-xr-x 3 root root 4096 Oct 10 19:48 . drwxr-xr-x 10 root root 4096 Oct 10 19:48 .. drwxr-xr-x 1 root root 11 Oct 10 19:48 ..ver1 drwxr-xr-x 1 root root 11 Oct 10 19:48 ..ver2 lrwxr-xr-x 1 root root 11 Oct 10 19:48 ..data -&amp;gt; ..ver1 drwxr-xr-x 1 root root 11 Oct 10 19:48 data $ $ ll -a data drwxr-xr-x 3 root root 4096 Oct 10 19:48 .</description>
+    </item>
+    
+    <item>
+      <title>Tcp 长连接服务优雅重启的秘密</title>
+      <link>https://www.yeqown.xyz/2023/08/17/tcp-%E9%95%BF%E8%BF%9E%E6%8E%A5%E6%9C%8D%E5%8A%A1%E4%BC%98%E9%9B%85%E9%87%8D%E5%90%AF%E7%9A%84%E7%A7%98%E5%AF%86/</link>
+      <pubDate>Thu, 17 Aug 2023 09:31:49 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2023/08/17/tcp-%E9%95%BF%E8%BF%9E%E6%8E%A5%E6%9C%8D%E5%8A%A1%E4%BC%98%E9%9B%85%E9%87%8D%E5%90%AF%E7%9A%84%E7%A7%98%E5%AF%86/</guid>
+      <description>假设我们有一个长连接服务，我们想要对它进行升级，但是不想让客户端受到影响应该怎么做？这个问题其实是一个很常见的问题，比如我们的游戏服务器，我们的 IM 服务器，推送服务器等等，诸如此类使用tcp长连接的服务，都会遇到这个问题。那么我们应该怎么做呢？
+需求分析 我们可以先来看下这个场景下的需求：
+客户端必须要对这个操作没有感知，也就是说客户端不需要做任何的修改，在服务器升级的过程中不需要配合。 服务器在升级的过程中，不能丢失任何的连接，也就是说，如果有新的连接进来，那么这个连接必须要被接受，如果有旧的连接，那么客户端不能够触发重连。 基本思路 实现思路的讨论范围限制在 linux 服务器上
+为了实现上述的要求，首先在升级流程中我们需要做到以下几点：
+旧的服务器进程在处理完请求前不能退出，而且一旦升级开始就不能再接受新的连接。 旧的服务器进程在所有连接都处理完毕后才能退出。 新的服务器进程在启动时需要继承旧的服务器进程的所有连接，新的连接也应该被新的服务器进程接受。 新的服务器进程也必须监听旧的服务器进程的监听端口，否则新的连接无法被接受。 那么通过 Google 和 ChatGPT 的帮助，我们可以找到一些思路：
+新进程继承旧进程的（监听）套接字，而不是创建新的。
+为什么不创建新的（监听）套接字呢？在 linux 中内核会把处在不同握手阶段的TCP连接放在不同的队列中（半连接/全连接）。服务器的监听套接字会有自己的队列，如果创建新的套接字，那么旧的套接字队列中的连接就会丢失。为了做到客户端无感知，我们需要继承旧的套接字（主要是为了连接队列中的连接不丢失）。
+半连接队列：当客户端发送 SYN 包时，服务器会把这个连接放在半连接队列中，等待服务器的 ACK 包，这个时候连接处于半连接状态。当服务器发送 ACK 包时，这个连接就会从半连接队列中移除，放到全连接队列中，这个时候连接处于全连接状态。当服务器调用 accept 时，就会从全连接队列中取出一个连接，这个时候连接处于 ESTABLISHED 状态。
+实现方式 那么在 linux 中，我们可以通过以如下方式实现：
+通过 fork 创建子进程，子进程继承父进程的所有资源，包括监听套接字; 子进程通过 exec 加载最新的二进制程序执行，这样就实现了新进程继承旧进程的监听套接字。 新进程启动完成后，通知父进程退出。 父进程受到信号后，停止接受新的连接，等待所有的连接处理完毕后退出。 在 Go 里面，我们可以通过如下方式实现：
+type gracefulTcpServer struct { listener *net.TCPListener shutdownChan chan struct{} conns map[net.Conn]struct{} servingConnCount atomic.Int32 serveRunning atomic.Bool } // 普通启动方式 func start(port int) (*gracefulTcpServer, error) { ln, err := net.</description>
+    </item>
+    
+    <item>
+      <title>在Parent Shell中执行内置命令的方法</title>
+      <link>https://www.yeqown.xyz/2022/07/25/%E5%9C%A8parent-shell%E4%B8%AD%E6%89%A7%E8%A1%8C%E5%86%85%E7%BD%AE%E5%91%BD%E4%BB%A4%E7%9A%84%E6%96%B9%E6%B3%95/</link>
+      <pubDate>Mon, 25 Jul 2022 10:05:09 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2022/07/25/%E5%9C%A8parent-shell%E4%B8%AD%E6%89%A7%E8%A1%8C%E5%86%85%E7%BD%AE%E5%91%BD%E4%BB%A4%E7%9A%84%E6%96%B9%E6%B3%95/</guid>
+      <description>背景 最近在为 大仓项目(Monorepo) 制作一个脚手架，其中构思了一个自动替用户切换工作路径的工具（代码是通过模板初始化的，在结构上基本一致，但是代码文件较深，想要在terminal去和文件交互时，只能使用 cd 命令，费时费力），因此我期望一个小工具，能比较方便的帮我跳转到目标路径。预期的使用效果如下：
+这个命令执行后，你可以从当前路径（任意路径）跳转到目标路径，那我就不用记我应该先跳转到根目录再前往目标目录了，少敲击很多次 tab。
+PS: 后续计划给这个命令扩展一下历史记录，可以通过筛选匹配历史快速补全命令，提高效率。
+chdir没作用？ 这个小工具是通过Go来编写的，我从文档中看到 os.Chdir 这个调用, 因此用它来试试：
+// Chdir changes the current working directory to the named directory. // If there is an error, it will be of type *PathError. func Chdir(dir string) error 结果我发现没有效果，通过 os.Getwd() 却能看到当前路径已经被改变了。这个切换的需求还没解决，我却产生了几个新的疑问：
+cd 命令怎么实现的？ chdir 系统调用的使用和原理？ 通过执行如下的命令，会发现 cd 命令并不是通过一个独立的可执行文件来实现的，而是内置在 bash 等 shell 程序中，其次通过查阅资料可以发现 大部分Linux发行版都部分符合 POSIX 标准。如果再检索一下shell程序的原理，我们会得出如下的结论：
+$ which cd cd: shell built-in command shell 程序在执行内建命令时，是通过调用内部的函数的执行。而非内建的命令（如 git / gcc / gdb）都是通过 fork 一个进程来执行；cd 命令是通过 chdir [IEEE Std 1003.</description>
+    </item>
+    
+    <item>
+      <title>设计一个分布式定时任务系统</title>
+      <link>https://www.yeqown.xyz/2022/01/27/%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%88%86%E5%B8%83%E5%BC%8F%E5%AE%9A%E6%97%B6%E4%BB%BB%E5%8A%A1%E7%B3%BB%E7%BB%9F/</link>
+      <pubDate>Thu, 27 Jan 2022 16:52:24 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2022/01/27/%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%88%86%E5%B8%83%E5%BC%8F%E5%AE%9A%E6%97%B6%E4%BB%BB%E5%8A%A1%E7%B3%BB%E7%BB%9F/</guid>
+      <description>需求和背景分析 一提到定时任务的使用场景，我们肯定能想到很多场景，比如：
+每天晚上12点执行一次清理数据的任务 每天凌晨1点给符合条件的用户发送推广邮件 每个月10号结算工资 每隔5分钟检查一次服务器的状态 每天根据用户的配置，给用户发送站内消息提醒 &amp;hellip; 从常见的场景中，我们可以提炼出一些定时任务的特点：
+序号 特点 说明 1 定时 执行时间有规则 2 可靠 可以延迟执行，但不能不执行；可以不执行，但是不能多执行 3 并发（可能） 某些场景下，可以运行多个 cron 进程来提高执行效率 4 可执行 这个有点废话了，但是这个关系到 cronjob 的设计，因此在这里还是提出来 但是作为一个系统来说，我们需要更多的功能来提升用户体验，保证平台的可靠和稳定。我们设想下以下的场景：
+定时任务已经触发了，但是有没有执行，执行结果是什么？ 如果一个定时任务长时间运行，那么它正常吗？ 一个定时任务还在运行，但是下一个触发时机又到来了，该怎么办？ 如果服务器资源已经处于高位，那么要被触发的任务还触发吗？ &amp;hellip; 最后，基本的访问控制，权限分配和API设计，这些都是系统功能的一部分，但不作为本文的重点考虑对象。
+一些概念 到这里我们可以提取一些概念，来帮助我们设计一个系统：
+序号 名词 解释 1 CronJob 定时任务实例，描述定时任务资源的一个实体 2 Job 执行中的定时任务 3 Scheduler 调度器，负责触发 CronJob 执行和监控 Job 的执行状态；或许还会存储一些 CronJob 的状态 4 JobRuntime job 运行时，准备 Job 运行时需要的资源; 可以参考 k8s CRI 这里 JobRuntime 是抽象化的概念，因为 Job 可以是k8s上的POD，也可以是物理机的进程，还可以是一个进程中的coroutine。
+这几个概念的关联关系如图：</description>
+    </item>
+    
+    <item>
+      <title>protoc-gen-fieldmask插件</title>
+      <link>https://www.yeqown.xyz/2022/01/25/protoc-gen-fieldmask%E6%8F%92%E4%BB%B6/</link>
+      <pubDate>Tue, 25 Jan 2022 13:46:36 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2022/01/25/protoc-gen-fieldmask%E6%8F%92%E4%BB%B6/</guid>
+      <description>背景 gRPC 作为服务端的常用框架，它通过 protocol-buffers 语言来定义服务，同时也约定了请求和响应的格式，这样在服务端和客户端之间就可以通过 protoc 生成的代码直接运行而不用考虑编码传输问题了。
+但是，可能会遇到这样的场景：
+RPC 响应中 无用的字段过多 , 浪费带宽和无效计算，如下图所示：
+这里的无用字段是指，在响应中，没有用到的字段，这些字段可以忽略掉，不会影响客户端的使用。
+或许 拆分接口 是一个好的办法，但是可能会因为这样那样的原因（信息粒度降低导致接口太多了，有些地方就是需要聚合信息；细粒度的API设计同时会导致代码重复增加），可能无法推动拆分改造。同时如果没有拆分标准，亦或团队内成员不能严格遵守标准，那么拆分也只是重复问题而已。
+RPC 增量更新时，如何判断零值字段是否需要更新？
+对于 unset 和 zero value 不好区分的语言中（比如：go），在提供服务的一方遇到 增量更新 的场景时就会遇到这样的情况：
+对于这种情况当然可以也有一些方法来解决，比如：使用指针来定义数据基本类型，那么在使用的时候如果判定为 nil 就说明没有设置，如果不为 nil 且为零值，那么就说明也是需要更新的。不过这样解决的缺点就是，nil refference panic 的概率又增加了，在使用时也稍微麻烦了一点。
+·
+解决方案 其实我们在思考上述两种场景的时候，把 客户端 和 服务端 的角色提取出来，就会发现这两个场景都是从 服务端 的视角遇到的问题，两个场景都是类似的：
+客户端需要哪些字段，服务端不知道 客户端更新了哪些字段，服务端也不知道 但是，其实客户端是知道的，因此让客户端把这部分信息传递给服务端就行了。因此我们可以用 FieldMask 字段，用来传递客户端需要的字段，服务端就只返回需要的字段；客户端的告诉服务端需要哪些字段，服务端就更新哪些字段。
+但是 FieldMask 只是一个定义，在具体的使用场景中还需要开发者自己编写一些辅助方法，来实现功能。那么是不是可以提供一个插件，让开发者可以只编写 proto 文件，便可以自动生成一些辅助方法呢？答案是肯定的，预览效果如下：
+message UserInfoRequest { string user_id = 1; google.protobuf.FieldMask field_mask = 2 [ (fieldmask.option.Option).in = {gen: true}, (fieldmask.</description>
+    </item>
+    
+    <item>
+      <title>Sentry&#43;OpenTelemetry前后端全链路打通总结</title>
+      <link>https://www.yeqown.xyz/2021/12/15/Sentry-OpenTelemetry%E5%89%8D%E5%90%8E%E7%AB%AF%E5%85%A8%E9%93%BE%E8%B7%AF%E6%89%93%E9%80%9A%E6%80%BB%E7%BB%93/</link>
+      <pubDate>Wed, 15 Dec 2021 16:16:05 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2021/12/15/Sentry-OpenTelemetry%E5%89%8D%E5%90%8E%E7%AB%AF%E5%85%A8%E9%93%BE%E8%B7%AF%E6%89%93%E9%80%9A%E6%80%BB%E7%BB%93/</guid>
+      <description>自从微服务大行其道，容器化和k8s编排一统天下之后，&amp;ldquo;可观测性&amp;rdquo; 便被提出来。这个概念是指，对于应用或者容器的运行状况的掌控程度，其中分为了三个模块：Metrics、Tracing、Logging。Metrics 指应用采集的指标；Tracing 指应用的追踪；Logging 指应用的日志。
+日志自不用多说，这是最原始的调试和数据采集能力。Metrics 比较火的方案就是 Prometheus + Grafana，思路就是通过应用内埋入SDK，选择 Pull 或者 Push 的方式将数据收集到 prometheus 中，然后通过 Grafana 实现可视化，当然这不是本文的重点就此略过。
+Tracing 也并不是可观测性提出后才诞生的概念，在微服务化的进程中就已经有Google的Dapper落地实践，并慢慢形成 OpenTracing 规范，这一规范又被多家第三方框架所支持，如 Jaeger、Zipkin 等。OpenTelemetry 就是结合了 OpenTracing + OpenCensus 规范，约定并提供完成的可观测性套件，只是目前（2021-12-15）稳定下来的只有 Tracing 这一部分而已。对 OpenTelemetry 发展历史感兴趣的可以自行了解。
+效果预览 链路总览，包含了前端页面的生命周期 + 整个了链路采集到的Span聚合。
+前端页面指标采集概览，包含了该页面生命周期内的动作和日志等。
+服务端链路细节，包含了服务端链路采集的标签和日志（事件）等信息。
+propagation兼容jaeger效果，保证jaeger侧链路完整，使用一致的 traceId检索。因为服务侧 sentry 是渐进更新的，因此没有接入的应用并不会展示在sentry侧， 等到完全更新后就会完整。
+背景 目前运行中的链路追踪组件是采用 opentracing + jaeger 实现，这套方案唯二的不足就是：
+opentracing 已经被 opentelemetry 兼容，且 opentelemetry 在可观测性上更全面，更灵活。 浏览器侧支持不完善（可以参见 https://github.com/jaegertracing/jaeger-client-javascript ）【恰恰我司有这方面的需求 🤪】。 前端采用 sentry 来采集前端页面数据（APP + WEB 都支持很好），因此才有了这么一个 前后端链路打通的需求。
+经过调研，我发现 sentry 也并不完美，详情参见 附录/sentry作为链路采集组件的优缺点</description>
+    </item>
+    
+    <item>
+      <title>WebSocket Implemention With Go</title>
+      <link>https://www.yeqown.xyz/2020/09/27/WebSocket-Implemention-With-Go/</link>
+      <pubDate>Sun, 27 Sep 2020 11:32:15 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2020/09/27/WebSocket-Implemention-With-Go/</guid>
+      <description>什么是WS协议 The WebSocket Protocol enables two-way communication between a client running untrusted code in a controlled environment to a remote host that has opted-in to communications from that code. The security model used for this is the origin-based security model commonly used by web browsers. The protocol consists of an opening handshake followed by basic message framing, layered over TCP.
+The goal of this technology is to provide a mechanism for browser-based applications that need two-way communication with servers that does not rely on opening multiple HTTP connections (e.</description>
+    </item>
+    
+    <item>
+      <title>Opentracing实战</title>
+      <link>https://www.yeqown.xyz/2020/08/06/opentracing%E5%AE%9E%E6%88%98/</link>
+      <pubDate>Thu, 06 Aug 2020 08:34:45 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2020/08/06/opentracing%E5%AE%9E%E6%88%98/</guid>
+      <description>背景 在没有链路追踪系统的情况下，如果只要少数几个服务，或许还可以通过日志来排查定位问题。但是如果服务一旦超过10个，那么再想通过日志来定位分析问题将无比繁琐。 因为，你先要从大量的日志中删筛选出某次请求的日志数据，才能进行后续的定位分析。 倘若日志系统也不够完善，日志对于调试毫无帮助，那又得退回到最原始的方式，通过代码断点和增加日志，等待问题复现，或者通过肉眼检查代码。 不是说这种方式不行，而是大部分的程序员的业务需求比较紧张，这样的排查手段效率和收益远远达不到要求（如果你有时间，当我没说 🐶）。
+在实际场景中，我也遇到了这样的问题：
+日志系统里包含了过少的信息，对于调试几乎没有帮助 (几乎只有错误日志，缺少输出上下文的日志)。 服务调用复杂，一个请求失败，只能透过错误码和错误信息进行判断是否存在调用失败的情况。 调用链路复杂的情况下，想要对某个请求进行优化，无从下手。 这里只列举了跟trace相关的一些原始场景，当然从上面的描述中还能发现日志系统不够完善，对调试不友好，不过这里首要解决的问题是链路追踪问题。
+如果对路链路追踪没有概念，还望自行查阅资料，这里不会过多介绍～
+Opentracing 注意：Opentracing 是一套标准接口，而不是具体实现。
+这里就实战opentracing + jaeger 的链路追踪方案。其中 opentracing 是一套标准接口，而jaeger是包含了 opentracing 的实现的一套工具。 Trace链路简单示例如下：
+Trace 描述在分布式系统中的一次&amp;quot;事务&amp;quot;。
+Span 表示工作流的一部分的命名和定时操作。可以接受标签(Tag Key:Value)，以及附加到特定span实例的标注(Annotation)，如时间戳和结构化日志。
+SpanContext 追踪伴随分布式事务的信息，包括它通过网络或通过消息总线将服务传递给服务的时间。span上下文包含TraceId、SpanId和追踪系统需要传播到下游服务的其他数据。
+实战 这里我准备的是 Go 项目，服务之间通过gRPC通信。链路如下：
++-- process internal trace2 | +---&amp;gt; process internal trace1 | | +---&amp;gt; server-b trace(gRPC) entry(HTTP) ---&amp;gt; server-a trace--gRPC--| +---&amp;gt; server-c trace(gRPC) | +----&amp;gt; process internal trace3 从上图中可以明确，我们的目标是：实践跨服务调用和服务内部调用的链路追踪，配合jaeger我们还可以将链路信息可视化。
+我有了服务，怎么实施落地？ 为了回答这个问题，我把这个问题结合opentracing的概念再分解一下：
+ParentSpan 从哪儿来？ ChildSpan由ParentSpan创建，那么什么时候创建？ 链路Tracer从哪儿来？ Trace信息怎么传递？ 链路信息如何搜集？ Parent-Span 从哪儿来？链路从哪里开始。 在上述的实践目标中，我们只有一个入口服务，那么很明显每一次的&amp;quot;事务&amp;quot;都是在这个入口（http entry）开启的。我写了如下的中间件（基于gin）。</description>
+    </item>
+    
+    <item>
+      <title>Channel in Go小结</title>
+      <link>https://www.yeqown.xyz/2020/04/13/channel-in-Go%E5%B0%8F%E7%BB%93/</link>
+      <pubDate>Mon, 13 Apr 2020 17:23:45 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2020/04/13/channel-in-Go%E5%B0%8F%E7%BB%93/</guid>
+      <description>在其他编程语言中，如果想要在线程中通信，最常用的手段是共享内存。然而考虑到线程冲突问题，不得不考虑加锁，以保证并发安全，加锁也一定会带来额外的开销，对性能产生影响。
+CSP模型 在 Go 语言中也能使用共享内存加互斥锁进行通信，但是 Go 语言提供了一种不同的并发模型，也就是通信顺序进程（Communicating sequential processes，CSP）1。Goroutine 和 Channel 分别对应 CSP 中的实体和传递信息的媒介，Go 语言中的 Goroutine 会通过 Channel 传递数据。
+使用示例 在使用之前，需要对channel有个整体的印象：
+FIFO (First In First Out) 分为有缓冲和无缓冲两种 在使用过程中会阻塞（无缓冲时，只操作读或写；有缓冲已满时，只操作读或者写） 接受者和发送者都是goroutine 参考下图：
+func main() { // Q: 有缓冲和无缓冲在使用上有什么区别？ // ch := make(chan int) // 无缓冲 ch := make(chan int, 1) // 有缓冲，大小为1 // 发送 ch &amp;lt;- 1 fmt.Println(&amp;lt;-ch) } 注意事项 在使用channel时，需要注意一下事项：
+操作\CH状态 ch为空 ch已关闭 ch正常 发送 ch &amp;lt;- 死锁 panic 成功或阻塞 接收 &amp;lt;-ch 死锁 成功或空值 成功或阻塞 关闭 close(ch) panic panic 成功 Q: 这里考虑下如何优雅的关闭channel (避免panic)?</description>
+    </item>
+    
+    <item>
+      <title>Gin源码简要分析</title>
+      <link>https://www.yeqown.xyz/2020/01/21/gin%E6%BA%90%E7%A0%81%E7%AE%80%E8%A6%81%E5%88%86%E6%9E%90/</link>
+      <pubDate>Tue, 21 Jan 2020 10:05:57 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2020/01/21/gin%E6%BA%90%E7%A0%81%E7%AE%80%E8%A6%81%E5%88%86%E6%9E%90/</guid>
+      <description>概述 通过日常对gin场景出发，深入源码，总结介绍gin的核心设计。包含：Engine / HandlerFunc / RouterGroup(Router) / Context。在日常使用中常见的就以上概念，汇总如下：
+概念 解释 应用意义 Engine 引擎 web server的基础支持，也是服务的入口 和 根级数据结构 RouterGroup(Router) 路由 用于支持gin,REST路由绑定和路由匹配的基础，源于radix-tree数据结构支持 HandlerFunc 处理函数 逻辑处理器和中间件实现的函数签名 Context 上下文 封装了请求和响应的操作，为HandlerFunc的定义和中间件模式提供支持 从DEMO开始 type barForm struct { Foo string `form:&amp;#34;foo&amp;#34; binding:&amp;#34;required&amp;#34;` Bar int `form:&amp;#34;bar&amp;#34; binding:&amp;#34;required&amp;#34;` } func (fooHdl FooHdl) Bar(c *gin.Context) { var bform = new(barForm) if err := c.ShouldBind(bform); err != nil { // true: parse form error return } // handle biz logic and generate response structure // c (gin.</description>
+    </item>
+    
+    <item>
+      <title>一次gRPC使用不当导致goroutine泄漏排查记录</title>
+      <link>https://www.yeqown.xyz/2020/01/17/%E8%AE%B0%E4%B8%80%E6%AC%A1%E6%8E%92%E6%9F%A5gRPC%E4%BD%BF%E7%94%A8%E4%B8%8D%E5%BD%93%E5%AF%BC%E8%87%B4%E7%9A%84goroutine%E6%B3%84%E6%BC%8F/</link>
+      <pubDate>Fri, 17 Jan 2020 13:20:17 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2020/01/17/%E8%AE%B0%E4%B8%80%E6%AC%A1%E6%8E%92%E6%9F%A5gRPC%E4%BD%BF%E7%94%A8%E4%B8%8D%E5%BD%93%E5%AF%BC%E8%87%B4%E7%9A%84goroutine%E6%B3%84%E6%BC%8F/</guid>
+      <description>由于保留必要的“罪证”，因此某些异常只能通过文字来描述了～
+背景 昨晚上10点左右，前端童鞋反映开发环境接口响应超时，但过了几分钟后又恢复了，于是有了这一篇文章。
+其实很久以前就出现了内存占用异常的情况～，只是占用并不高也就是50MB左右，加上当时还忙着写业务需求就没有急着加上pprof来检查。
+首先通过运维平台(k8s based)直观发现了该pod数量从1变成了2, 再结合新增pod的启动时间，我发现该时间正好是前端童鞋反映状况的时间节点，稍后我检查了下该服务的资源限制如下图：
+那么前端童鞋反映的问题就很明显了，由于某种原因导致了pod内存超限，触发了运维平台对于内存超限的“容忍机制”。表现为: 新增一个pod用于缓解服务压力，老服务由于无法申请更多内存会导致崩溃或其他异常（无法响应客户端请求），这与反映的情况一致。
+pprof排查 知道了服务内存异常，想要具体定位的话，这时候就需要pprof上场了。
+如果你需要重启服务才能开启pprof的话，那么只能等待复现了。这里我在开发环境和测试环境一直开启了pprof，因此可以直接检查。个人觉得，这样还可以帮助开发和测试，完成最初的性能分析😼。
+内存检查 go tool pprof --http=:8080 https://service.host.com/debug/pprof/heap 这个命令是在本地打开一个web服务，直接可视化该服务的内存占用情况。也可以使用:
+go tool pprof https://service.host.com/debug/pprof/heap 使用交互模式来分析。通过这个步骤定位到了 grpc相关的包内存占用异常分为两个部分：
+50MB+ google.golang.org/grpc/internal/transport.newBufWriter 50MB+ bufio.NewReaderSize http2 相关库的占用也比较多 这一切都指向了我们使用的gRPC，可是为啥使用gRPC会用到这么“多”内存呢？接着分析
+goroutine检查 打开一看 https://service.host.com/debug/pprof/一看，goroutine和heap居“高”(4000+)不下，虽然对于动辄10W+的别人家的服务来说，这点根本不算事，但在我们这种小作坊里可就算异常了。点开看goroutine查看详情，有四个部分的goroutine分别有900个左右，这里就算初步定位了“gRPC客户端使用了较多的goroutine，但是却没有正确的结束掉”，如下图（这是解决后的截的图）：
+pprof总结 服务中使用的gRPC客户端出了某些故障，导致了goroutine泄漏，引发了OOM（Out Of Memory）。如下图：
+代码排查 上一步已经定位到是gRPC客户端的问题，那么就可以直接从代码上手了。我心里已经有一个“嫌疑犯”了，如下：
+var ( defaultHandler *handler timeout = 5 * time.Second // _ pb.UserServiceClient = &amp;amp;handler{} ) // Init of usersvc.handler func Init(rpcAddr string) error { // ... 略去不表 } type handler struct { // rpc configs rpcAddr string client pb.</description>
+    </item>
+    
+    <item>
+      <title>介绍一下snowflake和rc4</title>
+      <link>https://www.yeqown.xyz/2019/04/05/%E4%BB%8B%E7%BB%8D%E4%B8%80%E4%B8%8Bsnowflake%E5%92%8Crc4/</link>
+      <pubDate>Fri, 05 Apr 2019 14:51:46 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2019/04/05/%E4%BB%8B%E7%BB%8D%E4%B8%80%E4%B8%8Bsnowflake%E5%92%8Crc4/</guid>
+      <description>snowflake是twitter公司开源的生成唯一ID的网络服务，具有很强的伸缩性，这里只取用生成唯一ID的算法部分。 rc4（Rivest Cipher 4）是一种流加密算法，密钥长度可变，它的加解密使用相同的密钥，因此也属于对称加密算法。
+为啥要介绍这两种算法？ 其一，snowflake可以生成唯一ID，而相比与UUID，snowflake生成的ID更加“好用”，这个放在后面解释。 其二，UUID和snowflake虽然可以生成唯一ID，但是无法适用于所有场景，譬如说“生成推广码”。生成推广码的时候，希望尽可能短而精，很明显唯一ID都不太短。
+snowflake snowflake的唯一ID是一个64bit的int型数据，相较于UUID来说耗费空间更小，可以更方便的作为数据库主键来索引和排序。
+生成过程： 置0不用 timestamp（41bits）精确到ms。 machine-id（10bits）该部分其实由datacenterId和workerId两部分组成，这两部分是在配置文件中指明的。datacenterId（5bits）方便搭建多个生成uid的service，并保证uid不重复。workerId（5bits）是实际server机器的代号，最大到32，同一个datacenter下的workerId是不能重复的。 sequence-id(12bits)，该id可以表示4096个数字，它是在time相同的情况下，递增该值直到为0，即一个循环结束，此时便只能等到下一个ms到来，一般情况下4096/ms的请求是不太可能出现的，所以足够使用了。 优势和缺陷： 速度快，无依赖，原理和实现简单，也可以根据自己的需求做算法调整 依赖机器时间，如果时间回拨可能导致重复的ID rc4 RC4加密算法也是一种基于密钥流的加密算法。
+首先，rc4根据明文和密钥生成的密钥流，其长度和明文的长度是相等的，也就是说明文的长度是500字节，那么密钥流也是500字节，这也是我们用来生成推广码的原因之一了；其次，rc4是是对称加密完全可以通过密文得到明文，也就是说在生成码的时候把必要信息放在明文中，在使用密文的时候可以不用查库也能得到相关的信息，譬如用户ID，这是原因之二。
+使用场景 现在需要生成一种码，短小易记，且唯一，但并不需要大量。
+上述的snowflake和UUID都很容易实现唯一，但是短小就不符合要求了。因为并不需要大量生成这种码，因此我们考虑用自增ID + RC4来实现：
+package main import ( &amp;#34;crypto/rc4&amp;#34; &amp;#34;encoding/hex&amp;#34; &amp;#34;fmt&amp;#34; &amp;#34;log&amp;#34; ) func main() { cipher, err := rc4.NewCipher([]byte(&amp;#34;thisiskey&amp;#34;)) if err != nil { log.Fatalf(&amp;#34;wrong with NewCipher: %v&amp;#34;, err) } c := map[string]bool{} for i := 0; i &amp;lt; 1000; i++ { src := []byte(fmt.Sprintf(&amp;#34;%7d&amp;#34;, i)) dst := make([]byte, len(src)) cipher.</description>
+    </item>
+    
+    <item>
+      <title>go-watcher-热重载轮子</title>
+      <link>https://www.yeqown.xyz/2019/04/01/go-watcher-%E7%83%AD%E9%87%8D%E8%BD%BD%E8%BD%AE%E5%AD%90/</link>
+      <pubDate>Mon, 01 Apr 2019 22:19:41 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2019/04/01/go-watcher-%E7%83%AD%E9%87%8D%E8%BD%BD%E8%BD%AE%E5%AD%90/</guid>
+      <description>Golang编写的热重载工具，自定义命令，支持监视文件及路径配置，环境变量配置。这是一个重复的轮子～
+安装使用 go install github.com/yeqown/go-watcher/cmd/go-watcher 命令行 ➜ go-watcher git:(master) ✗ ./go-watcher -h NAME: go-watcher - A new cli application USAGE: go-watcher [global options] command [command options] [arguments...] VERSION: 2.0.0 AUTHOR: yeqown@gmail.com COMMANDS: init generate a config file to specified postion run execute a command, and watch the files, if any change to these files, the command will reload help, h Shows a list of commands or help for one command GLOBAL OPTIONS: --help, -h show help --version, -v print the version 配置文件 watcher: # 监视器配置 duration: 2000 # 文件修改时间间隔，只有高于这个间隔才回触发重载 included_filetypes: # 监视的文件扩展类型 - .</description>
+    </item>
+    
+    <item>
+      <title>goswagger入门手册</title>
+      <link>https://www.yeqown.xyz/2019/03/30/goswagger%E5%85%A5%E9%97%A8%E6%89%8B%E5%86%8C/</link>
+      <pubDate>Sat, 30 Mar 2019 09:22:55 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2019/03/30/goswagger%E5%85%A5%E9%97%A8%E6%89%8B%E5%86%8C/</guid>
+      <description>本文旨在记录使用goswagger过程中遇到的一些问题（只在生成文档方面，不涉及其他功能）：
+如何在go1.11+以上（支持Go Module）版本中的应用swagger 一些注解上的注意事项 如何在团队中管理API文档（主要涵盖了：swagger-ui的部署和使用） 关于swagger swagger涵盖WebAPI的一整套工具：API设计，API实现（代码生成），API文档，API测试及API规范。更多信息请参见官网
+准备工作 一个Golang web项目，并软连接到GOPATH/src下。【毕竟是支持Gomodule的项目，还放在GOPATH下就不科学了😄】 安装swagger工具. 参见安装 环境： ➜ swagger-demo git:(master) ✗ go version go version go1.11.5 darwin/amd64 ➜ swagger-demo git:(master) ✗ swagger version version: v0.18.0 commit: 6b23bb61413826ce42c3b14a37bf5870caf91e0b 编写注释 元信息包含了这个应用的基本信息。一般新建一个doc.go放在你的API根目录下；还有一定要注意这句话：
+You give it a main file and it will parse all the files that are reachable by that main package to produce a swagger specification.To use you can add a go:generate comment to your main file。</description>
+    </item>
+    
+    <item>
+      <title>QRCode Generator based Golang</title>
+      <link>https://www.yeqown.xyz/2018/11/26/QR-Code%E7%94%9F%E6%88%90%E5%99%A8forgolang/</link>
+      <pubDate>Mon, 26 Nov 2018 14:07:07 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/11/26/QR-Code%E7%94%9F%E6%88%90%E5%99%A8forgolang/</guid>
+      <description>项目地址：yeqown/go-qrcode 同类项目：skip2/go-qrcode 纠错算法和bitset使用了该库，后续可能会考虑自己实现一遍
+go-qrcode 示例 link to CODE
+package main import ( &amp;#34;fmt&amp;#34; qrcode &amp;#34;github.com/yeqown/go-qrcode&amp;#34; ) func main() { qrc, err := qrcode.New(&amp;#34;https://github.com/yeqown/go-qrcode&amp;#34;) if err != nil { fmt.Printf(&amp;#34;could not generate QRCode: %v&amp;#34;, err) } // save file if err := qrc.Save(&amp;#34;../testdata/repo-qrcode.jpeg&amp;#34;); err != nil { fmt.Printf(&amp;#34;could not save image: %v&amp;#34;, err) } } 生成结果如图： QR Code 基本原理 1 数据分析（data analysis）： 分析输入数据，根据数据决定要使用的QR码版本、容错级别和编码模式。低版本的QR码无法编码过长的数据，含有非数字字母字符的数据要使用扩展字符编码模式。
+2 编码数据（data encoding）： 根据选择的编码模式，将输入的字符串转换成比特流，插入模式标识码（mode indicator）和终止标识符（terminator），把比特流切分成八比特的字节，加入填充字节来满足标准的数据字码数要求。
+3 计算纠错码（error correction coding）： 对步骤二产生的比特流计算纠错码，附在比特流之后。高版本的编码方式可能需要将数据流切分成块（block）再分别进行纠错码计算。</description>
+    </item>
+    
+    <item>
+      <title>go-get遇到🧱的解决方法</title>
+      <link>https://www.yeqown.xyz/2018/11/19/go-get%E9%81%87%E5%88%B0%E5%A2%99%E7%9A%84%E8%A7%A3%E5%86%B3%E6%96%B9%E6%B3%95/</link>
+      <pubDate>Mon, 19 Nov 2018 11:33:24 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/11/19/go-get%E9%81%87%E5%88%B0%E5%A2%99%E7%9A%84%E8%A7%A3%E5%86%B3%E6%96%B9%E6%B3%95/</guid>
+      <description>解决方法有两种，在网上也很好找到：
+1. 最简单的，从¥“github.com/golang”找到对应的包并下载到 $GOPATH/src/golang.org/x/ 下 2. 第二种，就是翻过🧱了。 1 问题：翻了🧱，还是没办法直接使用go get来下载呢？ 先说原因，因为go get并没有走你的代理啊！！！！那么如何设置代理呢？
+export http_proxy=http://ip:port go get golang.org/xxx 其他设置代理的方式，自行参见 参考
+2 如果你的代理不支持http || https协议，可咋整？ 那么想办法支持http或者把http再代理到你可以使用的协议（socks5~），那么可以使用cow。
+cow 推荐使用方式：
+go get 下载安装（因为刚开始图简单，使用程序的时候运行报错了，go get 安装方式并不会有这样的困扰）。 配置的时候也很简单，编辑配置文件 ～/.cow/rc，配置http socks5代理服务和监听代理端口。
+listen = http://127.0.0.1:7777 proxy = socks5://127.0.0.1:1080 3 运行 配置完成之后就可以直接运行了
+./cow # 另开一个Terminal export http_proxy=http://ip:port go get golang.org/xxx 写在后面 知道了go get无法翻🧱的原因之后，就可以发挥自己的想象力来解决问题了，这样解决还是挺繁琐的。虽然cow可以配置开机启动，但对于一个懒癌晚期）的人来说（如果不是因为升级Go到了1.11，go-module机制让我无法开心的玩耍，我也不会去考虑为啥翻🧱了go get还是不能用，明明有代理却还有使用另外一个代理～。
+友情提示：vscode-go 也可以设置proxy哦
+参考： go get 使用代理 cow cow配置文件说明 vscode-go设置proxy </description>
+    </item>
+    
+    <item>
+      <title>etcd与service-registration-discovery</title>
+      <link>https://www.yeqown.xyz/2018/10/23/etcd-service-registration-discovery/</link>
+      <pubDate>Tue, 23 Oct 2018 17:20:48 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/10/23/etcd-service-registration-discovery/</guid>
+      <description>声明：本文对etcd的原理，实现细节，性能等均不考虑，仅将etcd作为一个分布式的K-V存储组件。本文提价代码均在： github.com/yeqown/server-common/tree/master/framework/etcd
+一个核心 etcd, 分布式Key-Value存储工具。详细资料由此去
+etcd下载安装 两个对象 服务提供者（在测试环境中，我定义为单独的服务实例），也就是服务的提供者，需要向其他服务暴露自己的ip和端口，方便调用。 服务调用者（同样地，在测试环境中我定义为反向代理网关程序），也就是服务的调用者，需要获取到 可使用 地服务地址并调用。 关于服务注册与发现 就具体场景而言：我们的生产环境中使用了一个代理网关服务器，用于转发移动端和PC端的API请求，并完成其他功能。所有的服务实例配置都是硬编码在网关程序中，顶多就是抽离出来成了一个配置文件。这样做的缺点很明显：“非动态”。也就意味着，一旦有服务Down掉，那么用户访问则可能异常，甚至导致整个服务的崩溃；其次，需要对服务进行扩容的情况下，则需要先进行服务部署再更新网关程序，步骤繁琐且容易出错。
+那么如果我们设计成为如下图的样子： 对于新添加的服务实例，只需要启动新的服务，并注册到etcd相应的路径下就行了。
+注册：对于同一组服务，配置一个统一的前缀（如图上的&amp;quot;/specServer&amp;quot;），不同实例使用ID加以区分。
+将现行服务改造成为上述模式需要解决的问题： etcd 配置安装 网关程序改造（监听etcd的节点夹子/prefix;适配动态的服务实例调用） 服务实例改造（注册服务实例到etcd;心跳更新;其他配套设施，异常退出删除注册信息） etcd安装配置在github.com已经非常详细了。在这里贴一下我在本地测试时候启动的脚本（这部分是从etcd-demo获取到的，做了针对端口的改动）：
+#!/bin/bash # For each machine TOKEN=token-01 CLUSTER_STATE=new NAME_1=machine1 NAME_2=machine2 NAME_3=machine3 HOST_1=127.0.0.1 HOST_2=127.0.0.1 HOST_3=127.0.0.1 CLUSTER=${NAME_1}=http://${HOST_1}:2380,${NAME_2}=http://${HOST_2}:2381,${NAME_3}=http://${HOST_3}:2382 # For machine 1 THIS_NAME=${NAME_1} THIS_IP=${HOST_1} etcd --data-dir=machine1.etcd --name ${THIS_NAME} \ --initial-advertise-peer-urls http://${THIS_IP}:2380 --listen-peer-urls http://${THIS_IP}:2380 \ --advertise-client-urls http://${THIS_IP}:2377 --listen-client-urls http://${THIS_IP}:2377 \ --initial-cluster ${CLUSTER} \ --initial-cluster-state ${CLUSTER_STATE} --initial-cluster-token ${TOKEN} &amp;amp; # For machine 2 THIS_NAME=${NAME_2} THIS_IP=${HOST_2} etcd --data-dir=machine2.</description>
+    </item>
+    
+    <item>
+      <title>Golang适用的DTO工具</title>
+      <link>https://www.yeqown.xyz/2018/08/29/Golang%E9%80%82%E7%94%A8%E7%9A%84DTO%E5%B7%A5%E5%85%B7/</link>
+      <pubDate>Wed, 29 Aug 2018 09:27:36 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/08/29/Golang%E9%80%82%E7%94%A8%E7%9A%84DTO%E5%B7%A5%E5%85%B7/</guid>
+      <description>DTO (Data Transfer Object) 是Java中的概念，起到数据封装和隔离的作用。在使用Golang开发Web应用的过程中，也会有类似的需求。先贴项目地址 github.com/yeqown/server-common/tree/master/dbs/tools
+举个例子 现在有一个用户数据结构如下,
+type UserModel struct { ID int64 `gorm:&amp;#34;column:id&amp;#34;` Name string `gorm:&amp;#34;column:name&amp;#34;` Password string `gorm:&amp;#34;column:password&amp;#34;` } // 问题1: 现在要求是想要JSON格式返回用户数据，并且不希望其中包含有Password字段 // 解决1:
+type UserModel struct { ID int64 `gorm:&amp;#34;column:id&amp;#34; json:&amp;#34;id&amp;#34;` Name string `gorm:&amp;#34;column:name&amp;#34; json:&amp;#34;name&amp;#34;` Password string `gorm:&amp;#34;column:password&amp;#34; json:&amp;#34;-&amp;#34;` } // 问题2: 同样是JSON数据格式，并且希望额外返回用户的身份标示Ident（假设必须要跟用户数据放在一起） // 解决2: （这也是我的场景）
+type UserDTO struct { ID int64 `json:&amp;#34;id&amp;#34;` Name string `json:&amp;#34;name&amp;#34;` Password string `json:&amp;#34;-&amp;#34;` Ident string `json:&amp;#34;ident&amp;#34;` } func LoadUserDTOFromModel(data *UserMolde) *UserDTO { ident := genUserIdent(data) return &amp;amp;{ ID data.</description>
+    </item>
+    
+    <item>
+      <title>api-gateway中实现基于权重的轮询调度</title>
+      <link>https://www.yeqown.xyz/2018/06/08/api-gateway%E4%B8%AD%E5%AE%9E%E7%8E%B0%E5%9F%BA%E4%BA%8E%E6%9D%83%E9%87%8D%E7%9A%84%E8%BD%AE%E8%AF%A2%E8%B0%83%E5%BA%A6/</link>
+      <pubDate>Fri, 08 Jun 2018 10:53:32 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/06/08/api-gateway%E4%B8%AD%E5%AE%9E%E7%8E%B0%E5%9F%BA%E4%BA%8E%E6%9D%83%E9%87%8D%E7%9A%84%E8%BD%AE%E8%AF%A2%E8%B0%83%E5%BA%A6/</guid>
+      <description>背景和目标 背景 项目需要在现有项目的基础上实现权限系统，但为了低耦合，选择实现了一个基于ne7ermore/gRBAC的auth-server，用于实现权限，角色，用户的管理，以及提供鉴权服务。在开发环境对接没有问题，正常的鉴权访问。到了线上部署的时候，才发现：
+线上某服务部署在多台机器上; 目前的api-gateway并不支持同一服务配置多个node; 想的办法有：
+序号 描述 优点 缺点 1 api-gateway通过url来转发请求，之前是配置IP加端口 api-gateway改动小 影响web和APP升级 2 api-gateway能支持多台机器，并进行调度 api-gateway功能更强大，把以后要做的事情提前做好基础 好像没啥缺点，只是费点时间支持下多节点配置，并调度 如果没说清，请看下图：
+目标 那么，目标也就明确了，需要实现api-gateway中实现基于权重的调度。为啥要基于权重？其一是仿照nginx基于权重的负载均衡，其二是服务器性能差异。
+轮询调度算法介绍 轮询调度算法: 轮询调度算法的原理是每一次把来自用户的请求轮流分配给内部中的服务器，从1开始，直到N(内部服务器个数)，然后重新开始循环。该算法的优点是其简洁性，它无需记录当前所有连接的状态，所以它是一种无状态调度。
+假设有一组服务器N台，S = {S1, S2, …, Sn}，一个指示变量i表示上一次选择的服务器ID。变量i被初始化为N-1。其算法如下：
+j = i; do { j = (j + 1) mod n; i = j; return Si; } while (j != i); return NULL; 平滑加权轮询调度算法： 上述的轮询调度算法，并没有考虑服务器性能的差异，实际生产环境中，每一台服务器配置和安装的业务并不一定相同，处理能力不完全一样。因此需要根据服务器能力，分配不同的权值，以免服务的超负荷和过分闲余。
+假设有一组服务器S = {S0, S1, …, Sn-1}, 其算法如下：
+// i表示上一次选择的服务器，变量i初始化为-1 // W(Si)表示服务器Si的权值 // cw表示当前调度的权值 cw初始化为0 // max(S)表示集合S中所有服务器的最大权值 // gcd(S)表示集合S中所有服务器权值的最大公约数 while (true) { i = (i + 1) mod n; if (i == 0) { cw = cw - gcd(S); if (cw &amp;lt;= 0) { cw = max(S); if (cw == 0) return NULL; } } if (W(Si) &amp;gt;= cw) return Si; } Nginx基于权重的轮询算法的实现可以参考它的一次代码提交： Upstream: smooth weighted round-robin balancing。</description>
+    </item>
+    
+    <item>
+      <title>使用golang 实现JSON-RPC2.0</title>
+      <link>https://www.yeqown.xyz/2018/05/18/%E4%BD%BF%E7%94%A8golang-%E5%AE%9E%E7%8E%B0JSON-RPC2-0/</link>
+      <pubDate>Fri, 18 May 2018 17:52:18 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/05/18/%E4%BD%BF%E7%94%A8golang-%E5%AE%9E%E7%8E%B0JSON-RPC2-0/</guid>
+      <description>什么是RPC？ 远程过程调用（英语：Remote Procedure Call，缩写为 RPC）是一个计算机通信协议。该协议允许运行于一台计算机的程序调用另一台计算机的子程序，而程序员无需额外地为这个交互作用编程。如果涉及的软件采用面向对象编程，那么远程过程调用亦可称作远程调用或远程方法调用。
+远程过程调用是一个分布式计算的客户端-服务器（Client/Server）的例子，它简单而又广受欢迎。远程过程调用总是由客户端对服务器发出一个执行若干过程请求，并用客户端提供的参数。执行结果将返回给客户端。由于存在各式各样的变体和细节差异，对应地派生了各式远程过程调用协议，而且它们并不互相兼容。——————源自维基百科
+什么又是JSON-RPC? JSON-RPC，是一个无状态且轻量级的远程过程调用（RPC）传送协议，其传递内容通过 JSON 为主。相较于一般的 REST 通过网址（如 GET /user）调用远程服务器，JSON-RPC 直接在内容中定义了欲调用的函数名称（如 {&amp;ldquo;method&amp;rdquo;: &amp;ldquo;getUser&amp;rdquo;}），这也令开发者不会陷于该使用 PUT 或者 PATCH 的问题之中。 更多JSON-RPC约定参见：https://zh.wikipedia.org/wiki/JSON-RPC
+问题 服务端注册及调用 约定如**net/rpc**：
+the method&amp;rsquo;s type is exported. the method is exported. the method has two arguments, both exported (or builtin) types. the method&amp;rsquo;s second argument is a pointer. the method has return type error. // 这就是约定 func (t *T) MethodName(argType T1, replyType *T2) error 那么问题来了:
+问题1: Server怎么来注册`t.</description>
+    </item>
+    
+    <item>
+      <title>自己写一个手机菜谱APP</title>
+      <link>https://www.yeqown.xyz/2018/05/18/%E8%87%AA%E5%B7%B1%E5%86%99%E4%B8%80%E4%B8%AA%E6%89%8B%E6%9C%BA%E8%8F%9C%E8%B0%B1APP/</link>
+      <pubDate>Fri, 18 May 2018 12:38:14 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/05/18/%E8%87%AA%E5%B7%B1%E5%86%99%E4%B8%80%E4%B8%AA%E6%89%8B%E6%9C%BA%E8%8F%9C%E8%B0%B1APP/</guid>
+      <description>需要的技术及工具：
+Python3 + Selenuium Golang net/http React-Native 相关（使用了react-navigation） MongoDB Redis 代码地址：
+github.com/yeqown/recipe 项目构思及构成 食谱类型的App，应用市场肯定有更好的的食谱APP。所以自己开发的目的，首先是写代码，其次是定制APP～ 好的，现在化身产品经理，设计一下APP有哪些功能：
+每日菜谱推荐，推荐可更换 每天需要准备的材料提醒 发现更多菜谱 分类筛选菜谱 搜索菜谱 查看菜谱详情 设置（不知道设置啥，提前准备吧） 设计稿？不存在的，随心所欲。
+现在分析下我需要做的事情：
+能跑起来的APP，与restful web api 交互。 能跑起来的web-api，提供菜谱数据，筛选，推荐，搜索等功能 能跑起来的简易spider，从网上获取菜谱信息。（这个爬虫能解析动态生成网站就够用了，姑且称之为爬虫吧） 没有考虑大量数据，因此爬虫并不通用，只适合特定XX网站。
+实战爬虫 这个APP里面最重要的就是菜谱数据了，那么开发之前，需要明确的数据格式，如下：
+{ &amp;#34;name&amp;#34;: &amp;#34;name&amp;#34;, &amp;#34;cat&amp;#34;: &amp;#34;cat&amp;#34;, &amp;#34;img&amp;#34;: &amp;#34;img_url&amp;#34;, &amp;#34;mark_cnt&amp;#34;: 19101, &amp;#34;view_cnt&amp;#34;: 181891, &amp;#34;setps&amp;#34;: [ { &amp;#34;desc&amp;#34;: &amp;#34;&amp;#34;, &amp;#34;img&amp;#34;: &amp;#34;&amp;#34;, }, // more step ], &amp;#34;material&amp;#34;: { &amp;#34;ingredients&amp;#34;: [ { &amp;#34;name&amp;#34;: &amp;#34;ingredients_name&amp;#34;, &amp;#34;weight&amp;#34;: &amp;#34;ingredients_weight&amp;#34;, }, // more ingredients ], &amp;#34;seasoning&amp;#34;: [ { &amp;#34;name&amp;#34;: &amp;#34;seasoning_name&amp;#34;, &amp;#34;weight&amp;#34;: &amp;#34;seasoning_weight&amp;#34;, }, // more seasoning ], }, &amp;#34;create_time&amp;#34;: &amp;#34;2018xxxxxx&amp;#34;, &amp;#34;update_time&amp;#34;: &amp;#34;2018xxxxxx&amp;#34;, } 目标 前提：无法直接获取到该网站的服务API，才使用爬虫间接获取数据。</description>
+    </item>
+    
+    <item>
+      <title>docker&#43;jenkins&#43;golang持续集成实践</title>
+      <link>https://www.yeqown.xyz/2018/05/03/docker-jenkins-golang%E6%8C%81%E7%BB%AD%E9%9B%86%E6%88%90%E5%AE%9E%E8%B7%B5/</link>
+      <pubDate>Thu, 03 May 2018 16:54:10 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/05/03/docker-jenkins-golang%E6%8C%81%E7%BB%AD%E9%9B%86%E6%88%90%E5%AE%9E%E8%B7%B5/</guid>
+      <description>起因 因为生产需要最近又重新折腾了一下Jenkins和docker。主要目的是想自动编译，打包，部署一些Golang的HttpServer。于是决定使用Jenkins来做这个持续集成的载体，选择Jenkins出于两点原因：
+1. 以前就使用过，上手会更快 2. 社区比较成熟，插件和文档丰富
+安装Docker和Pull Jenkins镜像 这一步，作为前置条件且不是本文主要要描述的步骤，因此略去。网上也有很多参考资料～
+Jenkins &amp;amp; docker-compose配置 为了方便我才用了docker-compose这个工具，docker-compose 基础可以参见我的docker-compose上手。这里直接上配置：
+version: &amp;#39;2&amp;#39; services: jenkins: container_name: jenkins-lts ports: - 9001:8080 - 50000:50000 image: jenkins/jenkins:lts volumes: - /home/worker/jenkins/jenkins_home:/var/jenkins_home 配置也是官方的示例配置。
+Note: 将宿主机的/home/worker/jenkins/jenkins_home挂载为容器的/var/jenkins_home目录。这样做的目的是，如果容器被不小心删除也不至于Jenkins的数据丢失。
+到这里，我们只需要执行docker-compose up -d便可以将Jenkins容器跑起来了，再配置一下Nginx，便可以直接访问到Jenkins页面了，并进行初始化。
+我的目录结构如下：
+➜ jenkins ll total 8.0K -rw-rw-r-- 1 worker worker 220 May 2 17:19 docker-compose.yml drwxrwxr-x 19 worker worker 4.0K May 3 15:53 jenkins_home ➜ jenkins pwd /home/worker/jenkins ➜ jenkins docker-compose up -d # 运行 Publish Over SSH配置 Publish Over SSH配置，由于我们是通过docker运行的Jenkins，因此要特别配置一下SSH，方便Jenkins部署项目。这里先列出步骤：</description>
+    </item>
+    
+    <item>
+      <title>gorm使用记录</title>
+      <link>https://www.yeqown.xyz/2018/04/20/gorm%E4%BD%BF%E7%94%A8%E8%AE%B0%E5%BD%95/</link>
+      <pubDate>Fri, 20 Apr 2018 16:23:38 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/04/20/gorm%E4%BD%BF%E7%94%A8%E8%AE%B0%E5%BD%95/</guid>
+      <description>关于Gorm gorm文档
+遇见问题 无法通过结构体的方式更新或查询零值 这里零值是说，各个类型的默认值。 关于这一点是在这里中注明了的，也提供了解决方案：
+WARNING when update with struct, GORM will only update those fields that with non blank value
+For below Update, nothing will be updated as &amp;ldquo;&amp;rdquo;, 0, false are blank values of their types
+NOTE When query with struct, GORM will only query with those fields has non-zero value, that means if your field’s value is 0, &amp;lsquo;&amp;rsquo;, false or other zero values, it won’t be used to build query conditions,</description>
+    </item>
+    
+    <item>
+      <title>golang热重载工具</title>
+      <link>https://www.yeqown.xyz/2018/04/17/golang%E7%83%AD%E9%87%8D%E8%BD%BD%E5%B7%A5%E5%85%B7/</link>
+      <pubDate>Tue, 17 Apr 2018 14:05:09 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/04/17/golang%E7%83%AD%E9%87%8D%E8%BD%BD%E5%B7%A5%E5%85%B7/</guid>
+      <description>运行截图 项目地址 https://github.com/yeqown/gw
+本项目由https://github.com/silenceper/gowatch改造而来。不同之处在于:
+本gw任意指定重新执行的命令。 而原来的gw默认是重新编译打包go程序。</description>
+    </item>
+    
+    <item>
+      <title>Golang学习笔记</title>
+      <link>https://www.yeqown.xyz/2018/04/08/Golang%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</link>
+      <pubDate>Sun, 08 Apr 2018 15:01:33 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/04/08/Golang%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/</guid>
+      <description>目录 Channel Goroutine Channel 一开始是在看channel的源码，结果发现里面含有一些抽象的描述（可能也就是我觉得。。。毕竟没有深入）
+Do not change another G&amp;rsquo;s status while holding this lock (in particular, do not ready a G), as this can deadlock with stack shrinking.
+其中G是啥？我看着是很懵逼的，去google了一下，其实是goroutine相关的知识，那就把goroutine理解了先。
+2020-04-13 填坑
+channel in go
+Goroutine G: 表示goroutine，存储了goroutine的执行stack信息、goroutine状态以及goroutine的任务函数等；另外G对象是可以重用的。 P: 表示逻辑processor，P的数量决定了系统内最大可并行的G的数量（前提：系统的物理cpu核数&amp;gt;=P的数量）；P的最大作用还是其拥有的各种G对象队列、链表、一些cache和状态。 M: 代表着真正的执行计算资源。在绑定有效的p后，进入schedule循环；而schedule循环的机制大致是从各种队列、p的本地队列中获取G，切换到G的执行栈上并执行G的函数，调用goexit做清理工作并回到m，如此反复。M并不保留G状态，这是G可以跨M调度的基础。M必须关联了P才能执行Go代码。
+结合下图更方便理解： &amp;ndash;源于Tonybai的博客，见参考资料。 参考资料 runtime/runtime2.go Tonybai-goroutine调度器 </description>
+    </item>
+    
+    <item>
+      <title>Stack实现O(1)的Min和Max</title>
+      <link>https://www.yeqown.xyz/2018/03/01/Stack%E5%AE%9E%E7%8E%B0O1%E7%9A%84Min%E5%92%8CMax/</link>
+      <pubDate>Thu, 01 Mar 2018 16:26:05 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/03/01/Stack%E5%AE%9E%E7%8E%B0O1%E7%9A%84Min%E5%92%8CMax/</guid>
+      <description>栈（Stack）Pop和Push操作只需要对栈顶元素进行操作，就不多加描述了。那么对于Max和Min操作，怎么保证O(1)的时间复杂度?最直接想到的就是设置两个标记位，最小值的最大值，在push和pop的时候更新两个值。那么怎么更新呢，怎么保证最大值和最小值弹出之后还能正确获取到当前所有元素中的最大值和最小值呢？请看下文：
+辅助最大值栈SM 算法描述 type Stack Struct{ data []int } var SMax *Stack = new(Stack) push: 如果当前元素大于等于辅助栈的栈顶元素或者辅助栈为空，那么当前元素push到辅助栈中 pop: 如果当前元素等于辅助栈的栈顶元素，那么从辅助栈中弹出当前元素 举个例子 如果有1，3，6，1，12，512，12，5121，121，412数据放入栈中 Step-1. 元素1入栈，当前SM栈为空，SM栈也同步更新
+Stack: 1 SMax: 1 Step-2. 元素3入栈，3 &amp;gt; 1，SMax栈也同步更新
+Stack: 1, 3 SMax: 1, 3 Step-3. 元素6入栈，6&amp;gt;3，SMax栈也同步更新
+Stack: 1, 3, 6 SMax: 1, 3, 6 &amp;hellip;此处省略更多步骤
+最大值标记法 第一种方式利用辅助栈来标记当前最大值和上一个最大值，并利用栈来实现O(1)复杂度。但是根据上述的例子，可以看到如果插入的元素是依次增大，那么耗费2N+1空间才能实现栈的最大值和最小值在O(1)复杂度。现在介绍的方法，能够很好的减少空间耗费，并保证O(1)时间复杂度。
+算法描述 type Stack struct { data []int max int // default = math.MinInt32 } push: 将(当前元素-Max)放入栈中；如果当前元素大于Max，用当前元素替换Max pop: 如果栈顶元素&amp;gt;0，弹出Max，用Max-栈顶元素替换Max；否则弹出Max+栈顶元素 再举个例子 如果有5, 23, 12, 499, 45, 20, 60入栈 Step-1.</description>
+    </item>
+    
+    <item>
+      <title>ShortURL系统实现</title>
+      <link>https://www.yeqown.xyz/2018/01/29/ShortURL%E7%94%9F%E6%88%90%E7%B3%BB%E7%BB%9F/</link>
+      <pubDate>Mon, 29 Jan 2018 10:22:00 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/01/29/ShortURL%E7%94%9F%E6%88%90%E7%B3%BB%E7%BB%9F/</guid>
+      <description>在知乎上看了一个很有启发的回答，因此实际动手来实现短URL生成系统。贴上链接： 知乎 - 短URL系统是如何设计的。其中提到了，要实现短URL生成系统要解决的问题有：
+如何优雅的实现？ 怎么基本实现长对短、一对一？ 如何实现分布式，高并发，高可用？ 储存选用？ 基本原理 数据库自增ID转换62进制
+使用自增ID不会产生重复的短链接。 为了解决自增ID超长和不便记忆，对ID进行62进制编码。所谓62进制就是0-9，a-z，A-Z。 简单计算下：
+62 ^ 4 = 14,776,336 62 ^ 5 = 916,132,832 62 ^ 6 = 56,800,235,584 // 已经足够使用了 总体结构及处理流程 长链接处理流程 获取参数，调用shortURL服务 尝试从缓存中获取，如果命中，则读取短链接(重置过期时间)。跳转第4步 将长链接存储到Mysql数据库，根据ID进行base62编码，组装Domain+Encoded字符串并更新数据库 返回生成的短链接 短链接处理流程 解析短链接为ID 查询ID对应的长链接 以301方式跳转到长链接 长链接与短链接的对应关系 一对多，一个长链接可能对应多个短链接。数据表存储结构如下：
++-----------+--------------+------+-----+---------+----------------+ | Field | Type | Null | Key | Default | Extra | +-----------+--------------+------+-----+---------+----------------+ | id | int(64) | NO | PRI | NULL | auto_increment | | long_url | varchar(100) | NO | | NULL | | | short_url | varchar(40) | YES | | NULL | | +-----------+--------------+------+-----+---------+----------------+ 分布式和高并发设计 ###注：这部分未实现。我的思路如下：</description>
+    </item>
+    
+    <item>
+      <title>Golang服务端技术笔记</title>
+      <link>https://www.yeqown.xyz/2018/01/27/Golang%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%8A%80%E6%9C%AF%E7%AC%94%E8%AE%B0/</link>
+      <pubDate>Sat, 27 Jan 2018 20:58:49 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/01/27/Golang%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%8A%80%E6%9C%AF%E7%AC%94%E8%AE%B0/</guid>
+      <description>总结使用Golang开发服务端时，使用的基础的工具和部署方式。用于思考不足并优化，提升编码效率。 总体上采用MVCS的软件模式，如下图：
+从图中可以看出，MVCS是从MVC进化而来，相比于MVC，增加了Service层。把业务逻辑从Controller层中抽离出来，这样做的好处在于，项目日益庞大之后，将某些功能独立出来。
+Golang工具 &amp;ldquo;gvt&amp;rdquo; 依赖管理工具 &amp;ldquo;httprouter&amp;rdquo; 路由及中间件配置 &amp;ldquo;schema&amp;rdquo; 解析请求参数到结构体 &amp;ldquo;beego/validation&amp;rdquo; 结构体校验工具 &amp;ldquo;github.com/go-redis/redis&amp;rdquo; redis操作库 &amp;ldquo;github.com/go-sql-driver/mysql&amp;rdquo; Mysql Driver
+文件结构 --Golang Project |-sh # shell脚本，包括数据库脚本 |-config # 配置文件 |-logs # 日志文件 |-vendor # 项目源码及依赖 | |-github.com # | |-mainfest # gvt 依赖管理文件 | |-app | |-utils | |-controllers | |-models | |-route | |-services |-Dockerfile # docker构建镜像配置文件 |-docker-compose.yml # docker-compose.yml文件 `-entry.go # web服务入口文件 部署方式 采用docker来部署应用。分别编写Dockerfile和docker-composer.yml文件，实例如下：
+Dockerfile #### # build #### FROM golang:1.9-alpine AS build WORKDIR /go/src/web-server COPY .</description>
+    </item>
+    
+  </channel>
+</rss>

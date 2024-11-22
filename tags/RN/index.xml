@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>RN on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/RN/</link>
+    <description>Recent content in RN on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Fri, 18 May 2018 12:38:14 +0000</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/RN/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>自己写一个手机菜谱APP</title>
+      <link>https://www.yeqown.xyz/2018/05/18/%E8%87%AA%E5%B7%B1%E5%86%99%E4%B8%80%E4%B8%AA%E6%89%8B%E6%9C%BA%E8%8F%9C%E8%B0%B1APP/</link>
+      <pubDate>Fri, 18 May 2018 12:38:14 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/05/18/%E8%87%AA%E5%B7%B1%E5%86%99%E4%B8%80%E4%B8%AA%E6%89%8B%E6%9C%BA%E8%8F%9C%E8%B0%B1APP/</guid>
+      <description>需要的技术及工具：
+Python3 + Selenuium Golang net/http React-Native 相关（使用了react-navigation） MongoDB Redis 代码地址：
+github.com/yeqown/recipe 项目构思及构成 食谱类型的App，应用市场肯定有更好的的食谱APP。所以自己开发的目的，首先是写代码，其次是定制APP～ 好的，现在化身产品经理，设计一下APP有哪些功能：
+每日菜谱推荐，推荐可更换 每天需要准备的材料提醒 发现更多菜谱 分类筛选菜谱 搜索菜谱 查看菜谱详情 设置（不知道设置啥，提前准备吧） 设计稿？不存在的，随心所欲。
+现在分析下我需要做的事情：
+能跑起来的APP，与restful web api 交互。 能跑起来的web-api，提供菜谱数据，筛选，推荐，搜索等功能 能跑起来的简易spider，从网上获取菜谱信息。（这个爬虫能解析动态生成网站就够用了，姑且称之为爬虫吧） 没有考虑大量数据，因此爬虫并不通用，只适合特定XX网站。
+实战爬虫 这个APP里面最重要的就是菜谱数据了，那么开发之前，需要明确的数据格式，如下：
+{ &amp;#34;name&amp;#34;: &amp;#34;name&amp;#34;, &amp;#34;cat&amp;#34;: &amp;#34;cat&amp;#34;, &amp;#34;img&amp;#34;: &amp;#34;img_url&amp;#34;, &amp;#34;mark_cnt&amp;#34;: 19101, &amp;#34;view_cnt&amp;#34;: 181891, &amp;#34;setps&amp;#34;: [ { &amp;#34;desc&amp;#34;: &amp;#34;&amp;#34;, &amp;#34;img&amp;#34;: &amp;#34;&amp;#34;, }, // more step ], &amp;#34;material&amp;#34;: { &amp;#34;ingredients&amp;#34;: [ { &amp;#34;name&amp;#34;: &amp;#34;ingredients_name&amp;#34;, &amp;#34;weight&amp;#34;: &amp;#34;ingredients_weight&amp;#34;, }, // more ingredients ], &amp;#34;seasoning&amp;#34;: [ { &amp;#34;name&amp;#34;: &amp;#34;seasoning_name&amp;#34;, &amp;#34;weight&amp;#34;: &amp;#34;seasoning_weight&amp;#34;, }, // more seasoning ], }, &amp;#34;create_time&amp;#34;: &amp;#34;2018xxxxxx&amp;#34;, &amp;#34;update_time&amp;#34;: &amp;#34;2018xxxxxx&amp;#34;, } 目标 前提：无法直接获取到该网站的服务API，才使用爬虫间接获取数据。</description>
+    </item>
+    
+    <item>
+      <title>RN历险记</title>
+      <link>https://www.yeqown.xyz/2018/01/11/RN%E5%8E%86%E9%99%A9%E8%AE%B0/</link>
+      <pubDate>Thu, 11 Jan 2018 18:11:23 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/01/11/RN%E5%8E%86%E9%99%A9%E8%AE%B0/</guid>
+      <description>讲述配置ReactNative的心酸历程
+程序猿长征第一步 根据官方文档来安装RN, 以及巨大无比的Xcode Ver9.0.0
+错误一：Build Fail 可能描述不太一致, 但是原因都差不多, 文件缺失。 菜鸟想必看到这些个报错, 两眼一懵逼, 啥子情况, 怎么和官方的描述不一致, 一个及其简单的RN-Demo, 我就是想跑一下的喂！
+我遇到的情况, 分为两种：
+其一是安装很慢, 之后失败 其二是安装很快, 然后失败
+经过反复的“瞎子”调整, 在多次更换react, react-native版本, 求助Google大叔无果之后。我开始了阅读输出日志的漫漫长路, 终于发现了build失败的元凶, boost/xxx.hpp not found为啥找不到呢, 去文件夹一看, 才发现这些文件真的不存在&amp;hellip;&amp;hellip;
+好了知道错误, 就再Google下咯（其实我还去改过这些#includ&amp;lt;boost/config/user.hpp&amp;gt; 0&amp;lt;~&amp;gt;0）这里就直接给出我找的结果吧: http://cdn2.jianshu.io/p/2ef019a7e82a
+总的说来, 就是自动下载的的第三方库是残缺的
+错误二：CFBundleIdentifier not Found 第二错误也是困扰了比较多人, 我遇到的只是导致这个情况的其中之一
+通过查看输出日志, 并没有发现什么有用的信息, 提示的是Command Fail , balabala… 手动搜索了一下PlistBuddy, 了解了下用法, 然后我手动执行了下命令, 居然可以！！！！什么情况, 那为什么提示错误信息？果断进入到文件夹中查看,果然文件是存在的那么为啥一个可以, 一个不可以呢？到这里, 大致猜到原因了, 没有找到文件
+再次以此为点求助Google大叔: http://blog.csdn.net/ohyeahhhh/article/details/54691512
+这个坑就是, Xcode编译保存的路径和react-native-cli寻找的路径不一致, 通过修改路径就OK啦, 还有其他原因导致的这个fail 请参阅链接, 先搞清楚react-native run-ios做了啥事.
+中间更多细节”虐“去~~~~, 感谢预先踩坑的前辈, 最终项目成功运行啦！
+心得：</description>
+    </item>
+    
+  </channel>
+</rss>

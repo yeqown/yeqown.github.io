@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Spider on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/Spider/</link>
+    <description>Recent content in Spider on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Fri, 18 May 2018 12:38:14 +0000</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/Spider/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>自己写一个手机菜谱APP</title>
+      <link>https://www.yeqown.xyz/2018/05/18/%E8%87%AA%E5%B7%B1%E5%86%99%E4%B8%80%E4%B8%AA%E6%89%8B%E6%9C%BA%E8%8F%9C%E8%B0%B1APP/</link>
+      <pubDate>Fri, 18 May 2018 12:38:14 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/05/18/%E8%87%AA%E5%B7%B1%E5%86%99%E4%B8%80%E4%B8%AA%E6%89%8B%E6%9C%BA%E8%8F%9C%E8%B0%B1APP/</guid>
+      <description>需要的技术及工具：
+Python3 + Selenuium Golang net/http React-Native 相关（使用了react-navigation） MongoDB Redis 代码地址：
+github.com/yeqown/recipe 项目构思及构成 食谱类型的App，应用市场肯定有更好的的食谱APP。所以自己开发的目的，首先是写代码，其次是定制APP～ 好的，现在化身产品经理，设计一下APP有哪些功能：
+每日菜谱推荐，推荐可更换 每天需要准备的材料提醒 发现更多菜谱 分类筛选菜谱 搜索菜谱 查看菜谱详情 设置（不知道设置啥，提前准备吧） 设计稿？不存在的，随心所欲。
+现在分析下我需要做的事情：
+能跑起来的APP，与restful web api 交互。 能跑起来的web-api，提供菜谱数据，筛选，推荐，搜索等功能 能跑起来的简易spider，从网上获取菜谱信息。（这个爬虫能解析动态生成网站就够用了，姑且称之为爬虫吧） 没有考虑大量数据，因此爬虫并不通用，只适合特定XX网站。
+实战爬虫 这个APP里面最重要的就是菜谱数据了，那么开发之前，需要明确的数据格式，如下：
+{ &amp;#34;name&amp;#34;: &amp;#34;name&amp;#34;, &amp;#34;cat&amp;#34;: &amp;#34;cat&amp;#34;, &amp;#34;img&amp;#34;: &amp;#34;img_url&amp;#34;, &amp;#34;mark_cnt&amp;#34;: 19101, &amp;#34;view_cnt&amp;#34;: 181891, &amp;#34;setps&amp;#34;: [ { &amp;#34;desc&amp;#34;: &amp;#34;&amp;#34;, &amp;#34;img&amp;#34;: &amp;#34;&amp;#34;, }, // more step ], &amp;#34;material&amp;#34;: { &amp;#34;ingredients&amp;#34;: [ { &amp;#34;name&amp;#34;: &amp;#34;ingredients_name&amp;#34;, &amp;#34;weight&amp;#34;: &amp;#34;ingredients_weight&amp;#34;, }, // more ingredients ], &amp;#34;seasoning&amp;#34;: [ { &amp;#34;name&amp;#34;: &amp;#34;seasoning_name&amp;#34;, &amp;#34;weight&amp;#34;: &amp;#34;seasoning_weight&amp;#34;, }, // more seasoning ], }, &amp;#34;create_time&amp;#34;: &amp;#34;2018xxxxxx&amp;#34;, &amp;#34;update_time&amp;#34;: &amp;#34;2018xxxxxx&amp;#34;, } 目标 前提：无法直接获取到该网站的服务API，才使用爬虫间接获取数据。</description>
+    </item>
+    
+  </channel>
+</rss>

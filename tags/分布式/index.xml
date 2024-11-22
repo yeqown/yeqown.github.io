@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>分布式 on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/%E5%88%86%E5%B8%83%E5%BC%8F/</link>
+    <description>Recent content in 分布式 on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Sun, 18 Aug 2024 09:43:35 +0800</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/%E5%88%86%E5%B8%83%E5%BC%8F/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>ShardingSphere-Proxy问题几则</title>
+      <link>https://www.yeqown.xyz/2024/08/18/shardingsphere-proxy%E9%97%AE%E9%A2%98%E5%87%A0%E5%88%99/</link>
+      <pubDate>Sun, 18 Aug 2024 09:43:35 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2024/08/18/shardingsphere-proxy%E9%97%AE%E9%A2%98%E5%87%A0%E5%88%99/</guid>
+      <description>ShardingSphere Proxy 是 Apache ShardingSphere 的一个子项目，是一个基于 MySQL 协议的数据库中间件，用于实现分库分表、读写分离等功能。在使用过程中，遇到了一些问题，记录如下。
+这里主要针对的是 分库分表 的使用场景。
+问题概述 数据库往往是一个系统最容易出现瓶颈的点，当遇到数据库瓶颈时，我们可以通过数据拆分来缓解问题。数据拆分的方式通常分为横向拆分和纵向拆分，横向拆分即分库分表；纵向拆分即把一个库表中的字段拆分到不同的库表中去。这两种手段并不互斥，而是在实际情况中相辅相成。本文即是横向拆分相关内容。
+常见的部署方式有哪些？ 数据分片规则怎么配置？ 数据分片数应该怎么确定？ 数据分片后唯一索引还有用吗？ 数据分片后数据迁移？ 数据分片后如何确定实际执行 SQL 语句？ 数据分片后后的查询优化？ 0. 常见的部署方式 官方提供了两种部署方式：
+单机部署：将 ShardingSphere Proxy 部署在单台服务器上，用于测试和开发环境。 集群部署：将 ShardingSphere Proxy 部署在多台服务器上，用于生产环境。集群模式下使用 zookeeper 来存储元数据。 关于元数据，元数据是 ShardingSphere Proxy 的核心，用于存储分库分表规则、读写分离规则等信息。 官方建议使用集群模式部署 生产环境的 ShardingSphere Proxy
+如果不按照官方的指引，选择部署了多个 Standalone 模式的 ShardingSphere Proxy，那么需要注意“每个这样的 proxy 节点会有自己的元信息，他们之间并不互通”。这样一些情况下会出现节点之间元数据不一致的问题，参看如下测试：
+# 启动 3 个 standalone 模式的 ShardingSphere Proxy +-------+ | LB | +-------+ | |-------------|--------------| | | | +-------+ +-------+ +-------+ | Node1 | | Node2 | | Node3 | +-------+ +-------+ +-------+ 初始表结构如下：</description>
+    </item>
+    
+    <item>
+      <title>消息推送架构-Based-GOIM</title>
+      <link>https://www.yeqown.xyz/2020/04/02/%E6%B6%88%E6%81%AF%E6%8E%A8%E9%80%81%E6%9E%B6%E6%9E%84-based-GOIM/</link>
+      <pubDate>Thu, 02 Apr 2020 14:50:04 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2020/04/02/%E6%B6%88%E6%81%AF%E6%8E%A8%E9%80%81%E6%9E%B6%E6%9E%84-based-GOIM/</guid>
+      <description>本文的重点，主要梳理了GOIM的架构，消息流转和消息处理。本文没有提到Comet的具体逻辑，套接字编程和RingBuffer等，但是Comet的复杂度远高于其他两个网元，因此强烈建议阅读Comet源码，应该会对Go网络编程有更多认识。
+GOIM 是Go实现的消息推送的分布式服务，易于扩容伸缩，使用了bilibili/discovery来支持服务发现。相较于我之前用Socket.IO做的信令服务，优点在于更优雅的扩容，将连接层和逻辑层分离，职责更清晰。当然缺点也有（没有和具体实现解耦，如MQ的选型，导致不够灵活；客户端非全双工通信，TCP利用率偏低，这点并不全是缺点，好处是：消息流转清晰，职责非常明确），这部分可以自己做定制（最后的参考文献2中讲很多）。
+架构图 总的来说，整个应用的架构如下
+这里省略了其中用于服务发现的“bilibili/discovery”。在整个GOIM中用到服务发现的主要是gRPC和消息推送关系查找。
+如上图：
+Comet负责建立和维持客户端的长连接； Job负责消息的分发； Logic提供三种纬度的消息（全局，ROOM，用户）投递，还包括业务逻辑，Session管理。 消息流转 从上述的架构图中可以知道，消息是通过HTTP调用Logic产生的，然后用MQ来中转（存储，削峰）；每个Job成员都从给队列中消费消息，投递给一个或者多个Comet，由Comet将消息发送给客户端。
+生成消息 目前在Github上的GOIM版本，消息（除鉴权/心跳等基础数据包外）生成都是由Logic完成第一手处理，Logic提供了HTTP接口以支持消息发送能力，主要有三个纬度：用户，房间，全应用广播，如下：
+curl -d &amp;#39;mid message&amp;#39; http://api.goim.io:3111/goim/push/mids?operation=1000&amp;amp;mids=123 curl -d &amp;#39;room message&amp;#39; http://api.goim.io:3111/goim/push/room?operation=1000&amp;amp;type=live&amp;amp;room=1000 curl -d &amp;#39;broadcast message&amp;#39; http://api.goim.io:3111/goim/push/all?operation=1000 在Logic服务中会通过处理，将消息处理成**附#消息格式#任务队列消息**的格式，然后投递到MQ中。其中三种纬度的消息处理稍有不同：
+用户
+// goim/internal/logic/push.go // mid =&amp;gt; []PushMsg{op, server, keys, msg} func (l *Logic) PushMids(c context.Context, op int32, mids []int64, msg []byte) (err error) { // 根据用户ID获取所有的 key:server 对应关系；在redis中是一个hash keyServers, _, err := l.dao.KeysByMids(c, mids) // ... keys := make(map[string][]string) for key, server := range keyServers { // .</description>
+    </item>
+    
+  </channel>
+</rss>

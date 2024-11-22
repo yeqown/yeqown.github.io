@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Test on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/Test/</link>
+    <description>Recent content in Test on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Tue, 16 Jan 2018 11:28:59 +0000</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/Test/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>wrk性能测试工具使用总结</title>
+      <link>https://www.yeqown.xyz/2018/01/16/wrk%E6%80%A7%E8%83%BD%E6%B5%8B%E8%AF%95%E5%B7%A5%E5%85%B7%E4%BD%BF%E7%94%A8%E6%80%BB%E7%BB%93/</link>
+      <pubDate>Tue, 16 Jan 2018 11:28:59 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/01/16/wrk%E6%80%A7%E8%83%BD%E6%B5%8B%E8%AF%95%E5%B7%A5%E5%85%B7%E4%BD%BF%E7%94%A8%E6%80%BB%E7%BB%93/</guid>
+      <description>wrk 压力测试工具的简单小结。 项目地址：https://github.com/wg/wrk
+安装 Win: https://github.com/wg/wrk/wiki/Installing-wrk-on-Windows-10 Linux: https://github.com/wg/wrk/wiki/Installing-wrk-on-Linux MacOS: brew install wrk
+基本命令 ➜ ~ wrk Usage: wrk &amp;lt;options&amp;gt; &amp;lt;url&amp;gt; Options: -c, --connections &amp;lt;N&amp;gt; 连接数 -d, --duration &amp;lt;T&amp;gt; 持续时间 -t, --threads &amp;lt;N&amp;gt; 线程数 -s, --script &amp;lt;S&amp;gt; 制定lua脚本 -H, --header &amp;lt;H&amp;gt; 添加请求头 --latency 打印延迟分布信息 --timeout &amp;lt;T&amp;gt; 设置请求超时 -v, --version 打印版本信息 &amp;lt;N&amp;gt;表示数字参数，支持国际单位 (1k, 1M, 1G) &amp;lt;T&amp;gt;表示时间参数，支持国际单位 (2s, 2m, 2h) 简单使用及解释 wrk -t1 -d20s -c10 -s post.lua http://api.example.com/fake/post 以单线程 保持10个连接 持续20秒 运行post.lua脚本访问http://api.example.com/fake/post
+报告分析 如下是一个简单的性能测试报告</description>
+    </item>
+    
+    <item>
+      <title>pytest用法小结</title>
+      <link>https://www.yeqown.xyz/2018/01/13/pytest%E7%94%A8%E6%B3%95%E5%B0%8F%E7%BB%93/</link>
+      <pubDate>Sat, 13 Jan 2018 15:20:50 +0000</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2018/01/13/pytest%E7%94%A8%E6%B3%95%E5%B0%8F%E7%BB%93/</guid>
+      <description>pytest最常用法总结，当然不止这一点功能。关于更多更强大的插件，可以根据自己需要来定制。
+安装 pytest 安装和使用都非常简单, 只需pip install pytest
+编写测试代码 使用pytest，不需要像unittest模块一样，pytest使用的是python自带的assert，如：
+def test_global_function(): assert 1 == 1 使用pytest.mark pytest.mark 用于给测试方法打上标签，在稍后的执行中会讲到如何使用marker
+@pytest.mark.marker_self def test_global_function(): assert 1 == 1 使用pytest.fixture @pytest.fixture def google_url(): return &amp;#34;http://google.com&amp;#34; setup 和 teardown setup和teardown方法作用范围，分为全局作用，类作用，方法作用
+全局：作用于全局测试函数 类： 作用于自身类 类方法： 作用于类函数 简单举例: # 全局 def setup_function(function): print(&amp;#34;setup function global&amp;#34;) def teardown_function(function): print(&amp;#34;teardown function global&amp;#34;) # 类 class Test_fixture: @classmethod def setup_class(cls): print(&amp;#34;class setup method&amp;#34;) @classmethod def teardown_class(cls): print(&amp;#34;class teardown method&amp;#34;) # 类方法 def setup_method(self, method): print(&amp;#34;class method setup function&amp;#34;) def teardown_method(self, method): print(&amp;#34;class method teardown function&amp;#34;) pytest配置文件 配置文件名为pytest.</description>
+    </item>
+    
+  </channel>
+</rss>

@@ -1,0 +1,447 @@
+<!DOCTYPE HTML>
+
+<html lang='en'>
+
+<head>
+	<title>pytest用法小结 &middot; Yeqown
+	</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	
+	
+	
+	<link rel="stylesheet" href="/assets/css/main.min.css">
+	
+	
+	<link rel="shortcut icon" href="/favicon.ico">
+	
+	
+	<noscript>
+		<link rel="stylesheet" href='/assets/css/noscript.css' />
+	</noscript>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/rainbow.min.css">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>`
+	<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+		<meta name="referrer" content="no-referrer-when-downgrade"></head>
+
+<body lang='en' class="is-preload">
+
+    
+    <div id="wrapper">
+
+        
+<header id="header">
+    <a href='/' class="logo">Yeqown</a>
+    </header>
+
+        
+
+<nav id="nav">
+    <ul class="links">
+        <li class="active"><a href='/'>Yeqown</a></li>
+        <li><a href="/tags/">tags</a></li>
+        <li><a href="/categories/">categories</a></li>
+        
+        <li><a href='/#footer'>Contact</a></li>
+        
+        
+    </ul>
+    
+    <ul class="icons">
+        
+        <li><a href="https://twitter.com/yeqown" class="icon fa-twitter"><span class="label">Twitter</span></a></li>
+        
+        
+        
+        
+        
+        <li><a href="https://github.com/yeqown" class="icon fa-github"><span class="label">GitHub</span></a></li>
+        
+        
+        
+        
+        
+        
+        <li><a href="/index.xml" class="icon fa-rss"><span class="label">RSS</span></a></li>
+        
+
+    </ul>
+    
+</nav>
+
+        
+        <div id="main">
+
+            
+            <section class="post">
+                <header class="major">
+                    
+                    <span class="date">
+                        January 13, 2018 
+                        
+                        <span id="busuanzi_container_page_pv">本文阅读量<span id="busuanzi_value_page_pv"></span>次</span>
+                    </span>
+                    
+
+
+
+                    <h1>pytest用法小结</h1>
+                    <p>pytest最常用法总结，当然不止这一点功能。关于更多更强大的插件，可以根据自己需要来定制。</p>
+                </header>
+                
+                <p>pytest最常用法总结，当然不止这一点功能。关于更多更强大的插件，可以根据自己需要来定制。</p>
+<!-- more -->
+<blockquote>
+<h3 id="安装">安装</h3>
+</blockquote>
+<p>pytest 安装和使用都非常简单, 只需<code>pip install pytest</code></p>
+<blockquote>
+<h3 id="编写测试代码">编写测试代码</h3>
+</blockquote>
+<p>使用pytest，不需要像unittest模块一样，pytest使用的是python自带的<code>assert</code>，如：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">test_global_function</span>():
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">assert</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span>
+</span></span></code></pre></div><blockquote>
+<h3 id="使用pytestmark">使用pytest.mark</h3>
+</blockquote>
+<p>pytest.mark 用于给测试方法打上标签，在稍后的执行中会讲到如何使用marker</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#a6e22e">@pytest.mark.marker_self</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">test_global_function</span>():
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">assert</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span>
+</span></span></code></pre></div><blockquote>
+<h3 id="使用pytestfixture">使用pytest.fixture</h3>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#a6e22e">@pytest.fixture</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">google_url</span>():
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#e6db74">&#34;http://google.com&#34;</span>
+</span></span></code></pre></div><blockquote>
+<h3 id="setup-和-teardown">setup 和 teardown</h3>
+</blockquote>
+<p><code>setup</code>和<code>teardown</code>方法作用范围，分为全局作用，类作用，方法作用</p>
+<ul>
+<li>全局：作用于全局测试<strong>函数</strong></li>
+<li>类： 作用于<strong>自身类</strong></li>
+<li>类方法： 作用于<strong>类函数</strong></li>
+</ul>
+<h3 id="简单举例"><strong>简单举例:</strong></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># 全局</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">setup_function</span>(function):
+</span></span><span style="display:flex;"><span>    print(<span style="color:#e6db74">&#34;setup function global&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">teardown_function</span>(function):
+</span></span><span style="display:flex;"><span>    print(<span style="color:#e6db74">&#34;teardown function global&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 类</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Test_fixture</span>:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@classmethod</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">setup_class</span>(cls):
+</span></span><span style="display:flex;"><span>        print(<span style="color:#e6db74">&#34;class setup method&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@classmethod</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">teardown_class</span>(cls):
+</span></span><span style="display:flex;"><span>        print(<span style="color:#e6db74">&#34;class teardown method&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 类方法</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">setup_method</span>(self, method):
+</span></span><span style="display:flex;"><span>        print(<span style="color:#e6db74">&#34;class method setup function&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">teardown_method</span>(self, method):
+</span></span><span style="display:flex;"><span>        print(<span style="color:#e6db74">&#34;class method teardown function&#34;</span>)
+</span></span></code></pre></div><blockquote>
+<h3 id="pytest配置文件">pytest配置文件</h3>
+</blockquote>
+<p>配置文件名为<code>pytest.ini</code> <code>setup.cfg</code> <code>tox.ini</code> <em>关于配置文件优先级请查阅官方文档</em>
+简单举例：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>[pytest]
+</span></span><span style="display:flex;"><span>addopts = --maxfail=2 // set default pytest options
+</span></span><span style="display:flex;"><span>python_classes = *Api //execute all *Api like TestSingUpApi or TestSignUpApi
+</span></span></code></pre></div><p>更多配置内容参见<a href="https://docs.pytest.org/en/latest/customize.html">https://docs.pytest.org/en/latest/customize.html</a></p>
+<blockquote>
+<h3 id="执行方法">执行方法</h3>
+</blockquote>
+<p>此处只列举了较常用的参数，主要用于演示marker和选中，和文件，类，函数的选中</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#75715e"># 执行方法：pytest [options] test_file::Test_class::test_method [plugin-options]</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 执行有标记为marker_self的case</span>
+</span></span><span style="display:flex;"><span>pytest -v -m <span style="color:#e6db74">&#34;marker_self&#34;</span> test_demo.py::Test_fixture::test_fixture_demo
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 执行有标记为marker_self 且 marker_other与的case</span>
+</span></span><span style="display:flex;"><span>pytest -v -m <span style="color:#e6db74">&#34;marker_self and marker_other&#34;</span> test_demo.py::Test_fixture
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 执行有标记为marker_self 或 marker_other的case</span>
+</span></span><span style="display:flex;"><span>pytest -v -m <span style="color:#e6db74">&#34;yeqiag or marker_other&#34;</span> test_demo.py
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 执行测试文件中某一个测试类的一个测试case</span>
+</span></span><span style="display:flex;"><span>pytest -v test_demo.py::Test_fixture::test_fixture_demo
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 执行测试文件中某一个测试类</span>
+</span></span><span style="display:flex;"><span>pytest -v test_demo.py::Test_fixture
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 执行测试文件</span>
+</span></span><span style="display:flex;"><span>pytest -v test_demo.py
+</span></span></code></pre></div><blockquote>
+<h3 id="全部代码">全部代码</h3>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#e6db74">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">1.setup teardown 作用范围：
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    全局的 作用于 全局的单个函数，
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    class 作用于 该类的单个函数
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">2.mark的使用
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    使用全局的skip, xfail来标记并略过一部分的测试case
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    使用自定义的marker来区分测试等级
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">3.fixture的作用范围
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    全局作用
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    class内部作用
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> pytest
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">setup_function</span>(function):
+</span></span><span style="display:flex;"><span>    print(<span style="color:#e6db74">&#34;setup function global&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">teardown_function</span>(function):
+</span></span><span style="display:flex;"><span>    print(<span style="color:#e6db74">&#34;teardown function global&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">test_simple_method</span>():
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">assert</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">@pytest.mark.marker_self</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">test_global_function</span>():
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">assert</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Test_class_case</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        Must Know These Things
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        1. 测试类 init函数不会被执行
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        2. 测试类 属性只读
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    &#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@classmethod</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">setup_class</span>(cls):
+</span></span><span style="display:flex;"><span>        print(<span style="color:#e6db74">&#34;class setup function&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@classmethod</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">teardown_class</span>(cls):
+</span></span><span style="display:flex;"><span>        print(<span style="color:#e6db74">&#34;class teardown function&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">setup_method</span>(self, method):
+</span></span><span style="display:flex;"><span>        print(<span style="color:#e6db74">&#34;class method setup function&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">teardown_method</span>(self, method):
+</span></span><span style="display:flex;"><span>        print(<span style="color:#e6db74">&#34;class method teardown function&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@pytest.mark.xfail</span>(reason<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;一定失败&#34;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">test_case0</span>(self):
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">assert</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">test_case1</span>(self):
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">assert</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@pytest.mark.skip</span>(reason<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;我知道这是错的&#34;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">test_case2</span>(self):
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">assert</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">test_case3</span>(self):
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">assert</span> <span style="color:#66d9ef">True</span> <span style="color:#f92672">==</span> <span style="color:#66d9ef">False</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">@pytest.fixture</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">google_url</span>():
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#e6db74">&#34;http://google.com&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">@pytest.mark.marker_self</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">test_fixture_google</span>(google_url):
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">assert</span> google_url <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;http://google.com&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">assert</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">test_</span>(google_url):
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">assert</span> google_url <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;http;//google.com&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">test_baidu_url</span>(baidu_url):
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">assert</span> baidu_url <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;http://baidu.com&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Test_fixture</span>:
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@classmethod</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">setup_class</span>(cls):
+</span></span><span style="display:flex;"><span>        print(<span style="color:#e6db74">&#34;class setup method&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@classmethod</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">teardown_class</span>(cls):
+</span></span><span style="display:flex;"><span>        print(<span style="color:#e6db74">&#34;class teardown method&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@pytest.fixture</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">baidu_url</span>(self):
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#e6db74">&#34;http://www.baidu.com&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@pytest.mark.marker_self</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">test_fixture_demo</span>(self, baidu_url):
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">assert</span> baidu_url <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;http://www.baidu.com&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">assert</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@pytest.mark.marker_other</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">test_fixture_demo_2</span>(self, baidu_url):
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">assert</span> baidu_url <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;http://google.com&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@pytest.mark.marker_self</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@pytest.mark.skip</span>(reason<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;没有原因三&#34;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">test_self_marker_demo0</span>(self):
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">assert</span> <span style="color:#ae81ff">10</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@pytest.mark.marker_self</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">test_self_marker_demo1</span>(self):
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">assert</span> <span style="color:#ae81ff">10</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@pytest.mark.marker_self</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@pytest.mark.marker_other</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">test_fixture_demo_google</span>(self, google_url):
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">assert</span> google_url <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;http://google.com&#34;</span>
+</span></span></code></pre></div><blockquote>
+<p>执行结果截图</p>
+</blockquote>
+<p><img src="/images/pytest_resutl.png" alt="截图"></p>
+<p>未完待续&hellip;</p>
+
+
+                
+            </section>
+
+            
+            <section class="comment">
+                <div id="gitalk-container"></div>
+                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+                <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+                <script>
+                    const gitalk = new Gitalk({
+                        clientID: '7d8c8c91ae6aff3e46e7',
+                        clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+                        repo: 'yeqown.github.io',
+                        owner: 'yeqown',
+                        admin: ['yeqown'],
+                        id: "pytest-usage-summary", 
+                        distractionFreeMode: false 
+                    });
+                    (function () {
+                        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+                            document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+                            return;
+                        }
+                        gitalk.render('gitalk-container');
+                    })();
+                </script>
+            </section>
+        </div>
+
+        
+
+<footer id="footer">
+  <section>
+    <form method="post" action="Page%28/posts/pytest%e7%94%a8%e6%b3%95%e5%b0%8f%e7%bb%93.md%29">
+      <div class="fields">
+        <div class="field">
+          <label for="name">Name</label>
+          <input type="text" name="name" id="name" />
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="text" name="email" id="email" />
+        </div>
+        <div class="field">
+          <label for="message">Message</label>
+          <textarea name="message" id="message" rows="3"></textarea>
+        </div>
+      </div>
+      <ul class="actions">
+        <li><input type="submit" value='Send A Message' /></li>
+      </ul>
+    </form>
+  </section>
+
+  <section class="split contact">
+    
+    <section class="alt">
+      <h3>Address</h3>
+      <p>
+        
+         Chengdu · China
+        
+         <br />  This is a city that comes and doesn&#39;t want to go
+        
+      </p>
+    </section>
+    
+    
+    <section>
+      <h3>Phone</h3>
+      <p><a href="tel:no%20way">no way</a></p>
+    </section>
+    
+    
+    <section>
+      <h3>Email</h3>
+      <p><a href="mailto:yeqown@gmail.com">yeqown@gmail.com</a></p>
+    </section>
+    
+    
+    <section>
+      <h3>Social</h3>
+      <ul class="icons alt">
+        
+        <li><a href="https://twitter.com/yeqown" class="icon alt fa-twitter"><span class="label">Twitter</span></a></li>
+        
+        
+        
+        
+        
+        <li><a href="https://github.com/yeqown" class="icon alt fa-github"><span class="label">GitHub</span></a></li>
+        
+        
+        
+        
+        
+      </ul>
+    </section>
+    
+  </section>
+</footer>
+        
+<div id="copyright">
+    <ul>
+        <li>&copy; Yeqown</li>
+        <li>Design: <a href="https://html5up.net">HTML5 UP</a></li>
+        <li>Hugo Port: <a href="https://curtistimson.co.uk">curttimson</a></li>
+    </ul>
+
+    
+    <ul>
+        <li>
+            <span id="busuanzi_container_site_pv">
+                总访问量<span id="busuanzi_value_site_pv"></span>次
+            </span>
+        </li>
+        <li>
+            <span id="busuanzi_container_site_uv">
+                访客数<span id="busuanzi_value_site_uv"></span>人次
+            </span>
+        </li>
+    </ul></div>
+
+    </div>
+    
+    
+
+
+
+
+
+
+
+
+
+
+<script src='/assets/js/bundle.js'></script>
+</body>
+
+</html>

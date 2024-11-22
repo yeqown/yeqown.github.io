@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Ring Buffer on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/Ring-Buffer/</link>
+    <description>Recent content in Ring Buffer on Yeqown</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en</language>
+    <lastBuildDate>Thu, 19 Sep 2019 11:10:51 +0800</lastBuildDate><atom:link href="https://www.yeqown.xyz/tags/Ring-Buffer/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>初识Ring Buffer</title>
+      <link>https://www.yeqown.xyz/2019/09/19/%E5%88%9D%E8%AF%86Ring-Buffer/</link>
+      <pubDate>Thu, 19 Sep 2019 11:10:51 +0800</pubDate>
+      
+      <guid>https://www.yeqown.xyz/2019/09/19/%E5%88%9D%E8%AF%86Ring-Buffer/</guid>
+      <description>使用场景 一个服务器程序可能会收到多个客户端的网络数据流，在每个数据流上实际上有多个独立的数据包，只有一个数据包接收完整了才能做进一步的处理。如果在一个网络连接上数据包并不完整，就需要暂时缓存住尚未接收完的数据包。
+解决以上场景的方法肯定不止RingBuffer这一种，同理RingBuffer也不只是这一个使用场景，这里只是介绍下RingBuffer在这种场景下的使用。
+实现方式 RingBuffer结构定义：
+const A = 10 // Byts ... type Byts []byte // RingBuffer . not concurrent safe type RingBuffer struct { data []*Byts pRead uint pWrite uint size uint } // NewRingBuffer . at least 2 func NewRingBuffer(size uint) *RingBuffer { if size &amp;lt;= 1 { panic(&amp;#34;too small size&amp;#34;) } return &amp;amp;RingBuffer{ data: make([]*Byts, size), pRead: 0, pWrite: 0, size: size, } } RingBuffer方法定义：
+func (buf *RingBuffer) Write(d Byts) error { if (buf.</description>
+    </item>
+    
+  </channel>
+</rss>
