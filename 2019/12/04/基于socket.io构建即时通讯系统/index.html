@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="记录一下将socket.io应用到生产过程中的想法和遇到的问题">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2019/12/04/%E5%9F%BA%E4%BA%8Esocket.io%E6%9E%84%E5%BB%BA%E5%8D%B3%E6%97%B6%E9%80%9A%E8%AE%AF%E7%B3%BB%E7%BB%9F/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="基于socket.io构建即时通讯系统">
+  <meta property="og:description" content="记录一下将socket.io应用到生产过程中的想法和遇到的问题">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2019-12-04T18:37:31+08:00">
+    <meta property="article:modified_time" content="2019-12-04T18:37:31+08:00">
+    <meta property="article:tag" content="Socket.io">
+    <meta property="article:tag" content="Im">
+<title>基于socket.io构建即时通讯系统 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2019/12/04/%E5%9F%BA%E4%BA%8Esocket.io%E6%9E%84%E5%BB%BA%E5%8D%B3%E6%97%B6%E9%80%9A%E8%AE%AF%E7%B3%BB%E7%BB%9F/">
+<link rel="stylesheet" href="/book.min.6c8b9d2a1fc95075ed7da46ca81060b39add8fff6741ac51259f768929281e2c.css" integrity="sha256-bIudKh/JUHXtfaRsqBBgs5rdj/9nQaxRJZ92iSkoHiw=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.19281d98520c1068688eab8fb9272ff934b3f609732095c160acde7ba1089f16.js" integrity="sha256-GSgdmFIMEGhojquPuScv&#43;TSz9glzIJXBYKzee6EInxY=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>基于socket.io构建即时通讯系统</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#背景">背景</a></li>
+        <li><a href="#关于socketio的介绍">关于socket.io的介绍</a></li>
+        <li><a href="#基于socket-io的app设计">基于socket-io的APP设计</a></li>
+        <li><a href="#实现过程中的问题">实现过程中的问题</a></li>
+        <li><a href="#总结">总结</a></li>
+        <li><a href="#参考资料">参考资料</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    基于socket.io构建即时通讯系统
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>December 4, 2019</span>
+  </div>
+
+
+
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/socket.io/">Socket.io</a>, 
+      <a href="/tags/im/">Im</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><blockquote>
+<p>本意在总结实现<a href="github.com/yeqown/socket.io-app">socket.io-app</a>过程中的一些知识。</p>
+</blockquote>
+<h3 id="背景">
+  背景
+  <a class="anchor" href="#%e8%83%8c%e6%99%af">#</a>
+</h3>
+<p>现需要替换公司的即时通信框架（之前用的是阿里云的微消息队列，优点在于：简单易接入，问题在于：对于人数和客户端状态感知不够准确，原因后面细说）。在框架选型的时候，基于应用场景（客户端有：小程序/nodeJS/浏览器），有三种方案：</p>
+<ol>
+<li>替换MQTT的架子，针对现有场景下的问题，选用一款更加可控的MQTT服务，如<a href="https://www.emqx.io">EMQX</a>。</li>
+<li>基于现有的技术栈，选择一款golang开发的开源框架，在此基础上进行开发，如<a href="https://github.com/Terry-Mao/goim">goim</a>。</li>
+<li>一个大众且稳定的开源框架，语言不限，如<a href="https://github.com/socketio/socket.io">socket.io</a>。</li>
+</ol>
+<p>综合一系列因素（技术熟悉程度/star数/时间成本/金钱成本/运维成本）选择了<code>socket.io / JS</code>🐶～</p>
+<blockquote>
+<p>这里想推荐一下<code>goim</code>给<code>golang</code>程序猿。个人看法：goim对团队技术栈更友好；对分布式更友好；架构合理易于扩展；如有兴趣可以去看下：https://juejin.im/post/5cbb9e68e51d456e51614aab @tsingson 的解析，结合源码更容易理解上手。</p>
+</blockquote>
+<hr>
+<h3 id="关于socketio的介绍">
+  关于socket.io的介绍
+  <a class="anchor" href="#%e5%85%b3%e4%ba%8esocketio%e7%9a%84%e4%bb%8b%e7%bb%8d">#</a>
+</h3>
+<p>文档在此<a href="https://socket.io/docs/">socket.io</a></p>
+<h4 id="通信机制及特点">
+  通信机制及特点
+  <a class="anchor" href="#%e9%80%9a%e4%bf%a1%e6%9c%ba%e5%88%b6%e5%8f%8a%e7%89%b9%e7%82%b9">#</a>
+</h4>
+<table>
+  <thead>
+      <tr>
+          <th>特点</th>
+          <th>摘要</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>可用性</td>
+          <td>提供 long-polling 和 WebSocket 两种方式，可以自动升级，基于engine.io</td>
+      </tr>
+      <tr>
+          <td>自动重连</td>
+          <td>客户端会一直重连，直到再次链接上服务器</td>
+      </tr>
+      <tr>
+          <td>断线检测</td>
+          <td>客户端和服务端通过心跳维持长链接</td>
+      </tr>
+      <tr>
+          <td>二进制消息</td>
+          <td>任意被序列化的数据结构都可以传输</td>
+      </tr>
+      <tr>
+          <td>多路复用</td>
+          <td>对不同的Namespace,复用底层链接</td>
+      </tr>
+      <tr>
+          <td>内置Room概念</td>
+          <td>理解为聊天室和即可</td>
+      </tr>
+      <tr>
+          <td>基于websocket，但不互通</td>
+          <td><a href="https://github.com/socketio/socket.io-protocol">https://github.com/socketio/socket.io-protocol</a></td>
+      </tr>
+  </tbody>
+</table>
+<p>总结一下：socket.io 已经提供了即时通讯必要的基础，不用关心任何通讯相关的细节，开箱即用。</p>
+<h4 id="分布式">
+  分布式
+  <a class="anchor" href="#%e5%88%86%e5%b8%83%e5%bc%8f">#</a>
+</h4>
+<p>确认socket.io已经提供了通讯基础，那么问题来了：单机性能有限，如何扩展到分布式呢?
+socket.io的另一个优点<code>adapter</code>机制让socket.io易于扩展，官方提供了<code>redis-adapter</code>来支持消息分发。</p>
+<blockquote>
+<p>By running socket.io with the socket.io-redis adapter you can run multiple socket.io instances in different processes or servers that can all broadcast and emit events to and from each other.</p>
+</blockquote>
+<blockquote>
+<p>注意：redis-adapter会同步所有的广播和emit事件</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#66d9ef">const</span> <span style="color:#a6e22e">io</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">require</span>(<span style="color:#e6db74">&#39;socket.io&#39;</span>)(<span style="color:#ae81ff">3000</span>);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">const</span> <span style="color:#a6e22e">redisAdapter</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">require</span>(<span style="color:#e6db74">&#39;socket.io-redis&#39;</span>);
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">adapter</span>(<span style="color:#a6e22e">redisAdapter</span>({ <span style="color:#a6e22e">host</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#39;localhost&#39;</span>, <span style="color:#a6e22e">port</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">6379</span> }));
+</span></span></code></pre></div><h4 id="事件机制">
+  事件机制
+  <a class="anchor" href="#%e4%ba%8b%e4%bb%b6%e6%9c%ba%e5%88%b6">#</a>
+</h4>
+<p>如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#66d9ef">var</span> <span style="color:#a6e22e">io</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">require</span>(<span style="color:#e6db74">&#39;socket.io&#39;</span>)(<span style="color:#ae81ff">80</span>);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">var</span> <span style="color:#a6e22e">chat</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">io</span>
+</span></span><span style="display:flex;"><span>  .<span style="color:#66d9ef">of</span>(<span style="color:#e6db74">&#39;/chat&#39;</span>)
+</span></span><span style="display:flex;"><span>  .<span style="color:#a6e22e">on</span>(<span style="color:#e6db74">&#39;connection&#39;</span>, <span style="color:#66d9ef">function</span> (<span style="color:#a6e22e">socket</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">socket</span>.<span style="color:#a6e22e">emit</span>(<span style="color:#e6db74">&#39;event1&#39;</span>, {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">that</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#39;only&#39;</span>
+</span></span><span style="display:flex;"><span>      , <span style="color:#e6db74">&#39;/chat&#39;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#39;will get&#39;</span>
+</span></span><span style="display:flex;"><span>    });
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">chat</span>.<span style="color:#a6e22e">emit</span>(<span style="color:#e6db74">&#39;event2&#39;</span>, {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">everyone</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#39;in&#39;</span>
+</span></span><span style="display:flex;"><span>      , <span style="color:#e6db74">&#39;/chat&#39;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#39;will get&#39;</span>
+</span></span><span style="display:flex;"><span>    });
+</span></span><span style="display:flex;"><span>  });
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">var</span> <span style="color:#a6e22e">news</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">io</span>
+</span></span><span style="display:flex;"><span>  .<span style="color:#66d9ef">of</span>(<span style="color:#e6db74">&#39;/news&#39;</span>)
+</span></span><span style="display:flex;"><span>  .<span style="color:#a6e22e">on</span>(<span style="color:#e6db74">&#39;connection&#39;</span>, <span style="color:#66d9ef">function</span> (<span style="color:#a6e22e">socket</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">socket</span>.<span style="color:#a6e22e">emit</span>(<span style="color:#e6db74">&#39;item&#39;</span>, { <span style="color:#a6e22e">news</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#39;item&#39;</span> });
+</span></span><span style="display:flex;"><span>  });
+</span></span></code></pre></div><p>除了内置保留的事件（<code>connect</code> <code>message</code> <code>disconnect</code> <code>error</code> <code>ping</code> <code>pong</code>等）外，可以自定义任何事件名，用于业务逻辑。</p>
+<p>这里只是简单介绍了一下socket.io，可以前往官网获取更多细节。</p>
+<h5 id="事件机制对与客户端状态和人数的作用">
+  事件机制对与客户端状态和人数的作用
+  <a class="anchor" href="#%e4%ba%8b%e4%bb%b6%e6%9c%ba%e5%88%b6%e5%af%b9%e4%b8%8e%e5%ae%a2%e6%88%b7%e7%ab%af%e7%8a%b6%e6%80%81%e5%92%8c%e4%ba%ba%e6%95%b0%e7%9a%84%e4%bd%9c%e7%94%a8">#</a>
+</h5>
+<p>前面说过使用阿里云微消息队列无法准确获取到客户端状态和数量的问题，在<a href="https://help.aliyun.com/document_detail/50069.html?spm=a2c4g.11186623.6.554.69643dc9HHEx6q">阿里云文档</a>中提到了：<strong>异步上下线通知因为采用消息解耦，状态判断更加复杂，且误判可能性更大，但该方法可以基于事件分析多个客户端的运行状态轨迹</strong>。异步上下线正是之前用于统计在线人数和客户端状态选择的方案。在实际使用的时候，能很直观的发现，上下线消息不能保证正确的顺序，这也导致了计算人数和状态时候出错～</p>
+<hr>
+<h3 id="基于socket-io的app设计">
+  基于socket-io的APP设计
+  <a class="anchor" href="#%e5%9f%ba%e4%ba%8esocket-io%e7%9a%84app%e8%ae%be%e8%ae%a1">#</a>
+</h3>
+<p>基于业务场景，要求app的功能有：</p>
+<pre><code>1. 客户端和服务端全双工方式通信
+2. 同一Namesapce下，相同用户ID仅能存在一个
+3. 服务端正常触发上线/下线，用于维系客户端状态
+4. 提供RPC调用方式，用于业务服务器与客户端交互
+5. 提供客户端鉴权，非法客户端和未鉴权客户端会被主动关闭连接
+6. Namespace可动态创建
+7. 要求一定的监控数据，如链接数量，房间数量，消息数量等等。
+</code></pre>
+<h4 id="应用对接">
+  应用对接
+  <a class="anchor" href="#%e5%ba%94%e7%94%a8%e5%af%b9%e6%8e%a5">#</a>
+</h4>
+<img src="/images/socketio-app-arch0.svg" width="100%"/>
+<h4 id="客户端生存周期泳道图">
+  客户端生存周期泳道图
+  <a class="anchor" href="#%e5%ae%a2%e6%88%b7%e7%ab%af%e7%94%9f%e5%ad%98%e5%91%a8%e6%9c%9f%e6%b3%b3%e9%81%93%e5%9b%be">#</a>
+</h4>
+<img src="/images/socketio-app-client-conn-life.svg" width="100%">
+<hr>
+<h3 id="实现过程中的问题">
+  实现过程中的问题
+  <a class="anchor" href="#%e5%ae%9e%e7%8e%b0%e8%bf%87%e7%a8%8b%e4%b8%ad%e7%9a%84%e9%97%ae%e9%a2%98">#</a>
+</h3>
+<p>socket.io是对长连接服务的，在分布式服务的场景下，虽然有<code>redis-adapter</code>可以方便的做消息分发到不同的服务实例上去，如果不是emit相关的事件则不支持分布式。下面列举了一部分关于分布式时需要解决的问题：</p>
+<h4 id="sticky-session">
+  Sticky Session
+  <a class="anchor" href="#sticky-session">#</a>
+</h4>
+<p>因为<code>socket.io</code>同时支持了<code>long-polling</code>和<code>websocket</code>，并自带自动升级功能。因此存在升级过程中，存在HTTP协议升级时，链接到不同服务器，导致无法完成升级过程。解决办法有两种：</p>
+<ol>
+<li>使用<code>nginx / ip_hash</code>或类似功能，如果有自己的LB或者网关，可以自定义这个规则，保证负载均衡的同时保证同一连接接在同一服务器上完成升级过程。</li>
+<li>配置 <code>transports</code> 为仅 <code>websocket</code>，规避升级过程。</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#66d9ef">var</span> <span style="color:#a6e22e">io</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">require</span>(<span style="color:#e6db74">&#39;socket.io-client&#39;</span>)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">var</span> <span style="color:#a6e22e">client</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">io</span>(<span style="color:#e6db74">&#39;https://myhost.com&#39;</span>, {<span style="color:#a6e22e">transports</span><span style="color:#f92672">:</span> [<span style="color:#e6db74">&#39;websocket&#39;</span>]})
+</span></span></code></pre></div><blockquote>
+<p><a href="https://socket.io/docs/internals/#socket-io-client">https://socket.io/docs/internals/#socket-io-client</a></p>
+</blockquote>
+<h4 id="rpc调用如何扩展到分布式">
+  RPC调用如何扩展到分布式
+  <a class="anchor" href="#rpc%e8%b0%83%e7%94%a8%e5%a6%82%e4%bd%95%e6%89%a9%e5%b1%95%e5%88%b0%e5%88%86%e5%b8%83%e5%bc%8f">#</a>
+</h4>
+<p>需RPC提供的功能有<strong>踢人</strong>，<strong>断开与客户端的连接</strong>，<strong>清空房间</strong>之类。这一类命令不会调用<code>emit</code> / <code>broadcast</code>，因此也不能通过<code>redis-adapter</code>来实现分发。这里可以借鉴<code>redis-adapter</code>消息分发的思想，通过 <strong>redis PUB/SUB</strong> 来分发RPC命令，由此扩展到分布式。举例如下:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-typescript" data-lang="typescript"><span style="display:flex;"><span><span style="color:#66d9ef">interface</span> <span style="color:#a6e22e">IRpcCommand</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">evt</span>: <span style="color:#66d9ef">rpcCommandEvt</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">meta</span>: <span style="color:#66d9ef">any</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">grpcService</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">    * 订阅redis channel，并分发命令
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">    */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">private</span> <span style="color:#a6e22e">_subscribeCommandsToRedis() {</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">this</span>.<span style="color:#a6e22e">_sub</span>.<span style="color:#a6e22e">on</span>(<span style="color:#e6db74">&#34;message&#34;</span>, (<span style="color:#a6e22e">ch</span>: <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">message</span>: <span style="color:#66d9ef">string</span>) <span style="color:#f92672">=&gt;</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">info</span>(<span style="color:#e6db74">&#34;recv an command from: &#34;</span>, <span style="color:#a6e22e">ch</span>, <span style="color:#a6e22e">message</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">try</span> {
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">let</span> <span style="color:#a6e22e">command</span>: <span style="color:#66d9ef">IRpcCommand</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">JSON</span>.<span style="color:#a6e22e">parse</span>(<span style="color:#a6e22e">message</span>)
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">this</span>.<span style="color:#a6e22e">_call</span>(<span style="color:#a6e22e">command</span>)
+</span></span><span style="display:flex;"><span>            } <span style="color:#66d9ef">catch</span> (<span style="color:#a6e22e">error</span>) {
+</span></span><span style="display:flex;"><span>                <span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">error</span>(<span style="color:#e6db74">&#34;could not execute message command: &#34;</span>, <span style="color:#a6e22e">error</span>)
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>        })
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">this</span>.<span style="color:#a6e22e">_sub</span>.<span style="color:#a6e22e">SUBSCRIBE</span>(<span style="color:#a6e22e">gRPCService</span>.<span style="color:#a6e22e">pubsubTopic</span>())
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>     <span style="color:#66d9ef">private</span> <span style="color:#a6e22e">_call</span>(<span style="color:#a6e22e">command</span>: <span style="color:#66d9ef">IRpcCommand</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">switch</span> (<span style="color:#a6e22e">command</span>.<span style="color:#a6e22e">evt</span>) {
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">/* ignore other cases */</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">case</span> <span style="color:#a6e22e">rpcCommandEvt.clearRooms</span>:
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">let</span> <span style="color:#a6e22e">d6</span>: <span style="color:#66d9ef">clearRoomMeta</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">command</span>.<span style="color:#a6e22e">meta</span> <span style="color:#66d9ef">as</span> <span style="color:#a6e22e">clearRoomMeta</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">this</span>.<span style="color:#a6e22e">_clearRooms</span>(<span style="color:#a6e22e">d6</span>.<span style="color:#a6e22e">nspName</span>, <span style="color:#a6e22e">d6</span>.<span style="color:#a6e22e">roomIds</span>)
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">break</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">default</span><span style="color:#f92672">:</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">error</span>(<span style="color:#e6db74">&#34;undefined command evt&#34;</span>)
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* ignore some codes */</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">private</span> <span style="color:#a6e22e">_clearRooms</span> <span style="color:#f92672">=</span> (<span style="color:#a6e22e">nspName</span>: <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">roomIds</span>: <span style="color:#66d9ef">string</span>[]) <span style="color:#f92672">=&gt;</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">this</span>.<span style="color:#a6e22e">_socketioSrv</span>.<span style="color:#a6e22e">clearRooms</span>(<span style="color:#a6e22e">nspName</span>, <span style="color:#a6e22e">roomIds</span>)
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/**
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * clearRoom
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">clearRooms</span> <span style="color:#f92672">=</span> (<span style="color:#a6e22e">call</span>: <span style="color:#66d9ef">grpc.ServerUnaryCall</span>&lt;<span style="color:#f92672">api_pb.ClearRoomsReq</span>&gt;, <span style="color:#a6e22e">cb</span>: <span style="color:#66d9ef">grpc.requestCallback</span>&lt;<span style="color:#f92672">api_pb.ClearRoomsResp</span>&gt;) <span style="color:#f92672">=&gt;</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">let</span> <span style="color:#a6e22e">roomIds</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">call</span>.<span style="color:#a6e22e">request</span>.<span style="color:#a6e22e">getRoomidsList</span>()
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">let</span> <span style="color:#a6e22e">nspName</span> <span style="color:#f92672">=</span> <span style="color:#a6e22e">call</span>.<span style="color:#a6e22e">request</span>.<span style="color:#a6e22e">getNspname</span>()
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">let</span> <span style="color:#a6e22e">resp</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> <span style="color:#a6e22e">api_pb</span>.<span style="color:#a6e22e">ClearRoomsResp</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">let</span> <span style="color:#a6e22e">meta</span>: <span style="color:#66d9ef">clearRoomMeta</span> <span style="color:#f92672">=</span> { <span style="color:#a6e22e">nspName</span>, <span style="color:#a6e22e">roomIds</span> }
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">this</span>.<span style="color:#a6e22e">_publishCommandsToRedis</span>(<span style="color:#a6e22e">rpcCommandEvt</span>.<span style="color:#a6e22e">clearRooms</span>, <span style="color:#a6e22e">meta</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">resp</span>.<span style="color:#a6e22e">setErrcode</span>(<span style="color:#a6e22e">codes</span>.<span style="color:#a6e22e">OK</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">resp</span>.<span style="color:#a6e22e">setErrmsg</span>(<span style="color:#a6e22e">getMessage</span>(<span style="color:#a6e22e">codes</span>.<span style="color:#a6e22e">OK</span>))
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">cb</span>(<span style="color:#66d9ef">null</span>, <span style="color:#a6e22e">resp</span>)
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h4 id="namespace下唯一用户id如何保证">
+  Namespace下唯一用户ID如何保证
+  <a class="anchor" href="#namespace%e4%b8%8b%e5%94%af%e4%b8%80%e7%94%a8%e6%88%b7id%e5%a6%82%e4%bd%95%e4%bf%9d%e8%af%81">#</a>
+</h4>
+<p>这个需求简单的就是说，业务逻辑上想对客户端加以限制，不能让同一个用户开启多个客户端来交互。逻辑很简单：<strong>每个连接鉴权的时候，去查询是否该用户ID已经存在Session了，如果存在则把之前的连接断开。同样的在分布式场景下：用户A分配到了S1服务器，用户A在其他地方S2服务器又建立一个新的连接，那么S2如何把S1上的连接断开呢？</strong></p>
+<p>说过上面RPC的命令分发之后，这里简单了：只需要触发一次RPC的<code>disconnect</code>事件就行了。</p>
+<h4 id="nodejs--grpc--typescript-实战">
+  NodeJS + gRPC + TypeScript 实战
+  <a class="anchor" href="#nodejs--grpc--typescript-%e5%ae%9e%e6%88%98">#</a>
+</h4>
+<p>😭😭😭先哭为敬！想起来就心酸。核心问题是： 1. 用什么工具给proto文件生成<code>ts</code>文件；2. ts 中如何使用gRPC；3. ts 配置问题；其他；这里直接祭出最终结果：</p>
+<h5 id="生成工具">
+  生成工具
+  <a class="anchor" href="#%e7%94%9f%e6%88%90%e5%b7%a5%e5%85%b7">#</a>
+</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-makefile" data-lang="makefile"><span style="display:flex;"><span><span style="color:#75715e"># generate js code for grpc proto file
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">gen-js</span><span style="color:#f92672">:</span>
+</span></span><span style="display:flex;"><span>	./node_modules/.bin/grpc_tools_node_protoc <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>		--js_out<span style="color:#f92672">=</span>import_style<span style="color:#f92672">=</span>commonjs,binary:./src/codegen/api/ <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>		--grpc_out<span style="color:#f92672">=</span>./src/codegen/api/ <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>		--plugin<span style="color:#f92672">=</span>protoc-gen-grpc<span style="color:#f92672">=</span>./node_modules/.bin/grpc_tools_node_protoc_plugin <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>		--proto_path<span style="color:#f92672">=</span>./src/api/ <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>		api.proto
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># generate ts code for grpc messages and service
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">gen-ts</span><span style="color:#f92672">:</span>
+</span></span><span style="display:flex;"><span>	protoc <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>		--plugin<span style="color:#f92672">=</span>protoc-gen-ts<span style="color:#f92672">=</span>./node_modules/.bin/protoc-gen-ts <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>		--ts_out<span style="color:#f92672">=</span>./src/codegen/api <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>		--proto_path<span style="color:#f92672">=</span>./src/api/ <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>		api.proto
+</span></span></code></pre></div><h5 id="ts中grpcserver绑定service">
+  ts中grpc.Server绑定service
+  <a class="anchor" href="#ts%e4%b8%adgrpcserver%e7%bb%91%e5%ae%9aservice">#</a>
+</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-typescript" data-lang="typescript"><span style="display:flex;"><span><span style="color:#75715e">// https://github.com/yeqown/socket.io-app/blob/master/src/server/grpc.ts
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">serve</span> <span style="color:#f92672">=</span> () <span style="color:#f92672">=&gt;</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// const _protoPath = &#39;../api/api.proto&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// const _protoDescriptor: GrpcObject = grpc.load(_protoPath);
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// const service = ;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">let</span> <span style="color:#a6e22e">_srv</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> <span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">Server</span>()
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">_srv</span>.<span style="color:#a6e22e">addService</span>(<span style="color:#a6e22e">grpc_pb</span>.<span style="color:#a6e22e">SocketMServiceService</span>, {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">nspBroadcast</span>: <span style="color:#66d9ef">this.nspBroadcast</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">nspRoomsBroadcast</span>: <span style="color:#66d9ef">this.nspRoomsBroadcast</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">nspUsersBroadcast</span>: <span style="color:#66d9ef">this.nspUsersBroadcast</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">disconnect</span>: <span style="color:#66d9ef">this.disconnect</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">knockoutFromRoom</span>: <span style="color:#66d9ef">this.knockoutFromRoom</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">clearRooms</span>: <span style="color:#66d9ef">this.clearRooms</span>,
+</span></span><span style="display:flex;"><span>    })
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* ignore some codes */</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">_srv</span>.<span style="color:#a6e22e">bind</span>(<span style="color:#e6db74">&#34;0.0.0.0:&#34;</span> <span style="color:#f92672">+</span> <span style="color:#66d9ef">this</span>.<span style="color:#a6e22e">port</span>.<span style="color:#a6e22e">toString</span>(), <span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">ServerCredentials</span>.<span style="color:#a6e22e">createInsecure</span>())
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">_srv</span>.<span style="color:#a6e22e">start</span>()
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="总结">
+  总结
+  <a class="anchor" href="#%e6%80%bb%e7%bb%93">#</a>
+</h3>
+<ol>
+<li>socket.io 已经很全面了，在此基础上只需要接入自己的业务逻辑就可以了。</li>
+<li>redis 真好用</li>
+<li>TS 真好用，只是部分工具跟不上～</li>
+<li>开源了一个基于socket.io的app架子，<a href="https://github.com/yeqown/socket.io-app">socket.io-app</a>，欢迎交流</li>
+<li>redis-adapter 会主动分发emit, broadcast指令</li>
+<li>socket.io的协议升级期间需要保证在同一台服务器上完成</li>
+</ol>
+<blockquote>
+<p>水平有限，如有错误，欢迎勘误指正🙏。</p>
+</blockquote>
+<h3 id="参考资料">
+  参考资料
+  <a class="anchor" href="#%e5%8f%82%e8%80%83%e8%b5%84%e6%96%99">#</a>
+</h3>
+<ul>
+<li><a href="https://socket.io/docs">https://socket.io/docs</a></li>
+<li><a href="https://github.com/yeqown/socket.io-app">https://github.com/yeqown/socket.io-app</a></li>
+</ul>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "IM-system-based-socket.io", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#背景">背景</a></li>
+        <li><a href="#关于socketio的介绍">关于socket.io的介绍</a></li>
+        <li><a href="#基于socket-io的app设计">基于socket-io的APP设计</a></li>
+        <li><a href="#实现过程中的问题">实现过程中的问题</a></li>
+        <li><a href="#总结">总结</a></li>
+        <li><a href="#参考资料">参考资料</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

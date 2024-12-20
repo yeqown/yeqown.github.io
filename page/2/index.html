@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+	<meta name="generator" content="Hugo 0.140.0">
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="Yeqown">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="website">
+<title>Yeqown | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/">
+<link rel="stylesheet" href="/book.min.6c8b9d2a1fc95075ed7da46ca81060b39add8fff6741ac51259f768929281e2c.css" integrity="sha256-bIudKh/JUHXtfaRsqBBgs5rdj/9nQaxRJZ92iSkoHiw=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.19281d98520c1068688eab8fb9272ff934b3f609732095c160acde7ba1089f16.js" integrity="sha256-GSgdmFIMEGhojquPuScv&#43;TSz9glzIJXBYKzee6EInxY=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><link rel="alternate" type="application/rss+xml" href="https://www.yeqown.xyz/index.xml" title="Yeqown" />
+<!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>Yeqown</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+
+<article class="markdown book-post">
+    <h2>
+        <a href="/2022/01/27/%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%88%86%E5%B8%83%E5%BC%8F%E5%AE%9A%E6%97%B6%E4%BB%BB%E5%8A%A1%E7%B3%BB%E7%BB%9F/">设计一个分布式定时任务系统</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>January 27, 2022</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/design/">Design</a>, 
+      <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F/">分布式</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Distributed/">Distributed</a>, 
+      <a href="/tags/CronJob/">CronJob</a>, 
+      <a href="/tags/k8s/">K8s</a>, 
+      <a href="/tags/raft/">Raft</a>, 
+      <a href="/tags/Golang/">Golang</a>
+  </div>
+  
+
+
+    <div class="book-post-content">
+        
+        <p>尝试设计一个 &#34;分布式&#34; 定时任务系统，&#34;功能设计&#34; 和 &#34;分布式设计&#34; 作为切入点。不含任何的代码，只是一个设计思路。</p>
+        
+        
+        <a href="/2022/01/27/%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%88%86%E5%B8%83%E5%BC%8F%E5%AE%9A%E6%97%B6%E4%BB%BB%E5%8A%A1%E7%B3%BB%E7%BB%9F/"> 🐕‍🦺 Expand More 🚀 </a>
+        
+    </div>
+</article>
+
+<article class="markdown book-post">
+    <h2>
+        <a href="/2022/01/25/protoc-gen-fieldmask%E6%8F%92%E4%BB%B6/">protoc-gen-fieldmask插件</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>January 25, 2022</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Golang/">Golang</a>, 
+      <a href="/categories/%E6%8A%80%E6%9C%AF%E6%80%BB%E7%BB%93/">技术总结</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/protocol-buffers/">Protocol-Buffers</a>, 
+      <a href="/tags/Fieldmask/">Fieldmask</a>, 
+      <a href="/tags/gRPC/">GRPC</a>
+  </div>
+  
+
+
+    <div class="book-post-content">
+        
+        <p>动手做一个 protoc-gen-fieldmask 插件来解决，gRPC在服务侧的增量更新和屏蔽字段的场景问题；同时总结下使用 PG* 开发 protoc 插件的一些经验。</p>
+        
+        
+        <a href="/2022/01/25/protoc-gen-fieldmask%E6%8F%92%E4%BB%B6/"> 🐕‍🦺 Expand More 🚀 </a>
+        
+    </div>
+</article>
+
+<article class="markdown book-post">
+    <h2>
+        <a href="/2021/12/15/Sentry-OpenTelemetry%E5%89%8D%E5%90%8E%E7%AB%AF%E5%85%A8%E9%93%BE%E8%B7%AF%E6%89%93%E9%80%9A%E6%80%BB%E7%BB%93/">Sentry&#43;OpenTelemetry前后端全链路打通总结</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>December 15, 2021</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E6%8A%80%E6%9C%AF%E6%80%BB%E7%BB%93/">技术总结</a>, 
+      <a href="/categories/Tracing/">Tracing</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/Sentry/">Sentry</a>, 
+      <a href="/tags/OpenTelemetry/">OpenTelemetry</a>
+  </div>
+  
+
+
+    <div class="book-post-content">
+        
+        <p>Sentry&#43;OpenTelemetry前后端全链路打通, 从后端的角度去思考链路的构建，为 otel-collector 实现定制的 trace exporter。</p>
+        
+        
+        <a href="/2021/12/15/Sentry-OpenTelemetry%E5%89%8D%E5%90%8E%E7%AB%AF%E5%85%A8%E9%93%BE%E8%B7%AF%E6%89%93%E9%80%9A%E6%80%BB%E7%BB%93/"> 🐕‍🦺 Expand More 🚀 </a>
+        
+    </div>
+</article>
+
+<article class="markdown book-post">
+    <h2>
+        <a href="/2020/09/27/WebSocket-Implemention-With-Go/">WebSocket Implemention With Go</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>September 27, 2020</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Golang/">Golang</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/Tools/">Tools</a>
+  </div>
+  
+
+
+    <div class="book-post-content">
+        
+        <p>使用Go来实现WebSocket协议</p>
+        
+        
+        <a href="/2020/09/27/WebSocket-Implemention-With-Go/"> 🐕‍🦺 Expand More 🚀 </a>
+        
+    </div>
+</article>
+
+<article class="markdown book-post">
+    <h2>
+        <a href="/2020/09/22/Kubernetes%E4%B8%ADgRPC-Load-Balancing%E5%88%86%E6%9E%90%E5%92%8C%E8%A7%A3%E5%86%B3/">Kubernetes中gRPC Load Balancing分析和解决</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>September 22, 2020</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E6%8A%80%E6%9C%AF%E6%80%BB%E7%BB%93/">技术总结</a>, 
+      <a href="/categories/Kubernetes/">Kubernetes</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Kubernetes/">Kubernetes</a>, 
+      <a href="/tags/gRPC/">GRPC</a>, 
+      <a href="/tags/Load-Balancing/">Load Balancing</a>
+  </div>
+  
+
+
+    <div class="book-post-content">
+        
+        <p>在k8s集群中部署gRPC服务并使用k8s中的Service来对外暴露服务，这是比较常见的用法，但是这种方式却会导致gRPC服务负载不均衡，进而影响整个系统的负载能力甚至‘雪崩’。</p>
+        
+        
+        <a href="/2020/09/22/Kubernetes%E4%B8%ADgRPC-Load-Balancing%E5%88%86%E6%9E%90%E5%92%8C%E8%A7%A3%E5%86%B3/"> 🐕‍🦺 Expand More 🚀 </a>
+        
+    </div>
+</article>
+
+<article class="markdown book-post">
+    <h2>
+        <a href="/2020/08/12/%E8%BF%91%E6%9C%9F%E4%BD%BF%E7%94%A8Docker%E6%89%93%E5%8C%85%E9%95%9C%E5%83%8F%E9%81%87%E5%88%B0%E7%9A%84%E9%97%AE%E9%A2%98%E6%80%BB%E7%BB%93/">近期使用Docker打包镜像遇到的问题总结</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>August 12, 2020</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E6%8A%80%E6%9C%AF%E6%80%BB%E7%BB%93/">技术总结</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/docker/">Docker</a>, 
+      <a href="/tags/%E9%95%9C%E5%83%8F/">镜像</a>
+  </div>
+  
+
+
+    <div class="book-post-content">
+        
+        <p>总结最近使用docker遇到的问题和解决办法。</p>
+        
+        
+        <a href="/2020/08/12/%E8%BF%91%E6%9C%9F%E4%BD%BF%E7%94%A8Docker%E6%89%93%E5%8C%85%E9%95%9C%E5%83%8F%E9%81%87%E5%88%B0%E7%9A%84%E9%97%AE%E9%A2%98%E6%80%BB%E7%BB%93/"> 🐕‍🦺 Expand More 🚀 </a>
+        
+    </div>
+</article>
+
+<article class="markdown book-post">
+    <h2>
+        <a href="/2020/08/06/opentracing%E5%AE%9E%E6%88%98/">Opentracing实战</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>August 6, 2020</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Tracing/">Tracing</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/Opentracing/">Opentracing</a>, 
+      <a href="/tags/Tracing/">Tracing</a>, 
+      <a href="/tags/Jaeger/">Jaeger</a>
+  </div>
+  
+
+
+    <div class="book-post-content">
+        
+        <p>解决微服务架构下，链路追踪，问题定位和可视化分析等问题，链路追踪还是微服务可观测性的重要基石，本文就实战了在Go项目中如何将opentracing落地</p>
+        
+        
+        <a href="/2020/08/06/opentracing%E5%AE%9E%E6%88%98/"> 🐕‍🦺 Expand More 🚀 </a>
+        
+    </div>
+</article>
+
+<article class="markdown book-post">
+    <h2>
+        <a href="/2020/04/13/channel-in-Go%E5%B0%8F%E7%BB%93/">Channel in Go小结</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>April 13, 2020</span>
+  </div>
+
+
+
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/Channel/">Channel</a>
+  </div>
+  
+
+
+    <div class="book-post-content">
+        
+        <p>channel是Go区别于其他语言的一大特色，让程序员们在goroutine的并发基础上，采用简单易理解的通信手段</p>
+        
+        
+        <a href="/2020/04/13/channel-in-Go%E5%B0%8F%E7%BB%93/"> 🐕‍🦺 Expand More 🚀 </a>
+        
+    </div>
+</article>
+
+<article class="markdown book-post">
+    <h2>
+        <a href="/2020/04/02/%E6%B6%88%E6%81%AF%E6%8E%A8%E9%80%81%E6%9E%B6%E6%9E%84-based-GOIM/">消息推送架构-Based-GOIM</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>April 2, 2020</span>
+  </div>
+
+
+
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F/">分布式</a>, 
+      <a href="/tags/goim/">Goim</a>
+  </div>
+  
+
+
+    <div class="book-post-content">
+        
+        <p>GOIM 是Go实现的消息推送的分布式服务，易于扩容伸缩，使用了bilibili/discovery来支持服务发现。</p>
+        
+        
+        <a href="/2020/04/02/%E6%B6%88%E6%81%AF%E6%8E%A8%E9%80%81%E6%9E%B6%E6%9E%84-based-GOIM/"> 🐕‍🦺 Expand More 🚀 </a>
+        
+    </div>
+</article>
+
+<article class="markdown book-post">
+    <h2>
+        <a href="/2020/03/29/redis%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6/">Redis主从复制</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>March 29, 2020</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E6%8A%80%E6%9C%AF%E6%80%BB%E7%BB%93/">技术总结</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/redis/">Redis</a>, 
+      <a href="/tags/replication/">Replication</a>
+  </div>
+  
+
+
+    <div class="book-post-content">
+        
+        <p>redis主从复制是高可用方案中的一部分，那主从复制是如何进行的？又是如何实现的？怎么支撑了redis的高可用性？在主从模式下Master和Slave节点分别做了哪些事情？</p>
+        
+        
+        <a href="/2020/03/29/redis%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6/"> 🐕‍🦺 Expand More 🚀 </a>
+        
+    </div>
+</article>
+
+
+
+    <ul class="pagination pagination-default">
+      <li class="page-item">
+        <a href="/" aria-label="First" class="page-link" role="button"><span aria-hidden="true">&laquo;&laquo;</span></a>
+      </li>
+      <li class="page-item">
+        <a href="/" aria-label="Previous" class="page-link" role="button"><span aria-hidden="true">&laquo;</span></a>
+      </li>
+      <li class="page-item">
+        <a href="/" aria-label="Page 1" class="page-link" role="button">1</a>
+      </li>
+      <li class="page-item active">
+        <a aria-current="page" aria-label="Page 2" class="page-link" role="button">2</a>
+      </li>
+      <li class="page-item">
+        <a href="/page/3/" aria-label="Page 3" class="page-link" role="button">3</a>
+      </li>
+      <li class="page-item">
+        <a href="/page/4/" aria-label="Page 4" class="page-link" role="button">4</a>
+      </li>
+      <li class="page-item">
+        <a href="/page/5/" aria-label="Page 5" class="page-link" role="button">5</a>
+      </li>
+      <li class="page-item">
+        <a href="/page/3/" aria-label="Next" class="page-link" role="button"><span aria-hidden="true">&raquo;</span></a>
+      </li>
+      <li class="page-item">
+        <a href="/page/7/" aria-label="Last" class="page-link" role="button"><span aria-hidden="true">&raquo;&raquo;</span></a>
+      </li>
+    </ul>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Kafka Connect on Yeqown</title>
+    <link>http://localhost:1313/tags/Kafka-Connect/</link>
+    <description>Recent content in Kafka Connect on Yeqown</description>
+    <generator>Hugo</generator>
+    <language>en</language>
+    <lastBuildDate>Tue, 17 Dec 2024 16:50:41 +0800</lastBuildDate>
+    <atom:link href="http://localhost:1313/tags/Kafka-Connect/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>近期的一些经验总结</title>
+      <link>http://localhost:1313/2024/12/17/%E8%BF%91%E6%9C%9F%E7%9A%84%E4%B8%80%E4%BA%9B%E7%BB%8F%E9%AA%8C%E6%80%BB%E7%BB%93/</link>
+      <pubDate>Tue, 17 Dec 2024 16:50:41 +0800</pubDate>
+      <guid>http://localhost:1313/2024/12/17/%E8%BF%91%E6%9C%9F%E7%9A%84%E4%B8%80%E4%BA%9B%E7%BB%8F%E9%AA%8C%E6%80%BB%E7%BB%93/</guid>
+      <description>&lt;blockquote&gt;&#xA;&lt;p&gt;这里不会过多的介绍软件的相关概念和架构，主要是针对实际问题的解决方案和思考。&lt;/p&gt;&#xA;&lt;/blockquote&gt;&#xA;&lt;h3 id=&#34;问题汇总&#34;&gt;&#xA;  问题汇总&#xA;  &lt;a class=&#34;anchor&#34; href=&#34;#%e9%97%ae%e9%a2%98%e6%b1%87%e6%80%bb&#34;&gt;#&lt;/a&gt;&#xA;&lt;/h3&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;&#xA;&lt;p&gt;CDC 相关&lt;/p&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;CDC kafka-connect mysql sink 侧消费积压问题&lt;/li&gt;&#xA;&lt;li&gt;CDC kafka-connect mysql source 侧删除事件投递了两条事件，导致删除动作数据量被放大&lt;/li&gt;&#xA;&lt;li&gt;CDC kafka-connect mongodb 数据同步任务异常（消息超过 1MB ）&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;/li&gt;&#xA;&lt;li&gt;&#xA;&lt;p&gt;DMS 数据同步相关&lt;/p&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;数据迁移完成后，怎么对比源数据和目标数据是否一致？&lt;/li&gt;&#xA;&lt;li&gt;如果不一致怎么处理？&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;/li&gt;&#xA;&lt;li&gt;&#xA;&lt;p&gt;Istio 相关&lt;/p&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;Istio 中多个 gateway 使用相同 host，analyze 是提示错误&lt;/li&gt;&#xA;&lt;li&gt;Istio 中一个服务提供了多个端口的服务，怎么配置 Virtual Service ？&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;/li&gt;&#xA;&lt;li&gt;&#xA;&lt;p&gt;APISIX 相关&lt;/p&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;使用 APISIX 作为网关，怎么进行有条件的响应重写？&lt;/li&gt;&#xA;&lt;li&gt;APISIX 插件的执行顺序是怎么样的？&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;/li&gt;&#xA;&lt;li&gt;&#xA;&lt;p&gt;ShardingSphere Proxy&lt;/p&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;HINT策略 在 ShardingSphere Proxy 中的使用&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;/li&gt;&#xA;&lt;li&gt;&#xA;&lt;p&gt;Kafka 相关&lt;/p&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;如何将迁移kafka集群中的数据？&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;h3 id=&#34;1-cdc-相关&#34;&gt;&#xA;  1. CDC 相关&#xA;  &lt;a class=&#34;anchor&#34; href=&#34;#1-cdc-%e7%9b%b8%e5%85%b3&#34;&gt;#&lt;/a&gt;&#xA;&lt;/h3&gt;&#xA;&lt;p&gt;CDC 是 Change Data Capture 的缩写，即变更数据捕获。CDC 是一种软件模式，用于捕获和跟踪数据库中的变更。CDC 通常用于复制数据、数据集成和数据仓库加载等场景。&lt;/p&gt;&#xA;&lt;p&gt;这里 CDC 的技术实现为使用 kafka-connect 连接 mysql 和 mongodb 将数据同步到异构系统中 elasticsearch。source 和 sink connector 使用的 debezium 插件。kafka-connect 是基于 kafka 构建的沟通数据系统的可靠工具，它最常用于将数据异构存储，以满足离线查询和分析、数据仓库、数据湖等需求。&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>
