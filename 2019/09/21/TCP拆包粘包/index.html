@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="在实现RPC协议时，面试时都遇到这个问题，特此记录">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2019/09/21/TCP%E6%8B%86%E5%8C%85%E7%B2%98%E5%8C%85/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="TCP拆包粘包">
+  <meta property="og:description" content="在实现RPC协议时，面试时都遇到这个问题，特此记录">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2019-09-21T11:36:13+08:00">
+    <meta property="article:modified_time" content="2019-09-21T11:36:13+08:00">
+    <meta property="article:tag" content="TCP">
+    <meta property="article:tag" content="粘包">
+    <meta property="article:tag" content="拆包">
+<title>TCP拆包粘包 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2019/09/21/TCP%E6%8B%86%E5%8C%85%E7%B2%98%E5%8C%85/">
+<link rel="stylesheet" href="/book.min.6c8b9d2a1fc95075ed7da46ca81060b39add8fff6741ac51259f768929281e2c.css" integrity="sha256-bIudKh/JUHXtfaRsqBBgs5rdj/9nQaxRJZ92iSkoHiw=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.841d4ababb38aa4f3624bd06df2554a2c1f281a7e9d83ec209b6473d18664902.js" integrity="sha256-hB1Kurs4qk82JL0G3yVUosHygafp2D7CCbZHPRhmSQI=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>TCP拆包粘包</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#一些名词">一些名词</a></li>
+        <li><a href="#为什么会出现拆包">为什么会出现“拆包”？</a></li>
+        <li><a href="#为什么会出现粘包">为什么会出现“粘包”？</a></li>
+        <li><a href="#如何解决呢">如何解决呢？</a></li>
+        <li><a href="#参考文献">参考文献</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    TCP拆包粘包
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>September 21, 2019</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E6%8A%80%E6%9C%AF%E6%80%BB%E7%BB%93/">技术总结</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/tcp/">TCP</a>, 
+      <a href="/tags/%E7%B2%98%E5%8C%85/">粘包</a>, 
+      <a href="/tags/%E6%8B%86%E5%8C%85/">拆包</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><h3 id="一些名词">
+  一些名词
+  <a class="anchor" href="#%e4%b8%80%e4%ba%9b%e5%90%8d%e8%af%8d">#</a>
+</h3>
+<h4 id="mtumaximum-transmission-unit">
+  MTU（Maximum Transmission Unit）
+  <a class="anchor" href="#mtumaximum-transmission-unit">#</a>
+</h4>
+<blockquote>
+<p>the maximum transmission unit (MTU) is the size of the largest protocol data unit (PDU) that can be communicated in a single network layer transaction. ——from wiki</p>
+</blockquote>
+<p>MTU 物理接口（数据链路层）提供给其上层（通常是IP层）最大一次传输数据的大小。一般来说<code>MTU=1500byte</code>。如果<code>MSS + TCP首部 + IP首部 &gt; MTU</code>，那么IP报文就会存在分片，否则就不需要分片。</p>
+<h4 id="mss-maximum-segment-size">
+  MSS (Maximum Segment Size)
+  <a class="anchor" href="#mss-maximum-segment-size">#</a>
+</h4>
+<blockquote>
+<p>The maximum segment size (MSS) is a parameter of the options field of the TCP header that specifies the largest amount of data, specified in bytes, that a computer or communications device can receive in a single TCP segment. ——from wiki</p>
+</blockquote>
+<p>MSS是TCP提交给IP层最大分段大小，只包含<code>payload</code>，不包括TCP头部长度。MSS由TCP握手过程中由双方协商得出，其中SYN字段中的选项部分包括了这个信息。一般来说，<code>MSS = MTU - IP首部大小 - TCP首部大小</code></p>
+<h3 id="为什么会出现拆包">
+  为什么会出现“拆包”？
+  <a class="anchor" href="#%e4%b8%ba%e4%bb%80%e4%b9%88%e4%bc%9a%e5%87%ba%e7%8e%b0%e6%8b%86%e5%8c%85">#</a>
+</h3>
+<p>“拆包”是无法一次发送所有数据。</p>
+<p>如果应用层需要发送的字节数超过了MSS，就需要发送多个TCP报文才能完所有应用数据的发送。</p>
+<h3 id="为什么会出现粘包">
+  为什么会出现“粘包”？
+  <a class="anchor" href="#%e4%b8%ba%e4%bb%80%e4%b9%88%e4%bc%9a%e5%87%ba%e7%8e%b0%e7%b2%98%e5%8c%85">#</a>
+</h3>
+<p>“粘包”是在一次接收数据不能完全地体现一个完整的消息数据。</p>
+<p>1.Nagle算法所致（Nagle算法是一种改善网络传输效率的算法）简单的说，当我们提交一段数据给TCP发送时，TCP并不立刻发送此段数据，而是等待一小段时间，看看在等待期间是否还有要发送的数据，若有则会一次把这两段数据发送出去。</p>
+<p>2.接收端接收不及时造成的接收端粘包：TCP会把接收到的数据存在自己的缓冲区中，然后通知应用层取数据.当应用层由于某些原因不能及时的把TCP的数据取出来，就会造成TCP缓冲区中存放了几段数据。</p>
+<p>总结一下：</p>
+<blockquote>
+<p>TCP是字节流协议，没有记录边界，TCP也不理解流所携带的数据内容。因此需要应用层自己去定义“有序的，结构化的数据信息”。</p>
+</blockquote>
+<h3 id="如何解决呢">
+  如何解决呢？
+  <a class="anchor" href="#%e5%a6%82%e4%bd%95%e8%a7%a3%e5%86%b3%e5%91%a2">#</a>
+</h3>
+<p>现在知道了以上两种情况是由于TCP是字节流的协议，不关心数据结构和边界，所以这一部分工作是要交给应用层自己处理的。下面就先看下应用层中协议和应用是怎么处理的。</p>
+<h4 id="http">
+  HTTP
+  <a class="anchor" href="#http">#</a>
+</h4>
+<p>HTTP是一个文本协议，用<code>\r\n\r\n</code>来区分消息头和消息体，在消息头中有<code>Content-Length</code>来说明消息体有多大，如果没有该字段就说明没有消息体。</p>
+<h4 id="二进制协议">
+  二进制协议
+  <a class="anchor" href="#%e4%ba%8c%e8%bf%9b%e5%88%b6%e5%8d%8f%e8%ae%ae">#</a>
+</h4>
+<p>通过消息固定长度的字节表示消息的总长度。<code>Talk is cheap, show me your Code</code>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// Package proto .
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">package</span> <span style="color:#a6e22e">proto</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> (
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;bufio&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;encoding/binary&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;errors&#34;</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">const</span> (
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// OpRequest .
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">OpRequest</span> <span style="color:#66d9ef">uint16</span> = <span style="color:#66d9ef">iota</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// OpResponse .
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">OpResponse</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">const</span> (
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Ver1 .
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">Ver1</span> <span style="color:#66d9ef">uint16</span> = <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Ver2 .
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">Ver2</span> = <span style="color:#ae81ff">2</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">var</span> (
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// ErrProtoHeaderLen .
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">ErrProtoHeaderLen</span> = <span style="color:#a6e22e">errors</span>.<span style="color:#a6e22e">New</span>(<span style="color:#e6db74">&#34;not matched proto header len&#34;</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// ErrEmptyReader .
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">ErrEmptyReader</span> = <span style="color:#a6e22e">errors</span>.<span style="color:#a6e22e">New</span>(<span style="color:#e6db74">&#34;empty reader&#34;</span>)
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">const</span> (
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// size
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">_packSize</span>      <span style="color:#66d9ef">uint16</span> = <span style="color:#ae81ff">4</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">_headerSize</span>    <span style="color:#66d9ef">uint16</span> = <span style="color:#ae81ff">2</span> <span style="color:#75715e">// uint16
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">_verSize</span>       <span style="color:#66d9ef">uint16</span> = <span style="color:#ae81ff">2</span> <span style="color:#75715e">// uint16
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">_opSize</span>        <span style="color:#66d9ef">uint16</span> = <span style="color:#ae81ff">2</span> <span style="color:#75715e">// uint16
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">_seqSize</span>       <span style="color:#66d9ef">uint16</span> = <span style="color:#ae81ff">2</span> <span style="color:#75715e">// uint16
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">_rawHeaderSize</span> <span style="color:#66d9ef">uint16</span> = <span style="color:#a6e22e">_packSize</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">_headerSize</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">_verSize</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">_opSize</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">_seqSize</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// offset
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">_packOffset</span>   <span style="color:#66d9ef">uint16</span> = <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">_headerOffset</span>        = <span style="color:#a6e22e">_packOffset</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">_packSize</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">_verOffset</span>           = <span style="color:#a6e22e">_headerOffset</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">_headerSize</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">_opOffset</span>            = <span style="color:#a6e22e">_verOffset</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">_verSize</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">_seqOffset</span>           = <span style="color:#a6e22e">_opOffset</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">_opSize</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// Proto .这部分参考了GOIM, 定制了一些协议头信息，可自定义。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Proto</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Ver</span>  <span style="color:#66d9ef">uint16</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Op</span>   <span style="color:#66d9ef">uint16</span> <span style="color:#75715e">// Type of Proto
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">Seq</span>  <span style="color:#66d9ef">uint16</span> <span style="color:#75715e">// Seq of message, 0 means done, else means not finished
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">Body</span> []<span style="color:#66d9ef">byte</span> <span style="color:#75715e">// Body of Proto
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// New .
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">New</span>() <span style="color:#f92672">*</span><span style="color:#a6e22e">Proto</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">Proto</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Ver</span>:  <span style="color:#a6e22e">Ver1</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Op</span>:   <span style="color:#a6e22e">OpRequest</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Seq</span>:  <span style="color:#ae81ff">0</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Body</span>: <span style="color:#66d9ef">nil</span>,
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// WriteTCP .
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// packLen(32bit):headerLen(16bit):ver(16bit):op(16bit):body
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">p</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Proto</span>) <span style="color:#a6e22e">WriteTCP</span>(<span style="color:#a6e22e">wr</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">bufio</span>.<span style="color:#a6e22e">Writer</span>) (<span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">var</span> (
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">buf</span>     = make([]<span style="color:#66d9ef">byte</span>, <span style="color:#a6e22e">_rawHeaderSize</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">packLen</span> <span style="color:#66d9ef">int</span>
+</span></span><span style="display:flex;"><span>	)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">packLen</span> = int(<span style="color:#a6e22e">_rawHeaderSize</span>) <span style="color:#f92672">+</span> len(<span style="color:#a6e22e">p</span>.<span style="color:#a6e22e">Body</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">BigEndian</span>.<span style="color:#a6e22e">PutUint32</span>(<span style="color:#a6e22e">buf</span>[<span style="color:#a6e22e">_packOffset</span>:], uint32(<span style="color:#a6e22e">packLen</span>))
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">BigEndian</span>.<span style="color:#a6e22e">PutUint16</span>(<span style="color:#a6e22e">buf</span>[<span style="color:#a6e22e">_headerOffset</span>:], <span style="color:#a6e22e">_rawHeaderSize</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">BigEndian</span>.<span style="color:#a6e22e">PutUint16</span>(<span style="color:#a6e22e">buf</span>[<span style="color:#a6e22e">_verOffset</span>:], <span style="color:#a6e22e">p</span>.<span style="color:#a6e22e">Ver</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">BigEndian</span>.<span style="color:#a6e22e">PutUint16</span>(<span style="color:#a6e22e">buf</span>[<span style="color:#a6e22e">_opOffset</span>:], <span style="color:#a6e22e">p</span>.<span style="color:#a6e22e">Op</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">BigEndian</span>.<span style="color:#a6e22e">PutUint16</span>(<span style="color:#a6e22e">buf</span>[<span style="color:#a6e22e">_seqOffset</span>:], <span style="color:#a6e22e">p</span>.<span style="color:#a6e22e">Seq</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">wr</span>.<span style="color:#a6e22e">Write</span>(<span style="color:#a6e22e">buf</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">p</span>.<span style="color:#a6e22e">Body</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">wr</span>.<span style="color:#a6e22e">Write</span>(<span style="color:#a6e22e">p</span>.<span style="color:#a6e22e">Body</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// println(wr.Buffered(), len(p.Body))
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// ReadTCP .
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">p</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Proto</span>) <span style="color:#a6e22e">ReadTCP</span>(<span style="color:#a6e22e">rr</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">bufio</span>.<span style="color:#a6e22e">Reader</span>) (<span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">var</span> (
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">bodyLen</span>   <span style="color:#66d9ef">int</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">headerLen</span> <span style="color:#66d9ef">uint16</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">packLen</span>   <span style="color:#66d9ef">int</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">buf</span>       []<span style="color:#66d9ef">byte</span>
+</span></span><span style="display:flex;"><span>	)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">buf</span>, <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">ReadNBytes</span>(<span style="color:#a6e22e">rr</span>, int(<span style="color:#a6e22e">_rawHeaderSize</span>)); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">packLen</span> = int(<span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">BigEndian</span>.<span style="color:#a6e22e">Uint32</span>(<span style="color:#a6e22e">buf</span>[<span style="color:#a6e22e">_packOffset</span>:<span style="color:#a6e22e">_headerOffset</span>]))
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">headerLen</span> = <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">BigEndian</span>.<span style="color:#a6e22e">Uint16</span>(<span style="color:#a6e22e">buf</span>[<span style="color:#a6e22e">_headerOffset</span>:<span style="color:#a6e22e">_verOffset</span>])
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">p</span>.<span style="color:#a6e22e">Ver</span> = <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">BigEndian</span>.<span style="color:#a6e22e">Uint16</span>(<span style="color:#a6e22e">buf</span>[<span style="color:#a6e22e">_verOffset</span>:<span style="color:#a6e22e">_opOffset</span>])
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">p</span>.<span style="color:#a6e22e">Op</span> = <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">BigEndian</span>.<span style="color:#a6e22e">Uint16</span>(<span style="color:#a6e22e">buf</span>[<span style="color:#a6e22e">_opOffset</span>:<span style="color:#a6e22e">_seqOffset</span>])
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">p</span>.<span style="color:#a6e22e">Seq</span> = <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">BigEndian</span>.<span style="color:#a6e22e">Uint16</span>(<span style="color:#a6e22e">buf</span>[<span style="color:#a6e22e">_seqOffset</span>:])
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">headerLen</span> <span style="color:#f92672">!=</span> <span style="color:#a6e22e">_rawHeaderSize</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">ErrProtoHeaderLen</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">bodyLen</span> = <span style="color:#a6e22e">packLen</span> <span style="color:#f92672">-</span> int(<span style="color:#a6e22e">headerLen</span>); <span style="color:#a6e22e">bodyLen</span> &gt; <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">p</span>.<span style="color:#a6e22e">Body</span>, <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">ReadNBytes</span>(<span style="color:#a6e22e">rr</span>, <span style="color:#a6e22e">bodyLen</span>)
+</span></span><span style="display:flex;"><span>	} <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">p</span>.<span style="color:#a6e22e">Body</span> = <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// ReadNBytes . read limitted `N` bytes from bufio.Reader.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">ReadNBytes</span>(<span style="color:#a6e22e">rr</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">bufio</span>.<span style="color:#a6e22e">Reader</span>, <span style="color:#a6e22e">N</span> <span style="color:#66d9ef">int</span>) ([]<span style="color:#66d9ef">byte</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">rr</span> <span style="color:#f92672">==</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">ErrEmptyReader</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">var</span> (
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">buf</span> = make([]<span style="color:#66d9ef">byte</span>, <span style="color:#a6e22e">N</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>
+</span></span><span style="display:flex;"><span>	)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">i</span> <span style="color:#f92672">:=</span> <span style="color:#ae81ff">0</span>; <span style="color:#a6e22e">i</span> &lt; <span style="color:#a6e22e">N</span>; <span style="color:#a6e22e">i</span><span style="color:#f92672">++</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">buf</span>[<span style="color:#a6e22e">i</span>], <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">rr</span>.<span style="color:#a6e22e">ReadByte</span>(); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">buf</span>, <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Proto应用：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// handleConn to recive a conn,
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// parse NewRequest and then transfer to call.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">s</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Server</span>) <span style="color:#a6e22e">handleConn</span>(<span style="color:#a6e22e">conn</span> <span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">Conn</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// receive a request
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// data, err := bufio.NewReader(conn).ReadBytes(&#39;\n&#39;)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">rr</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">bufio</span>.<span style="color:#a6e22e">NewReader</span>(<span style="color:#a6e22e">conn</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">wr</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">bufio</span>.<span style="color:#a6e22e">NewWriter</span>(<span style="color:#a6e22e">conn</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">var</span> (
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">precv</span> = <span style="color:#a6e22e">proto</span>.<span style="color:#a6e22e">New</span>()
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">psend</span> = <span style="color:#a6e22e">proto</span>.<span style="color:#a6e22e">New</span>()
+</span></span><span style="display:flex;"><span>	)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">precv</span>.<span style="color:#a6e22e">ReadTCP</span>(<span style="color:#a6e22e">rr</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {<span style="color:#960050;background-color:#1e0010">·</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">DebugF</span>(<span style="color:#e6db74">&#34;response to client connection err: %v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">resp</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">codec</span>.<span style="color:#a6e22e">NewResponse</span>(<span style="color:#66d9ef">nil</span>, <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">InternalErr</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">psend</span>.<span style="color:#a6e22e">Body</span> = <span style="color:#a6e22e">encodeResponse</span>(<span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">codec</span>, <span style="color:#a6e22e">resp</span>) <span style="color:#75715e">// []byte(....)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">psend</span>.<span style="color:#a6e22e">WriteTCP</span>(<span style="color:#a6e22e">wr</span>)  <span style="color:#75715e">// Proto写到buffer中去
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">wr</span>.<span style="color:#a6e22e">Flush</span>()          <span style="color:#75715e">// 将字节流从buffer中写到wr.Writer, 可以考虑将这一步藏起来。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// more code
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div><h3 id="参考文献">
+  参考文献
+  <a class="anchor" href="#%e5%8f%82%e8%80%83%e6%96%87%e7%8c%ae">#</a>
+</h3>
+<ol>
+<li><a href="#https://juejin.im/post/5ba895a06fb9a05ce95c5dac">TCP协议</a></li>
+<li><a href="https://en.wikipedia.org/wiki/Maximum_segment_size">WSS</a></li>
+<li><a href="https://en.wikipedia.org/wiki/Maximum_transmission_unit">MTU</a></li>
+</ol>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "tcp-splice-packet", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#一些名词">一些名词</a></li>
+        <li><a href="#为什么会出现拆包">为什么会出现“拆包”？</a></li>
+        <li><a href="#为什么会出现粘包">为什么会出现“粘包”？</a></li>
+        <li><a href="#如何解决呢">如何解决呢？</a></li>
+        <li><a href="#参考文献">参考文献</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

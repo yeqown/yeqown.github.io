@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>微服务 on Yeqown</title>
+    <link>http://localhost:1313/categories/%E5%BE%AE%E6%9C%8D%E5%8A%A1/</link>
+    <description>Recent content in 微服务 on Yeqown</description>
+    <generator>Hugo</generator>
+    <language>en</language>
+    <lastBuildDate>Thu, 09 Jan 2025 10:52:09 +0800</lastBuildDate>
+    <atom:link href="http://localhost:1313/categories/%E5%BE%AE%E6%9C%8D%E5%8A%A1/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>微服务架构中利用sidecar搭建泳道环境</title>
+      <link>http://localhost:1313/2025/01/09/%E5%BE%AE%E6%9C%8D%E5%8A%A1%E6%9E%B6%E6%9E%84%E4%B8%AD%E5%88%A9%E7%94%A8sidecar%E6%90%AD%E5%BB%BA%E6%B3%B3%E9%81%93%E7%8E%AF%E5%A2%83/</link>
+      <pubDate>Thu, 09 Jan 2025 10:52:09 +0800</pubDate>
+      <guid>http://localhost:1313/2025/01/09/%E5%BE%AE%E6%9C%8D%E5%8A%A1%E6%9E%B6%E6%9E%84%E4%B8%AD%E5%88%A9%E7%94%A8sidecar%E6%90%AD%E5%BB%BA%E6%B3%B3%E9%81%93%E7%8E%AF%E5%A2%83/</guid>
+      <description>&lt;h2 id=&#34;1-背景&#34;&gt;&#xA;  1. 背景&#xA;  &lt;a class=&#34;anchor&#34; href=&#34;#1-%e8%83%8c%e6%99%af&#34;&gt;#&lt;/a&gt;&#xA;&lt;/h2&gt;&#xA;&lt;p&gt;在微服务架构中，我们往往有多个服务实例，这些实例可能被不同的团队维护，他们各自的迭代速度和发布节奏可能不一致，甚至于同一个服务被多个团队迭代，这时候最容易出现的就是某个服务更新到测试环境时，会直接影响其上下游服务的测试；对于同一个服务的不同版本想要部署到同一个环境中，也会需要协调各个版本的人员，进行代码分支的管理和部署的协调，甚至于功能代码会互相影响，测试结果不能保证线上的绝对正确。&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>
