@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Swagger on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/Swagger/</link>
+    <description>Recent content in Swagger on Yeqown</description>
+    <generator>Hugo</generator>
+    <language>en</language>
+    <lastBuildDate>Sat, 30 Mar 2019 09:22:55 +0000</lastBuildDate>
+    <atom:link href="https://www.yeqown.xyz/tags/Swagger/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>goswagger入门手册</title>
+      <link>https://www.yeqown.xyz/2019/03/30/goswagger%E5%85%A5%E9%97%A8%E6%89%8B%E5%86%8C/</link>
+      <pubDate>Sat, 30 Mar 2019 09:22:55 +0000</pubDate>
+      <guid>https://www.yeqown.xyz/2019/03/30/goswagger%E5%85%A5%E9%97%A8%E6%89%8B%E5%86%8C/</guid>
+      <description>&lt;blockquote&gt;&#xA;&lt;p&gt;本文旨在记录使用goswagger过程中遇到的一些问题（只在生成文档方面，不涉及其他功能）：&lt;/p&gt;&lt;/blockquote&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;如何在go1.11+以上（支持Go Module）版本中的应用swagger&lt;/li&gt;&#xA;&lt;li&gt;一些注解上的注意事项&lt;/li&gt;&#xA;&lt;li&gt;如何在团队中管理API文档（主要涵盖了：swagger-ui的部署和使用）&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;h3 id=&#34;关于swaggerhttpsswaggerio&#34;&gt;&#xA;  关于&lt;a href=&#34;https://swagger.io&#34;&gt;swagger&lt;/a&gt;&#xA;  &lt;a class=&#34;anchor&#34; href=&#34;#%e5%85%b3%e4%ba%8eswaggerhttpsswaggerio&#34;&gt;#&lt;/a&gt;&#xA;&lt;/h3&gt;&#xA;&lt;p&gt;swagger涵盖WebAPI的一整套工具：API设计，API实现（代码生成），API文档，API测试及API规范。更多信息请参见官网&lt;/p&gt;&#xA;&lt;!-- more --&gt;&#xA;&lt;h3 id=&#34;准备工作&#34;&gt;&#xA;  准备工作&#xA;  &lt;a class=&#34;anchor&#34; href=&#34;#%e5%87%86%e5%a4%87%e5%b7%a5%e4%bd%9c&#34;&gt;#&lt;/a&gt;&#xA;&lt;/h3&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;一个Golang web项目，并软连接到&lt;code&gt;GOPATH/src&lt;/code&gt;下。【毕竟是支持Gomodule的项目，还放在GOPATH下就不科学了😄】&lt;/li&gt;&#xA;&lt;li&gt;安装swagger工具. 参见&lt;a href=&#34;https://goswagger.io/install.html&#34;&gt;安装&lt;/a&gt;&lt;/li&gt;&#xA;&lt;li&gt;环境：&#xA;&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-sh&#34; data-lang=&#34;sh&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;➜  swagger-demo git:&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;master&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; ✗ go version&#xA;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;go version go1.11.5 darwin/amd64&#xA;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;➜  swagger-demo git:&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;master&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt; ✗ swagger version&#xA;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;version: v0.18.0&#xA;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;commit: 6b23bb61413826ce42c3b14a37bf5870caf91e0b&#xA;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;h3 id=&#34;编写注释&#34;&gt;&#xA;  编写注释&#xA;  &lt;a class=&#34;anchor&#34; href=&#34;#%e7%bc%96%e5%86%99%e6%b3%a8%e9%87%8a&#34;&gt;#&lt;/a&gt;&#xA;&lt;/h3&gt;&#xA;&lt;blockquote&gt;&#xA;&lt;p&gt;元信息包含了这个应用的基本信息。一般新建一个doc.go放在你的API根目录下；还有一定要注意这句话：&lt;/p&gt;&lt;/blockquote&gt;&#xA;&lt;blockquote&gt;&#xA;&lt;p&gt;You give it a main file and it will parse all the files that are reachable by that main package to produce a swagger specification.To use you can add a go:generate comment to your main file。&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>
