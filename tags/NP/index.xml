@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>“NP” on Yeqown</title>
+    <link>http://localhost:1313/tags/NP/</link>
+    <description>Recent content in “NP” on Yeqown</description>
+    <generator>Hugo</generator>
+    <language>en</language>
+    <lastBuildDate>Fri, 31 Dec 2021 10:53:52 +0800</lastBuildDate>
+    <atom:link href="http://localhost:1313/tags/NP/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Bin-Packing难题</title>
+      <link>http://localhost:1313/2021/12/31/bin-packing%E9%9A%BE%E9%A2%98/</link>
+      <pubDate>Fri, 31 Dec 2021 10:53:52 +0800</pubDate>
+      <guid>http://localhost:1313/2021/12/31/bin-packing%E9%9A%BE%E9%A2%98/</guid>
+      <description>&lt;p&gt;Bin Packing难题是一个优化问题，其中不同尺寸的物品必须包装到有限数量的箱子或容器中，每个箱子都有固定的给定容量，以最小化使用的箱子数量。&lt;/p&gt;&#xA;&lt;p&gt;当箱的数量限制为1并且每个项目都以体积和值为特征时，最大化可以放入箱子的项目的价值的问题称为 &lt;strong&gt;&lt;em&gt;背包问题&lt;/em&gt;&lt;/strong&gt;。&lt;/p&gt;&#xA;&lt;h3 id=&#34;变体&#34;&gt;&#xA;  变体&#xA;  &lt;a class=&#34;anchor&#34; href=&#34;#%e5%8f%98%e4%bd%93&#34;&gt;#&lt;/a&gt;&#xA;&lt;/h3&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;&#xA;&lt;p&gt;&lt;a href=&#34;https://en.wikipedia.org/wiki/Bin_packing_problem&#34;&gt;在线包装 (online bin packing)&lt;/a&gt;&lt;/p&gt;&#xA;&lt;p&gt;不同体积的物品应该按顺序到达，决策者必须决定是选择并包装当前观察到的物品，还是不处理, 每个决定都不能撤销。&lt;/p&gt;&#xA;&lt;/li&gt;&#xA;&lt;li&gt;&#xA;&lt;p&gt;&lt;a href=&#34;https://en.wikipedia.org/wiki/Bin_packing_problem&#34;&gt;离线包装 (offline bin packing)&lt;/a&gt;&lt;/p&gt;&#xA;&lt;p&gt;相应的，离线包装就是已知所有物品，那么做决策的时候就可以重新排列物品。&lt;/p&gt;&#xA;&lt;/li&gt;&#xA;&lt;li&gt;&#xA;&lt;p&gt;&lt;a href=&#34;https://en.wikipedia.org/wiki/Knapsack_problem&#34;&gt;背包问题 (knapsack problem)&lt;/a&gt;&lt;/p&gt;&#xA;&lt;p&gt;背包问题就是一个特定的离线包装问题，其中每个物品都有一个体积和价值，同时包的数量限制为1。&lt;/p&gt;&#xA;&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;h3 id=&#34;背包问题算法&#34;&gt;&#xA;  背包问题算法&#xA;  &lt;a class=&#34;anchor&#34; href=&#34;#%e8%83%8c%e5%8c%85%e9%97%ae%e9%a2%98%e7%ae%97%e6%b3%95&#34;&gt;#&lt;/a&gt;&#xA;&lt;/h3&gt;&#xA;&lt;p&gt;给定一组项目，每个项目都有一个权重和一个值，确定要包含在集合中的每个项目的数量，以便总重量小于或等于给定的限制，并且总值尽可能大。&lt;/p&gt;&#xA;&lt;h4 id=&#34;0-1-背包问题&#34;&gt;&#xA;  &lt;strong&gt;0-1 背包问题&lt;/strong&gt;&#xA;  &lt;a class=&#34;anchor&#34; href=&#34;#0-1-%e8%83%8c%e5%8c%85%e9%97%ae%e9%a2%98&#34;&gt;#&lt;/a&gt;&#xA;&lt;/h4&gt;&#xA;&lt;blockquote&gt;&#xA;&lt;p&gt;限制每类项目的副本数为1或者0&lt;/p&gt;&#xA;&lt;/blockquote&gt;&#xA;&lt;p&gt;定义子问题 &lt;code&gt;P(i, W)&lt;/code&gt; 为：在前 &lt;code&gt;i&lt;/code&gt; 个物品中挑选总重量不超过 &lt;code&gt;W&lt;/code&gt; 的物品，每种物品至多只能挑选1个，使得总价值最大；这时的最优值记作 &lt;code&gt;m(i, W)&lt;/code&gt; ，其中 &lt;code&gt;1 &amp;lt;= i &amp;lt;= n&lt;/code&gt;， &lt;code&gt;1 &amp;lt;= W &amp;lt;= C&lt;/code&gt;。&lt;/p&gt;&#xA;&lt;p&gt;考虑第 i 个物品，只有两种选择：&lt;/p&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;选：背包容量减小，问题变为 &lt;code&gt;P(i-1, W-W[i])&lt;/code&gt;&lt;/li&gt;&#xA;&lt;li&gt;不选：背包容量不变，问题变为 &lt;code&gt;P(i-1, W)&lt;/code&gt;&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;p&gt;同时考虑临界情况，只有一个物品的情况下，最大价值就是该物品的价值，当然也可能该物品直接超过了背包的最大容量。但这是确定的，因此我们是可以按照这个规则反向推导出 &lt;code&gt;m(i, W)&lt;/code&gt; 的。&lt;/p&gt;&#xA;&lt;p&gt;分析到这里，它已经满足动态规划的条件：&lt;/p&gt;&#xA;&lt;ol&gt;&#xA;&lt;li&gt;问题可以分解为有限子问题&lt;/li&gt;&#xA;&lt;li&gt;能够归纳出状态转移方程：&lt;code&gt;m(i, W) = max{m(i-1, W), m(i-1, W-W[i]) + V[i]}&lt;/code&gt;&lt;/li&gt;&#xA;&lt;li&gt;临界条件：&lt;code&gt;i = 0, m(i, W) = 0&lt;/code&gt;; &lt;code&gt;W = 0. m(i, W) = 0&lt;/code&gt;&lt;/li&gt;&#xA;&lt;/ol&gt;&#xA;&lt;p&gt;总结下：&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>
