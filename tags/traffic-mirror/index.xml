@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Traffic Mirror on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/traffic-mirror/</link>
+    <description>Recent content in Traffic Mirror on Yeqown</description>
+    <generator>Hugo</generator>
+    <language>en</language>
+    <lastBuildDate>Thu, 08 May 2025 09:35:14 +0800</lastBuildDate>
+    <atom:link href="https://www.yeqown.xyz/tags/traffic-mirror/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>在 Kubernetes中实现 gRPC 流量的镜像和对比</title>
+      <link>https://www.yeqown.xyz/2025/05/08/%E5%9C%A8-Kubernetes%E4%B8%AD%E5%AE%9E%E7%8E%B0gRPC%E6%B5%81%E9%87%8F%E9%95%9C%E5%83%8F/</link>
+      <pubDate>Thu, 08 May 2025 09:35:14 +0800</pubDate>
+      <guid>https://www.yeqown.xyz/2025/05/08/%E5%9C%A8-Kubernetes%E4%B8%AD%E5%AE%9E%E7%8E%B0gRPC%E6%B5%81%E9%87%8F%E9%95%9C%E5%83%8F/</guid>
+      <description>&lt;h2 id=&#34;场景描述&#34;&gt;&#xA;  场景描述&#xA;  &lt;a class=&#34;anchor&#34; href=&#34;#%e5%9c%ba%e6%99%af%e6%8f%8f%e8%bf%b0&#34;&gt;#&lt;/a&gt;&#xA;&lt;/h2&gt;&#xA;&lt;p&gt;现有一个 python 开发的 gRPC 微服务提供了一些 &lt;strong&gt;数据查询&lt;/strong&gt; 接口 供 上层应用使用，随着业务流量的增加运维这个服务的成本也逐渐增加，为了降低运维成本和提高性能 (木有擅长 python 高性能的开发)，因此选择了使用 go 语言对这个服务进行重写。在开发完成之后，需要对新服务的 gRPC 接口进行验证。&lt;/p&gt;&#xA;&lt;p&gt;这种场景对测试开发人员来说，实在是太熟悉了吧？典型的 &lt;strong&gt;重放验证&lt;/strong&gt;，马上能想到的验证手段就是：&lt;/p&gt;&#xA;&lt;ol&gt;&#xA;&lt;li&gt;如果有存量的单元测试，那么直接重新跑一遍单元测试就能快速的完成验证。&lt;/li&gt;&#xA;&lt;li&gt;没有单元测试的情况，那么可以将新服务部署起来，通过流量复制的方式将旧服务的流量复制到新服务上，然后对比两个服务的返回结果是否一致。&lt;/li&gt;&#xA;&lt;/ol&gt;&#xA;&#xA;&#xA;&lt;script src=&#34;https://www.yeqown.xyz/mermaid.min.js&#34;&gt;&lt;/script&gt;&#xA;&#xA;  &lt;script&gt;mermaid.initialize({&#xA;  &#34;flowchart&#34;: {&#xA;    &#34;useMaxWidth&#34;:true&#xA;  },&#xA;  &#34;theme&#34;: &#34;default&#34;&#xA;}&#xA;)&lt;/script&gt;&#xA;&#xA;&#xA;&#xA;&#xA;&lt;pre class=&#34;mermaid&#34;&gt;&#xA;flowchart LR&#xA;    %% 定义布局方向和间距&#xA;    subgraph s1[&#34;方案一: 单元测试验证&#34;]&#xA;        direction TB&#xA;        UT[单元测试] --&gt;|执行| NS1[新服务]&#xA;    end&#xA;    &#xA;    subgraph s2[&#34;方案二: 流量复制验证&#34;]&#xA;        direction TB&#xA;        C[客户端] --&gt;|请求| OS[旧服务]&#xA;        OS --&gt;|响应| C&#xA;        OS --&gt;|复制流量| NS2[新服务]&#xA;        NS2 --&gt;|对比响应| OS&#xA;    end&#xA;&#xA;    %% 设置布局方向和对齐方式&#xA;    s1 ~~~ s2&#xA;&lt;/pre&gt;&#xA;&#xA;&lt;p&gt;但是很遗憾 😭，并没有成熟的单元测试；测试人员也都是人肉测试，对于内部服务的接口验证帮助不大，因此这里采用第二种方式进行验证。&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

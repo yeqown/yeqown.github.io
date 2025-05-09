@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>粘包 on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/%E7%B2%98%E5%8C%85/</link>
+    <description>Recent content in 粘包 on Yeqown</description>
+    <generator>Hugo</generator>
+    <language>en</language>
+    <lastBuildDate>Sat, 21 Sep 2019 11:36:13 +0800</lastBuildDate>
+    <atom:link href="https://www.yeqown.xyz/tags/%E7%B2%98%E5%8C%85/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>TCP拆包粘包</title>
+      <link>https://www.yeqown.xyz/2019/09/21/TCP%E6%8B%86%E5%8C%85%E7%B2%98%E5%8C%85/</link>
+      <pubDate>Sat, 21 Sep 2019 11:36:13 +0800</pubDate>
+      <guid>https://www.yeqown.xyz/2019/09/21/TCP%E6%8B%86%E5%8C%85%E7%B2%98%E5%8C%85/</guid>
+      <description>&lt;h3 id=&#34;一些名词&#34;&gt;&#xA;  一些名词&#xA;  &lt;a class=&#34;anchor&#34; href=&#34;#%e4%b8%80%e4%ba%9b%e5%90%8d%e8%af%8d&#34;&gt;#&lt;/a&gt;&#xA;&lt;/h3&gt;&#xA;&lt;h4 id=&#34;mtumaximum-transmission-unit&#34;&gt;&#xA;  MTU（Maximum Transmission Unit）&#xA;  &lt;a class=&#34;anchor&#34; href=&#34;#mtumaximum-transmission-unit&#34;&gt;#&lt;/a&gt;&#xA;&lt;/h4&gt;&#xA;&lt;blockquote&gt;&#xA;&lt;p&gt;the maximum transmission unit (MTU) is the size of the largest protocol data unit (PDU) that can be communicated in a single network layer transaction. ——from wiki&lt;/p&gt;&lt;/blockquote&gt;&#xA;&lt;p&gt;MTU 物理接口（数据链路层）提供给其上层（通常是IP层）最大一次传输数据的大小。一般来说&lt;code&gt;MTU=1500byte&lt;/code&gt;。如果&lt;code&gt;MSS + TCP首部 + IP首部 &amp;gt; MTU&lt;/code&gt;，那么IP报文就会存在分片，否则就不需要分片。&lt;/p&gt;&#xA;&lt;h4 id=&#34;mss-maximum-segment-size&#34;&gt;&#xA;  MSS (Maximum Segment Size)&#xA;  &lt;a class=&#34;anchor&#34; href=&#34;#mss-maximum-segment-size&#34;&gt;#&lt;/a&gt;&#xA;&lt;/h4&gt;&#xA;&lt;blockquote&gt;&#xA;&lt;p&gt;The maximum segment size (MSS) is a parameter of the options field of the TCP header that specifies the largest amount of data, specified in bytes, that a computer or communications device can receive in a single TCP segment. ——from wiki&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

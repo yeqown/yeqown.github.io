@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="652px" height="427px" viewBox="0 0 652 427" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>画板</title>
+    <defs>
+        <rect id="path-1" x="0" y="0" width="186" height="74"></rect>
+        <mask id="mask-2" maskContentUnits="userSpaceOnUse" maskUnits="objectBoundingBox" x="0" y="0" width="186" height="74" fill="white">
+            <use xlink:href="#path-1"></use>
+        </mask>
+    </defs>
+    <g id="画板" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <rect fill="#000000" opacity="0.1" x="0" y="0" width="652" height="427"></rect>
+        <g id="编组-2备份" transform="translate(51.000000, 162.000000)">
+            <rect id="矩形" stroke="#AA00FF" stroke-width="2" fill="#00BFA5" x="1" y="1" width="333" height="71"></rect>
+            <text id="Scheduler" font-family="PTMono-Bold, PT Mono" font-size="28" font-weight="bold" fill="#FFFFFF">
+                <tspan x="91.4" y="46">Scheduler</tspan>
+            </text>
+        </g>
+        <g id="编组备份-8" transform="translate(331.493151, 62.000000)">
+            <rect id="矩形备份-2" stroke="#3E2723" stroke-width="2" fill="#9E9E9E" x="1" y="1" width="141.013699" height="56"></rect>
+            <text id="CronJob" font-family="PTMono-Regular, PT Mono" font-size="24" font-weight="normal" fill="#FFFFFF">
+                <tspan x="21.1068493" y="38">CronJob</tspan>
+            </text>
+        </g>
+        <g id="编组备份-8" transform="translate(331.493151, 296.000000)">
+            <rect id="矩形备份-2" stroke="#212121" stroke-width="2" fill="#A1887F" x="1" y="1" width="141.013699" height="56"></rect>
+            <text id="Job" font-family="PTMono-Regular, PT Mono" font-size="24" font-weight="normal" fill="#FFFFFF">
+                <tspan x="49.9068493" y="38">Job</tspan>
+            </text>
+        </g>
+        <line x1="51" y1="265" x2="604" y2="265" id="直线-10" stroke="#212121" stroke-width="2" fill="#212121" stroke-linecap="square" stroke-dasharray="10"></line>
+        <g id="编组" transform="translate(418.000000, 162.000000)">
+            <use id="矩形" stroke="#979797" mask="url(#mask-2)" stroke-width="2" fill="#FFCCBC" stroke-dasharray="4" xlink:href="#path-1"></use>
+            <text id="RunContext" font-family="PTMono-Bold, PT Mono" font-size="24" font-weight="bold" fill="#FFFFFF">
+                <tspan x="20.5" y="45">RunContext</tspan>
+            </text>
+        </g>
+        <path id="直线-11" d="M403.801724,118.834994 L403.983365,119.818359 L415.94,184.551 L421.840586,183.461406 L417.5,198.5 L408.073476,186.004375 L413.973,184.914 L402.016635,120.181641 L401.834994,119.198276 L403.801724,118.834994 Z" fill="#4E342E" fill-rule="nonzero"></path>
+        <path id="路径" d="M511.984188,235.822873 C515.097677,253.122633 513.560445,270.465772 507.377319,287.83536 C502.925154,300.342344 496.190279,310.413536 487.175321,318.030478 L490.540901,323.134415 L475,325 L482.832073,311.447929 L486.06501,316.349678 C494.710923,308.986236 501.186108,299.263917 505.493139,287.16464 C511.456174,270.413331 513.013452,253.715139 510.169555,237.053995 L510.015812,236.177127 L511.984188,235.822873 Z" fill="#FFAB00" fill-rule="nonzero"></path>
+        <path id="路径-2" d="M221.306825,236 L232.196128,247.243802 L226.517385,249.036997 C233.176451,267.25034 242.539455,282.671553 254.606509,295.309415 C277.302334,319.078822 289.487878,323.904445 330.277788,323.998581 L331.522642,324 L331.522642,326 C289.211247,326 276.482943,321.116767 253.160006,296.690585 C240.89293,283.843239 231.383471,268.178088 224.631742,249.703923 L224.608,249.638 L218.845365,251.457723 L221.306825,236 Z" fill="#FFAB00" fill-rule="nonzero"></path>
+        <path id="直线-12" d="M404.5,192.5 L418.5,199.5 L404.5,206.5 L404.5,200.5 L385.5,200.5 L385.5,198.5 L404.5,198.5 L404.5,192.5 Z" fill="#FFAB00" fill-rule="nonzero"></path>
+        <text id="JonRuntime" font-family="PTMono-Bold, PT Mono" font-size="24" font-weight="bold" fill="#212121">
+            <tspan x="48" y="296">JonRuntime</tspan>
+        </text>
+        <text id="status-report" font-family="PTMono-Regular, PT Mono" font-size="12" font-weight="normal" fill="#212121">
+            <tspan x="249" y="288">status report</tspan>
+        </text>
+        <text id="control-job" font-family="PTMono-Regular, PT Mono" font-size="12" font-weight="normal" fill="#212121">
+            <tspan x="418.4" y="252">control job</tspan>
+        </text>
+        <text id="CronJob-configuratio" font-family="PTMono-Regular, PT Mono" font-size="12" font-weight="normal" fill="#212121">
+            <tspan x="418.8" y="149">CronJob configurations</tspan>
+        </text>
+    </g>
+</svg>

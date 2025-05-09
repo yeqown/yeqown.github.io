@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="这里介绍一下如何在 Kubernetes 如何对新旧服务进行 gRPC 流量的复制和重放，并对比新旧服务的响应内容。grpcreplay是一款开源的 gRPC 流量解析和重放工具，它可以在不修改应用代码的情况下，对gRPC流量进行镜像和重放。而 Istio 则是一个非常成熟的 Service Mesh 解决方案，它可以在不修改应用代码的情况下，对 gRPC 流量进行镜像和重放。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2025/05/08/%E5%9C%A8-Kubernetes%E4%B8%AD%E5%AE%9E%E7%8E%B0gRPC%E6%B5%81%E9%87%8F%E9%95%9C%E5%83%8F/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="在 Kubernetes中实现 gRPC 流量的镜像和对比">
+  <meta property="og:description" content="这里介绍一下如何在 Kubernetes 如何对新旧服务进行 gRPC 流量的复制和重放，并对比新旧服务的响应内容。grpcreplay是一款开源的 gRPC 流量解析和重放工具，它可以在不修改应用代码的情况下，对gRPC流量进行镜像和重放。而 Istio 则是一个非常成熟的 Service Mesh 解决方案，它可以在不修改应用代码的情况下，对 gRPC 流量进行镜像和重放。">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2025-05-08T09:35:14+08:00">
+    <meta property="article:modified_time" content="2025-05-08T09:35:14+08:00">
+    <meta property="article:tag" content="Kubernetes">
+    <meta property="article:tag" content="GRPC">
+    <meta property="article:tag" content="Traffic Mirror">
+    <meta property="article:tag" content="Grpcreplay">
+    <meta property="article:tag" content="Sidecar">
+    <meta property="article:tag" content="Istio">
+<title>在 Kubernetes中实现 gRPC 流量的镜像和对比 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2025/05/08/%E5%9C%A8-Kubernetes%E4%B8%AD%E5%AE%9E%E7%8E%B0gRPC%E6%B5%81%E9%87%8F%E9%95%9C%E5%83%8F/">
+<link rel="stylesheet" href="/book.min.dff49fe021b85119b8df810e9dff23e3fa64b382774db1d28553890bb4018a43.css" integrity="sha256-3/Sf4CG4URm434EOnf8j4/pks4J3TbHShVOJC7QBikM=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.241ae9396102e5f6f3007291ca47e0a4ebdcc7ed02ca4791bbf61d08b9934736.js" integrity="sha256-JBrpOWEC5fbzAHKRykfgpOvcx&#43;0CykeRu/YdCLmTRzY=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>在 Kubernetes中实现 gRPC 流量的镜像和对比</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#场景描述">场景描述</a></li>
+    <li><a href="#方案介绍">方案介绍</a>
+      <ul>
+        <li><a href="#kubernetes-中的-sidecar">Kubernetes 中的 sidecar</a></li>
+        <li><a href="#grpcreplay-简介">grpcreplay 简介</a></li>
+      </ul>
+    </li>
+    <li><a href="#实践1-grpcreplay-sidecar">实践1: grpcreplay sidecar</a>
+      <ul>
+        <li><a href="#架构设计">架构设计</a></li>
+        <li><a href="#镜像打包">镜像打包</a></li>
+        <li><a href="#添加-pvc">添加 PVC</a></li>
+        <li><a href="#配置-sidecar-grpcreplay">配置 Sidecar: grpcreplay</a></li>
+      </ul>
+    </li>
+    <li><a href="#实践2-istio-virtualservice-mirror">实践2: Istio VirtualService mirror</a>
+      <ul>
+        <li><a href="#配置源服务-virtualservice">配置源服务 VirtualService</a></li>
+        <li><a href="#编写-gprc-interceptor">编写 gPRC interceptor</a></li>
+      </ul>
+    </li>
+    <li><a href="#对比脚本">对比脚本</a></li>
+    <li><a href="#总结">总结</a></li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    在 Kubernetes中实现 gRPC 流量的镜像和对比
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>May 8, 2025</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Kubernetes/">Kubernetes</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Kubernetes/">Kubernetes</a>, 
+      <a href="/tags/gRPC/">GRPC</a>, 
+      <a href="/tags/traffic-mirror/">Traffic Mirror</a>, 
+      <a href="/tags/grpcreplay/">Grpcreplay</a>, 
+      <a href="/tags/sidecar/">Sidecar</a>, 
+      <a href="/tags/Istio/">Istio</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><h2 id="场景描述">
+  场景描述
+  <a class="anchor" href="#%e5%9c%ba%e6%99%af%e6%8f%8f%e8%bf%b0">#</a>
+</h2>
+<p>现有一个 python 开发的 gRPC 微服务提供了一些 <strong>数据查询</strong> 接口 供 上层应用使用，随着业务流量的增加运维这个服务的成本也逐渐增加，为了降低运维成本和提高性能 (木有擅长 python 高性能的开发)，因此选择了使用 go 语言对这个服务进行重写。在开发完成之后，需要对新服务的 gRPC 接口进行验证。</p>
+<p>这种场景对测试开发人员来说，实在是太熟悉了吧？典型的 <strong>重放验证</strong>，马上能想到的验证手段就是：</p>
+<ol>
+<li>如果有存量的单元测试，那么直接重新跑一遍单元测试就能快速的完成验证。</li>
+<li>没有单元测试的情况，那么可以将新服务部署起来，通过流量复制的方式将旧服务的流量复制到新服务上，然后对比两个服务的返回结果是否一致。</li>
+</ol>
+
+
+<script src="/mermaid.min.js"></script>
+
+  <script>mermaid.initialize({
+  "flowchart": {
+    "useMaxWidth":true
+  },
+  "theme": "default"
+}
+)</script>
+
+
+
+
+<pre class="mermaid">
+flowchart LR
+    %% 定义布局方向和间距
+    subgraph s1["方案一: 单元测试验证"]
+        direction TB
+        UT[单元测试] -->|执行| NS1[新服务]
+    end
+    
+    subgraph s2["方案二: 流量复制验证"]
+        direction TB
+        C[客户端] -->|请求| OS[旧服务]
+        OS -->|响应| C
+        OS -->|复制流量| NS2[新服务]
+        NS2 -->|对比响应| OS
+    end
+
+    %% 设置布局方向和对齐方式
+    s1 ~~~ s2
+</pre>
+
+<p>但是很遗憾 😭，并没有成熟的单元测试；测试人员也都是人肉测试，对于内部服务的接口验证帮助不大，因此这里采用第二种方式进行验证。</p>
+<blockquote>
+<p>服务均采用 Kubernetes 部署。</p></blockquote>
+<h2 id="方案介绍">
+  方案介绍
+  <a class="anchor" href="#%e6%96%b9%e6%a1%88%e4%bb%8b%e7%bb%8d">#</a>
+</h2>
+<p>HTTP 流量的复制重放工具就很多很成熟了，而且往往在 网关/代理 一侧就能实现流量复制甚至对比。</p>
+<table>
+  <thead>
+      <tr>
+          <th>工具</th>
+          <th>分类</th>
+          <th>文档链接</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Nginx mirror</td>
+          <td>网关/代理</td>
+          <td><a href="https://nginx.org/en/docs/http/ngx_http_mirror_module.html">https://nginx.org/en/docs/http/ngx_http_mirror_module.html</a></td>
+      </tr>
+      <tr>
+          <td>APISIX</td>
+          <td>网关/代理</td>
+          <td><a href="https://apisix.apache.org/docs/apisix/plugins/proxy-mirror/">https://apisix.apache.org/docs/apisix/plugins/proxy-mirror/</a></td>
+      </tr>
+      <tr>
+          <td>Istio: Virtual Service mirror</td>
+          <td>Service Mesh</td>
+          <td><a href="https://istio.io/latest/docs/tasks/traffic-management/mirroring/">https://istio.io/latest/docs/tasks/traffic-management/mirroring/</a></td>
+      </tr>
+      <tr>
+          <td>GoReplay</td>
+          <td>流量复制</td>
+          <td><a href="https://github.com/buger/goreplay">https://github.com/buger/goreplay</a></td>
+      </tr>
+      <tr>
+          <td>tcpcopy</td>
+          <td>流量复制</td>
+          <td><a href="https://github.com/session-replay-tools/tcpcopy">https://github.com/session-replay-tools/tcpcopy</a></td>
+      </tr>
+  </tbody>
+</table>
+<blockquote>
+<p>tcpcopy 相比于其他工具方案，虽然不能直接使用，但是其作用于 TCP 传输层，功能会更丰富。相比之下，gRPC 流量复制工具就没有那么成熟了。</p></blockquote>
+<p>由于这里是一个 Kubernetes gRPC 微服务，可以想到的就是使用 sidecar 容器的方式来实现流量镜像，并记录到本地文件中，然后通过对比脚本来对比新旧服务的响应内容。</p>
+<figure>
+  <img src="/images/grpcr-k8s/architecture0.png" alt="k8s-grpcr-sidecar" width="100%" />
+  <figcaption>Mirror and Compare flow</figcaption>
+</figure>
+<h3 id="kubernetes-中的-sidecar">
+  Kubernetes 中的 sidecar
+  <a class="anchor" href="#kubernetes-%e4%b8%ad%e7%9a%84-sidecar">#</a>
+</h3>
+<p>Kubenetes 中的 sidecar 是指在应用容器之外，部署一个独立的容器，用于处理应用容器的请求和响应。sidecar 容器和应用容器共享同一个网络命名空间，因此可以通过 localhost 来进行通信。</p>
+<p>因此不管是使用 Istio 还是 grpcreplay，都需要在应用容器之外部署一个 sidecar 容器。只不过两个容器的作用原理不相同，grpcreplay 一个是通过嗅探网络协议栈上的 gRPC 流量，将这部分数据报文解析再使用；而 Istio 则是接管了应用容器的请求和响应，然后将流量复制到新的服务上。</p>
+<h3 id="grpcreplay-简介">
+  grpcreplay 简介
+  <a class="anchor" href="#grpcreplay-%e7%ae%80%e4%bb%8b">#</a>
+</h3>
+<p><a href="https://github.com/vearne/grpcreplay">grpcreplay</a> 是一款开源的 gRPC 流量解析和重放工具，它类似于 goreplay 都是通过抓包实现流量的复制，而不是代理的方式。另外它还支持多种输入输出，包括文件、网卡、消息队列、标准输入输出等。当然也有一些限制:</p>
+<ul>
+<li>目前支持到 h2c 暂不支持 h2</li>
+<li>序列化器支持 protobuf</li>
+<li>不支持 Streaming</li>
+</ul>
+<blockquote>
+<p><em><strong>h2c</strong></em> 指的是 HTTP/2 over TCP，<em><strong>h2</strong></em> 指的是 HTTP/2 over TLS/SSL。</p></blockquote>
+<details ><summary>grpcr help message</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ grpcreplay -h
+</span></span><span style="display:flex;"><span>   ______ ____   ____   ______ ____
+</span></span><span style="display:flex;"><span>  / ____// __ <span style="color:#ae81ff">\ </span>/ __ <span style="color:#ae81ff">\ </span>/ ____// __ <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span> / / __ / /_/ // /_/ // /    / /_/ /
+</span></span><span style="display:flex;"><span>/ /_/ // _, _// ____// /___ / _, _/
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">\_</span>___//_/ |_|/_/     <span style="color:#ae81ff">\_</span>___//_/ |_|
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Usage of grpcreplay:
+</span></span><span style="display:flex;"><span>  -codec string
+</span></span><span style="display:flex;"><span>    	 <span style="color:#f92672">(</span>default <span style="color:#e6db74">&#34;simple&#34;</span><span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>  -exit-after duration
+</span></span><span style="display:flex;"><span>    	exit after specified duration
+</span></span><span style="display:flex;"><span>  -include-filter-method-match string
+</span></span><span style="display:flex;"><span>    	filter requests when the method matches the specified regular expression
+</span></span><span style="display:flex;"><span>  -input-file-directory value
+</span></span><span style="display:flex;"><span>    	grpcr --input-file-directory<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;/tmp/mycapture&#34;</span> --output-grpc<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;grpc://xx.xx.xx.xx:35001“ (default [])
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">  -input-file-read-depth int
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    	 (default 100)
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">  -input-file-replay-speed float
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    	 (default 1)
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">  -input-raw value
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    	Capture traffic from given port (use RAW sockets and require *sudo* access):
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    	                # Capture traffic from 80 port
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    	                grpcr --input-raw=&#34;</span>0.0.0.0:80<span style="color:#e6db74">&#34; --output-grpc=&#34;</span>grpc://xx.xx.xx.xx:35001<span style="color:#e6db74">&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    	                (default [])
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">  -input-rocketmq-access-key string
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">  -input-rocketmq-group-name string
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    	 (default &#34;</span>fakeGroupName<span style="color:#e6db74">&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">  -input-rocketmq-name-server value
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    	grpcr --input-rocketmq-name-server=&#34;</span>192.168.2.100:9876<span style="color:#e6db74">&#34; --output-grpc=&#34;</span>grpc://xx.xx.xx.xx:35001<span style="color:#e6db74">&#34; (default [])
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">  -input-rocketmq-secret-key string
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">  -input-rocketmq-topic string
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    	 (default &#34;</span>test<span style="color:#e6db74">&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">  -output-file-directory value
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    	Write incoming requests to file:
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    			        grpcr --input-raw=&#34;</span>0.0.0.0:80<span style="color:#e6db74">&#34; --output-file-directory=&#34;</span>/tmp/mycapture<span style="color:#e6db74">&#34; (default [])
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">  -output-file-max-age int
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    	MaxAge is the maximum number of days to retain old log files
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    					based on the timestamp encoded in their filename (default 30)
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">  -output-file-max-backups int
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    	MaxBackups is the maximum number of old log files to retain. (default 10)
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">  -output-file-max-size int
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    	MaxSize is the maximum size in megabytes of the log file before it gets rotated. (default 500)
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">  -output-grpc value
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    	Forwards incoming requests to given grpc address.
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    				    # Redirect all incoming requests to xxx.com address
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    	                grpcr --input-raw=&#34;</span>0.0.0.0:80<span style="color:#e6db74">&#34; --output-grpc=&#34;</span>grpc://xx.xx.xx.xx:35001<span style="color:#e6db74">&#34;) (default [])
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">  -output-grpc-worker-number int
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    	multiple workers call services concurrently (default 5)
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">  -output-rocketmq-access-key string
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">  -output-rocketmq-name-server value
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    	grpcr --input-raw=&#34;</span>0.0.0.0:80<span style="color:#e6db74">&#34; --output-rocketmq-name-server=&#34;</span>192.168.2.100:9876<span style="color:#e6db74">&#34; (default [])
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">  -output-rocketmq-secret-key string
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">  -output-rocketmq-topic string
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    	 (default &#34;</span>test<span style="color:#e6db74">&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">  -output-stdout
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    	Just prints data to console
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">  -rate-limit-qps int
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    	the capture rate per second limit for Query (default -1)
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">  -record-response
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    	record response
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">  -version
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    	print version
+</span></span></span></code></pre></div>  </div>
+</details>
+<h2 id="实践1-grpcreplay-sidecar">
+  实践1: grpcreplay sidecar
+  <a class="anchor" href="#%e5%ae%9e%e8%b7%b51-grpcreplay-sidecar">#</a>
+</h2>
+<p>想要把 grpcreplay 想要作为 sidecar 容器部署在 Kubernetes 中，这里需要做的工作有：</p>
+<ol>
+<li>grpcreplay 镜像打包并推送到镜像仓库</li>
+<li>添加 PVC 以存储 grpcreplay 的流量数据</li>
+<li>修改新旧服务的 Deployment 以配置 sidecar 容器。</li>
+</ol>
+<h3 id="架构设计">
+  架构设计
+  <a class="anchor" href="#%e6%9e%b6%e6%9e%84%e8%ae%be%e8%ae%a1">#</a>
+</h3>
+<p>图以蔽之：</p>
+<figure>
+  <img src="/images/grpcr-k8s/architecture.png" alt="k8s-grpcr-sidecar" width="100%" />
+  <figcaption>架构描述</figcaption>
+</figure>
+<h3 id="镜像打包">
+  镜像打包
+  <a class="anchor" href="#%e9%95%9c%e5%83%8f%e6%89%93%e5%8c%85">#</a>
+</h3>
+<p>提前将 grpcreplay 源码下载到本地，然后编写 Dockerfile 进行构建。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-Dockerfile" data-lang="Dockerfile"><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span><span style="color:#e6db74"> golang:1.23.6 AS builder</span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">WORKDIR</span><span style="color:#e6db74"> /go/src/github.com/vearne/grpcreplay/</span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">COPY</span> . /go/src/github.com/vearne/grpcreplay/<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#75715e"># 安装依赖</span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">RUN</span> apt-get update <span style="color:#f92672">&amp;&amp;</span> apt-get install -y libpcap-dev<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">RUN</span> go get<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#75715e"># 构建应用</span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">RUN</span> CGO_ENABLED<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span> go build -ldflags <span style="color:#e6db74">&#34;-s -w&#34;</span> -o grpcr<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#75715e"># 使用多阶段构建减小镜像大小</span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">FROM</span><span style="color:#e6db74"> debian:bookworm-slim</span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#75715e"># 安装运行时依赖</span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">RUN</span> apt-get update <span style="color:#f92672">&amp;&amp;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>    apt-get install -y libpcap0.8 <span style="color:#f92672">&amp;&amp;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>    apt-get clean <span style="color:#f92672">&amp;&amp;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>    rm -rf /var/lib/apt/lists/*<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">WORKDIR</span><span style="color:#e6db74"> /app</span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#75715e"># 从构建阶段复制二进制文件</span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">COPY</span> --from<span style="color:#f92672">=</span>builder /go/src/github.com/vearne/grpcreplay/grpcr /app/<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#75715e"># 设置容器入口点</span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">ENTRYPOINT</span> [<span style="color:#e6db74">&#34;/app/grpcr&#34;</span>]<span style="color:#960050;background-color:#1e0010">
+</span></span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># 构建镜像</span>
+</span></span><span style="display:flex;"><span>podman build --platform linux/amd64 --rm -t grpcr -f Dockerfile .
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 修改镜像标签</span>
+</span></span><span style="display:flex;"><span>podman tag grpcr yeqown/grpcr:v0.2.6
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 推送到 hub.docker.com 镜像仓库 https://hub.docker.com/repository/docker/yeqown/grpcr</span>
+</span></span><span style="display:flex;"><span>podman push yeqown/grpcr:v0.2.6
+</span></span></code></pre></div><h3 id="添加-pvc">
+  添加 PVC
+  <a class="anchor" href="#%e6%b7%bb%e5%8a%a0-pvc">#</a>
+</h3>
+<blockquote>
+<p>这里仅供参考，也不是必要的步骤，只要能给 POD 挂载一个 PV 即可。</p></blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">v1</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">kind</span>: <span style="color:#ae81ff">PersistentVolumeClaim</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">grpc-capture-pvc</span>
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">spec</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">accessModes</span>:
+</span></span><span style="display:flex;"><span>    - <span style="color:#ae81ff">ReadWriteMany </span> <span style="color:#75715e"># 多个Pod需要同时访问</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">resources</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">requests</span>:
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">storage</span>: <span style="color:#ae81ff">10Gi</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">storageClassName</span>: <span style="color:#ae81ff">YOUR_STORAGE_CLASS_NAME </span> <span style="color:#75715e"># 替换为你的存储类名称</span>
+</span></span></code></pre></div><h3 id="配置-sidecar-grpcreplay">
+  配置 Sidecar: grpcreplay
+  <a class="anchor" href="#%e9%85%8d%e7%bd%ae-sidecar-grpcreplay">#</a>
+</h3>
+<p>配置新旧服务的 Deployment 文件以配置 sidecar 容器。同样的这里以实际情况为准</p>
+<p><em><strong>旧服务：</strong></em></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-diff" data-lang="diff"><span style="display:flex;"><span>apiVersion: apps/v1
+</span></span><span style="display:flex;"><span>kind: Deployment
+</span></span><span style="display:flex;"><span>metadata:
+</span></span><span style="display:flex;"><span>  name: old-grpc
+</span></span><span style="display:flex;"><span>  labels:
+</span></span><span style="display:flex;"><span>    app: old-grpc
+</span></span><span style="display:flex;"><span>spec:
+</span></span><span style="display:flex;"><span>  replicas: 1
+</span></span><span style="display:flex;"><span>  selector:
+</span></span><span style="display:flex;"><span>    matchLabels:
+</span></span><span style="display:flex;"><span>      app: old-grpc
+</span></span><span style="display:flex;"><span>  template:
+</span></span><span style="display:flex;"><span>    metadata:
+</span></span><span style="display:flex;"><span>      labels:
+</span></span><span style="display:flex;"><span>        app: old-grpc
+</span></span><span style="display:flex;"><span>    spec:
+</span></span><span style="display:flex;"><span>      containers:
+</span></span><span style="display:flex;"><span>      - name: old-grpc
+</span></span><span style="display:flex;"><span>        image: your-registry/old-grpc:latest
+</span></span><span style="display:flex;"><span>        ports:
+</span></span><span style="display:flex;"><span>        - containerPort: 50051  # gRPC服务端口
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">+      # grpcreplay sidecar容器
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+      - name: grpcreplay
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+        image: docker.io/yeqown/grpcr:v0.2.6
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+        securityContext:
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+          capabilities:
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+            add: [&#34;NET_ADMIN&#34;, &#34;NET_RAW&#34;]  # 需要这些权限来捕获网络流量
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+        args:
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+        - &#34;--input-raw=0.0.0.0:50051&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+        - &#34;--output-grpc=grpc://new-grpc:50051&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+        - &#34;--output-file-directory=/capture/server&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+        - &#34;--record-response&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+        - &#34;--codec=json&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+        volumeMounts:
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+        - name: capture-volume
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+          mountPath: /capture/server
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+      volumes:
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+      - name: capture-volume
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+        persistentVolumeClaim:
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+          claimName: grpc-capture-pvc
+</span></span></span></code></pre></div><p><em><strong>新服务：</strong></em></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-diff" data-lang="diff"><span style="display:flex;"><span>apiVersion: apps/v1
+</span></span><span style="display:flex;"><span>kind: Deployment
+</span></span><span style="display:flex;"><span>metadata:
+</span></span><span style="display:flex;"><span>  name: new-grpc
+</span></span><span style="display:flex;"><span>  labels:
+</span></span><span style="display:flex;"><span>    app: new-grpc
+</span></span><span style="display:flex;"><span>spec:
+</span></span><span style="display:flex;"><span>  replicas: 1
+</span></span><span style="display:flex;"><span>  selector:
+</span></span><span style="display:flex;"><span>    matchLabels:
+</span></span><span style="display:flex;"><span>      app: new-grpc
+</span></span><span style="display:flex;"><span>  template:
+</span></span><span style="display:flex;"><span>    metadata:
+</span></span><span style="display:flex;"><span>      labels:
+</span></span><span style="display:flex;"><span>        app: new-grpc
+</span></span><span style="display:flex;"><span>    spec:
+</span></span><span style="display:flex;"><span>      containers:
+</span></span><span style="display:flex;"><span>      - name: new-grpc
+</span></span><span style="display:flex;"><span>        image: your-registry/new-grpc:latest
+</span></span><span style="display:flex;"><span>        ports:
+</span></span><span style="display:flex;"><span>        - containerPort: 50051  # gRPC服务端口    
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">+      # grpcreplay sidecar容器（可选，用于记录请求和响应）
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+      - name: grpcreplay
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+        image: docker.io/yeqown/grpcr:v0.2.6
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+        securityContext:
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+          capabilities:
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+            add: [&#34;NET_ADMIN&#34;, &#34;NET_RAW&#34;]
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+        args:
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+        - &#34;--input-raw=0.0.0.0:50051&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+        - &#34;--output-stdout&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+        - &#34;--output-file-directory=/capture/mirror&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+        - &#34;--record-response&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+        - &#34;--codec=json&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+        volumeMounts:
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+        - name: capture-volume
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+          mountPath: /capture/mirror
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+      
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+      volumes:
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+      - name: capture-volume
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+        persistentVolumeClaim:
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+          claimName: grpc-capture-pvc
+</span></span></span></code></pre></div><p>服务启动后，会在 <code>/capture/server</code> 和 <code>/capture/mirror</code> 目录下生成 grpcreplay 的流量数据。</p>
+<figure>
+  <img src="/images/grpcr-k8s/capture-log.png" alt="k8s-grpcr-sidecar" width="100%" />
+  <figcaption>grpcreplay 流量数据</figcaption>
+</figure>
+<h2 id="实践2-istio-virtualservice-mirror">
+  实践2: Istio VirtualService mirror
+  <a class="anchor" href="#%e5%ae%9e%e8%b7%b52-istio-virtualservice-mirror">#</a>
+</h2>
+<p>Istio 是一个非常成熟的 Service Mesh 解决方案，它可以在不修改应用代码的情况下，对 gRPC 流量进行镜像和重放。只需要为服务配置好 VirtualService mirror 规则即可。</p>
+<table>
+  <thead>
+      <tr>
+          <th>字段</th>
+          <th>路径层级</th>
+          <th>描述</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>mirror</td>
+          <td><code>spec.http[].mirror</code></td>
+          <td>指定要镜像的目标服务。</td>
+      </tr>
+      <tr>
+          <td>mirrorPercentage</td>
+          <td><code>spec.http[].mirrorPercentage</code></td>
+          <td>指定要镜像的流量百分比。</td>
+      </tr>
+  </tbody>
+</table>
+<p>再复制流量之后，这个方案还需要获取 gRPC 服务的响应内容，记录到本地文件中，然后通过对比脚本来对比新旧服务的响应内容。这里可以考虑实现 Istio 的插件去记录，也可以选择在服务中添加 gRPC 拦截器来实现记录。</p>
+<h3 id="配置源服务-virtualservice">
+  配置源服务 VirtualService
+  <a class="anchor" href="#%e9%85%8d%e7%bd%ae%e6%ba%90%e6%9c%8d%e5%8a%a1-virtualservice">#</a>
+</h3>
+<p>这里为 <code>old-grpc</code> 服务配置 VirtualService。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">networking.istio.io/v1</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">kind</span>: <span style="color:#ae81ff">VirtualService</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">old-grpc</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">spec</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">hosts</span>:
+</span></span><span style="display:flex;"><span>  - <span style="color:#ae81ff">old-grpc</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">http</span>:
+</span></span><span style="display:flex;"><span>  - <span style="color:#f92672">route</span>:
+</span></span><span style="display:flex;"><span>    - <span style="color:#f92672">destination</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">host</span>: <span style="color:#ae81ff">old-grpc.default.svc.cluster.local</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">weight</span>: <span style="color:#ae81ff">100</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">mirror</span>:
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">host</span>: <span style="color:#ae81ff">new-grpc.default.svc.cluster.local</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">mirrorPercentage</span>:
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">value</span>: <span style="color:#ae81ff">100</span>
+</span></span></code></pre></div><h3 id="编写-gprc-interceptor">
+  编写 gPRC interceptor
+  <a class="anchor" href="#%e7%bc%96%e5%86%99-gprc-interceptor">#</a>
+</h3>
+<p>各个语言要实现 gRPC 拦截器的方式都不尽相同，但都大差不差，这里以 python 语言为例：</p>
+<blockquote>
+<p>PS: 为啥用 python 举例？对我来说，它是真抽象～</p></blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#f92672">from</span> grpc_interceptor <span style="color:#f92672">import</span> ServerInterceptor
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">RecordReqRespInterceptor</span>(ServerInterceptor):
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    Interceptor to record request and response information.
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    Usage:
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        server = grpc.server(
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">            ThreadPoolExecutor(max_workers=5),
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">            interceptors=[RecordReqRespInterceptor(store_directory)])
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    &#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    fd <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>
+</span></span><span style="display:flex;"><span>    store_directory <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>  <span style="color:#75715e"># /capture/server/capture.log</span>
+</span></span><span style="display:flex;"><span>    _lock <span style="color:#f92672">=</span> threading<span style="color:#f92672">.</span>Lock()  <span style="color:#75715e"># 添加线程锁</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> __init__(self, store_directory<span style="color:#f92672">=</span><span style="color:#66d9ef">None</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> <span style="color:#f92672">not</span> store_directory:
+</span></span><span style="display:flex;"><span>            __LOGGER__<span style="color:#f92672">.</span>warning(
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;Warning: store_directory is not specified, request and response information will not be recorded.&#34;</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        filename <span style="color:#f92672">=</span> store_directory <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34;capture.log&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">try</span>:
+</span></span><span style="display:flex;"><span>            self<span style="color:#f92672">.</span>store_directory <span style="color:#f92672">=</span> filename
+</span></span><span style="display:flex;"><span>            self<span style="color:#f92672">.</span>fd <span style="color:#f92672">=</span> open(filename, <span style="color:#e6db74">&#39;a&#39;</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">except</span> <span style="color:#a6e22e">Exception</span> <span style="color:#66d9ef">as</span> e:
+</span></span><span style="display:flex;"><span>            __LOGGER__<span style="color:#f92672">.</span>error(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;Failed to open file </span><span style="color:#e6db74">{</span>store_directory<span style="color:#e6db74">}</span><span style="color:#e6db74">: </span><span style="color:#e6db74">{</span>e<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">record</span>(self, call_detail: CallDetails, error: str <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>fd <span style="color:#f92672">is</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">or</span> self<span style="color:#f92672">.</span>store_directory <span style="color:#f92672">is</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 从handler_call_details中提取基本信息</span>
+</span></span><span style="display:flex;"><span>        method <span style="color:#f92672">=</span> call_detail<span style="color:#f92672">.</span>method
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> method <span style="color:#f92672">in</span> [
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;/grpc.health.v1.Health/Check&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;/grpc.reflection.v1.ServerReflection/ServerReflectionInfo&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;/grpc.reflection.v1alpha.ServerReflection/ServerReflectionInfo&#34;</span>,
+</span></span><span style="display:flex;"><span>        ]:
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        metadata <span style="color:#f92672">=</span> dict(call_detail<span style="color:#f92672">.</span>invocation_metadata)
+</span></span><span style="display:flex;"><span>        timestamp_nano <span style="color:#f92672">=</span> time<span style="color:#f92672">.</span>time_ns()
+</span></span><span style="display:flex;"><span>        timestamp_seconds <span style="color:#f92672">=</span> int(timestamp_nano <span style="color:#f92672">/</span> <span style="color:#ae81ff">1000000000</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        req_body <span style="color:#f92672">=</span> json<span style="color:#f92672">.</span>dumps(MessageToDict(call_detail<span style="color:#f92672">.</span>request), separators<span style="color:#f92672">=</span>(<span style="color:#e6db74">&#39;,&#39;</span>, <span style="color:#e6db74">&#39;:&#39;</span>))
+</span></span><span style="display:flex;"><span>        resp_body <span style="color:#f92672">=</span> json<span style="color:#f92672">.</span>dumps(MessageToDict(call_detail<span style="color:#f92672">.</span>response), separators<span style="color:#f92672">=</span>(<span style="color:#e6db74">&#39;,&#39;</span>, <span style="color:#e6db74">&#39;:&#39;</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        req_fingerprint <span style="color:#f92672">=</span> hashlib<span style="color:#f92672">.</span>md5(req_body<span style="color:#f92672">.</span>encode())<span style="color:#f92672">.</span>hexdigest()
+</span></span><span style="display:flex;"><span>        resp_fingerprint <span style="color:#f92672">=</span> hashlib<span style="color:#f92672">.</span>md5(resp_body<span style="color:#f92672">.</span>encode())<span style="color:#f92672">.</span>hexdigest()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 构建记录</span>
+</span></span><span style="display:flex;"><span>        record <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;meta&#34;</span>: {
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;uuid&#34;</span>: hashlib<span style="color:#f92672">.</span>md5(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">{</span>method<span style="color:#e6db74">}</span><span style="color:#e6db74">-</span><span style="color:#e6db74">{</span>timestamp_seconds<span style="color:#e6db74">}</span><span style="color:#e6db74">-</span><span style="color:#e6db74">{</span>req_fingerprint<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span><span style="color:#f92672">.</span>encode())<span style="color:#f92672">.</span>hexdigest(),
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;timestamp&#34;</span>: timestamp_nano,
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;req_fingerprint&#34;</span>: req_fingerprint,
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;resp_fingerprint&#34;</span>: resp_fingerprint,
+</span></span><span style="display:flex;"><span>            },
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;method&#34;</span>: method,
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;request&#34;</span>: {
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;headers&#34;</span>: metadata,
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;body&#34;</span>: req_body,
+</span></span><span style="display:flex;"><span>            },
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;response&#34;</span>: {
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;headers&#34;</span>: {
+</span></span><span style="display:flex;"><span>                    <span style="color:#e6db74">&#34;failed&#34;</span>: error <span style="color:#f92672">is</span> <span style="color:#f92672">not</span> <span style="color:#66d9ef">None</span>,
+</span></span><span style="display:flex;"><span>                    <span style="color:#e6db74">&#34;error&#34;</span>: error <span style="color:#66d9ef">if</span> error <span style="color:#66d9ef">else</span> <span style="color:#e6db74">&#34;&#34;</span>,
+</span></span><span style="display:flex;"><span>                },
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;body&#34;</span>: resp_body,
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">try</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">with</span> self<span style="color:#f92672">.</span>_lock:  <span style="color:#75715e"># 使用锁保证写入原子性</span>
+</span></span><span style="display:flex;"><span>                self<span style="color:#f92672">.</span>fd<span style="color:#f92672">.</span>write(json<span style="color:#f92672">.</span>dumps(record) <span style="color:#f92672">+</span> <span style="color:#e6db74">&#39;</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#39;</span>)
+</span></span><span style="display:flex;"><span>                self<span style="color:#f92672">.</span>fd<span style="color:#f92672">.</span>flush()
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">except</span> <span style="color:#a6e22e">Exception</span> <span style="color:#66d9ef">as</span> e:
+</span></span><span style="display:flex;"><span>            __LOGGER__<span style="color:#f92672">.</span>error(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;Failed to write to file </span><span style="color:#e6db74">{</span>self<span style="color:#f92672">.</span>store_directory<span style="color:#e6db74">}</span><span style="color:#e6db74">: </span><span style="color:#e6db74">{</span>e<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 实现 ServerInterceptor 抽象方法</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">intercept</span>(
+</span></span><span style="display:flex;"><span>            self,
+</span></span><span style="display:flex;"><span>            method: Callable,
+</span></span><span style="display:flex;"><span>            request_or_iterator: Any,
+</span></span><span style="display:flex;"><span>            context: grpc<span style="color:#f92672">.</span>ServicerContext,
+</span></span><span style="display:flex;"><span>            method_name: str,
+</span></span><span style="display:flex;"><span>    ):
+</span></span><span style="display:flex;"><span>        response <span style="color:#f92672">=</span> method(request_or_iterator, context)
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>record(CallDetails(method_name, context, request_or_iterator, response))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> response
+</span></span></code></pre></div><h2 id="对比脚本">
+  对比脚本
+  <a class="anchor" href="#%e5%af%b9%e6%af%94%e8%84%9a%e6%9c%ac">#</a>
+</h2>
+<p><code>capture.log</code> 中的保存每一条记录 JSON 结构如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;meta&#34;</span>: {
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&#34;version&#34;</span>: <span style="color:#ae81ff">2</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&#34;uuid&#34;</span>: <span style="color:#e6db74">&#34;d1e353af-2b2a-11f0-9fc3-c25e9f33ab0e&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&#34;timestamp&#34;</span>: <span style="color:#ae81ff">1746612335844422126</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&#34;containResponse&#34;</span>: <span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span>    },
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;method&#34;</span>: <span style="color:#e6db74">&#34;/pbpkg.Service/Method&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;request&#34;</span>: {
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&#34;headers&#34;</span>: {
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&#34;:authority&#34;</span>: <span style="color:#e6db74">&#34;10.90.74.23:50051&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&#34;:method&#34;</span>: <span style="color:#e6db74">&#34;POST&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&#34;:path&#34;</span>: <span style="color:#e6db74">&#34;/pbpkg.Service/Method&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&#34;:scheme&#34;</span>: <span style="color:#e6db74">&#34;http&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&#34;content-type&#34;</span>: <span style="color:#e6db74">&#34;application/grpc&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&#34;grpc-accept-encoding&#34;</span>: <span style="color:#e6db74">&#34;gzip&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&#34;te&#34;</span>: <span style="color:#e6db74">&#34;trailers&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&#34;user-agent&#34;</span>: <span style="color:#e6db74">&#34;grpc-go/1.61.0&#34;</span>
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&#34;body&#34;</span>: <span style="color:#e6db74">&#34;&lt;ignored data string&gt;&#34;</span>
+</span></span><span style="display:flex;"><span>    },
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;response&#34;</span>: {
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&#34;headers&#34;</span>: {
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&#34;:status&#34;</span>: <span style="color:#e6db74">&#34;200&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&#34;content-type&#34;</span>: <span style="color:#e6db74">&#34;application/grpc&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&#34;grpc-message&#34;</span>: <span style="color:#e6db74">&#34;&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&#34;grpc-status&#34;</span>: <span style="color:#e6db74">&#34;0&#34;</span>
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&#34;body&#34;</span>: <span style="color:#e6db74">&#34;&lt;ignored data string&gt;&#34;</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>JSON 中已经详细的记录了请求和响应的内容，同时还有一个 uuid 字段，可以用来标识同一个请求。脚本的对比逻辑如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">parse_capture_log</span>(log_file) <span style="color:#f92672">-&gt;</span> Record:
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    解析 grpcreplay 生成的 capture.log 文件，返回一个 Record 对象
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    &#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    records <span style="color:#f92672">=</span> {}
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">with</span> open(log_file, <span style="color:#e6db74">&#34;r&#34;</span>) <span style="color:#66d9ef">as</span> f:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> line <span style="color:#f92672">in</span> f:
+</span></span><span style="display:flex;"><span>            record <span style="color:#f92672">=</span> Record<span style="color:#f92672">.</span>parse_raw(line)
+</span></span><span style="display:flex;"><span>            records[record<span style="color:#f92672">.</span>uuid] <span style="color:#f92672">=</span> record
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">main</span>():
+</span></span><span style="display:flex;"><span>    source_records <span style="color:#f92672">=</span> parse_capture_log(<span style="color:#e6db74">&#34;capture.source.log&#34;</span>)
+</span></span><span style="display:flex;"><span>    mirror_records <span style="color:#f92672">=</span> parse_capture_log(<span style="color:#e6db74">&#34;capture.mirror.log&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> source_record <span style="color:#f92672">in</span> source_records:
+</span></span><span style="display:flex;"><span>        mirror_record <span style="color:#f92672">=</span> mirror_records<span style="color:#f92672">.</span>get(source_record<span style="color:#f92672">.</span>uuid)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        diff <span style="color:#f92672">=</span> source_record<span style="color:#f92672">.</span>diff(mirror_record)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> diff:
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e"># 展示差异</span>
+</span></span><span style="display:flex;"><span>            print(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;Request </span><span style="color:#e6db74">{</span>source_record<span style="color:#f92672">.</span>uuid<span style="color:#e6db74">}</span><span style="color:#e6db74"> is different:&#34;</span>)
+</span></span><span style="display:flex;"><span>            print(diff)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 统计对比结果：总共有多少条记录，有多少条记录不同；多少个 method 不同；method 各有多少条记录不同；</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 统计 method 不同的原因：请求头不同、请求体不同、响应头不同、响应体不同；</span>
+</span></span><span style="display:flex;"><span>    print_summary()
+</span></span></code></pre></div><h2 id="总结">
+  总结
+  <a class="anchor" href="#%e6%80%bb%e7%bb%93">#</a>
+</h2>
+<p>本文介绍了如何在 Kubernetes 中使用 grpcreplay 实现 gRPC 流量镜像。通过 sidecar 容器的方式，我们可以将 grpcreplay 部署在旧服务和新服务的旁边，从而实现流量的复制和对比。这种方式的好处在于：</p>
+<ul>
+<li>不需要修改应用代码；</li>
+<li>相比于代理的方式，不会影响应用的性能；</li>
+<li>可以方便的对比新旧服务的响应内容的差异；</li>
+</ul>
+<p>如果当前环境中已经有 Istio 这种 service mesh 的话，那么可以考虑使用 Virtual Service 的 mirror 配置来快速实现流量复制，另外再加上一个请求和响应的记录器，就可以实现流量的复制和对比。</p>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#场景描述">场景描述</a></li>
+    <li><a href="#方案介绍">方案介绍</a>
+      <ul>
+        <li><a href="#kubernetes-中的-sidecar">Kubernetes 中的 sidecar</a></li>
+        <li><a href="#grpcreplay-简介">grpcreplay 简介</a></li>
+      </ul>
+    </li>
+    <li><a href="#实践1-grpcreplay-sidecar">实践1: grpcreplay sidecar</a>
+      <ul>
+        <li><a href="#架构设计">架构设计</a></li>
+        <li><a href="#镜像打包">镜像打包</a></li>
+        <li><a href="#添加-pvc">添加 PVC</a></li>
+        <li><a href="#配置-sidecar-grpcreplay">配置 Sidecar: grpcreplay</a></li>
+      </ul>
+    </li>
+    <li><a href="#实践2-istio-virtualservice-mirror">实践2: Istio VirtualService mirror</a>
+      <ul>
+        <li><a href="#配置源服务-virtualservice">配置源服务 VirtualService</a></li>
+        <li><a href="#编写-gprc-interceptor">编写 gPRC interceptor</a></li>
+      </ul>
+    </li>
+    <li><a href="#对比脚本">对比脚本</a></li>
+    <li><a href="#总结">总结</a></li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
