@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="虽然现在 memcached 不是当下最流行的缓存系统，但是胜在简单。了解其协议设计和使用场景，对于架构设计也会有一些帮助。本文通过抓包的方式来分析 memcached 的协议交互过程，再结合一部分源码来分析下 memcached 是怎么支持“分布式”场景的。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2025/01/03/%E9%80%9A%E8%BF%87%E4%B8%80%E6%AC%A1%E6%8A%93%E5%8C%85%E6%9D%A5%E6%8E%8C%E6%8F%A1memcached/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="通过一次抓包来掌握memcached">
+  <meta property="og:description" content="虽然现在 memcached 不是当下最流行的缓存系统，但是胜在简单。了解其协议设计和使用场景，对于架构设计也会有一些帮助。本文通过抓包的方式来分析 memcached 的协议交互过程，再结合一部分源码来分析下 memcached 是怎么支持“分布式”场景的。">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2025-01-03T20:49:24+08:00">
+    <meta property="article:modified_time" content="2025-01-03T20:49:24+08:00">
+    <meta property="article:tag" content="Memcached">
+    <meta property="article:tag" content="Tcpdump">
+    <meta property="article:tag" content="Wireshark">
+    <meta property="article:tag" content="Rendezvous Hashing">
+<title>通过一次抓包来掌握memcached | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2025/01/03/%E9%80%9A%E8%BF%87%E4%B8%80%E6%AC%A1%E6%8A%93%E5%8C%85%E6%9D%A5%E6%8E%8C%E6%8F%A1memcached/">
+<link rel="stylesheet" href="/book.min.dff49fe021b85119b8df810e9dff23e3fa64b382774db1d28553890bb4018a43.css" integrity="sha256-3/Sf4CG4URm434EOnf8j4/pks4J3TbHShVOJC7QBikM=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.c1f63d993a6a9d30b207d9f16b85cba64392fb8a2c1ec12fbf04229a9c3bb0c8.js" integrity="sha256-wfY9mTpqnTCyB9nxa4XLpkOS&#43;4osHsEvvwQimpw7sMg=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>通过一次抓包来掌握memcached</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#什么是-memcachedhttpsmemcachedorg">什么是 <a href="https://memcached.org/">memcached</a></a>
+      <ul>
+        <li><a href="#为什么有-redis-还要使用-memcached">为什么有 redis 还要使用 memcached</a></li>
+      </ul>
+    </li>
+    <li><a href="#memcached-协议概览">memcached 协议概览</a>
+      <ul>
+        <li><a href="#standard-text-protocol">Standard Text Protocol</a></li>
+        <li><a href="#meta-text-protocol">Meta Text Protocol</a></li>
+      </ul>
+    </li>
+    <li><a href="#抓包源码分析">抓包/源码分析</a>
+      <ul>
+        <li><a href="#分析0-memcached-的协议长什么样">分析0: memcached 的协议长什么样？</a></li>
+        <li><a href="#分析1-memcached-集群是如何工作的">分析1: memcached 集群是如何工作的？</a></li>
+        <li><a href="#分析2-元文本协议有什么区别">分析2: 元文本协议有什么区别？</a></li>
+      </ul>
+    </li>
+    <li><a href="#文本协议梳理">文本协议梳理</a></li>
+    <li><a href="#memcached-client-实现">Memcached Client 实现</a></li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    通过一次抓包来掌握memcached
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>January 3, 2025</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E6%8A%80%E6%9C%AF%E6%80%BB%E7%BB%93/">技术总结</a>, 
+      <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F/">分布式</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/memcached/">Memcached</a>, 
+      <a href="/tags/tcpdump/">Tcpdump</a>, 
+      <a href="/tags/wireshark/">Wireshark</a>, 
+      <a href="/tags/Rendezvous-Hashing/">Rendezvous Hashing</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><h2 id="什么是-memcachedhttpsmemcachedorg">
+  什么是 <a href="https://memcached.org/">memcached</a>
+  <a class="anchor" href="#%e4%bb%80%e4%b9%88%e6%98%af-memcachedhttpsmemcachedorg">#</a>
+</h2>
+<p>memcached 是一个高性能的“分布式”内存对象缓存系统，用于动态 Web 应用以减轻数据库负载。它通过在内存中缓存数据和对象来减少读取数据库的次数，从而提高动态、数据库驱动网站的速度。memcached 是自由软件，以 BSD 许可证发布。</p>
+<p>相比于大家熟知的 Redis，memcached 更加简单，只支持 key-value 存储，而 Redis 支持更多的数据结构，如 list、set、hash 等。</p>
+<blockquote>
+<p>Github 地址：<a href="https://github.com/memcached/memcached">https://github.com/memcached/memcached</a></p>
+</blockquote>
+<h3 id="为什么有-redis-还要使用-memcached">
+  为什么有 redis 还要使用 memcached
+  <a class="anchor" href="#%e4%b8%ba%e4%bb%80%e4%b9%88%e6%9c%89-redis-%e8%bf%98%e8%a6%81%e4%bd%bf%e7%94%a8-memcached">#</a>
+</h3>
+<p>从我个人的角度来说，要在采用一个缓存系统的时候，我会优先选择 Redis，因为 Redis 功能更加强大，支持更多的数据结构，而且 Redis 也支持持久化，在高可用和分布式部分的设计上也更加完善。</p>
+<p>但是 memcached 也有自己的优势，比如更加简单，更加轻量级，更加容易上手，因此在某些系统中也会选用 memcached。因此，了解 memcached 的设计也是有必要的。</p>
+<h2 id="memcached-协议概览">
+  memcached 协议概览
+  <a class="anchor" href="#memcached-%e5%8d%8f%e8%ae%ae%e6%a6%82%e8%a7%88">#</a>
+</h2>
+<p>memcached 支持基本的文本协议和<a href="https://docs.memcached.org/protocols/meta/">元文本协议</a>，其中元文本协议于 2019 年推出。memcached 还曾支持过二进制协议，但已经被废弃。</p>
+<blockquote class="book-hint info">
+<p>memcached 的协议是基于文本的，因此我们可以通过 telnet 或者 netcat 工具来模拟 memcached 的客户端，从而方便的进行测试。</p>
+<p>这两者是 “交叉兼容” 的，也就是说我们可以通过 <em><strong>文本协议来设置键值</strong></em>, 通过 <em><strong>元文本协议来查询</strong></em>，反之亦然。</p>
+</blockquote>
+<h3 id="standard-text-protocol">
+  Standard Text Protocol
+  <a class="anchor" href="#standard-text-protocol">#</a>
+</h3>
+<blockquote>
+<p>详细的协议文档可以参考：<a href="https://github.com/memcached/memcached/blob/master/doc/protocol.txt">https://github.com/memcached/memcached/blob/master/doc/protocol.txt</a></p>
+</blockquote>
+<p>memcached 的标准文本协议是一个基于文本的协议，它使用 ASCII 字符串来进行通信。memcached 服务器监听在默认端口 11211 上，客户端通过 TCP 连接到服务器，然后发送命令和数据。因此我们可以很容易的通过 telnet 工具就可以完成 memcached 的基本操作。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>telnet 127.0.0.1 <span style="color:#ae81ff">11211</span>
+</span></span></code></pre></div><p>然后我们可以输入 memcached 的命令，如 <code>set</code>、<code>get</code> 等。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>set key <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">5</span> <span style="color:#75715e"># set key flag expire_time data_length</span>
+</span></span><span style="display:flex;"><span>value         <span style="color:#75715e"># data</span>
+</span></span><span style="display:flex;"><span>STORED       <span style="color:#75715e"># 表示存储成功</span>
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>get key
+</span></span><span style="display:flex;"><span>VALUE key <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">5</span> <span style="color:#75715e"># VALUE key flag data_length CAS</span>
+</span></span><span style="display:flex;"><span>value         <span style="color:#75715e"># data</span>
+</span></span><span style="display:flex;"><span>END           <span style="color:#75715e"># 表示获取结束</span>
+</span></span></code></pre></div><h4 id="storage-commands">
+  Storage Commands
+  <a class="anchor" href="#storage-commands">#</a>
+</h4>
+<p>存储命令分为两类，一类是存储命令（set, add, replace, append 和 prepend），另一类是检查并设置命令（cas）。各自的格式如下：</p>
+<ul>
+<li>
+<p>直接存储命令</p>
+<p><code>&lt;command name&gt; &lt;key&gt; &lt;flags&gt; &lt;exptime&gt; &lt;bytes&gt; [noreply]\r\n &lt;data block&gt; \r\n</code></p>
+<ul>
+<li>key: 客户端声明的用于存储的 key</li>
+<li>flags: 任意的 16 位无符号整数用于存储额外的信息，对服务器透明，当数据被获取时会原封不动的返回。在 v1.2.1 之后，flags 可以是 32 位无符号整数。</li>
+<li>exptime: 以秒为单位的过期时间，0 表示永不过期（但仍然可能会因为内存不足而被删除）</li>
+<li>bytes: 存储的数据长度</li>
+<li>noreply: 可选参数，如果存在则不会返回响应</li>
+<li>data block: 存储的数据</li>
+</ul>
+</li>
+<li>
+<p>CAS 命令</p>
+<p><code>cas &lt;key&gt; &lt;flags&gt; &lt;exptime&gt; &lt;bytes&gt; &lt;cas unique&gt; [noreply]\r\n &lt;data block&gt; \r\n</code></p>
+<ul>
+<li>cas unique: 64 位无符号整数。使用 cas 前需要先通过 gets 获取到 token(cas unique)，使用 cas 时携带这个 token，否则会操作失败。</li>
+<li>其他参数和存储命令一致</li>
+</ul>
+</li>
+</ul>
+<table>
+  <thead>
+      <tr>
+          <th>命令</th>
+          <th>说明</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>set</td>
+          <td>存储数据，会覆盖任何现有数据 <br></td>
+      </tr>
+      <tr>
+          <td>add</td>
+          <td>仅当该数据尚不存在时才存储该数据 <br></td>
+      </tr>
+      <tr>
+          <td>replace</td>
+          <td>替换数据，但前提是该数据已存在 <br></td>
+      </tr>
+      <tr>
+          <td>append</td>
+          <td>在现有数据字节之后追加数据 <br></td>
+      </tr>
+      <tr>
+          <td>prepend</td>
+          <td>在现有数据字节之前追加数据 <br></td>
+      </tr>
+      <tr>
+          <td>cas</td>
+          <td>检查并设置，用于实现乐观锁 <br></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="retrieval-commands">
+  Retrieval Commands
+  <a class="anchor" href="#retrieval-commands">#</a>
+</h4>
+<table>
+  <thead>
+      <tr>
+          <th>命令</th>
+          <th>说明</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>get</td>
+          <td>获取数据 <br> <code>get key1 key2 ... keyn \r\n</code></td>
+      </tr>
+      <tr>
+          <td>gets</td>
+          <td>获取数据和 CAS 值 <br> <code>gets key1 key2 ... keyn \r\n</code></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="statistics-commands">
+  Statistics Commands
+  <a class="anchor" href="#statistics-commands">#</a>
+</h4>
+<blockquote>
+<p>关于 stats 的详细字段解释查阅：<a href="https://github.com/memcached/memcached/blob/7d6bc7b09e3c6bb8eaff8b2b3d78d01e0bf17f6f/doc/protocol.txt#L1299-L1451">https://github.com/memcached/memcached/blob/7d6bc7b09e3c6bb8eaff8b2b3d78d01e0bf17f6f/doc/protocol.txt#L1299-L1451</a></p>
+</blockquote>
+<table>
+  <thead>
+      <tr>
+          <th>命令</th>
+          <th>说明</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>stats</td>
+          <td>基本统计命令 <br> <code>stats \r\n</code></td>
+      </tr>
+      <tr>
+          <td>stats items</td>
+          <td>获取服务器统计信息 <br> <code>stats items \r\n</code></td>
+      </tr>
+      <tr>
+          <td>stats slabs</td>
+          <td>获取服务器统计信息 <br> <code>stats slabs \r\n</code></td>
+      </tr>
+      <tr>
+          <td>stats sizes</td>
+          <td>获取服务器统计信息 <br> <code>stats sizes \r\n</code></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="other-commands">
+  Other Commands
+  <a class="anchor" href="#other-commands">#</a>
+</h4>
+<table>
+  <thead>
+      <tr>
+          <th>命令</th>
+          <th>说明</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>version</td>
+          <td>获取服务器版本信息 <br> <code>version \r\n</code></td>
+      </tr>
+      <tr>
+          <td>quit</td>
+          <td>关闭连接 <br> <code>quit \r\n</code></td>
+      </tr>
+      <tr>
+          <td>flush_all</td>
+          <td>清空所有数据 <br> <code>flush_all \r\n</code></td>
+      </tr>
+      <tr>
+          <td>delete</td>
+          <td>删除数据 <br> <code>delete key \r\n</code></td>
+      </tr>
+      <tr>
+          <td>incr/decr</td>
+          <td>value为无符号 64 位整数的字符串表示形式，可以进行递增/递减操作。key 不存在会操作失败。<br> <code>incr key value \r\n</code></td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="meta-text-protocol">
+  Meta Text Protocol
+  <a class="anchor" href="#meta-text-protocol">#</a>
+</h3>
+<blockquote class="book-hint danger">
+<p>元文本协议中会出现大量的 token 字样的描述, 其指代的是跟在 flag 后面 “语法单元” 或 理解为flags 参数亦可。
+如 <code>mg foo k v R30</code> 中，<code>R</code> 就是一个 flag, <code>30</code> 就是就是 <code>R</code> 携带的token。</p>
+</blockquote>
+<p>元文本协议（Meta Text Protocol）是 memcached 1.6.0 版本引入的新协议，它是一种基于文本的协议，用于支持 memcached 的元数据操作。相比于标准文本协议，元文本协议有以下特点：</p>
+<ul>
+<li>引入了新命令和（使用 ms 来取代 set；mg 来取代 get，gets, touch, GAT, GATS 等）</li>
+<li>新增了元数据标志，如 l 标志自上一次访问以来的秒数，h 表示自存储以来是否被访问过，t 表示过期前剩余的秒数。</li>
+<li>支持 key 采用二进制格式（传输时需要使用 base64 编码）</li>
+<li>支持原子性操作</li>
+<li>支持对频繁访问的对象进行提前缓存。通过 R 标志，可以在查询时就指示服务器刷新缓存。</li>
+</ul>
+<p>新增的命令有：ms(meta set), mg(meta get), md(meta delete), me(meta debug) 等。</p>
+<h4 id="meta-set-命令ms">
+  Meta Set 命令：ms
+  <a class="anchor" href="#meta-set-%e5%91%bd%e4%bb%a4ms">#</a>
+</h4>
+<blockquote>
+<p>详细的协议文档可以参考：<a href="https://github.com/memcached/memcached/blob/master/doc/protocol.txt#L685">https://github.com/memcached/memcached/blob/master/doc/protocol.txt#L685</a></p>
+</blockquote>
+<p>在元文本协议中，请求的格式如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># 请求</span>
+</span></span><span style="display:flex;"><span>ms &lt;key&gt; &lt;datalen&gt; &lt;flags&gt;<span style="color:#ae81ff">\r\n</span>
+</span></span><span style="display:flex;"><span>&lt;data block&gt;<span style="color:#ae81ff">\r\n</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 响应</span>
+</span></span><span style="display:flex;"><span>&lt;CD&gt; &lt;flags&gt;<span style="color:#ae81ff">\r\n</span>
+</span></span></code></pre></div><p>举例如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># 设置一个 key=foo, value=bar 的数据, 其中 T90 表示 90 秒后过期, F1 表示 flags=1</span>
+</span></span><span style="display:flex;"><span>ms foo <span style="color:#ae81ff">3</span> T90 F1<span style="color:#ae81ff">\r\n</span>
+</span></span><span style="display:flex;"><span>bar<span style="color:#ae81ff">\r\n</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 响应</span>
+</span></span><span style="display:flex;"><span>HD
+</span></span></code></pre></div><blockquote>
+<p>ms 响应的 CD 有以下几种：</p>
+<p><code>HD</code> STORED 成功。</p>
+<p><code>NS</code> NOT_STORED 数据因为错误而未存储。</p>
+<p><code>EX</code> EXISTS 数据已经存在，往往是 CAS 语义，token失效的结果。</p>
+<p><code>NF</code> NOT_FOUND 数据不存在, 往往是 CAS 语义，key 不存在的结果。</p>
+</blockquote>
+<p>ms 支持的 flags 标志如下：</p>
+<table>
+  <thead>
+      <tr>
+          <th>Flags</th>
+          <th>说明</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>b</td>
+          <td>key 采用 base64 编码</td>
+      </tr>
+      <tr>
+          <td>c</td>
+          <td>存储成功则返回 cas token，否则返回0（但 0 不能作为判断成功失败的依据）。</td>
+      </tr>
+      <tr>
+          <td>C(token)</td>
+          <td>比较 CAS 值，如果 token 与服务器的 CAS 值不一致则操作失败。可以配合 <code>I</code> 标记使用</td>
+      </tr>
+      <tr>
+          <td>E(token)</td>
+          <td>使用 token 作为新的 CAS 值，如果 item 被修改</td>
+      </tr>
+      <tr>
+          <td>F(token)</td>
+          <td>设置 client flags (32bit)</td>
+      </tr>
+      <tr>
+          <td>I</td>
+          <td>使 item 失效，如果提供的 CAS 值比 item 的 CAS 值旧则操作失败</td>
+      </tr>
+      <tr>
+          <td>k</td>
+          <td>把 key 作为 token 返回（mg 默认不回携带 key, 那么可以通过此 flag 返回）</td>
+      </tr>
+      <tr>
+          <td>O(token)</td>
+          <td>透明值, 会原封不动的返回</td>
+      </tr>
+      <tr>
+          <td>q</td>
+          <td>使用 noreply 语义</td>
+      </tr>
+      <tr>
+          <td>s</td>
+          <td>返回 item 字节大小</td>
+      </tr>
+      <tr>
+          <td>T(token)</td>
+          <td>设置 item 的 TTL</td>
+      </tr>
+      <tr>
+          <td>M(token)</td>
+          <td>模式切换,默认 Set。Token 可选值 E(add), A(Append), P(Prepend), R(Replace) , S(Set)</td>
+      </tr>
+      <tr>
+          <td>N(token)</td>
+          <td>如果是 append 模式下，如果不存在则会自动创建一个新的 item，接受 TTL 作为参数</td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="meta-get-命令mg">
+  Meta Get 命令：mg
+  <a class="anchor" href="#meta-get-%e5%91%bd%e4%bb%a4mg">#</a>
+</h4>
+<blockquote>
+<p>详细的协议文档可以参考：[https://github.com/memcached/memcached/blob/master/doc/protocol.txt#L685</p>
+</blockquote>
+<p><code>mg</code> 命令用于获取数据，请求的格式如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># 请求</span>
+</span></span><span style="display:flex;"><span>mg &lt;key&gt; &lt;flags&gt;<span style="color:#ae81ff">\r\n</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 响应</span>
+</span></span><span style="display:flex;"><span>&lt;CD&gt; &lt;flags&gt; &lt;flags token&gt;<span style="color:#ae81ff">\r\n</span>
+</span></span><span style="display:flex;"><span>&lt;data block&gt;<span style="color:#ae81ff">\r\n</span>
+</span></span></code></pre></div><p>举例如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># 获取 key=foo 的数据, v 表示 value，t 表示过期时间，f 表示 flags</span>
+</span></span><span style="display:flex;"><span>mg foo t f v<span style="color:#ae81ff">\r\n</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 响应</span>
+</span></span><span style="display:flex;"><span>VA <span style="color:#ae81ff">3</span> t79 f1
+</span></span><span style="display:flex;"><span>bat
+</span></span></code></pre></div><blockquote>
+<p>mg 响应的 CD 有以下几种：</p>
+<p><code>VA &lt;size&gt; &lt;flags&gt;\r\n &lt;data block&gt;\r\n</code> 如果使用了 v 标志 且 服务器有数据。</p>
+<p><code>HD &lt;flags&gt;\r\n</code> 如果没有使用 v 标志。</p>
+<p><code>EN\r\n</code> 代表 key 不存在。</p>
+</blockquote>
+<p>mg 支持的 flags 标志如下：</p>
+<table>
+  <thead>
+      <tr>
+          <th>Flags</th>
+          <th>说明</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>b</td>
+          <td>key 采用 base64 编码</td>
+      </tr>
+      <tr>
+          <td>c</td>
+          <td>返回 cas token</td>
+      </tr>
+      <tr>
+          <td>f</td>
+          <td>返回 client flags token</td>
+      </tr>
+      <tr>
+          <td>h</td>
+          <td>返回是否被访问过的标志</td>
+      </tr>
+      <tr>
+          <td>k</td>
+          <td>返回 key</td>
+      </tr>
+      <tr>
+          <td>l</td>
+          <td>返回自上次访问以来的秒数</td>
+      </tr>
+      <tr>
+          <td>O</td>
+          <td>透明值</td>
+      </tr>
+      <tr>
+          <td>q</td>
+          <td>使用 noreply 语义</td>
+      </tr>
+      <tr>
+          <td>s</td>
+          <td>返回 item 大小</td>
+      </tr>
+      <tr>
+          <td>t</td>
+          <td>返回剩余的 TTL</td>
+      </tr>
+      <tr>
+          <td>u</td>
+          <td>不更新 LRU</td>
+      </tr>
+      <tr>
+          <td>v</td>
+          <td>返回 value</td>
+      </tr>
+      <tr>
+          <td>E(token)</td>
+          <td>使用 token 作为新的 CAS 值，如果 item 被修改</td>
+      </tr>
+      <tr>
+          <td>N(token)</td>
+          <td>如果 item 不存在，创建一个新的 item，接受 TTL 作为参数</td>
+      </tr>
+      <tr>
+          <td>R(token)</td>
+          <td>如果剩余的 TTL 小于 token，为 recache 而胜出</td>
+      </tr>
+      <tr>
+          <td>T(token)</td>
+          <td>更新剩余的 TTL</td>
+      </tr>
+  </tbody>
+</table>
+<p>由此可见，元文本协议相比于标准文本协议更加灵活，支持更多的元数据操作。尤其是 mg 跟 flags 的结合更加灵活，将以前需要执行多个命令的操作合并到了一个命令中，减少了网络往返的次数。</p>
+<blockquote class="book-hint info">
+<p>元文本协议中当然不止这两个命令，还有 md, me 等命令，就不再一一列举了。通过 ms, mg 命令就足够掌握了元文本协议的设计理念和使用方法。</p>
+</blockquote>
+<h2 id="抓包源码分析">
+  抓包/源码分析
+  <a class="anchor" href="#%e6%8a%93%e5%8c%85%e6%ba%90%e7%a0%81%e5%88%86%e6%9e%90">#</a>
+</h2>
+<p>下面我们通过抓包的方式来分析 memcached 的协议交互过程，再结合一部分源码来分析下 memcached 是怎么支持“分布式”场景的。</p>
+<h3 id="分析0-memcached-的协议长什么样">
+  分析0: memcached 的协议长什么样？
+  <a class="anchor" href="#%e5%88%86%e6%9e%900-memcached-%e7%9a%84%e5%8d%8f%e8%ae%ae%e9%95%bf%e4%bb%80%e4%b9%88%e6%a0%b7">#</a>
+</h3>
+<p>要回答这个问题，我们甚至不需要抓包，从 memcached 的协议介绍我们就已经知道了它是一个文本协议，直接使用 telnet 就可以完成 memcached 的基本操作。下面就是一个 telnet 从连接到 set 并 get 的完整抓包截图：</p>
+<p><img src="/images/memcached/memcached-protocol.jpeg" alt="memcached 协议抓包" /></p>
+<p>从截图我们可以看到，经过三次握手后，客户端发送了 <code>ms foo 3 t90\r\nbar\r\n</code> 命令，然后 memcached 服务器返回了 <code>HD</code> 表示存储成功。接着客户端发送了 <code>mg foo t f v\r\n</code> 命令，memcached 服务器返回了 <code>VA 3 t-1 s3\r\nbar\r\n</code> 表示获取成功。</p>
+<p>都非常的直观，这里唯一需要注意 t90 这 个flag 使用错了，应该是 T90，表示 90 秒后过期，但是 memcached 服务器并没有报错，而是直接存储了 -1 表示永不过期。</p>
+<p>另外我们也会注意到telnet客户端发送 <code>ms foo 3 t90\r\nbar\r\n</code> 是分成了两个 TCP 包发送的，这是因为 telnet 默认是行缓冲模式，需要按下回车键才会发送数据。</p>
+<h3 id="分析1-memcached-集群是如何工作的">
+  分析1: memcached 集群是如何工作的？
+  <a class="anchor" href="#%e5%88%86%e6%9e%901-memcached-%e9%9b%86%e7%be%a4%e6%98%af%e5%a6%82%e4%bd%95%e5%b7%a5%e4%bd%9c%e7%9a%84">#</a>
+</h3>
+<p>我们通常看到 memcached 的介绍都会说 memcached 是一个“分布式”缓存系统，那么 memcached 是如何支持分布式场景的呢？从官方文档中我们还可以看到这样的描述：</p>
+<blockquote>
+<p><em><strong><a href="https://docs.memcached.org/#logic-half-in-client-half-in-server">Logic Half in Client, Half in Server</a></strong></em></p>
+<p><em><strong>A “memcached implementation” is partially in a client, and partially in a server. Clients understand how to choose which server to read or write to for an item, what to do when it cannot contact a server.</strong></em></p>
+<p><em><strong><a href="https://docs.memcached.org/#servers-are-disconnected-from-each-other">Servers are Disconnected From Each Other</a></strong></em></p>
+<p><em><strong>Memcached servers are unaware of each other. There is no crosstalk, no synchronization, no broadcasting, no replication. Adding servers increases the available memory. Cache invalidation is simplified, as clients delete or overwrite data on the server which owns it directly.</strong></em></p>
+</blockquote>
+<p>意思其实很简单，虽然 memcached 是一个“分布式”缓存系统，但是它的分布式是需要客户端配合的伪分布式，而不是通常意义上的分布式。它所支持的分布式是指客户端可以采取分片算法来决定数据存储在哪个服务器上，而 memcached 服务器本身是不会相互通信的，也不会进行数据同步的。如下图所示：</p>
+<p><img src="/images/memcached/memcached-distributed.svg" alt="memcached 分布式" /></p>
+<p>这样的设计有利有弊，优点是 memcached 服务器之间不需要相互通信，不需要同步数据，因此 memcached 服务器可以很容易的扩展，只需要增加服务器就可以增加缓存容量。缺点也是显而易见的，分布式的特性需要客户端来实现，这就需要客户端有一定的分片算法，如果想要实现高可用(某台机器宕机)，还需要客户端支持“复制”机制。</p>
+<p>接下来我们就可以通过，抓包来验证这一点：</p>
+<details ><summary>部署 memcached 集群</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#75715e"># 通过 docker 启动两个 memcached 实例, 分别监听宿主机的 11211 和 11212 端口</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">version</span>: <span style="color:#e6db74">&#39;3&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">services</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">memcached1</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">image</span>: <span style="color:#ae81ff">memcached:1.5.6</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">ports</span>:
+</span></span><span style="display:flex;"><span>      - <span style="color:#e6db74">&#34;11211:11211&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">memcached2</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">image</span>: <span style="color:#ae81ff">memcached:1.5.6</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">ports</span>:
+</span></span><span style="display:flex;"><span>      - <span style="color:#e6db74">&#34;11212:11211&#34;</span>
+</span></span></code></pre></div>  </div>
+</details>
+<details ><summary>客户端代码</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#f92672">from</span> pymemcache.client.hash <span style="color:#f92672">import</span> HashClient
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>client <span style="color:#f92672">=</span> HashClient([
+</span></span><span style="display:flex;"><span>  <span style="color:#e6db74">&#34;127.0.0.1:11211&#34;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#e6db74">&#34;127.0.0.1:11212&#34;</span>,
+</span></span><span style="display:flex;"><span>])
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>client<span style="color:#f92672">.</span>set(<span style="color:#e6db74">&#34;key-0&#34;</span>, <span style="color:#e6db74">&#34;I&#39;ll be sent to node1(11211)&#34;</span>, expire<span style="color:#f92672">=</span><span style="color:#ae81ff">30</span>)
+</span></span><span style="display:flex;"><span>client<span style="color:#f92672">.</span>set(<span style="color:#e6db74">&#34;key-2&#34;</span>, <span style="color:#e6db74">&#34;I&#39;ll be sent to node2(11212)&#34;</span>, expire<span style="color:#f92672">=</span><span style="color:#ae81ff">30</span>)
+</span></span></code></pre></div>  </div>
+</details>
+<p>通过 wirehsark 抓包，我们可以看到客户端按照预期发送了两个 set 命令，分别存储在 11211 和 11212 端口的 memcached 服务器上：</p>
+<p><img src="/images/memcached/memcached-cluster-wireshark.jpeg" alt="memcached 分布式抓包" /></p>
+<p>而客户端（pymemcache）的逻辑也很简单，通过使用 <code>Rendezvous Hashing</code> 算法来计算组合 key (node-$key) 的 hash 值，选择 score 最高的服务器，如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># self.hash_function = lambda x: murmur3_32(x)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">get_node</span>(self, key):
+</span></span><span style="display:flex;"><span>    high_score <span style="color:#f92672">=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>    winner <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> node <span style="color:#f92672">in</span> self<span style="color:#f92672">.</span>nodes:
+</span></span><span style="display:flex;"><span>        score <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>hash_function(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">{</span>node<span style="color:#e6db74">}</span><span style="color:#e6db74">-</span><span style="color:#e6db74">{</span>key<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> score <span style="color:#f92672">&gt;</span> high_score:
+</span></span><span style="display:flex;"><span>            (high_score, winner) <span style="color:#f92672">=</span> (score, node)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">elif</span> score <span style="color:#f92672">==</span> high_score:
+</span></span><span style="display:flex;"><span>            (high_score, winner) <span style="color:#f92672">=</span> (score, max(str(node), str(winner)))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> winner
+</span></span></code></pre></div><blockquote class="book-hint warning">
+<p>这里有意思的是，客户端的做法不是非常常见的 hash 取模的方式，而是通过一种叫做 HRW（Highest Random Weight）Hashing 的算法，这种算法的优点是当节点增加或者减少时，影响的数据量最小，而且不需要维护一致性哈希环。</p>
+<p>假如我们有三个节点（node1, node2, node3），key1 -&gt; node1，key2 -&gt; node2，key3 -&gt; node3</p>
+<p>如果 node2 挂掉了，那么最坏的情况下：key1-&gt; node3，key2 -&gt; node3，key3 -&gt; node1，这所有的 key 都要重新分配。</p>
+<p>而 HRW 算法的优点是：当 node2 挂掉了，只有 key2 -&gt; node3 需要重新分配，其他的 key 仍然保持原来的分配，这是因为一开始 key1 -&gt; node1 就已经是最高，那么节点减少这个状况也不会发生变化。</p>
+</blockquote>
+<h3 id="分析2-元文本协议有什么区别">
+  分析2: 元文本协议有什么区别？
+  <a class="anchor" href="#%e5%88%86%e6%9e%902-%e5%85%83%e6%96%87%e6%9c%ac%e5%8d%8f%e8%ae%ae%e6%9c%89%e4%bb%80%e4%b9%88%e5%8c%ba%e5%88%ab">#</a>
+</h3>
+<p>顾名思义，元文本协议还是基于文本的，但是它引入了更多的元数据标志，通过标志的组合避免了多次网络往返的问题，这对于需要优化 memcached 使用场景是非常有帮助的。</p>
+<p>但是这里，我们可以看看 memcached 内部是怎么处理元文本协议的，以下是 memcached 源码中对于元文本协议的处理：</p>
+<details open><summary>协议解析片段</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">process_command_ascii</span>(conn <span style="color:#f92672">*</span>c, <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>command) {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ... 省略部分代码
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// Meta commands are all 2-char in length.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">char</span> first <span style="color:#f92672">=</span> tokens[COMMAND_TOKEN].value[<span style="color:#ae81ff">0</span>];
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (first <span style="color:#f92672">==</span> <span style="color:#e6db74">&#39;m&#39;</span> <span style="color:#f92672">&amp;&amp;</span> tokens[COMMAND_TOKEN].length <span style="color:#f92672">==</span> <span style="color:#ae81ff">2</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">switch</span> (tokens[COMMAND_TOKEN].value[<span style="color:#ae81ff">1</span>]) {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">case</span> <span style="color:#e6db74">&#39;g&#39;</span><span style="color:#f92672">:</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#a6e22e">process_mget_command</span>(c, tokens, ntokens);
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">case</span> <span style="color:#e6db74">&#39;s&#39;</span><span style="color:#f92672">:</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#a6e22e">process_mset_command</span>(c, tokens, ntokens);
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">// ... 省略部分代码
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        }
+</span></span><span style="display:flex;"><span>    } <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (first <span style="color:#f92672">==</span> <span style="color:#e6db74">&#39;g&#39;</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// Various get commands are very common.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">WANT_TOKENS_MIN</span>(ntokens, <span style="color:#ae81ff">3</span>);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (<span style="color:#a6e22e">strcmp</span>(tokens[COMMAND_TOKEN].value, <span style="color:#e6db74">&#34;get&#34;</span>) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) {
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">process_get_command</span>(c, tokens, ntokens, false, false);
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// ... 省略部分代码
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    } <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (first <span style="color:#f92672">==</span> <span style="color:#e6db74">&#39;s&#39;</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (<span style="color:#a6e22e">strcmp</span>(tokens[COMMAND_TOKEN].value, <span style="color:#e6db74">&#34;set&#34;</span>) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">&amp;&amp;</span> (comm <span style="color:#f92672">=</span> NREAD_SET)) {
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">WANT_TOKENS_OR</span>(ntokens, <span style="color:#ae81ff">6</span>, <span style="color:#ae81ff">7</span>);
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">process_update_command</span>(c, tokens, ntokens, comm, false);
+</span></span><span style="display:flex;"><span>        } <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (<span style="color:#a6e22e">strcmp</span>(tokens[COMMAND_TOKEN].value, <span style="color:#e6db74">&#34;stats&#34;</span>) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) {
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">process_stat</span>(c, tokens, ntokens);
+</span></span><span style="display:flex;"><span>        } <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">out_string</span>(c, <span style="color:#e6db74">&#34;ERROR&#34;</span>);
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    } <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (first <span style="color:#f92672">==</span> <span style="color:#e6db74">&#39;d&#39;</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (<span style="color:#a6e22e">strcmp</span>(tokens[COMMAND_TOKEN].value, <span style="color:#e6db74">&#34;delete&#34;</span>) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) {
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">WANT_TOKENS</span>(ntokens, <span style="color:#ae81ff">3</span>, <span style="color:#ae81ff">5</span>);
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">process_delete_command</span>(c, tokens, ntokens);
+</span></span><span style="display:flex;"><span>        } <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">out_string</span>(c, <span style="color:#e6db74">&#34;ERROR&#34;</span>);
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    } <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (first <span style="color:#f92672">==</span> <span style="color:#e6db74">&#39;t&#39;</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (<span style="color:#a6e22e">strcmp</span>(tokens[COMMAND_TOKEN].value, <span style="color:#e6db74">&#34;touch&#34;</span>) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) {
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">WANT_TOKENS_OR</span>(ntokens, <span style="color:#ae81ff">4</span>, <span style="color:#ae81ff">5</span>);
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">process_touch_command</span>(c, tokens, ntokens);
+</span></span><span style="display:flex;"><span>        } <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">out_string</span>(c, <span style="color:#e6db74">&#34;ERROR&#34;</span>);
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    } <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (<span style="color:#a6e22e">strcmp</span>(tokens[COMMAND_TOKEN].value, <span style="color:#e6db74">&#34;version&#34;</span>) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">process_version_command</span>(c);
+</span></span><span style="display:flex;"><span>    } <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> (<span style="color:#a6e22e">strcmp</span>(tokens[COMMAND_TOKEN].value, <span style="color:#e6db74">&#34;quit&#34;</span>) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">process_quit_command</span>(c);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ... 省略部分代码
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">return</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div>  </div>
+</details>
+<p>可以看到 meta 协议是在文本协议之前的，通过判断第一个字符是否是 <code>m</code> 来判断是否是 meta 协议，然后再根据第二个字符来判断具体的 meta 命令。至于内部的处理逻辑，大体流程上和文本协议是一致的，只是在命令中增加了更多的元数据标志，这里就不再展开了。</p>
+<h2 id="文本协议梳理">
+  文本协议梳理
+  <a class="anchor" href="#%e6%96%87%e6%9c%ac%e5%8d%8f%e8%ae%ae%e6%a2%b3%e7%90%86">#</a>
+</h2>
+<blockquote>
+<p>🟩 标记的是标准文本协议的命令
+⭕️ 标记的是元文本协议的命令</p>
+</blockquote>
+<table>
+  <thead>
+      <tr>
+          <th>Command</th>
+          <th>Usage</th>
+          <th>Description</th>
+          <th>Remark</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>set</td>
+          <td><code>set &lt;key&gt; &lt;flags&gt; &lt;exptime&gt; &lt;bytes&gt; [noreply]\r\n&lt;data block&gt;\r\n</code></td>
+          <td>Stores data.</td>
+          <td>🟩</td>
+      </tr>
+      <tr>
+          <td>add</td>
+          <td><code>add &lt;key&gt; &lt;flags&gt; &lt;exptime&gt; &lt;bytes&gt; [noreply]\r\n&lt;data block&gt;\r\n</code></td>
+          <td>Stores data only if the server doesn&rsquo;t already hold data for this key.</td>
+          <td>🟩</td>
+      </tr>
+      <tr>
+          <td>replace</td>
+          <td><code>replace &lt;key&gt; &lt;flags&gt; &lt;exptime&gt; &lt;bytes&gt; [noreply]\r\n&lt;data block&gt;\r\n</code></td>
+          <td>Stores data only if the server already holds data for this key.</td>
+          <td>🟩</td>
+      </tr>
+      <tr>
+          <td>append</td>
+          <td><code>append &lt;key&gt; &lt;bytes&gt; [noreply]\r\n&lt;data block&gt;\r\n</code></td>
+          <td>Appends data to an existing key.</td>
+          <td>🟩</td>
+      </tr>
+      <tr>
+          <td>prepend</td>
+          <td><code>prepend &lt;key&gt; &lt;bytes&gt; [noreply]\r\n</code></td>
+          <td>Prepends data to an existing key.</td>
+          <td>🟩</td>
+      </tr>
+      <tr>
+          <td>cas</td>
+          <td><code>cas &lt;key&gt; &lt;flags&gt; &lt;exptime&gt; &lt;bytes&gt; &lt;cas unique&gt; [noreply]\r\n&lt;data block&gt;\r\n</code></td>
+          <td>&ldquo;Check and set&rdquo; operation; stores data only if no one else has updated since it was last fetched.</td>
+          <td>🟩</td>
+      </tr>
+      <tr>
+          <td>ms (Meta Set)</td>
+          <td><code>ms &lt;key&gt; &lt;datalen&gt; &lt;flags&gt;*\r\n&lt;data block&gt;\r\n</code></td>
+          <td>Generic command for storing data to memcached.</td>
+          <td>⭕️</td>
+      </tr>
+      <tr>
+          <td>get</td>
+          <td><code>get &lt;key&gt;*\r\n</code></td>
+          <td>Retrieves data for one or more keys.</td>
+          <td>🟩</td>
+      </tr>
+      <tr>
+          <td>gets</td>
+          <td><code>gets &lt;key&gt;*\r\n</code></td>
+          <td>Retrieves data for one or more keys, including CAS unique values.</td>
+          <td>🟩</td>
+      </tr>
+      <tr>
+          <td>gat</td>
+          <td><code>gat &lt;exptime&gt; &lt;key&gt;*\r\n</code></td>
+          <td>Retrieves data and updates the expiration time of existing items.</td>
+          <td>🟩</td>
+      </tr>
+      <tr>
+          <td>gats</td>
+          <td><code>gats &lt;exptime&gt; &lt;key&gt;*\r\n</code></td>
+          <td>Retrieves data and updates the expiration time of existing items, including CAS unique values.</td>
+          <td>🟩</td>
+      </tr>
+      <tr>
+          <td>mg (Meta Get)</td>
+          <td><code>mg &lt;key&gt; &lt;flags&gt;*\r\n</code></td>
+          <td>Generic command for retrieving key data from memcached.</td>
+          <td>⭕️</td>
+      </tr>
+      <tr>
+          <td>delete</td>
+          <td><code>delete &lt;key&gt; [noreply]\r\n</code></td>
+          <td>Explicitly deletes items.</td>
+          <td>🟩</td>
+      </tr>
+      <tr>
+          <td>incr</td>
+          <td><code>incr &lt;key&gt; &lt;value&gt; [noreply]\r\n</code></td>
+          <td>Increments the value of an item.</td>
+          <td>🟩</td>
+      </tr>
+      <tr>
+          <td>decr</td>
+          <td><code>decr &lt;key&gt; &lt;value&gt; [noreply]\r\n</code></td>
+          <td>Decrements the value of an item.</td>
+          <td>🟩</td>
+      </tr>
+      <tr>
+          <td>touch</td>
+          <td><code>touch &lt;key&gt; &lt;exptime&gt; [noreply]\r\n</code></td>
+          <td>Updates the expiration time of an existing item without fetching it.</td>
+          <td>🟩</td>
+      </tr>
+      <tr>
+          <td>me (Meta Debug)</td>
+          <td><code>me &lt;key&gt; &lt;flag&gt;\r\n</code></td>
+          <td>Human readable dump of all available internal metadata of an item.</td>
+          <td>⭕️</td>
+      </tr>
+      <tr>
+          <td>md (Meta Delete)</td>
+          <td><code>md &lt;key&gt; &lt;flags&gt;*\r\n</code></td>
+          <td>Explicitly deletes items, marking them as &ldquo;stale&rdquo;.</td>
+          <td>⭕️</td>
+      </tr>
+      <tr>
+          <td>ma (Meta Arithmetic)</td>
+          <td><code>ma &lt;key&gt; &lt;flags&gt;*\r\n</code></td>
+          <td>Basic operations against numerical values, replacing &ldquo;incr&rdquo; and &ldquo;decr&rdquo; commands.</td>
+          <td>⭕️</td>
+      </tr>
+      <tr>
+          <td>mn (Meta No-Op)</td>
+          <td><code>mn\r\n</code></td>
+          <td>Returns a static response code.</td>
+          <td>⭕️</td>
+      </tr>
+      <tr>
+          <td>slabs reassign</td>
+          <td><code>slabs reassign &lt;source class&gt; &lt;dest class&gt;\r\n</code></td>
+          <td>Redistributes memory after the server hits its limit.</td>
+          <td>🟩</td>
+      </tr>
+  </tbody>
+</table>
+<h2 id="memcached-client-实现">
+  Memcached Client 实现
+  <a class="anchor" href="#memcached-client-%e5%ae%9e%e7%8e%b0">#</a>
+</h2>
+<p>这是我实现的 Go 语言 memcached client 包：https://github.com/yeqown/memcached 支持标准文本协议和元文本协议、连接池和集群模式等功能，欢迎使用和反馈。</p>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#什么是-memcachedhttpsmemcachedorg">什么是 <a href="https://memcached.org/">memcached</a></a>
+      <ul>
+        <li><a href="#为什么有-redis-还要使用-memcached">为什么有 redis 还要使用 memcached</a></li>
+      </ul>
+    </li>
+    <li><a href="#memcached-协议概览">memcached 协议概览</a>
+      <ul>
+        <li><a href="#standard-text-protocol">Standard Text Protocol</a></li>
+        <li><a href="#meta-text-protocol">Meta Text Protocol</a></li>
+      </ul>
+    </li>
+    <li><a href="#抓包源码分析">抓包/源码分析</a>
+      <ul>
+        <li><a href="#分析0-memcached-的协议长什么样">分析0: memcached 的协议长什么样？</a></li>
+        <li><a href="#分析1-memcached-集群是如何工作的">分析1: memcached 集群是如何工作的？</a></li>
+        <li><a href="#分析2-元文本协议有什么区别">分析2: 元文本协议有什么区别？</a></li>
+      </ul>
+    </li>
+    <li><a href="#文本协议梳理">文本协议梳理</a></li>
+    <li><a href="#memcached-client-实现">Memcached Client 实现</a></li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
