@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="解决微服务架构下，链路追踪，问题定位和可视化分析等问题，链路追踪还是微服务可观测性的重要基石，本文就实战了在Go项目中如何将opentracing落地">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2020/08/06/opentracing%E5%AE%9E%E6%88%98/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="Opentracing实战">
+  <meta property="og:description" content="解决微服务架构下，链路追踪，问题定位和可视化分析等问题，链路追踪还是微服务可观测性的重要基石，本文就实战了在Go项目中如何将opentracing落地">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2020-08-06T08:34:45+08:00">
+    <meta property="article:modified_time" content="2020-08-06T08:34:45+08:00">
+    <meta property="article:tag" content="Golang">
+    <meta property="article:tag" content="Opentracing">
+    <meta property="article:tag" content="Tracing">
+    <meta property="article:tag" content="Jaeger">
+<title>Opentracing实战 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2020/08/06/opentracing%E5%AE%9E%E6%88%98/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.38acbfa5730860fb2f583635d275e043feb2eae8ec219fbb38dc639f42eb6855.js" integrity="sha256-OKy/pXMIYPsvWDY10nXgQ/6y6ujsIZ&#43;7ONxjn0LraFU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>Opentracing实战</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#背景">背景</a></li>
+        <li><a href="#opentracing">Opentracing</a></li>
+        <li><a href="#实战">实战</a></li>
+        <li><a href="#总结">总结</a></li>
+        <li><a href="#参考文献">参考文献</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    Opentracing实战
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>August 6, 2020</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Tracing/">Tracing</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/Opentracing/">Opentracing</a>, 
+      <a href="/tags/Tracing/">Tracing</a>, 
+      <a href="/tags/Jaeger/">Jaeger</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><h3 id="背景">
+  背景
+  <a class="anchor" href="#%e8%83%8c%e6%99%af">#</a>
+</h3>
+<p>在没有链路追踪系统的情况下，如果只要少数几个服务，或许还可以通过日志来排查定位问题。但是如果服务一旦超过10个，那么再想通过日志来定位分析问题将无比繁琐。
+因为，你先要从大量的日志中删筛选出某次请求的日志数据，才能进行后续的定位分析。
+倘若日志系统也不够完善，日志对于调试毫无帮助，那又得退回到最原始的方式，通过代码断点和增加日志，等待问题复现，或者通过肉眼检查代码。
+不是说这种方式不行，而是大部分的程序员的业务需求比较紧张，这样的排查手段效率和收益远远达不到要求（如果你有时间，当我没说 🐶）。</p>
+<p>在实际场景中，我也遇到了这样的问题：</p>
+<ol>
+<li>日志系统里包含了过少的信息，对于调试几乎没有帮助 (几乎只有错误日志，缺少输出上下文的日志)。</li>
+<li>服务调用复杂，一个请求失败，只能透过错误码和错误信息进行判断是否存在调用失败的情况。</li>
+<li>调用链路复杂的情况下，想要对某个请求进行优化，无从下手。</li>
+</ol>
+<p>这里只列举了跟<code>trace</code>相关的一些原始场景，当然从上面的描述中还能发现<code>日志系统不够完善，对调试不友好</code>，不过这里首要解决的问题是<code>链路追踪问题</code>。</p>
+<blockquote>
+<p>如果对路链路追踪没有概念，还望自行查阅资料，这里不会过多介绍～</p>
+</blockquote>
+<h3 id="opentracing">
+  Opentracing
+  <a class="anchor" href="#opentracing">#</a>
+</h3>
+<blockquote>
+<p><strong>注意</strong>：Opentracing 是一套标准接口，而不是具体实现。</p>
+</blockquote>
+<p>这里就实战opentracing + jaeger 的链路追踪方案。其中 opentracing 是一套标准接口，而jaeger是包含了 opentracing 的实现的一套工具。
+Trace链路简单示例如下：</p>
+<img src="/images/tracing1_0.png" />
+<h4 id="trace">
+  Trace
+  <a class="anchor" href="#trace">#</a>
+</h4>
+<p>描述在分布式系统中的一次&quot;事务&quot;。</p>
+<h4 id="span">
+  Span
+  <a class="anchor" href="#span">#</a>
+</h4>
+<p>表示工作流的一部分的命名和定时操作。可以接受标签(Tag Key:Value)，以及附加到特定span实例的标注(Annotation)，如时间戳和结构化日志。</p>
+<h4 id="spancontext">
+  SpanContext
+  <a class="anchor" href="#spancontext">#</a>
+</h4>
+<p>追踪伴随分布式事务的信息，包括它通过网络或通过消息总线将服务传递给服务的时间。span上下文包含TraceId、SpanId和追踪系统需要传播到下游服务的其他数据。</p>
+<h3 id="实战">
+  实战
+  <a class="anchor" href="#%e5%ae%9e%e6%88%98">#</a>
+</h3>
+<p>这里我准备的是 Go 项目，服务之间通过<code>gRPC</code>通信。链路如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>                                +-- process internal trace2
+</span></span><span style="display:flex;"><span>                                |
+</span></span><span style="display:flex;"><span>                     +---&gt; process internal trace1
+</span></span><span style="display:flex;"><span>                     |
+</span></span><span style="display:flex;"><span>                     |                 +---&gt; server-b trace<span style="color:#f92672">(</span>gRPC<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>entry<span style="color:#f92672">(</span>HTTP<span style="color:#f92672">)</span> ---&gt; server-a trace--gRPC--|
+</span></span><span style="display:flex;"><span>                                       +---&gt; server-c trace<span style="color:#f92672">(</span>gRPC<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>                                                   |
+</span></span><span style="display:flex;"><span>                                                   +----&gt; process internal trace3
+</span></span></code></pre></div><p>从上图中可以明确，我们的目标是：实践<code>跨服务调用</code>和<code>服务内部调用</code>的链路追踪，配合jaeger我们还可以将链路信息可视化。</p>
+<h4 id="我有了服务怎么实施落地">
+  我有了服务，怎么实施落地？
+  <a class="anchor" href="#%e6%88%91%e6%9c%89%e4%ba%86%e6%9c%8d%e5%8a%a1%e6%80%8e%e4%b9%88%e5%ae%9e%e6%96%bd%e8%90%bd%e5%9c%b0">#</a>
+</h4>
+<p>为了回答这个问题，我把这个问题结合opentracing的概念再分解一下：</p>
+<ol>
+<li>ParentSpan 从哪儿来？</li>
+<li>ChildSpan由ParentSpan创建，那么什么时候创建？</li>
+<li>链路Tracer从哪儿来？</li>
+<li>Trace信息怎么传递？</li>
+<li>链路信息如何搜集？</li>
+</ol>
+<h5 id="parent-span-从哪儿来链路从哪里开始">
+  Parent-Span 从哪儿来？链路从哪里开始。
+  <a class="anchor" href="#parent-span-%e4%bb%8e%e5%93%aa%e5%84%bf%e6%9d%a5%e9%93%be%e8%b7%af%e4%bb%8e%e5%93%aa%e9%87%8c%e5%bc%80%e5%a7%8b">#</a>
+</h5>
+<p>在上述的实践目标中，我们只有一个入口服务，那么很明显每一次的&quot;事务&quot;都是在这个入口（http entry）开启的。我写了如下的中间件（基于gin）。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// 这个定义是因为opentracing没有定义获取traceId 和spanId的方法，而我又实践了 zipkin 和 jaeger
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">getTraceID</span> <span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">spCtx</span> <span style="color:#a6e22e">opentracing</span>.<span style="color:#a6e22e">SpanContext</span>) <span style="color:#66d9ef">string</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// get trace info from header, if not then create an new one
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">Opentracing</span>(<span style="color:#a6e22e">getTraceIdFromSpanContext</span> <span style="color:#a6e22e">getTraceID</span>) <span style="color:#a6e22e">gin</span>.<span style="color:#a6e22e">HandlerFunc</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">gin</span>.<span style="color:#a6e22e">Context</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// prepare work ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        
+</span></span><span style="display:flex;"><span>    	<span style="color:#75715e">// 这里首先尝试从客户端请求中获取到trace链路信息，如果获取到则创建child span.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">carrier</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">opentracing</span>.<span style="color:#a6e22e">HTTPHeadersCarrier</span>(<span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Request</span>.<span style="color:#a6e22e">Header</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">clientSpCtx</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">tracer</span>.<span style="color:#a6e22e">Extract</span>(<span style="color:#a6e22e">opentracing</span>.<span style="color:#a6e22e">HTTPHeaders</span>, <span style="color:#a6e22e">carrier</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;could not extract trace data from http header, err=%v\n&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// derive a span or create an root span
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">sp</span> = <span style="color:#a6e22e">tracer</span>.<span style="color:#a6e22e">StartSpan</span>(
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Request</span>.<span style="color:#a6e22e">RequestURI</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">opentracing</span>.<span style="color:#a6e22e">ChildOf</span>(<span style="color:#a6e22e">clientSpCtx</span>),
+</span></span><span style="display:flex;"><span>        )
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">sp</span>.<span style="color:#a6e22e">Finish</span>()
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// do some work
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 将含有span的 context.Context 设置到 gin.Context 用于传递span
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">ctx</span> = <span style="color:#a6e22e">opentracing</span>.<span style="color:#a6e22e">ContextWithSpan</span>(<span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Request</span>.<span style="color:#a6e22e">Context</span>(), <span style="color:#a6e22e">sp</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Set</span>(<span style="color:#a6e22e">_traceContextKey</span>, <span style="color:#a6e22e">ctx</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">traceId</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">getTraceIdFromSpanContext</span>(<span style="color:#a6e22e">sp</span>.<span style="color:#a6e22e">Context</span>())
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Header</span>(<span style="color:#e6db74">&#34;X-Trace-Id&#34;</span>, <span style="color:#a6e22e">traceId</span>)
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// continue process request
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Next</span>()
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// do some work 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h5 id="child-span什么时候创建">
+  Child-Span什么时候创建？
+  <a class="anchor" href="#child-span%e4%bb%80%e4%b9%88%e6%97%b6%e5%80%99%e5%88%9b%e5%bb%ba">#</a>
+</h5>
+<p>其实在上述的中间件里已经有了体现（跨服务调用时）。这里主要有两种场景：<code>跨服务调用</code>，<code>服务内部调</code>，这两种的区别在于是否是同一个进程。
+针对跨服务调用，我们使用了gRPC来通信，那么创建的时机就在于gRPC客户端发起调用时，需要创建一个childSpan并传递给服务端，服务端需要解析到该span并在当次请求中使用。
+而对于服务内部的调用，相较而言会更简单一点，直接使用该span创建childSpan就好了。</p>
+<p>这里需要注意的是，一般来说在Go开发过程中推荐使用Context作为函数调用的第一个参数，opentracing也考虑了这一点，如下：
+官方提供了对应的方法，来帮助使用者把span和context.Context一起使用。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// ContextWithSpan returns a new `context.Context` that holds a reference to
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// the span. If span is nil, a new context without an active span is returned.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">ContextWithSpan</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">span</span> <span style="color:#a6e22e">Span</span>) <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">span</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">tracerWithHook</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">span</span>.<span style="color:#a6e22e">Tracer</span>().(<span style="color:#a6e22e">TracerContextWithSpanExtension</span>); <span style="color:#a6e22e">ok</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">ctx</span> = <span style="color:#a6e22e">tracerWithHook</span>.<span style="color:#a6e22e">ContextWithSpanHook</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">span</span>)
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">WithValue</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">activeSpanKey</span>, <span style="color:#a6e22e">span</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// SpanFromContext returns the `Span` previously associated with `ctx`, or
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// `nil` if no such `Span` could be found.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// NOTE: context.Context != SpanContext: the former is Go&#39;s intra-process
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// context propagation mechanism, and the latter houses OpenTracing&#39;s per-Span
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// identity and baggage information.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">SpanFromContext</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>) <span style="color:#a6e22e">Span</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">val</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">ctx</span>.<span style="color:#a6e22e">Value</span>(<span style="color:#a6e22e">activeSpanKey</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">sp</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">val</span>.(<span style="color:#a6e22e">Span</span>); <span style="color:#a6e22e">ok</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">sp</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>在中间件那里，我们已经把 context.Context 设置到了 gin.Context 中去了，因此在后续的使用中，我们需要把它从 gin.Context 取出并传递。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// traceHdl is a trace handler from HTTP request
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">traceHdl</span>(<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">gin</span>.<span style="color:#a6e22e">Context</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// get root Context from request
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// TODO: try to use c.Request.WithContext() to set context
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Get</span>(<span style="color:#a6e22e">x</span>.<span style="color:#a6e22e">GetTraceContextKey</span>())
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">ok</span> {
+</span></span><span style="display:flex;"><span>		panic(<span style="color:#e6db74">&#34;impossible&#34;</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ctx在服务内部传递，ctx含有span信息
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">clientCall</span>(<span style="color:#a6e22e">ctx</span>.(<span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>)); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">JSON</span>(<span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">StatusInternalServerError</span>, <span style="color:#a6e22e">gin</span>.<span style="color:#a6e22e">H</span>{<span style="color:#e6db74">&#34;message&#34;</span>: <span style="color:#a6e22e">err</span>.<span style="color:#a6e22e">Error</span>()})
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// response to client
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">JSON</span>(<span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">StatusOK</span>, <span style="color:#a6e22e">gin</span>.<span style="color:#a6e22e">H</span>{<span style="color:#e6db74">&#34;message&#34;</span>: <span style="color:#e6db74">&#34;traceHdl done&#34;</span>})
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">clientCall</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>) <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 注意：这里使用了gRPC来做跨服务的调用，对于ctx的处理，是通过interceptor实现的。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 这部分代码会在后面贴上，但是逻辑也跟类似，只是多了需要适配gRPC数据传递的规则。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">serverAConn</span>.<span style="color:#a6e22e">PingA</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">pb</span>.<span style="color:#a6e22e">PingAReq</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Now</span>:  <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Now</span>().<span style="color:#a6e22e">Unix</span>(),
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">From</span>: <span style="color:#e6db74">&#34;client&#34;</span>,
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 这里演示进程内链路
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">processInternalTrace1</span>(<span style="color:#a6e22e">ctx</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// internal process trace example 1
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">processInternalTrace1</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>) <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ctx2</span>, <span style="color:#a6e22e">sp</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">x</span>.<span style="color:#a6e22e">StartSpanFromContext</span>(<span style="color:#a6e22e">ctx</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">sp</span>.<span style="color:#a6e22e">Finish</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	println(<span style="color:#e6db74">&#34;processInternalTrace1 called&#34;</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// do some ops
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Sleep</span>(<span style="color:#ae81ff">10</span> <span style="color:#f92672">*</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Millisecond</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">processInternalTrace2</span>(<span style="color:#a6e22e">ctx2</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>gRPC interceptor 实现如下：服务端工作内容相似，只是从inject操作变成了extract。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// client interceptor
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">OpenTracingClientInterceptor</span>(<span style="color:#a6e22e">tracer</span> <span style="color:#a6e22e">opentracing</span>.<span style="color:#a6e22e">Tracer</span>, <span style="color:#a6e22e">optFuncs</span> <span style="color:#f92672">...</span><span style="color:#a6e22e">Option</span>) <span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">UnaryClientInterceptor</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">otgrpcOpts</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">newOptions</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">otgrpcOpts</span>.<span style="color:#a6e22e">apply</span>(<span style="color:#a6e22e">optFuncs</span><span style="color:#f92672">...</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">func</span>(
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>,<span style="color:#a6e22e">m</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">ethod</span> <span style="color:#66d9ef">string</span>, 
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">req</span>, <span style="color:#a6e22e">resp</span> <span style="color:#66d9ef">interface</span>{}, 
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">cc</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">ClientConn</span>, 
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">invoker</span> <span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">UnaryInvoker</span>, 
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">opts</span> <span style="color:#f92672">...</span><span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">CallOption</span>,
+</span></span><span style="display:flex;"><span>    ) <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">var</span> <span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">var</span> <span style="color:#a6e22e">parentCtx</span> <span style="color:#a6e22e">opentracing</span>.<span style="color:#a6e22e">SpanContext</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">parent</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">opentracing</span>.<span style="color:#a6e22e">SpanFromContext</span>(<span style="color:#a6e22e">ctx</span>); <span style="color:#a6e22e">parent</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">parentCtx</span> = <span style="color:#a6e22e">parent</span>.<span style="color:#a6e22e">Context</span>()
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">clientSpan</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">tracer</span>.<span style="color:#a6e22e">StartSpan</span>(
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">method</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">opentracing</span>.<span style="color:#a6e22e">ChildOf</span>(<span style="color:#a6e22e">parentCtx</span>),
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">ext</span>.<span style="color:#a6e22e">SpanKindRPCClient</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">gRPCComponentTag</span>,
+</span></span><span style="display:flex;"><span>        )
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">clientSpan</span>.<span style="color:#a6e22e">Finish</span>()
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 注入
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">ctx</span> = <span style="color:#a6e22e">injectSpanContext</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">tracer</span>, <span style="color:#a6e22e">clientSpan</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 调用
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">invoker</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">method</span>, <span style="color:#a6e22e">req</span>, <span style="color:#a6e22e">resp</span>, <span style="color:#a6e22e">cc</span>, <span style="color:#a6e22e">opts</span><span style="color:#f92672">...</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// ...		
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span> 
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">injectSpanContext</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">tracer</span> <span style="color:#a6e22e">opentracing</span>.<span style="color:#a6e22e">Tracer</span>, <span style="color:#a6e22e">clientSpan</span> <span style="color:#a6e22e">opentracing</span>.<span style="color:#a6e22e">Span</span>) <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">md</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">metadata</span>.<span style="color:#a6e22e">FromOutgoingContext</span>(<span style="color:#a6e22e">ctx</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">ok</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">md</span> = <span style="color:#a6e22e">metadata</span>.<span style="color:#a6e22e">New</span>(<span style="color:#66d9ef">nil</span>)
+</span></span><span style="display:flex;"><span>	} <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">md</span> = <span style="color:#a6e22e">md</span>.<span style="color:#a6e22e">Copy</span>()
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mdWriter</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">metadataReaderWriter</span>{<span style="color:#a6e22e">md</span>}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">tracer</span>.<span style="color:#a6e22e">Inject</span>(<span style="color:#a6e22e">clientSpan</span>.<span style="color:#a6e22e">Context</span>(), <span style="color:#a6e22e">opentracing</span>.<span style="color:#a6e22e">HTTPHeaders</span>, <span style="color:#a6e22e">mdWriter</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// We have no better place to record an error than the Span itself :-/
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">clientSpan</span>.<span style="color:#a6e22e">LogFields</span>(<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">String</span>(<span style="color:#e6db74">&#34;event&#34;</span>, <span style="color:#e6db74">&#34;Tracer.Inject() failed&#34;</span>), <span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Error</span>(<span style="color:#a6e22e">err</span>))
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">metadata</span>.<span style="color:#a6e22e">NewOutgoingContext</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">md</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>至此我们就介绍完了，服务间（gRPC）调用和服务内（context）调用的childSpan的创建和传递。</p>
+<h5 id="链路tracer从哪儿来">
+  链路Tracer从哪儿来？
+  <a class="anchor" href="#%e9%93%be%e8%b7%aftracer%e4%bb%8e%e5%93%aa%e5%84%bf%e6%9d%a5">#</a>
+</h5>
+<p>先说Tracer有什么用，Tracer是用来管理Span的统筹者，负责创建span和传播span。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// Tracer负责创建span和传播span
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Tracer</span> <span style="color:#66d9ef">interface</span> {
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Create, start, and return a new Span with the given `operationName` and
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// incorporate the given StartSpanOption `opts`. (Note that `opts` borrows
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// from the &#34;functional options&#34; pattern, per
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// http://dave.cheney.net/2014/10/17/functional-options-for-friendly-apis)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// A Span with no SpanReference options (e.g., opentracing.ChildOf() or
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// opentracing.FollowsFrom()) becomes the root of its own trace.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// Examples:
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//     var tracer opentracing.Tracer = ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//     // The root-span case:
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//     sp := tracer.StartSpan(&#34;GetFeed&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//     // The vanilla child span case:
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//     sp := tracer.StartSpan(
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//         &#34;GetFeed&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//         opentracing.ChildOf(parentSpan.Context()))
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//     // All the bells and whistles:
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//     sp := tracer.StartSpan(
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//         &#34;GetFeed&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//         opentracing.ChildOf(parentSpan.Context()),
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//         opentracing.Tag{&#34;user_agent&#34;, loggedReq.UserAgent},
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//         opentracing.StartTime(loggedReq.Timestamp),
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//     )
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">StartSpan</span>(<span style="color:#a6e22e">operationName</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">opts</span> <span style="color:#f92672">...</span><span style="color:#a6e22e">StartSpanOption</span>) <span style="color:#a6e22e">Span</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Inject() takes the `sm` SpanContext instance and injects it for
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// propagation within `carrier`. The actual type of `carrier` depends on
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// the value of `format`.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// OpenTracing defines a common set of `format` values (see BuiltinFormat),
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// and each has an expected carrier type.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// Other packages may declare their own `format` values, much like the keys
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// used by `context.Context` (see https://godoc.org/context#WithValue).
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// Example usage (sans error handling):
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//     carrier := opentracing.HTTPHeadersCarrier(httpReq.Header)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//     err := tracer.Inject(
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//         span.Context(),
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//         opentracing.HTTPHeaders,
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//         carrier)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// NOTE: All opentracing.Tracer implementations MUST support all
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// BuiltinFormats.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// Implementations may return opentracing.ErrUnsupportedFormat if `format`
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// is not supported by (or not known by) the implementation.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// Implementations may return opentracing.ErrInvalidCarrier or any other
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// implementation-specific error if the format is supported but injection
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// fails anyway.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// See Tracer.Extract().
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">Inject</span>(<span style="color:#a6e22e">sm</span> <span style="color:#a6e22e">SpanContext</span>, <span style="color:#a6e22e">format</span> <span style="color:#66d9ef">interface</span>{}, <span style="color:#a6e22e">carrier</span> <span style="color:#66d9ef">interface</span>{}) <span style="color:#66d9ef">error</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Extract() returns a SpanContext instance given `format` and `carrier`.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// OpenTracing defines a common set of `format` values (see BuiltinFormat),
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// and each has an expected carrier type.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// Other packages may declare their own `format` values, much like the keys
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// used by `context.Context` (see
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// https://godoc.org/golang.org/x/net/context#WithValue).
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// Example usage (with StartSpan):
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//     carrier := opentracing.HTTPHeadersCarrier(httpReq.Header)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//     clientContext, err := tracer.Extract(opentracing.HTTPHeaders, carrier)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//     // ... assuming the ultimate goal here is to resume the trace with a
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//     // server-side Span:
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//     var serverSpan opentracing.Span
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//     if err == nil {
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//         span = tracer.StartSpan(
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//             rpcMethodName, ext.RPCServerOption(clientContext))
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//     } else {
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//         span = tracer.StartSpan(rpcMethodName)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//     }
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// NOTE: All opentracing.Tracer implementations MUST support all
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// BuiltinFormats.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// Return values:
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//  - A successful Extract returns a SpanContext instance and a nil error
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//  - If there was simply no SpanContext to extract in `carrier`, Extract()
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//    returns (nil, opentracing.ErrSpanContextNotFound)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//  - If `format` is unsupported or unrecognized, Extract() returns (nil,
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//    opentracing.ErrUnsupportedFormat)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//  - If there are more fundamental problems with the `carrier` object,
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//    Extract() may return opentracing.ErrInvalidCarrier,
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//    opentracing.ErrSpanContextCorrupted, or implementation-specific
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//    errors.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// See Tracer.Inject().
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">Extract</span>(<span style="color:#a6e22e">format</span> <span style="color:#66d9ef">interface</span>{}, <span style="color:#a6e22e">carrier</span> <span style="color:#66d9ef">interface</span>{}) (<span style="color:#a6e22e">SpanContext</span>, <span style="color:#66d9ef">error</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>之前已经提到了了opentracing是一套接口，那么具体的实现是在其他的工具中完成的，如jaeger。创建的时候就需要jaeger的支持了，如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// 使用jaeger来创建一个tracer，并注入到opentracing全局中去
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">BootTracerWrapper</span>(<span style="color:#a6e22e">localServiceName</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">hostPort</span> <span style="color:#66d9ef">string</span>) <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">tracer</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">xjaeger</span>.<span style="color:#a6e22e">BootJaegerTracer</span>(<span style="color:#a6e22e">localServiceName</span>, <span style="color:#a6e22e">hostPort</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">errors</span>.<span style="color:#a6e22e">Wrap</span>(<span style="color:#a6e22e">err</span>, <span style="color:#e6db74">&#34;BootTracerWrapper.BootZipkinTracer&#34;</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 注入到全局后，就可以通过 opentracing.GlobalTracer() 来使用 tracer了 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">opentracing</span>.<span style="color:#a6e22e">SetGlobalTracer</span>(<span style="color:#a6e22e">tracer</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">BootJaegerTracer</span>(<span style="color:#a6e22e">localServiceName</span>, <span style="color:#a6e22e">hostPort</span> <span style="color:#66d9ef">string</span>) (<span style="color:#a6e22e">opentracing</span>.<span style="color:#a6e22e">Tracer</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">cfg</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">config</span>.<span style="color:#a6e22e">Configuration</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Sampler</span>: <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">config</span>.<span style="color:#a6e22e">SamplerConfig</span>{
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">Type</span>:  <span style="color:#a6e22e">jaeger</span>.<span style="color:#a6e22e">SamplerTypeConst</span>,
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">Param</span>: <span style="color:#ae81ff">1</span>,
+</span></span><span style="display:flex;"><span>		},
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">ServiceName</span>: <span style="color:#a6e22e">localServiceName</span>, <span style="color:#75715e">// 服务名
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">Reporter</span>: <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">config</span>.<span style="color:#a6e22e">ReporterConfig</span>{
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">LogSpans</span>:          <span style="color:#66d9ef">true</span>,
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">CollectorEndpoint</span>: <span style="color:#a6e22e">_jaegerRecorderEndpoint</span>,
+</span></span><span style="display:flex;"><span>		}, <span style="color:#75715e">// 链路搜集配置
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">tracer</span>, <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">cfg</span>.<span style="color:#a6e22e">NewTracer</span>(
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">config</span>.<span style="color:#a6e22e">Logger</span>(<span style="color:#a6e22e">jaegerlog</span>.<span style="color:#a6e22e">StdLogger</span>),
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">config</span>.<span style="color:#a6e22e">ZipkinSharedRPCSpan</span>(<span style="color:#66d9ef">true</span>),
+</span></span><span style="display:flex;"><span>	)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">errors</span>.<span style="color:#a6e22e">Wrap</span>(<span style="color:#a6e22e">err</span>, <span style="color:#e6db74">&#34;BootJaegerTracer&#34;</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">tracer</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h5 id="trace信息怎么传递">
+  Trace信息怎么传递？
+  <a class="anchor" href="#trace%e4%bf%a1%e6%81%af%e6%80%8e%e4%b9%88%e4%bc%a0%e9%80%92">#</a>
+</h5>
+<p>在 <a href="#Child-Span%e4%bb%80%e4%b9%88%e6%97%b6%e5%80%99%e5%88%9b%e5%bb%ba%ef%bc%9f">Child-Span什么时候创建？</a> 中提到了 <code>Inject</code>, <code>Extract</code> 方法，这两个方法就是用来辅助Trace信息传递的方法，
+具体的实现也是在jaeger中实现的，有兴趣的可以自行查阅代码。</p>
+<h5 id="链路信息如何搜集">
+  链路信息如何搜集？
+  <a class="anchor" href="#%e9%93%be%e8%b7%af%e4%bf%a1%e6%81%af%e5%a6%82%e4%bd%95%e6%90%9c%e9%9b%86">#</a>
+</h5>
+<p>在 <a href="#%e9%93%be%e8%b7%afTracer%e4%bb%8e%e5%93%aa%e5%84%bf%e6%9d%a5%ef%bc%9f">#链路Tracer从哪儿来</a> 已经提到了jaeger在创建tracer时可以指定搜集器的配置，
+因此上报动作会在jaeger中完成，但是要注意的是，显式调用 <code>sp.Finish()</code> 才会触发上报动作。</p>
+<h3 id="总结">
+  总结
+  <a class="anchor" href="#%e6%80%bb%e7%bb%93">#</a>
+</h3>
+<p>最终实战结果截图如下：
+图中包含了调用链路层级关系，每个环节的耗时情况，请求的入参和结果数据（异常信息，如有）等。同时还支持自定义（Tag 和 Annotation 功能），
+如果还想要更多的信息，那么推荐使用这两个功能组合来满足需求。</p>
+<img src="/images/tracing1_2.png" />
+<p>再多的案例和文档，都没有自己上手实践的效果好，建议实际运行并查阅opentracing源码。所有的代码均可在 <a href="https://github.com/yeqown/opentracing-practice">https://github.com/yeqown/opentracing-practice</a> 中找到。</p>
+<blockquote>
+<p>水平有限，如有错误，欢迎勘误指正🙏。</p>
+</blockquote>
+<h3 id="参考文献">
+  参考文献
+  <a class="anchor" href="#%e5%8f%82%e8%80%83%e6%96%87%e7%8c%ae">#</a>
+</h3>
+<ul>
+<li><a href="https://opentracing.io/docs/overview/">https://opentracing.io/docs/overview/</a></li>
+<li><a href="https://github.com/opentracing/opentracing-go">https://github.com/opentracing/opentracing-go</a></li>
+<li><a href="https://github.com/uber/jaeger-client-go">https://github.com/uber/jaeger-client-go</a></li>
+<li><a href="https://github.com/yeqown/opentracing-practice">https://github.com/yeqown/opentracing-practice</a></li>
+</ul>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "opentracing-practice", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#背景">背景</a></li>
+        <li><a href="#opentracing">Opentracing</a></li>
+        <li><a href="#实战">实战</a></li>
+        <li><a href="#总结">总结</a></li>
+        <li><a href="#参考文献">参考文献</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

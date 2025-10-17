@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="在生产测试过程中频繁遇到Producer和Consumer无法发送到RabbitMQ的队列中去，查阅日志后发现错误‘channel/connection is not open’。结合阅读AMQP协议，因此实现了一个 Wrapper 来提供重连机制。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2019/10/10/AMQP%E9%87%8D%E8%BF%9E%E6%9C%BA%E5%88%B6%E5%AE%9E%E7%8E%B0-Go/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="AMQP重连机制实现">
+  <meta property="og:description" content="在生产测试过程中频繁遇到Producer和Consumer无法发送到RabbitMQ的队列中去，查阅日志后发现错误‘channel/connection is not open’。结合阅读AMQP协议，因此实现了一个 Wrapper 来提供重连机制。">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2019-10-10T17:41:30+08:00">
+    <meta property="article:modified_time" content="2019-10-10T17:41:30+08:00">
+    <meta property="article:tag" content="AMQP">
+<title>AMQP重连机制实现 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2019/10/10/AMQP%E9%87%8D%E8%BF%9E%E6%9C%BA%E5%88%B6%E5%AE%9E%E7%8E%B0-Go/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.38acbfa5730860fb2f583635d275e043feb2eae8ec219fbb38dc639f42eb6855.js" integrity="sha256-OKy/pXMIYPsvWDY10nXgQ/6y6ujsIZ&#43;7ONxjn0LraFU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>AMQP重连机制实现</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#基本知识">基本知识</a></li>
+        <li><a href="#背景">背景</a></li>
+        <li><a href="#重连原理">重连原理</a></li>
+        <li><a href="#参考">参考</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    AMQP重连机制实现
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>October 10, 2019</span>
+  </div>
+
+
+
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/AMQP/">AMQP</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><blockquote>
+<p>文中代码基于 <a href="https://github.com/streadway/amqp">https://github.com/streadway/amqp</a> 实现。此方式简单暴力，但没有做到最小成本迁移（可以选择分别包装Producer和Consumer）。</p>
+<p>文中所有代码参见：https://github.com/yeqown/infrastructure/tree/master/framework/amqp</p>
+</blockquote>
+<h3 id="基本知识">
+  基本知识
+  <a class="anchor" href="#%e5%9f%ba%e6%9c%ac%e7%9f%a5%e8%af%86">#</a>
+</h3>
+<h6 id="amqp">
+  AMQP
+  <a class="anchor" href="#amqp">#</a>
+</h6>
+<p><code>AMQP</code>，即<code>Advanced Message Queuing Protocol</code>,一个提供统一消息服务的应用层标准高级消息队列协议，是应用层协议的一个开放标准,为面向消息的中间件设计。基于此协议的客户端与消息中间件可传递消息，并不受客户端/中间件同产品，不同的开发语言等条件的限制。用下图简单描述下AMQP模型：</p>
+<img src="/images/amqp-model.png" alt="AMQP MODEL"/>
+<h3 id="背景">
+  背景
+  <a class="anchor" href="#%e8%83%8c%e6%99%af">#</a>
+</h3>
+<h6 id="-问题">
+  -问题
+  <a class="anchor" href="#-%e9%97%ae%e9%a2%98">#</a>
+</h6>
+<p>生产环境中使用了<code>RabbitMQ</code>做异步消息分发，隔一段时间会出现：发送接口报错；发送成功后未被消费等情况。<strong>重启服务后恢复</strong>。</p>
+<h6 id="-问题代码">
+  -问题代码
+  <a class="anchor" href="#-%e9%97%ae%e9%a2%98%e4%bb%a3%e7%a0%81">#</a>
+</h6>
+<p>生产者：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// producer.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// NewClient .
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">NewClient</span>(<span style="color:#a6e22e">cfg</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">types</span>.<span style="color:#a6e22e">RabbitMQConfig</span>) <span style="color:#f92672">*</span><span style="color:#a6e22e">Client</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// init MQ connection
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">Client</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">ch</span>:  <span style="color:#a6e22e">ch</span>, <span style="color:#75715e">// *amqp.Channel
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">cfg</span>: <span style="color:#a6e22e">cfg</span>,
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// Client .
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Client</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ch</span>  <span style="color:#f92672">*</span><span style="color:#a6e22e">amqp</span>.<span style="color:#a6e22e">Channel</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">cfg</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">types</span>.<span style="color:#a6e22e">RabbitMQConfig</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// Send . send by routing 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Client</span>) <span style="color:#a6e22e">Send</span>(<span style="color:#a6e22e">payload</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">types</span>.<span style="color:#a6e22e">Payload</span>) <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">routing</span> <span style="color:#66d9ef">string</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">switch</span> <span style="color:#a6e22e">payload</span>.<span style="color:#a6e22e">Typ</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">types</span>.<span style="color:#a6e22e">PayloadTypUsers</span>:
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">routing</span> = <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">cfg</span>.<span style="color:#a6e22e">MqRoutingUser</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">default</span>:
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">routing</span> = <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">cfg</span>.<span style="color:#a6e22e">MqRoutingSys</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">dat</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">json</span>.<span style="color:#a6e22e">Marshal</span>(<span style="color:#a6e22e">payload</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">publishing</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">amqp</span>.<span style="color:#a6e22e">Publishing</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">ContentType</span>: <span style="color:#e6db74">&#34;text/plain&#34;</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Body</span>:        <span style="color:#a6e22e">dat</span>,
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">ch</span>.<span style="color:#a6e22e">Publish</span>(<span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">cfg</span>.<span style="color:#a6e22e">MqExchagne</span>, <span style="color:#a6e22e">routing</span>, <span style="color:#66d9ef">false</span>, <span style="color:#66d9ef">false</span>, <span style="color:#a6e22e">publishing</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>消费者：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// consumer.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Client</span>) <span style="color:#a6e22e">Consume</span>() <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">initRabbitmqResource</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">Std</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;could init rabbitmq resource: %v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">msgs</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">rabbitmqChannel</span>.<span style="color:#a6e22e">Consume</span>(
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">rabbitmqQ</span>, <span style="color:#75715e">// queue
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#e6db74">&#34;&#34;</span>,          <span style="color:#75715e">// consumer
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#66d9ef">false</span>,       <span style="color:#75715e">// auto ack
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#66d9ef">false</span>,       <span style="color:#75715e">// exclusive
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#66d9ef">false</span>,       <span style="color:#75715e">// no local
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#66d9ef">false</span>,       <span style="color:#75715e">// no wait
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#66d9ef">nil</span>,         <span style="color:#75715e">// args
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">Std</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;could not consume messages: %v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">Std</span>.<span style="color:#a6e22e">Infof</span>(<span style="color:#e6db74">&#34;start consumming messages&#34;</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">d</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">msgs</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">Std</span>.<span style="color:#a6e22e">Debugf</span>(<span style="color:#e6db74">&#34;consumming msg: body=%s, ex=%s, routing=%s, content-type=%s&#34;</span>,
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">Body</span>, <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">Exchange</span>, <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">RoutingKey</span>, <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">ContentType</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">sendout</span>(<span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">Body</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">continue</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">Ack</span>(<span style="color:#66d9ef">false</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">Std</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;ack message error: %v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 队列被删除时会被执行到
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">Std</span>.<span style="color:#a6e22e">Infof</span>(<span style="color:#e6db74">&#34;this should not be executed !!!!!&#34;</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// ...
+</span></span></span></code></pre></div><h6 id="-分析问题">
+  -分析问题
+  <a class="anchor" href="#-%e5%88%86%e6%9e%90%e9%97%ae%e9%a2%98">#</a>
+</h6>
+<p>服务故障后，首先查看了生产者的系统日志，发现了 <code>channel/connection is not open</code>。从github中检索后发现https://github.com/streadway/amqp/blob/75d898a42a/channel.go#L155 有一个逻辑是处理已经关闭的<code>channel</code>, 会触发<code>ErrClosed = &amp;Error{Code: ChannelError, Reason: &quot;channel/connection is not open&quot;}</code>，恰恰<em><strong>channel被关闭是上述代码没有考虑到的问题</strong></em>。</p>
+<p>在消费者这边的问题，在<code>channel</code>被关闭的情况下，就更显眼了：<em><strong>channel被关闭,消费者也就被关闭了，消费的goroutine自然也退出了，也就出现了消息无法被消费的情况</strong></em>。具体代码参见：</p>
+<ul>
+<li><code>channel.Consume</code> <a href="https://github.com/streadway/amqp/blob/75d898a42a/channel.go#L1049">https://github.com/streadway/amqp/blob/75d898a42a/channel.go#L1049</a></li>
+<li><code>consumers.buffer</code> <a href="https://github.com/streadway/amqp/blob/75d898a42a/consumers.go#L54">https://github.com/streadway/amqp/blob/75d898a42a/consumers.go#L54</a></li>
+</ul>
+<p>如果还有兴趣可以翻看下<code>connection.shutdown</code>, <code>channel.shutdown</code>。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">subs</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">consumers</span>) <span style="color:#a6e22e">buffer</span>(<span style="color:#a6e22e">in</span> <span style="color:#66d9ef">chan</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Delivery</span>, <span style="color:#a6e22e">out</span> <span style="color:#66d9ef">chan</span> <span style="color:#a6e22e">Delivery</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 退出时关闭消费channel
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">defer</span> close(<span style="color:#a6e22e">out</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">subs</span>.<span style="color:#a6e22e">Done</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">inflight</span> = <span style="color:#a6e22e">in</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">queue</span> []<span style="color:#f92672">*</span><span style="color:#a6e22e">Delivery</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">delivery</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">in</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">queue</span> = append(<span style="color:#a6e22e">queue</span>, <span style="color:#a6e22e">delivery</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">for</span> len(<span style="color:#a6e22e">queue</span>) &gt; <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">select</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#75715e">// 很明显，协程会在消费者被关闭的时候退出
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>			<span style="color:#66d9ef">case</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">subs</span>.<span style="color:#a6e22e">closed</span>:
+</span></span><span style="display:flex;"><span>				<span style="color:#75715e">// closed before drained, drop in-flight
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>				<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">delivery</span>, <span style="color:#a6e22e">consuming</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">inflight</span>:
+</span></span><span style="display:flex;"><span>				<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">consuming</span> {
+</span></span><span style="display:flex;"><span>					<span style="color:#a6e22e">queue</span> = append(<span style="color:#a6e22e">queue</span>, <span style="color:#a6e22e">delivery</span>)
+</span></span><span style="display:flex;"><span>				} <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>					<span style="color:#a6e22e">inflight</span> = <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>				}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">out</span> <span style="color:#f92672">&lt;-</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">queue</span>[<span style="color:#ae81ff">0</span>]:
+</span></span><span style="display:flex;"><span>				<span style="color:#a6e22e">queue</span> = <span style="color:#a6e22e">queue</span>[<span style="color:#ae81ff">1</span>:]
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>而为什么channel会被关闭，在网上检索后并结合代码：</p>
+<table>
+  <thead>
+      <tr>
+          <th>Seq</th>
+          <th>Description</th>
+          <th>Reason</th>
+          <th>Type</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>1</td>
+          <td>应用程序主动断开连接，网络异常被动断开连接</td>
+          <td>连接中断</td>
+          <td>连接关闭</td>
+      </tr>
+      <tr>
+          <td>2</td>
+          <td>重新声明现有队列或具有不匹配属性的交换将失败</td>
+          <td>406 PRECONDITION_FAILED</td>
+          <td>协议异常</td>
+      </tr>
+      <tr>
+          <td>3</td>
+          <td>访问不允许用户访问的资源将失败</td>
+          <td>403 ACCESS_REFUSED错误</td>
+          <td>协议异常</td>
+      </tr>
+      <tr>
+          <td>4</td>
+          <td>绑定不存在的队列或不存在的交换将失败</td>
+          <td>404 NOT_FOUND错误</td>
+          <td>协议异常</td>
+      </tr>
+      <tr>
+          <td>5</td>
+          <td>从不存在的队列中使用将失败</td>
+          <td>404 NOT_FOUND错误</td>
+          <td>协议异常</td>
+      </tr>
+      <tr>
+          <td>6</td>
+          <td>发布到不退出的交换将失败</td>
+          <td>404 NOT_FOUND错误</td>
+          <td>协议异常</td>
+      </tr>
+      <tr>
+          <td>7</td>
+          <td>从除声明连接以外的连接访问独占队列将失败</td>
+          <td>405 RESOURCE_LOCKED</td>
+          <td>协议异常</td>
+      </tr>
+  </tbody>
+</table>
+<p>得到结论：由于网络波动、生产者消费者使用不当会导致channel被关闭.</p>
+<h3 id="重连原理">
+  重连原理
+  <a class="anchor" href="#%e9%87%8d%e8%bf%9e%e5%8e%9f%e7%90%86">#</a>
+</h3>
+<p><strong><em>参考：</em></strong></p>
+<ul>
+<li><a href="https://ms2008.github.io/2019/06/16/golang-rabbitmq/">https://ms2008.github.io/2019/06/16/golang-rabbitmq/</a></li>
+<li><a href="https://github.com/streadway/amqp/issues/133">https://github.com/streadway/amqp/issues/133</a></li>
+</ul>
+<p>简而言之，<code>channel.NotifyClose</code>和<code>connection.NotifyClose</code>可以接收到错误消息，那就以此为重连的触发器。函数原型：<code>func NotifyClose(c chan *Error) chan *Error</code>。实现思路如图：</p>
+<img src="/images/amqp-reconnect-process.jpg" alt="AMQP RECONNECT PROCESS" style="width:100%"/>
+<p>结合***<a href="#https://github.com/yeqown/infrastructure/tree/master/framework/amqp">CODE</a>***食用，效果更佳哦。<code>handleReconnect</code>代码如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">w</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Wrapper</span>) <span style="color:#a6e22e">handleReconnect</span>() {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// 未连接上的情况下一直尝试连接
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">w</span>.<span style="color:#a6e22e">isConnected</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;Attempting to connect&#34;</span>)
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">var</span> (
+</span></span><span style="display:flex;"><span>				<span style="color:#a6e22e">connected</span> = <span style="color:#66d9ef">false</span>
+</span></span><span style="display:flex;"><span>				<span style="color:#a6e22e">err</span>       <span style="color:#66d9ef">error</span>
+</span></span><span style="display:flex;"><span>			)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">cnt</span> <span style="color:#f92672">:=</span> <span style="color:#ae81ff">0</span>; !<span style="color:#a6e22e">connected</span>; <span style="color:#a6e22e">cnt</span><span style="color:#f92672">++</span> {
+</span></span><span style="display:flex;"><span>				<span style="color:#75715e">// connect 尝试连接，并在成功后触发changeConn事件，也会更新isConnected
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>				<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">connected</span>, <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">w</span>.<span style="color:#a6e22e">connect</span>(); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>					<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;Failed to connect: %s.\n&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>				}
+</span></span><span style="display:flex;"><span>				<span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">connected</span> {
+</span></span><span style="display:flex;"><span>					<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;Retrying... %d\n&#34;</span>, <span style="color:#a6e22e">cnt</span>)
+</span></span><span style="display:flex;"><span>				}
+</span></span><span style="display:flex;"><span>				<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Sleep</span>(<span style="color:#a6e22e">reconnectDelay</span>)
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// 连接正常的情况下，处理channel.NotifyClose 和 conn.NotifyClose
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#75715e">// 注：在任意一个notify事件通知后，应完全处理两个channel中的消息，否则会造成无缓冲阻塞。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#75715e">// https://ms2008.github.io/2019/06/16/golang-rabbitmq/
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#66d9ef">select</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">case</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">w</span>.<span style="color:#a6e22e">done</span>:
+</span></span><span style="display:flex;"><span>			println(<span style="color:#e6db74">&#34;w.done&#34;</span>)
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">w</span>.<span style="color:#a6e22e">chNotify</span>:
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;channel close notify: %v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">w</span>.<span style="color:#a6e22e">isConnected</span> = <span style="color:#66d9ef">false</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">w</span>.<span style="color:#a6e22e">connNotify</span>:
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;conn close notify: %v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">w</span>.<span style="color:#a6e22e">isConnected</span> = <span style="color:#66d9ef">false</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Sleep</span>(<span style="color:#a6e22e">reconnectDetectDur</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>以上。</p>
+<blockquote>
+<p>水平有限，如有错误，欢迎勘误指正🙏。</p>
+</blockquote>
+<h3 id="参考">
+  参考
+  <a class="anchor" href="#%e5%8f%82%e8%80%83">#</a>
+</h3>
+<ul>
+<li><a href="https://github.com/streadway/amqp/issues/133">https://github.com/streadway/amqp/issues/133</a></li>
+<li><a href="https://blog.csdn.net/jaredcoding/article/details/78656636">https://blog.csdn.net/jaredcoding/article/details/78656636</a></li>
+<li><a href="https://www.cnblogs.com/frankyou/p/5283539.html">https://www.cnblogs.com/frankyou/p/5283539.html</a></li>
+<li><a href="https://ms2008.github.io/2019/06/16/golang-rabbitmq/">https://ms2008.github.io/2019/06/16/golang-rabbitmq/</a>【必读】</li>
+</ul>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "amqp-reconnect-implementation", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#基本知识">基本知识</a></li>
+        <li><a href="#背景">背景</a></li>
+        <li><a href="#重连原理">重连原理</a></li>
+        <li><a href="#参考">参考</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Apache Doris on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/Apache-Doris/</link>
+    <description>Recent content in Apache Doris on Yeqown</description>
+    <generator>Hugo</generator>
+    <language>en</language>
+    <lastBuildDate>Tue, 14 Oct 2025 10:43:43 +0800</lastBuildDate>
+    <atom:link href="https://www.yeqown.xyz/tags/Apache-Doris/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Apache Doris PreparedStatement 之谜</title>
+      <link>https://www.yeqown.xyz/2025/10/14/Apache-Doris-PreparedStatement%E9%97%AE%E9%A2%98%E6%8E%A2%E7%A9%B6/</link>
+      <pubDate>Tue, 14 Oct 2025 10:43:43 +0800</pubDate>
+      <guid>https://www.yeqown.xyz/2025/10/14/Apache-Doris-PreparedStatement%E9%97%AE%E9%A2%98%E6%8E%A2%E7%A9%B6/</guid>
+      <description>&lt;blockquote&gt;&#xA;&lt;p&gt;使用的 Apache Doris 版本：3.0.3, 对应的 Doris 源码如果没有特意说明，均为 3.0.3 版本。&lt;/p&gt;&#xA;&lt;/blockquote&gt;&#xA;&lt;h2 id=&#34;背景&#34;&gt;&#xA;  背景&#xA;  &lt;a class=&#34;anchor&#34; href=&#34;#%e8%83%8c%e6%99%af&#34;&gt;#&lt;/a&gt;&#xA;&lt;/h2&gt;&#xA;&lt;p&gt;运营反馈了一些业务异常，这些异常都指向了一个 Doris 数据查询服务（后都用 DQ-1 指代），该服务日志中存在大量的错误日志，如下：&lt;/p&gt;&#xA;&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;platformAwardBiz.GetByID failed: Error &lt;span style=&#34;color:#ae81ff&#34;&gt;1047&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;08S01&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;: msg: Not supported such prepared statement&#xA;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;日志中发现，全部的查询均报了 &lt;code&gt;Not supported such prepared statement&lt;/code&gt; 错误，而不是存在特定的查询语句。而与此同时，另外的 Doris 查询服务 (后使用 DQ-2 指代) 并没有出现该错误日志。&lt;/p&gt;&#xA;&lt;p&gt;&lt;code&gt;DQ-1&lt;/code&gt; 使用 golang 编写，使用了 &lt;code&gt;gorm&lt;/code&gt; 作为连接 Doris 的查询工具。&lt;code&gt;DQ-2&lt;/code&gt; 使用了 python3编写，使用了 &lt;code&gt;pymysql&lt;/code&gt; 作为连接 Doris 的查询工具。&lt;/p&gt;&#xA;&lt;p&gt;发现问题后，猜测是 prepared statement 机制的相关问题，快速解决方案选择了重启 &lt;code&gt;DQ-1&lt;/code&gt; 和 Doris FE 节点，然后错误消失。&lt;/p&gt;&#xA;&lt;h2 id=&#34;问题分析&#34;&gt;&#xA;  问题分析&#xA;  &lt;a class=&#34;anchor&#34; href=&#34;#%e9%97%ae%e9%a2%98%e5%88%86%e6%9e%90&#34;&gt;#&lt;/a&gt;&#xA;&lt;/h2&gt;&#xA;&lt;p&gt;首先从日志入手，采集了 FE 的错误日志，但经过排查没有发现明显的异常日志。经过检索搜索引擎和社区，也没有发现有相关的 issue。&lt;/p&gt;&#xA;&lt;p&gt;那只能从源码入手了。在进去源码分析之前，这里带着几个疑问：&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>
