@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="在使用 Apache Doris 过程中遇到了一个 “Not supported such prepared statement” 错误，从没有头绪到解决问题的全过程记录。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2025/10/14/Apache-Doris-PreparedStatement%E9%97%AE%E9%A2%98%E6%8E%A2%E7%A9%B6/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="Apache Doris PreparedStatement 之谜">
+  <meta property="og:description" content="在使用 Apache Doris 过程中遇到了一个 “Not supported such prepared statement” 错误，从没有头绪到解决问题的全过程记录。">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2025-10-14T10:43:43+08:00">
+    <meta property="article:modified_time" content="2025-10-14T10:43:43+08:00">
+    <meta property="article:tag" content="Apache Doris">
+    <meta property="article:tag" content="Mysql">
+    <meta property="article:tag" content="Prepared Statements">
+<title>Apache Doris PreparedStatement 之谜 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2025/10/14/Apache-Doris-PreparedStatement%E9%97%AE%E9%A2%98%E6%8E%A2%E7%A9%B6/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>Apache Doris PreparedStatement 之谜</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#更新">更新</a></li>
+    <li><a href="#背景">背景</a></li>
+    <li><a href="#问题分析">问题分析</a>
+      <ul>
+        <li><a href="#apache-doris-源码分析1">Apache Doris 源码分析1</a></li>
+        <li><a href="#mysql-prepared-statement-协议">MySQL Prepared Statement 协议</a></li>
+        <li><a href="#apache-doris-源码分析2">Apache Doris 源码分析2</a></li>
+      </ul>
+    </li>
+    <li><a href="#解决">解决</a>
+      <ul>
+        <li><a href="#wireshark-抓包">Wireshark 抓包</a></li>
+        <li><a href="#答疑">答疑</a></li>
+      </ul>
+    </li>
+    <li><a href="#总结">总结</a></li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    Apache Doris PreparedStatement 之谜
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>October 14, 2025</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Apache-Doris/">Apache Doris</a>, 
+      <a href="/tags/MySQL/">Mysql</a>, 
+      <a href="/tags/Prepared-Statements/">Prepared Statements</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><blockquote>
+<p>使用的 Apache Doris 版本：3.0.3, 对应的 Doris 源码如果没有特意说明，均为 3.0.3 版本。</p>
+</blockquote>
+<h2 id="更新">
+  更新
+  <a class="anchor" href="#%e6%9b%b4%e6%96%b0">#</a>
+</h2>
+<p>后续又遇到了一个跟 prepared statement 相关的错误，起因是在一次迭代中将 DQ-1 的 gorm 版本从 <code>v1.25.5</code> 升级到了 <code>v1.26.1</code> 发现大量的 SQL 报错:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>Error <span style="color:#ae81ff">1105</span> <span style="color:#f92672">(</span>HY000<span style="color:#f92672">)</span>: errCode <span style="color:#f92672">=</span> 2, detailMessage <span style="color:#f92672">=</span> <span style="color:#ae81ff">\n</span>mismatched input <span style="color:#e6db74">&#39;LIMIT&#39;</span> expecting <span style="color:#f92672">{</span>&lt;EOF&gt;, <span style="color:#e6db74">&#39;;&#39;</span><span style="color:#e6db74">`</span>）；
+</span></span></code></pre></div><p>但是 SQL 没有做过任何调整, 将 SQL 复制出来在 mysql shell 中都正常运行。</p>
+<p>抓包可以发现，这个错误是在 <code>COM_STMT_PREPARE</code> 阶段报出的, 如下图：</p>
+<figure>
+    <img src="/images/doris-prepared-statments/update-prepare-limit-variables.jpeg" alt="update-prepare-limit-variables"/>
+    <figcaption>update-prepare-limit-variables</figcaption>
+</figure>
+<p>经过对比和查看 <code>gorm</code> 的发布历史，找到这样一个 PR:</p>
+<p><em><strong><a href="https://github.com/go-gorm/gorm/pull/6806">#6806: let limit and offset use bind parameter</a></strong></em></p>
+<p>带来的影响就是把 <code>limit</code> 后面的变量在 <code>prepare</code> 阶段使用占位符号替代（之前的版本是直接使用的值而不是占位符）。恰恰 doris 还不支持如下这种语句，所以导致了上面的错误。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">select</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">from</span> <span style="color:#66d9ef">user</span> <span style="color:#66d9ef">where</span> id <span style="color:#f92672">=</span> <span style="color:#f92672">?</span> <span style="color:#66d9ef">limit</span> <span style="color:#f92672">?</span>;
+</span></span></code></pre></div><p>原因是 doris 的 SQL 语法约定了, <code>LIMIT</code> <code>OFFSET</code> 后面必须要跟一个整型字面量：</p>
+<pre tabindex="0"><code class="language-antlr4" data-lang="antlr4">// fe/fe-core/src/main/antlr4/org/apache/doris/nereids/DorisParser.g4
+limitClause
+    : (LIMIT limit=INTEGER_VALUE)
+    | (LIMIT limit=INTEGER_VALUE OFFSET offset=INTEGER_VALUE)
+    | (LIMIT offset=INTEGER_VALUE COMMA limit=INTEGER_VALUE)
+    ;
+</code></pre><blockquote>
+<p>为此，提交了一个 Feature Request: <em><strong><a href="https://github.com/apache/doris/issues/59962">#59962: [Feature] Placeholder in LIMIT Claus</a></strong></em></p>
+</blockquote>
+<h2 id="背景">
+  背景
+  <a class="anchor" href="#%e8%83%8c%e6%99%af">#</a>
+</h2>
+<p>运营反馈了一些业务异常，这些异常都指向了一个 Doris 数据查询服务（后都用 DQ-1 指代），该服务日志中存在大量的错误日志，如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>platformAwardBiz.GetByID failed: Error <span style="color:#ae81ff">1047</span> <span style="color:#f92672">(</span>08S01<span style="color:#f92672">)</span>: msg: Not supported such prepared statement
+</span></span></code></pre></div><p>日志中发现，全部的查询均报了 <code>Not supported such prepared statement</code> 错误，而不是存在特定的查询语句。而与此同时，另外的 Doris 查询服务 (后使用 DQ-2 指代) 并没有出现该错误日志。</p>
+<p><code>DQ-1</code> 使用 golang 编写，使用了 <code>gorm</code> 作为连接 Doris 的查询工具。<code>DQ-2</code> 使用了 python3编写，使用了 <code>pymysql</code> 作为连接 Doris 的查询工具。</p>
+<p>发现问题后，猜测是 prepared statement 机制的相关问题，快速解决方案选择了重启 <code>DQ-1</code> 和 Doris FE 节点，然后错误消失。</p>
+<h2 id="问题分析">
+  问题分析
+  <a class="anchor" href="#%e9%97%ae%e9%a2%98%e5%88%86%e6%9e%90">#</a>
+</h2>
+<p>首先从日志入手，采集了 FE 的错误日志，但经过排查没有发现明显的异常日志。经过检索搜索引擎和社区，也没有发现有相关的 issue。</p>
+<p>那只能从源码入手了。在进去源码分析之前，这里带着几个疑问：</p>
+<ol>
+<li>为什么 <code>DQ-1</code> 会报这个错误，而 <code>DQ-2</code> 不会报这个错误？</li>
+<li>为什么重启 <code>DQ-1</code> 和 Doris FE 节点可以解决问题？</li>
+<li>是 Doris FE 节点的问题，还是 <code>DQ-1</code> 的问题？</li>
+</ol>
+<blockquote>
+<p><code>DQ-1</code> 的嫌疑非常小，因为项目内有相同的代码连接另外的 MySQL 数据库，并没有出现类似的问题。</p>
+</blockquote>
+<h3 id="apache-doris-源码分析1">
+  Apache Doris 源码分析1
+  <a class="anchor" href="#apache-doris-%e6%ba%90%e7%a0%81%e5%88%86%e6%9e%901">#</a>
+</h3>
+<blockquote>
+<p>尝试在客户端检索 <em><strong><code>Not supported such prepared statement</code></strong></em> 关键词，发现没有任何结果，说明这个错误信息是 Doris FE 节点报出的。</p>
+</blockquote>
+<p>在源码中搜索 <code>Not supported such prepared statement</code>，发现该错误信息定义在 <code>fe/fe-core/src/main/java/org/apache/doris/qe/MysqlConnectProcessor.java</code> 文件中：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span>    <span style="color:#75715e">// process COM_EXECUTE, parse binary row data</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// https://dev.mysql.com/doc/dev/mysql-server/latest/page_protocol_com_stmt_execute.html</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">handleExecute</span>() {
+</span></span><span style="display:flex;"><span>        packetBuf <span style="color:#f92672">=</span> packetBuf.<span style="color:#a6e22e">order</span>(ByteOrder.<span style="color:#a6e22e">LITTLE_ENDIAN</span>);
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// parse stmt_id, flags, params</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">int</span> stmtId <span style="color:#f92672">=</span> packetBuf.<span style="color:#a6e22e">getInt</span>();
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// flag</span>
+</span></span><span style="display:flex;"><span>        packetBuf.<span style="color:#a6e22e">get</span>();
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// iteration_count always 1,</span>
+</span></span><span style="display:flex;"><span>        packetBuf.<span style="color:#a6e22e">getInt</span>();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// nererids</span>
+</span></span><span style="display:flex;"><span>        PreparedStatementContext preparedStatementContext <span style="color:#f92672">=</span> ctx.<span style="color:#a6e22e">getPreparedStementContext</span>(String.<span style="color:#a6e22e">valueOf</span>(stmtId));
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (preparedStatementContext <span style="color:#f92672">==</span> <span style="color:#66d9ef">null</span>) {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> (LOG.<span style="color:#a6e22e">isDebugEnabled</span>()) {
+</span></span><span style="display:flex;"><span>                LOG.<span style="color:#a6e22e">debug</span>(<span style="color:#e6db74">&#34;No such statement in context, stmtId:{}&#34;</span>, stmtId);
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>            ctx.<span style="color:#a6e22e">getState</span>().<span style="color:#a6e22e">setError</span>(ErrorCode.<span style="color:#a6e22e">ERR_UNKNOWN_COM_ERROR</span>,
+</span></span><span style="display:flex;"><span>                    <span style="color:#e6db74">&#34;msg: Not supported such prepared statement&#34;</span>);
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span>;
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        handleExecute(preparedStatementContext.<span style="color:#a6e22e">command</span>, stmtId, preparedStatementContext);
+</span></span><span style="display:flex;"><span>    }
+</span></span></code></pre></div><p>从这一段代码，就可以得到以下几个结论：</p>
+<ol>
+<li>Doris 支持 MySQL 协议的 <code>PreparedStatement</code> 机制</li>
+<li>这个错误是在<code>COM_STMT_EXECUTE</code> 阶段报出的</li>
+<li>该错误是因为 <code>PreparedStatementContext</code> 对象为 <code>null</code> 导致的</li>
+<li>这个 <code>stmtId</code> 是从客户端传递过来的</li>
+</ol>
+<p>简单总结一下，这个错误的根本原因是 Doris FE 节点没有找到 stmtId 对应的 <code>PreparedStatementContext</code> 对象导致的。那为什么客户端会传递一个 FE 节点没有的 <code>stmtId</code> 呢？</p>
+<p>再进一步深入代码前，发现自己对 MySQL 的 <code>PreparedStatement</code> 机制并不是很了解，于是先去补充了一下相关知识。</p>
+<h3 id="mysql-prepared-statement-协议">
+  MySQL Prepared Statement 协议
+  <a class="anchor" href="#mysql-prepared-statement-%e5%8d%8f%e8%ae%ae">#</a>
+</h3>
+<blockquote>
+<p><a href="https://dev.mysql.com/doc/dev/mysql-server/latest/page_protocol_command_phase_ps.html">MySQL 协议 - Prepared Statments</a></p>
+</blockquote>
+<p><code>Prepared Statments</code> 协议是从 MySQL 4.1 版本开始支持的，主要是为了提高 SQL 语句的执行效率和安全性。协议约定了以下几个命令：</p>
+<table>
+  <thead>
+      <tr>
+          <th>Command</th>
+          <th>Description</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>COM_STMT_PREPARE</code></td>
+          <td>准备一个 SQL 语句，返回一个 stmt_id</td>
+      </tr>
+      <tr>
+          <td><code>COM_STMT_EXECUTE</code></td>
+          <td>执行一个已经准备好的 SQL 语句，使用 stmt_id</td>
+      </tr>
+      <tr>
+          <td><code>COM_STMT_CLOSE</code></td>
+          <td>关闭一个已经准备好的 SQL 语句，释放资源</td>
+      </tr>
+      <tr>
+          <td><code>COM_STMT_RESET</code></td>
+          <td>重置 <code>COM_STMT_SEND_LONG_DATA</code> 命令发送的参数, 并关闭 <code>COM_STMT_EXECUTE</code> 打开的游标</td>
+      </tr>
+      <tr>
+          <td><code>COM_STMT_SEND_LONG_DATA</code></td>
+          <td>发送长数据参数给一个已经准备好的 SQL 语句</td>
+      </tr>
+      <tr>
+          <td><code>COM_STMT_FETCH</code></td>
+          <td>获取一个已经准备好的 SQL 语句的结果集</td>
+      </tr>
+  </tbody>
+</table>
+<p><code>PreparedStatement</code> 的工作流程如下：</p>
+<figure>
+  <img src="/images/doris-prepared-statments/prepared-statments-protocol.png" alt="PreparedStatement 流程图" />
+  <figcaption>PreparedStatement 流程图</figcaption>
+</figure>
+<p>从 Doris 源码中，已经得知是在 <code>COM_STMT_EXECUTE</code> 阶段报出的错误，而 <code>COM_STMT_EXECUTE</code> 传递的 <code>stmt_id</code>来自于 <code>COM_STMT_PREPARE</code> 阶段。那么这里再重点关注下这两个命令的协议细节。</p>
+<h4 id="com_stmt_preparehttpsdevmysqlcomdocdevmysql-serverlatestpage_protocol_com_stmt_preparehtml">
+  <a href="https://dev.mysql.com/doc/dev/mysql-server/latest/page_protocol_com_stmt_prepare.html">COM_STMT_PREPARE</a>
+  <a class="anchor" href="#com_stmt_preparehttpsdevmysqlcomdocdevmysql-serverlatestpage_protocol_com_stmt_preparehtml">#</a>
+</h4>
+<p><code>COM_STMT_PREPARE</code> 命令的请求包格式如下：</p>
+<table>
+  <thead>
+      <tr>
+          <th>Type</th>
+          <th>Name</th>
+          <th>Description</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>int&lt;1&gt;</td>
+          <td>status</td>
+          <td>[0x16] COM_STMT_PREPARE</td>
+      </tr>
+      <tr>
+          <td>string<EOF></td>
+          <td>query</td>
+          <td>The query to prepare</td>
+      </tr>
+  </tbody>
+</table>
+<p>响应包格式如下：</p>
+<table>
+  <thead>
+      <tr>
+          <th>Type</th>
+          <th>Name</th>
+          <th>Description</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>int&lt;1&gt;</td>
+          <td>status</td>
+          <td>[0x00] OK</td>
+      </tr>
+      <tr>
+          <td>int&lt;4&gt;</td>
+          <td>statement_id</td>
+          <td>The statement identifier</td>
+      </tr>
+      <tr>
+          <td>int&lt;2&gt;</td>
+          <td>num_columns</td>
+          <td>The number of columns in the result set</td>
+      </tr>
+      <tr>
+          <td>int&lt;2&gt;</td>
+          <td>num_params</td>
+          <td>The number of parameters in the statement</td>
+      </tr>
+      <tr>
+          <td>int&lt;1&gt;</td>
+          <td>reserved_1</td>
+          <td>[0x00] Filler</td>
+      </tr>
+      <tr>
+          <td>int&lt;2&gt;</td>
+          <td>warning_count</td>
+          <td>The number of warnings</td>
+      </tr>
+      <tr>
+          <td>省略其余字段</td>
+          <td></td>
+          <td></td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="com_stmt_executehttpsdevmysqlcomdocdevmysql-serverlatestpage_protocol_com_stmt_executehtml">
+  <a href="https://dev.mysql.com/doc/dev/mysql-server/latest/page_protocol_com_stmt_execute.html">COM_STMT_EXECUTE</a>
+  <a class="anchor" href="#com_stmt_executehttpsdevmysqlcomdocdevmysql-serverlatestpage_protocol_com_stmt_executehtml">#</a>
+</h4>
+<p><code>COM_STMT_EXECUTE</code> 命令的请求包格式如下：</p>
+<table>
+  <thead>
+      <tr>
+          <th>Type</th>
+          <th>Name</th>
+          <th>Description</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>int&lt;1&gt;</td>
+          <td>status</td>
+          <td>[0x17] COM_STMT_EXECUTE</td>
+      </tr>
+      <tr>
+          <td>int&lt;4&gt;</td>
+          <td>statement_id</td>
+          <td>ID of the prepared statement to execute</td>
+      </tr>
+      <tr>
+          <td>int&lt;1&gt;</td>
+          <td>flags</td>
+          <td>Flags. See enum_cursor_type</td>
+      </tr>
+      <tr>
+          <td>int&lt;4&gt;</td>
+          <td>iteration_count</td>
+          <td>Number of times to execute the statement. Currently always 1.</td>
+      </tr>
+      <tr>
+          <td>省略其余字段</td>
+          <td></td>
+          <td></td>
+      </tr>
+  </tbody>
+</table>
+<p>响应包格式于 <code>COM_QUERY</code> 类似，返回 OK 包、错误包和结果集包之一，取决于执行结果。与这里的问题无关，就不赘述了。</p>
+<p>到这里，已经对 <code>PreparedStatement</code> 协议有了一个基本的了解，也得到了以下信息：</p>
+<ol>
+<li><code>stmt_id</code> 是由服务端在 <code>COM_STMT_PREPARE</code> 阶段生成的，并返回给客户端。</li>
+<li>客户端在 <code>COM_STMT_EXECUTE</code> 阶段会携带 <code>stmt_id</code> 来执行对应的 SQL 语句。</li>
+<li><code>stmt_id</code> 是一个 <code>int&lt;4&gt;</code>(四字节) 的整数。</li>
+</ol>
+<p>那么这个问题的指向更清晰了，还是要回到 Doris 源码中，继续深入分析 <code>stmt_id</code> 的生成和管理。</p>
+<h3 id="apache-doris-源码分析2">
+  Apache Doris 源码分析2
+  <a class="anchor" href="#apache-doris-%e6%ba%90%e7%a0%81%e5%88%86%e6%9e%902">#</a>
+</h3>
+<p>继续深入 Doris 源码，重点关注 statement_id 的生成和管理。</p>
+<p>从 <code>PrepareCommand.java</code> 文件中，发现了返回给客户端的 <code>statement_id</code> 是通过 <code>ConnectionContext</code> 对象的 <code>getStmtId()</code> 方法获取：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span>    <span style="color:#75715e">// register prepared statement with attached statement id</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@Override</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">run</span>(ConnectContext ctx, StmtExecutor executor) <span style="color:#66d9ef">throws</span> Exception {
+</span></span><span style="display:flex;"><span>        List<span style="color:#f92672">&lt;</span>String<span style="color:#f92672">&gt;</span> labels <span style="color:#f92672">=</span> getLabels();
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// register prepareStmt</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// ...</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (logicalPlan <span style="color:#66d9ef">instanceof</span> InsertIntoTableCommand
+</span></span><span style="display:flex;"><span>                    <span style="color:#f92672">&amp;&amp;</span> ((InsertIntoTableCommand) logicalPlan).<span style="color:#a6e22e">getLabelName</span>().<span style="color:#a6e22e">isPresent</span>()) {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">throw</span> <span style="color:#66d9ef">new</span> org.<span style="color:#a6e22e">apache</span>.<span style="color:#a6e22e">doris</span>.<span style="color:#a6e22e">common</span>.<span style="color:#a6e22e">UserException</span>(<span style="color:#e6db74">&#34;Only support prepare InsertStmt without label now&#34;</span>);
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        ctx.<span style="color:#a6e22e">addPreparedStatementContext</span>(name,
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">new</span> PreparedStatementContext(<span style="color:#66d9ef">this</span>, ctx, ctx.<span style="color:#a6e22e">getStatementContext</span>(), name));
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (ctx.<span style="color:#a6e22e">getCommand</span>() <span style="color:#f92672">==</span> MysqlCommand.<span style="color:#a6e22e">COM_STMT_PREPARE</span>) {
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">// !!!! 关键线索 !!!!</span>
+</span></span><span style="display:flex;"><span>            executor.<span style="color:#a6e22e">sendStmtPrepareOK</span>((<span style="color:#66d9ef">int</span>) ctx.<span style="color:#a6e22e">getStmtId</span>(), labels);
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span></code></pre></div><p><code>executor.sendStmtPrepareOK((int) ctx.getStmtId(), labels);</code> 这一行代码中有一个关键的线索就是 <code>ctx.getStmtId()</code> 返回的值进行了类型转换，转换成了 <code>int</code> 类型。这不禁让人联想到一个可能性：</p>
+<p><code>stmtId</code> 超过了 <code>int</code> 的范围，但是由于这里的类型转换，导致了客户端接收到的 <code>stmtId</code> 和服务端实际存储的不一致，进而导致在 <code>COM_STMT_EXECUTE</code> 阶段，Doris FE 节点找不到对应的 <code>stmtId</code>。</p>
+<p>再检查下 <code>ConnectionContext</code> 类中的 <code>stmtID</code> 属性：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#75715e">// ConnectionContext</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">protected</span> <span style="color:#66d9ef">volatile</span> <span style="color:#66d9ef">long</span> stmtId;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">long</span> <span style="color:#a6e22e">getStmtId</span>() {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> stmtId;
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 由 StmtExecutor 调用</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">setStmtId</span>(<span style="color:#66d9ef">long</span> stmtId) {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">this</span>.<span style="color:#a6e22e">stmtId</span> <span style="color:#f92672">=</span> stmtId;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>继续追踪 <code>stmtId</code> 的生成，发现是在 <code>StmtExecutor</code> 类中：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#75715e">// StmtExecutor</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> AtomicLong STMT_ID_GENERATOR <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> AtomicLong(0); <span style="color:#75715e">// 初始值为 0</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">private</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">executeByNereids</span>(TUniqueId queryId) <span style="color:#66d9ef">throws</span> Exception {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ...</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// stmtId 原子自增</span>
+</span></span><span style="display:flex;"><span>    context.<span style="color:#a6e22e">setStmtId</span>(STMT_ID_GENERATOR.<span style="color:#a6e22e">incrementAndGet</span>());
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ...</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>至此，答案也已经呼之欲出了： <code>stmtId</code> 在内存中类型是 <code>long</code> (八字节)，而返回给客户端的时候进行了强制类型转换成了 <code>int</code> (四字节)。<code>stmtId</code> 一直自增，当 <code>stmtId</code> 超过了四字节的容量时，就会出现客户端接收到的 <code>stmtId</code> 和服务端实际存储的不一致，进而导致此问题。</p>
+<h2 id="解决">
+  解决
+  <a class="anchor" href="#%e8%a7%a3%e5%86%b3">#</a>
+</h2>
+<p>找到问题后，再去 Doris 仓库切换到最新的代码时，发现这部分逻辑已经被修改了，相关的 PR 在：<a href="https://github.com/apache/doris/pull/47950">https://github.com/apache/doris/pull/47950</a></p>
+<p>那就更简单了，直接升级 Doris 版本到最新即可。</p>
+<p>新版本中的逻辑是：<code>ConnectionContext</code> 新增了一个 <code>preparedStmtId</code> 属性，类型是 <code>int</code>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span>    <span style="color:#75715e">// range [Integer.MIN_VALUE, Integer.MAX_VALUE]</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">protected</span> <span style="color:#66d9ef">int</span> preparedStmtId <span style="color:#f92672">=</span> Integer.<span style="color:#a6e22e">MIN_VALUE</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">incPreparedStmtId</span>() {
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">++</span>preparedStmtId;
+</span></span><span style="display:flex;"><span>    }
+</span></span></code></pre></div><h3 id="wireshark-抓包">
+  Wireshark 抓包
+  <a class="anchor" href="#wireshark-%e6%8a%93%e5%8c%85">#</a>
+</h3>
+<p>在测试环境中升级 Doris 版本后，使用 Wireshark 抓包，验证一下 <code>stmtId</code> 是否如新版本中的逻辑工作。</p>
+<p>在以前的版本 <code>stmtId</code> 从 0 开始自增，而在新版本中 <code>preparedStmtId</code> 从 <code>Integer.MIN_VALUE</code> 开始自增。因此只需要关注前面几个 <code>COM_STMT_PREPARE</code> 包的响应，其中的 <code>statement_id</code> 是从 0 开始，还是 2147483648 (即 <code>Integer.MIN_VALUE</code> 无符号数) 开始。</p>
+<figure>
+  <img src="/images/doris-prepared-statments/wireshark-prepare.png" alt="Wireshark 抓包 - COM_STMT_PREPARE" />
+  <figcaption>Wireshark 抓包 - COM_STMT_PREPARE</figcaption>
+</figure>
+<p>很明显，<code>statement_id</code> 是从 2147483648 开始的，说明新版本中的逻辑已经生效。</p>
+<h3 id="答疑">
+  答疑
+  <a class="anchor" href="#%e7%ad%94%e7%96%91">#</a>
+</h3>
+<ol>
+<li>
+<p>为什么 <code>DQ-1</code> 会报这个错误，而 <code>DQ-2</code> 不会报这个错误？</p>
+<p><em><code>DQ-2</code> 使用的客户端拼接 SQL 语句，并没有使用到 <code>PreparedStatement</code> 机制。而 <code>DQ-1</code> (golang) 底层 mysql 驱动 (github.com/go-sql-driver/mysql) 会优先尝试客户端 prepare (使用 query 而不是服务器 prepare), 如果没有开启则会使用服务器 prepare, 使用 <a href="https://github.com/go-sql-driver/mysql?tab=readme-ov-file#interpolateparams">interpolateParams</a> 控制开启</em></p>
+<p><em>也就是说如果想要避免这个问题，可以在 <code>DQ-1</code> 的数据库连接字符串中添加 <code>interpolateParams=true</code> 参数，避免使用服务器 prepare 规避 statement_id 增长溢出。</em></p>
+<blockquote>
+<p>另外 <code>gorm</code> 也由一个 PrepareStmt 的配置选项，会缓存已经 prepared 的 sql.Stmt, 才会合理利用上服务端 prepare 机制，同时减少客户端的 prepare 次数。</p>
+</blockquote>
+</li>
+<li>
+<p>为什么重启 <code>DQ-1</code> 和 Doris FE 节点可以解决问题？</p>
+<p><em>实际上是重启 Doris FE 节点解决了问题，重启后 stmtId 重新从 0 开始自增，暂时避免了溢出。</em></p>
+</li>
+<li>
+<p>是 Doris FE 节点的问题，还是 <code>DQ-1</code> 的问题？</p>
+<p><em>是 Doris FE 中 PreparedStatement 实现存在缺陷。</em></p>
+</li>
+</ol>
+<h2 id="总结">
+  总结
+  <a class="anchor" href="#%e6%80%bb%e7%bb%93">#</a>
+</h2>
+<p>本文复盘了在使用 Apache Doris PreparedStatement 机制时出现 “Not supported such prepared statement” 错误的排查历程。通过源码追踪，发现 Doris FE 节点在管理 <code>stmtId</code> 时存在类型转换问题，导致溢出后客户端与服务端的 <code>stmtId</code> 不一致，最终引发异常。</p>
+<p>升级 Doris 至最新版本或在客户端配置参数避免服务端 prepare，均可有效规避该问题。</p>
+<p>在排查过程，系统性的了解 MySQL 的 PreparedStatement 协议以及服务端和客户端在 PreparedStatement 机制中的实现细节。</p>
+<p>总的来说，知其然更要知其所以然，理解底层原理才能更好地解决问题。</p>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#更新">更新</a></li>
+    <li><a href="#背景">背景</a></li>
+    <li><a href="#问题分析">问题分析</a>
+      <ul>
+        <li><a href="#apache-doris-源码分析1">Apache Doris 源码分析1</a></li>
+        <li><a href="#mysql-prepared-statement-协议">MySQL Prepared Statement 协议</a></li>
+        <li><a href="#apache-doris-源码分析2">Apache Doris 源码分析2</a></li>
+      </ul>
+    </li>
+    <li><a href="#解决">解决</a>
+      <ul>
+        <li><a href="#wireshark-抓包">Wireshark 抓包</a></li>
+        <li><a href="#答疑">答疑</a></li>
+      </ul>
+    </li>
+    <li><a href="#总结">总结</a></li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

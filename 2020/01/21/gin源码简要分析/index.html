@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="简单介绍gin源码，主要是路由和中间件的相关绑定使用流程，以及Context设计，但是不包括render">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2020/01/21/gin%E6%BA%90%E7%A0%81%E7%AE%80%E8%A6%81%E5%88%86%E6%9E%90/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="Gin源码简要分析">
+  <meta property="og:description" content="简单介绍gin源码，主要是路由和中间件的相关绑定使用流程，以及Context设计，但是不包括render">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2020-01-21T10:05:57+08:00">
+    <meta property="article:modified_time" content="2020-01-21T10:05:57+08:00">
+    <meta property="article:tag" content="Gin">
+    <meta property="article:tag" content="Golang">
+<title>Gin源码简要分析 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2020/01/21/gin%E6%BA%90%E7%A0%81%E7%AE%80%E8%A6%81%E5%88%86%E6%9E%90/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>Gin源码简要分析</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#概述">概述</a></li>
+        <li><a href="#从demo开始">从DEMO开始</a></li>
+        <li><a href="#engine">Engine</a></li>
+        <li><a href="#routergroup--methodtree">RouterGroup &amp; MethodTree</a></li>
+        <li><a href="#handlerfunc">HandlerFunc</a></li>
+        <li><a href="#context">Context</a></li>
+        <li><a href="#总结">总结</a></li>
+        <li><a href="#参考文献">参考文献</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    Gin源码简要分析
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>January 21, 2020</span>
+  </div>
+
+
+
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Gin/">Gin</a>, 
+      <a href="/tags/Golang/">Golang</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><h3 id="概述">
+  概述
+  <a class="anchor" href="#%e6%a6%82%e8%bf%b0">#</a>
+</h3>
+<p>通过日常对gin场景出发，深入源码，总结介绍gin的核心设计。包含：Engine / HandlerFunc / RouterGroup(Router) / Context。在日常使用中常见的就以上概念，汇总如下：</p>
+<table>
+  <thead>
+      <tr>
+          <th>概念</th>
+          <th>解释</th>
+          <th>应用意义</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Engine</td>
+          <td>引擎</td>
+          <td>web server的基础支持，也是服务的入口 和 根级数据结构</td>
+      </tr>
+      <tr>
+          <td>RouterGroup(Router)</td>
+          <td>路由</td>
+          <td>用于支持gin,REST路由绑定和路由匹配的基础，源于radix-tree数据结构支持</td>
+      </tr>
+      <tr>
+          <td>HandlerFunc</td>
+          <td>处理函数</td>
+          <td>逻辑处理器和中间件实现的函数签名</td>
+      </tr>
+      <tr>
+          <td>Context</td>
+          <td>上下文</td>
+          <td>封装了请求和响应的操作，为HandlerFunc的定义和中间件模式提供支持</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="从demo开始">
+  从DEMO开始
+  <a class="anchor" href="#%e4%bb%8edemo%e5%bc%80%e5%a7%8b">#</a>
+</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">barForm</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Foo</span> <span style="color:#66d9ef">string</span>  <span style="color:#e6db74">`form:&#34;foo&#34; binding:&#34;required&#34;`</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Bar</span> <span style="color:#66d9ef">int</span>     <span style="color:#e6db74">`form:&#34;bar&#34; binding:&#34;required&#34;`</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">fooHdl</span> <span style="color:#a6e22e">FooHdl</span>) <span style="color:#a6e22e">Bar</span>(<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">gin</span>.<span style="color:#a6e22e">Context</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">var</span> <span style="color:#a6e22e">bform</span> = new(<span style="color:#a6e22e">barForm</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">ShouldBind</span>(<span style="color:#a6e22e">bform</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// true: parse form error
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// handle biz logic and generate response structure
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// c (gin.Context) methods could called to support process-controling
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">JSON</span>(<span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">StatusOK</span>, <span style="color:#a6e22e">resp</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// c.String() alse repsonse to client
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// mountRouters .
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">mountRouters</span>(<span style="color:#a6e22e">engi</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">gin</span>.<span style="color:#a6e22e">Engine</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// use middlewares
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">engi</span>.<span style="color:#a6e22e">Use</span>(<span style="color:#a6e22e">gin</span>.<span style="color:#a6e22e">Logger</span>())
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">engi</span>.<span style="color:#a6e22e">Use</span>(<span style="color:#a6e22e">gin</span>.<span style="color:#a6e22e">Recovery</span>())
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// mount routers
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">group</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">engi</span>.<span style="color:#a6e22e">Group</span>(<span style="color:#e6db74">&#34;/v1&#34;</span>)
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">fooHdl</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">demohtp</span>.<span style="color:#a6e22e">New</span>()
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">group</span>.<span style="color:#a6e22e">GET</span>(<span style="color:#e6db74">&#34;/foo&#34;</span>, <span style="color:#a6e22e">fooHdl</span>.<span style="color:#a6e22e">Bar</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">group</span>.<span style="color:#a6e22e">GET</span>(<span style="color:#e6db74">&#34;/echo&#34;</span>, <span style="color:#a6e22e">fooHdl</span>.<span style="color:#a6e22e">Echo</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// subGroup := group.Group(&#34;/subg&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#75715e">// subGroup.GET(&#34;/hdl1&#34;, fooHdl.SubGroupHdl1) // 最终路由：&#34;targetURI = /v1/subg/hdl1&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">engi</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">gin</span>.<span style="color:#a6e22e">New</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mountRouters</span>(<span style="color:#a6e22e">engi</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">engi</span>.<span style="color:#a6e22e">Run</span>(<span style="color:#e6db74">&#34;:8080&#34;</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatalf</span>(<span style="color:#e6db74">&#34;engi exit with err=%v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>通过上述的代码就简单开启了一个gin server，其中就包括了常见的：路由注册，中间件注册，路由分组，服务启动。核心概念也就是刚刚在上文提到的那四个概念。概览流程如下图：</p>
+<img src="/images/gin-full-view.png"/>
+<p>可以参照DEMO中的方法名在图中检索改流程。</p>
+<h3 id="engine">
+  Engine
+  <a class="anchor" href="#engine">#</a>
+</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// Engine is the framework&#39;s instance, it contains the muxer, middleware and configuration settings.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Engine</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 路由管理
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">RouterGroup</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 省略非关心属性
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// context poo，支持context复用，减少对象创建提高性能。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">pool</span>             <span style="color:#a6e22e">sync</span>.<span style="color:#a6e22e">Pool</span>
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// []methodTree方法树根节点集合 这部分在路由部分会详细介绍
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">trees</span>            <span style="color:#a6e22e">methodTrees</span> 
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>Engine是根入口，它把RouterGroup结构图体嵌入自身，以获得了Group，GET，POST等路由管理方法。从 <code>Run</code>方法的代码：</p>
+<blockquote>
+<p>因为直接复制代码太多了，推荐下载源码来跳转，更便捷高效。</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">engine</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Engine</span>) <span style="color:#a6e22e">Run</span>(<span style="color:#a6e22e">addr</span> <span style="color:#f92672">...</span><span style="color:#66d9ef">string</span>) (<span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">defer</span> <span style="color:#66d9ef">func</span>() { <span style="color:#a6e22e">debugPrintError</span>(<span style="color:#a6e22e">err</span>) }()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">address</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">resolveAddress</span>(<span style="color:#a6e22e">addr</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">debugPrint</span>(<span style="color:#e6db74">&#34;Listening and serving HTTP on %s\n&#34;</span>, <span style="color:#a6e22e">address</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 使用的是标准库的http服务启动方法
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// 如果看过http.ListenAndServe函数签名，就知道engine实现了http.Handler方法，
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// 也就是它一定有一个ServeHTTP方法
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">ListenAndServe</span>(<span style="color:#a6e22e">address</span>, <span style="color:#a6e22e">engine</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>通过层层跳转我们可以找到图中淡紫色部分中的<code>handlerHTTPRequest</code>方法，在ServeHTTP函数时，engine会从pool中取得一个Context对象，并准备好Request和ResponseWriter的相关数据设置到Context中去，提供给方法链调用。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// 调用中间件和请求逻辑函数
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">engine</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Engine</span>) <span style="color:#a6e22e">handleHTTPRequest</span>(<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Context</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">httpMethod</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Request</span>.<span style="color:#a6e22e">Method</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">rPath</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Request</span>.<span style="color:#a6e22e">URL</span>.<span style="color:#a6e22e">Path</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">unescape</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">false</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">engine</span>.<span style="color:#a6e22e">UseRawPath</span> <span style="color:#f92672">&amp;&amp;</span> len(<span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Request</span>.<span style="color:#a6e22e">URL</span>.<span style="color:#a6e22e">RawPath</span>) &gt; <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">rPath</span> = <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Request</span>.<span style="color:#a6e22e">URL</span>.<span style="color:#a6e22e">RawPath</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">unescape</span> = <span style="color:#a6e22e">engine</span>.<span style="color:#a6e22e">UnescapePathValues</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">engine</span>.<span style="color:#a6e22e">RemoveExtraSlash</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">rPath</span> = <span style="color:#a6e22e">cleanPath</span>(<span style="color:#a6e22e">rPath</span>)
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 这里必须知道gin使用的是 “基数树（Radix Tree）” 用于存储路由
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// https://michaelyou.github.io/2018/02/10/%E8%B7%AF%E7%94%B1%E6%9F%A5%E6%89%BE%E4%B9%8BRadix-Tree/
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">t</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">engine</span>.<span style="color:#a6e22e">trees</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> <span style="color:#a6e22e">i</span>, <span style="color:#a6e22e">tl</span> <span style="color:#f92672">:=</span> <span style="color:#ae81ff">0</span>, len(<span style="color:#a6e22e">t</span>); <span style="color:#a6e22e">i</span> &lt; <span style="color:#a6e22e">tl</span>; <span style="color:#a6e22e">i</span><span style="color:#f92672">++</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">t</span>[<span style="color:#a6e22e">i</span>].<span style="color:#a6e22e">method</span> <span style="color:#f92672">!=</span> <span style="color:#a6e22e">httpMethod</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">// 从这里可以知道，engine中的methodTrees []methodTree是请求方法分组的路由匹配树。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#66d9ef">continue</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">root</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">t</span>[<span style="color:#a6e22e">i</span>].<span style="color:#a6e22e">root</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// root数据结构（radix-tree）？如何查找？
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">value</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">root</span>.<span style="color:#a6e22e">getValue</span>(<span style="color:#a6e22e">rPath</span>, <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Params</span>, <span style="color:#a6e22e">unescape</span>) <span style="color:#75715e">// 找到路由对应的处理函数
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">value</span>.<span style="color:#a6e22e">handlers</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">handlers</span> = <span style="color:#a6e22e">value</span>.<span style="color:#a6e22e">handlers</span> <span style="color:#75715e">// 复制节点的所有handlers
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Params</span> = <span style="color:#a6e22e">value</span>.<span style="color:#a6e22e">params</span>     <span style="color:#75715e">// 路由参数
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">fullPath</span> = <span style="color:#a6e22e">value</span>.<span style="color:#a6e22e">fullPath</span> <span style="color:#75715e">// 全路径
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Next</span>()                    <span style="color:#75715e">// 依次调用HandlerChain中的函数
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">writermem</span>.<span style="color:#a6e22e">WriteHeaderNow</span>()
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 省略，这部分流程控制也自行阅读
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    }
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 省略...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div><p>从上述流程我们可以总结得到图中紫色部分调用链：</p>
+<p><em><strong>engine.Run -&gt; http.ListenAndServe -&gt; engine.handleHTTPRequest -&gt; c.Next</strong></em></p>
+<p>但是其中还有不清楚的问题：</p>
+<ul>
+<li>路由是通过方法确定到该方法树的根节点，再查询到路由对应的节点，那么在radix-tree中是如何进行路由匹配的呢？</li>
+<li>c.handlers 直接从匹配到的路由节点的handlers复制得到，那么中间件是如何挂在到其中的呢？</li>
+<li>获取到c.handlers之后，只调用了一次c.Next，那么该链路是如何继续调用下去的？</li>
+<li>Path Param是如何获取到？<strong>root.getValue</strong></li>
+</ul>
+<h3 id="routergroup--methodtree">
+  RouterGroup &amp; MethodTree
+  <a class="anchor" href="#routergroup--methodtree">#</a>
+</h3>
+<p>这部分是除了Context概念之外理解gin的第二核心部分，提供路由注册，调用链路函数链处理，路由分组，路由匹配功能。在开始之前，必须知道gin的路由是由httprouter提供，而httprouter包是使用了radix-tree来实现路由管理功能。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// IRouter defines all router handle interface includes single and group router.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">IRouter</span> <span style="color:#66d9ef">interface</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">IRoutes</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Group</span>(<span style="color:#66d9ef">string</span>, <span style="color:#f92672">...</span><span style="color:#a6e22e">HandlerFunc</span>) <span style="color:#f92672">*</span><span style="color:#a6e22e">RouterGroup</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// IRoutes defines all router handle interface.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">IRoutes</span> <span style="color:#66d9ef">interface</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Use</span>(<span style="color:#f92672">...</span><span style="color:#a6e22e">HandlerFunc</span>) <span style="color:#a6e22e">IRoutes</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Handle</span>(<span style="color:#66d9ef">string</span>, <span style="color:#66d9ef">string</span>, <span style="color:#f92672">...</span><span style="color:#a6e22e">HandlerFunc</span>) <span style="color:#a6e22e">IRoutes</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Any</span>(<span style="color:#66d9ef">string</span>, <span style="color:#f92672">...</span><span style="color:#a6e22e">HandlerFunc</span>) <span style="color:#a6e22e">IRoutes</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">GET</span>(<span style="color:#66d9ef">string</span>, <span style="color:#f92672">...</span><span style="color:#a6e22e">HandlerFunc</span>) <span style="color:#a6e22e">IRoutes</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">POST</span>(<span style="color:#66d9ef">string</span>, <span style="color:#f92672">...</span><span style="color:#a6e22e">HandlerFunc</span>) <span style="color:#a6e22e">IRoutes</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">DELETE</span>(<span style="color:#66d9ef">string</span>, <span style="color:#f92672">...</span><span style="color:#a6e22e">HandlerFunc</span>) <span style="color:#a6e22e">IRoutes</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">PATCH</span>(<span style="color:#66d9ef">string</span>, <span style="color:#f92672">...</span><span style="color:#a6e22e">HandlerFunc</span>) <span style="color:#a6e22e">IRoutes</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">PUT</span>(<span style="color:#66d9ef">string</span>, <span style="color:#f92672">...</span><span style="color:#a6e22e">HandlerFunc</span>) <span style="color:#a6e22e">IRoutes</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">OPTIONS</span>(<span style="color:#66d9ef">string</span>, <span style="color:#f92672">...</span><span style="color:#a6e22e">HandlerFunc</span>) <span style="color:#a6e22e">IRoutes</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">HEAD</span>(<span style="color:#66d9ef">string</span>, <span style="color:#f92672">...</span><span style="color:#a6e22e">HandlerFunc</span>) <span style="color:#a6e22e">IRoutes</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">StaticFile</span>(<span style="color:#66d9ef">string</span>, <span style="color:#66d9ef">string</span>) <span style="color:#a6e22e">IRoutes</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Static</span>(<span style="color:#66d9ef">string</span>, <span style="color:#66d9ef">string</span>) <span style="color:#a6e22e">IRoutes</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">StaticFS</span>(<span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">FileSystem</span>) <span style="color:#a6e22e">IRoutes</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// RouterGroup is used internally to configure router, a RouterGroup is associated with
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// a prefix and an array of handlers (middleware).
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">RouterGroup</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Handlers</span> <span style="color:#a6e22e">HandlersChain</span> <span style="color:#75715e">// 中间件
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">basePath</span> <span style="color:#66d9ef">string</span>        <span style="color:#75715e">// 路由前缀
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">engine</span>   <span style="color:#f92672">*</span><span style="color:#a6e22e">Engine</span>       <span style="color:#75715e">// 指向engine入口的指针
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">root</span>     <span style="color:#66d9ef">bool</span>          <span style="color:#75715e">// 是否是root
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div><h4 id="路由注册">
+  .路由注册
+  <a class="anchor" href="#%e8%b7%af%e7%94%b1%e6%b3%a8%e5%86%8c">#</a>
+</h4>
+<p>通过任意一个路由注册方法，都可以进入到 <code>func (group *RouterGroup) handle(httpMethod, relativePath string, handlers HandlersChain) IRoutes</code> 这个方法。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// 挂载路由的实际处理函数
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">group</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">RouterGroup</span>) <span style="color:#a6e22e">handle</span>(<span style="color:#a6e22e">httpMethod</span>, <span style="color:#a6e22e">relativePath</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">handlers</span> <span style="color:#a6e22e">HandlersChain</span>) <span style="color:#a6e22e">IRoutes</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 计算最终的绝对路径 base + relativePath
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 注意base也是绝对路径
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">absolutePath</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">group</span>.<span style="color:#a6e22e">calculateAbsolutePath</span>(<span style="color:#a6e22e">relativePath</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 合并处理函数，将中间件和逻辑函数结合在一起
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 一般来说这里传入的handlder是逻辑函数 len(handlers) = 1
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 只有少数的handler会有自己的中间件处理函数 len(handlers) &gt; 1
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">handlers</span> = <span style="color:#a6e22e">group</span>.<span style="color:#a6e22e">combineHandlers</span>(<span style="color:#a6e22e">handlers</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 将处理好的 HandlersChain 加载到Radix Tree中去
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 这也表明，这里的RouterGroup只会载处理路由时发挥作用
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">group</span>.<span style="color:#a6e22e">engine</span>.<span style="color:#a6e22e">addRoute</span>(<span style="color:#a6e22e">httpMethod</span>, <span style="color:#a6e22e">absolutePath</span>, <span style="color:#a6e22e">handlers</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">group</span>.<span style="color:#a6e22e">returnObj</span>()
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><blockquote>
+<p>engine在初始化的时候会设置RouterGroup.basePath = &ldquo;/&rdquo;
+engine是将相同请求方法挂载到同一棵树下</p>
+</blockquote>
+<p>看到这里回到engine.addRoute中去，通过深入发现如下调用链：</p>
+<p><em><strong>engine.GET -&gt; routergroup.GET -&gt; routergroup.handle -&gt; engine.addRoute -&gt; methodTree.addRoute -&gt; node(radix-tree&rsquo;s node).insertChild</strong></em></p>
+<h4 id="路由分组">
+  .路由分组
+  <a class="anchor" href="#%e8%b7%af%e7%94%b1%e5%88%86%e7%bb%84">#</a>
+</h4>
+<p>RouterGroup通过Group函数来衍生下一级别的RouterGroup，会拷贝父级RouterGroup的中间件，重新计算basePath。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">group</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">RouterGroup</span>) <span style="color:#a6e22e">Group</span>(<span style="color:#a6e22e">relativePath</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">handlers</span> <span style="color:#f92672">...</span><span style="color:#a6e22e">HandlerFunc</span>) <span style="color:#f92672">*</span><span style="color:#a6e22e">RouterGroup</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">RouterGroup</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Handlers</span>: <span style="color:#a6e22e">group</span>.<span style="color:#a6e22e">combineHandlers</span>(<span style="color:#a6e22e">handlers</span>),           <span style="color:#75715e">// 初始化时，拷贝父亲节点的中间件
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">basePath</span>: <span style="color:#a6e22e">group</span>.<span style="color:#a6e22e">calculateAbsolutePath</span>(<span style="color:#a6e22e">relativePath</span>), <span style="color:#75715e">// 初始化时，计算孩子group的绝对路径
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">engine</span>:   <span style="color:#a6e22e">group</span>.<span style="color:#a6e22e">engine</span>,
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h4 id="中间件挂载">
+  .中间件挂载
+  <a class="anchor" href="#%e4%b8%ad%e9%97%b4%e4%bb%b6%e6%8c%82%e8%bd%bd">#</a>
+</h4>
+<p>有两个地方提供给中间件挂载，一个是RouterGroup.Use集中挂载中间件；另一个地方是挂载特定路由的时候(RouterGroup.GET / POST 等等)，将中间件和逻辑处理函数一起挂载。第二种方式在路由注册的时候已经见过了，这里再说下Use方法，<code>RouterGroup.Handlers = append(RouterGroup.Handlers, middlewareHandlers)</code>，这里只是简单的将后来的中间件复制到RouterGroup的中间件上，没有其他的逻辑。</p>
+<h4 id="路由匹配">
+  .路由匹配
+  <a class="anchor" href="#%e8%b7%af%e7%94%b1%e5%8c%b9%e9%85%8d">#</a>
+</h4>
+<p>这部分全都是交由radix-tree来负责的部分。</p>
+<h3 id="handlerfunc">
+  HandlerFunc
+  <a class="anchor" href="#handlerfunc">#</a>
+</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">HandlerFunc</span> <span style="color:#66d9ef">func</span>(<span style="color:#f92672">*</span><span style="color:#a6e22e">Context</span>)  <span style="color:#75715e">// 处理函数签名  
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">HandlersChain</span> []<span style="color:#a6e22e">HandlerFunc</span> <span style="color:#75715e">// 处理函数链
+</span></span></span></code></pre></div><p>这部分没什么好说的，就是定义了函数签名，指定Context作为上下文传递的关键数据。</p>
+<h3 id="context">
+  Context
+  <a class="anchor" href="#context">#</a>
+</h3>
+<p>Context是上下文传递的核心，它包括了请求处理，响应处理，表单解析等重要工作。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// Context is the most important part of gin. It allows us to pass variables between middleware,
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// manage the flow, validate the JSON of a request and render a JSON response for example.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Context</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">writermem</span> <span style="color:#a6e22e">responseWriter</span> <span style="color:#75715e">// 实现了http.ResponseWriter 和 gin.ResponseWriter
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">Request</span>   <span style="color:#f92672">*</span><span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">Request</span>  <span style="color:#75715e">// http.Request, 暴露给handler
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// gin.ResponseWriter 包含了：
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// http.ResponseWriter，http.Hijacker，http.Flusher，http.CloseNotifier和额外方法
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// 暴露给handler，是writermm的复制
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">Writer</span>    <span style="color:#a6e22e">ResponseWriter</span> 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Params</span>   <span style="color:#a6e22e">Params</span>        <span style="color:#75715e">// 路径参数 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">handlers</span> <span style="color:#a6e22e">HandlersChain</span> <span style="color:#75715e">// 调用链
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">index</span>    <span style="color:#66d9ef">int8</span>          <span style="color:#75715e">// 当前handler的索引
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">fullPath</span> <span style="color:#66d9ef">string</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">engine</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Engine</span> <span style="color:#75715e">// 对engine的引用
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">Keys</span> <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#66d9ef">interface</span>{} <span style="color:#75715e">// c.GET / c.SET 的支持，常用于session传递。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// Errors is a list of errors attached to all the handlers/middlewares who used this context.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">Errors</span> <span style="color:#a6e22e">errorMsgs</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// Accepted defines a list of manually accepted formats for content negotiation.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">Accepted</span> []<span style="color:#66d9ef">string</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// query 参数缓存
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">queryCache</span> <span style="color:#a6e22e">url</span>.<span style="color:#a6e22e">Values</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 表单参数缓存, 跟queryCache作用类似
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">formCache</span> <span style="color:#a6e22e">url</span>.<span style="color:#a6e22e">Values</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h4 id="调用链流转和控制">
+  .调用链流转和控制
+  <a class="anchor" href="#%e8%b0%83%e7%94%a8%e9%93%be%e6%b5%81%e8%bd%ac%e5%92%8c%e6%8e%a7%e5%88%b6">#</a>
+</h4>
+<p>从Engine部分已经知道，当路由被匹配到之后会执行一次c.Next，Next逻辑非常简单如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Context</span>) <span style="color:#a6e22e">Next</span>() {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 从c.reset 可以知道 c.index == -1
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">index</span><span style="color:#f92672">++</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">index</span> &lt; int8(len(<span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">handlers</span>)) {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">handlers</span>[<span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">index</span>](<span style="color:#a6e22e">c</span>) <span style="color:#75715e">// 发生调用
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">index</span><span style="color:#f92672">++</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 63，这意味这如果最大链路超过了63，那么通过index的流程控制就出问题了。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">const</span> <span style="color:#a6e22e">abortIndex</span> <span style="color:#66d9ef">int8</span> = <span style="color:#a6e22e">math</span>.<span style="color:#a6e22e">MaxInt8</span> <span style="color:#f92672">/</span> <span style="color:#ae81ff">2</span> 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Context</span>) <span style="color:#a6e22e">Abort</span>() {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">index</span> = <span style="color:#a6e22e">abortIndex</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>要注意的是，当你在调用链中的某一个handler中调用了c.Abort之类的函数，调用链会直接退出也是通过c.index来控制的。除了调用链流转，在Context这一部分还比较重要的是，参数的解析，响应处理。</p>
+<h4 id="参数解析">
+  .参数解析
+  <a class="anchor" href="#%e5%8f%82%e6%95%b0%e8%a7%a3%e6%9e%90">#</a>
+</h4>
+<p>参数传递一共有一下几种方式：</p>
+<table>
+  <thead>
+      <tr>
+          <th>序号</th>
+          <th>参数类型</th>
+          <th>解释</th>
+          <th>Context支持</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>1</td>
+          <td>path param</td>
+          <td>在URI中将参数作为路径的一部分</td>
+          <td>c.Param(&ldquo;key&rdquo;) string</td>
+      </tr>
+      <tr>
+          <td>2</td>
+          <td>query param</td>
+          <td>在URI中以&quot;?&ldquo;开始的，&ldquo;key=value&quot;形式的部分</td>
+          <td>c.Query(&ldquo;key&rdquo;) string</td>
+      </tr>
+      <tr>
+          <td>3</td>
+          <td>body [form; json; xml等等]</td>
+          <td>根据请求头Content-Type判定或指定</td>
+          <td>c.Bind类似函数</td>
+      </tr>
+  </tbody>
+</table>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// Content-Type MIME of the most common data formats.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">const</span> (
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">MIMEJSON</span>              = <span style="color:#e6db74">&#34;application/json&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">MIMEHTML</span>              = <span style="color:#e6db74">&#34;text/html&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">MIMEXML</span>               = <span style="color:#e6db74">&#34;application/xml&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">MIMEXML2</span>              = <span style="color:#e6db74">&#34;text/xml&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">MIMEPlain</span>             = <span style="color:#e6db74">&#34;text/plain&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">MIMEPOSTForm</span>          = <span style="color:#e6db74">&#34;application/x-www-form-urlencoded&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">MIMEMultipartPOSTForm</span> = <span style="color:#e6db74">&#34;multipart/form-data&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">MIMEPROTOBUF</span>          = <span style="color:#e6db74">&#34;application/x-protobuf&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">MIMEMSGPACK</span>           = <span style="color:#e6db74">&#34;application/x-msgpack&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">MIMEMSGPACK2</span>          = <span style="color:#e6db74">&#34;application/msgpack&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">MIMEYAML</span>              = <span style="color:#e6db74">&#34;application/x-yaml&#34;</span>
+</span></span><span style="display:flex;"><span>)
+</span></span></code></pre></div><blockquote>
+<p>关于第三种参数解析是最常用的，也是最复杂的部分包含的内容比较多，这里就不展开了。别忘了，binding的同时还有参数校验是基于“github.com/go-playground/validator”实现的。</p>
+</blockquote>
+<h4 id="响应处理">
+  .响应处理
+  <a class="anchor" href="#%e5%93%8d%e5%ba%94%e5%a4%84%e7%90%86">#</a>
+</h4>
+<p>常用的响应方法有<code>c.String(http.Status, string)</code>, <code>c.JSON(http.Status, interface{})</code></p>
+<p><em><strong>c.Render(code http.Status, r gin.Render) -&gt; r.Render</strong></em></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// Render interface is to be implemented by JSON, XML, HTML, YAML and so on.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Render</span> <span style="color:#66d9ef">interface</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Render writes data with custom ContentType.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">Render</span>(<span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">ResponseWriter</span>) <span style="color:#66d9ef">error</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// WriteContentType writes custom ContentType.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">WriteContentType</span>(<span style="color:#a6e22e">w</span> <span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">ResponseWriter</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>这里以gin.render.JSON为例：</p>
+<blockquote>
+<p>这里json包并不是直接使用的标准库json，而是经过了一层包装用于支持jsoniter替换json。
+这一支持是基于golang选择性编译实现的。</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// Render (JSON) writes data with custom ContentType.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">r</span> <span style="color:#a6e22e">JSON</span>) <span style="color:#a6e22e">Render</span>(<span style="color:#a6e22e">w</span> <span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">ResponseWriter</span>) (<span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">WriteJSON</span>(<span style="color:#a6e22e">w</span>, <span style="color:#a6e22e">r</span>.<span style="color:#a6e22e">Data</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		panic(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// WriteContentType (JSON) writes JSON ContentType.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">r</span> <span style="color:#a6e22e">JSON</span>) <span style="color:#a6e22e">WriteContentType</span>(<span style="color:#a6e22e">w</span> <span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">ResponseWriter</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">writeContentType</span>(<span style="color:#a6e22e">w</span>, <span style="color:#a6e22e">jsonContentType</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// WriteJSON marshals the given interface object and writes it with custom ContentType.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">WriteJSON</span>(<span style="color:#a6e22e">w</span> <span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">ResponseWriter</span>, <span style="color:#a6e22e">obj</span> <span style="color:#66d9ef">interface</span>{}) <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">writeContentType</span>(<span style="color:#a6e22e">w</span>, <span style="color:#a6e22e">jsonContentType</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">encoder</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">json</span>.<span style="color:#a6e22e">NewEncoder</span>(<span style="color:#a6e22e">w</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">encoder</span>.<span style="color:#a6e22e">Encode</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">obj</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="总结">
+  总结
+  <a class="anchor" href="#%e6%80%bb%e7%bb%93">#</a>
+</h3>
+<p>这里知识讲了把gin作为API Server开发时常用到的主要流程和数据结构，其中更多的流程控制部分被省略了，可以自行结合代码和源码阅读。这里主要解析了gin中函数调用链路和handlers流程控制，<em><strong>RadixTree</strong></em>的部分都被省略了，算法菜鸡不敢乱说，掌握后再结合gin的源码重读。</p>
+<p>文中代码偏多，最好是结合源码和图片食用。</p>
+<blockquote>
+<p>水平有限，如有错误，欢迎勘误指正🙏。</p>
+</blockquote>
+<h3 id="参考文献">
+  参考文献
+  <a class="anchor" href="#%e5%8f%82%e8%80%83%e6%96%87%e7%8c%ae">#</a>
+</h3>
+<ul>
+<li><a href="https://michaelyou.github.io/2018/02/10/%E8%B7%AF%E7%94%B1%E6%9F%A5%E6%89%BE%E4%B9%8BRadix-Tree/">https://michaelyou.github.io/2018/02/10/%E8%B7%AF%E7%94%B1%E6%9F%A5%E6%89%BE%E4%B9%8BRadix-Tree/</a></li>
+</ul>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "gin-source-code-analysis", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#概述">概述</a></li>
+        <li><a href="#从demo开始">从DEMO开始</a></li>
+        <li><a href="#engine">Engine</a></li>
+        <li><a href="#routergroup--methodtree">RouterGroup &amp; MethodTree</a></li>
+        <li><a href="#handlerfunc">HandlerFunc</a></li>
+        <li><a href="#context">Context</a></li>
+        <li><a href="#总结">总结</a></li>
+        <li><a href="#参考文献">参考文献</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="探究一下如何实现长连接服务的优雅启停/升级，以及背后的原理。同时分析一下 cloudflare/tableflip 的源码设计。知其然更知其所以然，才能更好的使用。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2023/08/17/tcp-%E9%95%BF%E8%BF%9E%E6%8E%A5%E6%9C%8D%E5%8A%A1%E4%BC%98%E9%9B%85%E9%87%8D%E5%90%AF%E7%9A%84%E7%A7%98%E5%AF%86/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="Tcp 长连接服务优雅重启的秘密">
+  <meta property="og:description" content="探究一下如何实现长连接服务的优雅启停/升级，以及背后的原理。同时分析一下 cloudflare/tableflip 的源码设计。知其然更知其所以然，才能更好的使用。">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-08-17T09:31:49+08:00">
+    <meta property="article:modified_time" content="2023-08-17T09:31:49+08:00">
+    <meta property="article:tag" content="Golang">
+    <meta property="article:tag" content="Linux">
+    <meta property="article:tag" content="Graceful Restart">
+    <meta property="article:tag" content="Fork">
+    <meta property="article:tag" content="Exec">
+    <meta property="article:tag" content="TCP">
+<title>Tcp 长连接服务优雅重启的秘密 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2023/08/17/tcp-%E9%95%BF%E8%BF%9E%E6%8E%A5%E6%9C%8D%E5%8A%A1%E4%BC%98%E9%9B%85%E9%87%8D%E5%90%AF%E7%9A%84%E7%A7%98%E5%AF%86/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>Tcp 长连接服务优雅重启的秘密</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#需求分析">需求分析</a></li>
+        <li><a href="#基本思路">基本思路</a></li>
+        <li><a href="#实现方式">实现方式</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    Tcp 长连接服务优雅重启的秘密
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>August 17, 2023</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/linux/">Linux</a>, 
+      <a href="/tags/Graceful-Restart/">Graceful Restart</a>, 
+      <a href="/tags/fork/">Fork</a>, 
+      <a href="/tags/exec/">Exec</a>, 
+      <a href="/tags/tcp/">TCP</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><p>假设我们有一个长连接服务，我们想要对它进行升级，但是不想让客户端受到影响应该怎么做？这个问题其实是一个很常见的问题，比如我们的游戏服务器，我们的 IM 服务器，推送服务器等等，诸如此类使用tcp长连接的服务，都会遇到这个问题。那么我们应该怎么做呢？</p>
+<h3 id="需求分析">
+  需求分析
+  <a class="anchor" href="#%e9%9c%80%e6%b1%82%e5%88%86%e6%9e%90">#</a>
+</h3>
+<p>我们可以先来看下这个场景下的需求：</p>
+<ul>
+<li>客户端必须要对这个操作没有感知，也就是说客户端不需要做任何的修改，在服务器升级的过程中不需要配合。</li>
+<li>服务器在升级的过程中，不能丢失任何的连接，也就是说，如果有新的连接进来，那么这个连接必须要被接受，如果有旧的连接，那么客户端不能够触发重连。</li>
+</ul>
+<h3 id="基本思路">
+  基本思路
+  <a class="anchor" href="#%e5%9f%ba%e6%9c%ac%e6%80%9d%e8%b7%af">#</a>
+</h3>
+<blockquote>
+<p>实现思路的讨论范围限制在 linux 服务器上</p>
+</blockquote>
+<p>为了实现上述的要求，首先在升级流程中我们需要做到以下几点：</p>
+<ul>
+<li>旧的服务器进程在处理完请求前不能退出，而且一旦升级开始就不能再接受新的连接。</li>
+<li>旧的服务器进程在所有连接都处理完毕后才能退出。</li>
+<li>新的服务器进程在启动时需要继承旧的服务器进程的所有连接，新的连接也应该被新的服务器进程接受。</li>
+<li>新的服务器进程也必须监听旧的服务器进程的监听端口，否则新的连接无法被接受。</li>
+</ul>
+<p>那么通过 Google 和 ChatGPT 的帮助，我们可以找到一些思路：</p>
+<p><em><strong>新进程继承旧进程的（监听）套接字，而不是创建新的。</strong></em></p>
+<blockquote>
+<p>为什么不创建新的（监听）套接字呢？在 linux 中内核会把处在不同握手阶段的TCP连接放在不同的队列中（半连接/全连接）。服务器的监听套接字会有自己的队列，如果创建新的套接字，那么旧的套接字队列中的连接就会丢失。为了做到客户端无感知，我们需要继承旧的套接字（主要是为了连接队列中的连接不丢失）。</p>
+<p>半连接队列：当客户端发送 SYN 包时，服务器会把这个连接放在半连接队列中，等待服务器的 ACK 包，这个时候连接处于半连接状态。当服务器发送 ACK 包时，这个连接就会从半连接队列中移除，放到全连接队列中，这个时候连接处于全连接状态。当服务器调用 accept 时，就会从全连接队列中取出一个连接，这个时候连接处于 ESTABLISHED 状态。</p>
+</blockquote>
+<h3 id="实现方式">
+  实现方式
+  <a class="anchor" href="#%e5%ae%9e%e7%8e%b0%e6%96%b9%e5%bc%8f">#</a>
+</h3>
+<p>那么在 linux 中，我们可以通过以如下方式实现：</p>
+<ol>
+<li>通过 <code>fork</code> 创建子进程，子进程继承父进程的所有资源，包括监听套接字;</li>
+<li>子进程通过 <code>exec</code> 加载最新的二进制程序执行，这样就实现了新进程继承旧进程的监听套接字。</li>
+<li>新进程启动完成后，通知父进程退出。</li>
+<li>父进程受到信号后，停止接受新的连接，等待所有的连接处理完毕后退出。</li>
+</ol>
+<p>在 Go 里面，我们可以通过如下方式实现：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">gracefulTcpServer</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">listener</span>     <span style="color:#f92672">*</span><span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">TCPListener</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">shutdownChan</span> <span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">struct</span>{}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">conns</span>        <span style="color:#66d9ef">map</span>[<span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">Conn</span>]<span style="color:#66d9ef">struct</span>{}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">servingConnCount</span> <span style="color:#a6e22e">atomic</span>.<span style="color:#a6e22e">Int32</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">serveRunning</span>     <span style="color:#a6e22e">atomic</span>.<span style="color:#a6e22e">Bool</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 普通启动方式
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">start</span>(<span style="color:#a6e22e">port</span> <span style="color:#66d9ef">int</span>) (<span style="color:#f92672">*</span><span style="color:#a6e22e">gracefulTcpServer</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ln</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">Listen</span>(<span style="color:#e6db74">&#34;tcp&#34;</span>, <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Sprintf</span>(<span style="color:#e6db74">&#34;:%d&#34;</span>, <span style="color:#a6e22e">port</span>))
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// handle error ignored
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">s</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">gracefulTcpServer</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">listener</span>:         <span style="color:#a6e22e">ln</span>.(<span style="color:#f92672">*</span><span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">TCPListener</span>),
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">shutdownChan</span>:     make(<span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">struct</span>{}, <span style="color:#ae81ff">1</span>),
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">conns</span>:            make(<span style="color:#66d9ef">map</span>[<span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">Conn</span>]<span style="color:#66d9ef">struct</span>{}, <span style="color:#ae81ff">16</span>),
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">servingConnCount</span>: <span style="color:#a6e22e">atomic</span>.<span style="color:#a6e22e">Int32</span>{},
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">serveRunning</span>:     <span style="color:#a6e22e">atomic</span>.<span style="color:#a6e22e">Bool</span>{},
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">s</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 优雅重启启动方式
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">startFromFork</span>() (<span style="color:#f92672">*</span><span style="color:#a6e22e">gracefulTcpServer</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ... ignored code
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 从环境变量中获取 父进程的处理的连接数，用来恢复连接
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">nfdStr</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Getenv</span>(<span style="color:#a6e22e">__GRACE_ENV_NFDS</span>); <span style="color:#a6e22e">nfdStr</span> <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;&#34;</span> {
+</span></span><span style="display:flex;"><span>		panic(<span style="color:#e6db74">&#34;not nfds env&#34;</span>)
+</span></span><span style="display:flex;"><span>	} <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">nfd</span>, <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">strconv</span>.<span style="color:#a6e22e">Atoi</span>(<span style="color:#a6e22e">nfdStr</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		panic(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// restore conn fds, 0, 1, 2 has been used by os.Stdin, os.Stdout, os.Stderr
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">lfd</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">NewFile</span>(<span style="color:#ae81ff">3</span>, <span style="color:#a6e22e">filepath</span>.<span style="color:#a6e22e">Join</span>(<span style="color:#a6e22e">tmpdir</span>, <span style="color:#e6db74">&#34;graceful&#34;</span>))
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ln</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">FileListener</span>(<span style="color:#a6e22e">lfd</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// handle error ignored
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">s</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">gracefulTcpServer</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">listener</span>:         <span style="color:#a6e22e">ln</span>.(<span style="color:#f92672">*</span><span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">TCPListener</span>),
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">shutdownChan</span>:     make(<span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">struct</span>{}, <span style="color:#ae81ff">1</span>),
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">conns</span>:            make(<span style="color:#66d9ef">map</span>[<span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">Conn</span>]<span style="color:#66d9ef">struct</span>{}, <span style="color:#ae81ff">16</span>),
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">servingConnCount</span>: <span style="color:#a6e22e">atomic</span>.<span style="color:#a6e22e">Int32</span>{},
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">serveRunning</span>:     <span style="color:#a6e22e">atomic</span>.<span style="color:#a6e22e">Bool</span>{},
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 从父进程继承的套接字中恢复连接
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">i</span> <span style="color:#f92672">:=</span> <span style="color:#ae81ff">0</span>; <span style="color:#a6e22e">i</span> &lt; <span style="color:#a6e22e">nfd</span>; <span style="color:#a6e22e">i</span><span style="color:#f92672">++</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">fd</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">NewFile</span>(uintptr(<span style="color:#ae81ff">4</span><span style="color:#f92672">+</span><span style="color:#a6e22e">i</span>), <span style="color:#a6e22e">filepath</span>.<span style="color:#a6e22e">Join</span>(<span style="color:#a6e22e">tmpdir</span>, <span style="color:#a6e22e">strconv</span>.<span style="color:#a6e22e">Itoa</span>(<span style="color:#ae81ff">4</span><span style="color:#f92672">+</span><span style="color:#a6e22e">i</span>)))
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">conn</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">FileConn</span>(<span style="color:#a6e22e">fd</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// handle error ignored
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#66d9ef">go</span> <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">handleConn</span>(<span style="color:#a6e22e">conn</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">s</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">s</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">gracefulTcpServer</span>) <span style="color:#a6e22e">gracefulRestart</span>() {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">_</span> = <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">listener</span>.<span style="color:#a6e22e">SetDeadline</span>(<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Now</span>())
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">lfd</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">listener</span>.<span style="color:#a6e22e">File</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 给子进程设置 优雅重启 相关的环境变量
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Setenv</span>(<span style="color:#a6e22e">__GRACE_ENV_FLAG</span>, <span style="color:#e6db74">&#34;true&#34;</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Setenv</span>(<span style="color:#a6e22e">__GRACE_ENV_NFDS</span>, <span style="color:#a6e22e">strconv</span>.<span style="color:#a6e22e">Itoa</span>(len(<span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">conns</span>)))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 将父进程的监听套接字传递给子进程
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">files</span> <span style="color:#f92672">:=</span> make([]<span style="color:#66d9ef">uintptr</span>, <span style="color:#ae81ff">4</span>, <span style="color:#ae81ff">3</span><span style="color:#f92672">+</span><span style="color:#ae81ff">1</span><span style="color:#f92672">+</span>len(<span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">conns</span>))
+</span></span><span style="display:flex;"><span>	copy(<span style="color:#a6e22e">files</span>[:<span style="color:#ae81ff">4</span>], []<span style="color:#66d9ef">uintptr</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Stdin</span>.<span style="color:#a6e22e">Fd</span>(),
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Stdout</span>.<span style="color:#a6e22e">Fd</span>(),
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Stderr</span>.<span style="color:#a6e22e">Fd</span>(),
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">lfd</span>.<span style="color:#a6e22e">Fd</span>(),
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 将父进程的套接字传递给子进程 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">conn</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">conns</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">connFd</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">conn</span>.(<span style="color:#f92672">*</span><span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">TCPConn</span>).<span style="color:#a6e22e">File</span>()
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">files</span> = append(<span style="color:#a6e22e">files</span>, <span style="color:#a6e22e">connFd</span>.<span style="color:#a6e22e">Fd</span>())
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">procAttr</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">syscall</span>.<span style="color:#a6e22e">ProcAttr</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Env</span>:   <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Environ</span>(),
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Files</span>: <span style="color:#a6e22e">files</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Sys</span>:   <span style="color:#66d9ef">nil</span>,
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 执行 fork + exec 调用
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">childPid</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">syscall</span>.<span style="color:#a6e22e">ForkExec</span>(<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Args</span>[<span style="color:#ae81ff">0</span>], <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Args</span>, <span style="color:#a6e22e">procAttr</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 根据环境变量判断是 fork 还是新启动
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">v</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Getenv</span>(<span style="color:#a6e22e">__GRACE_ENV_FLAG</span>); <span style="color:#a6e22e">v</span> <span style="color:#f92672">!=</span> <span style="color:#e6db74">&#34;&#34;</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">s</span>, <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">startFromFork</span>()
+</span></span><span style="display:flex;"><span>	} <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">s</span>, <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">start</span>(<span style="color:#f92672">*</span><span style="color:#a6e22e">port</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">go</span> <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">serve</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 处理信号，如果是 SIGHUP 信号，则执行 gracefulRestart 方法后再退出
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">waitForSignals</span>()
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><blockquote>
+<p>完整代码可以在 <a href="https://github.com/yeqown/playground/blob/master/golang/tcp-graceful-restart/main.go">https://github.com/yeqown/playground/golang/tcp-graceful-restart</a> 中找到。</p>
+</blockquote>
+<h4 id="syscallforkexec">
+  syscall.ForkExec
+  <a class="anchor" href="#syscallforkexec">#</a>
+</h4>
+<p>通过追踪 <code>syscall.ForkExec</code> 的源码，我们可以看到它的实现主体是 <code>forkAndExecInChild</code>, 它的实现如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">forkAndExecInChild</span>(<span style="color:#a6e22e">argv0</span> <span style="color:#f92672">*</span><span style="color:#66d9ef">byte</span>, <span style="color:#a6e22e">argv</span>, <span style="color:#a6e22e">envv</span> []<span style="color:#f92672">*</span><span style="color:#66d9ef">byte</span>, <span style="color:#a6e22e">chroot</span>, <span style="color:#a6e22e">dir</span> <span style="color:#f92672">*</span><span style="color:#66d9ef">byte</span>, <span style="color:#a6e22e">attr</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">ProcAttr</span>, <span style="color:#a6e22e">sys</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">SysProcAttr</span>, <span style="color:#a6e22e">pipe</span> <span style="color:#66d9ef">int</span>) (<span style="color:#a6e22e">pid</span> <span style="color:#66d9ef">int</span>, <span style="color:#a6e22e">err</span> <span style="color:#a6e22e">Errno</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ... some ignored codes
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">fd</span> <span style="color:#f92672">:=</span> make([]<span style="color:#66d9ef">int</span>, len(<span style="color:#a6e22e">attr</span>.<span style="color:#a6e22e">Files</span>))
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">nextfd</span> = len(<span style="color:#a6e22e">attr</span>.<span style="color:#a6e22e">Files</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">i</span>, <span style="color:#a6e22e">ufd</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">attr</span>.<span style="color:#a6e22e">Files</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">nextfd</span> &lt; int(<span style="color:#a6e22e">ufd</span>) {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">nextfd</span> = int(<span style="color:#a6e22e">ufd</span>)
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">fd</span>[<span style="color:#a6e22e">i</span>] = int(<span style="color:#a6e22e">ufd</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">nextfd</span><span style="color:#f92672">++</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 调用 fork
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">runtime_BeforeFork</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">r1</span>, <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err1</span> = <span style="color:#a6e22e">rawSyscall</span>(<span style="color:#a6e22e">abi</span>.<span style="color:#a6e22e">FuncPCABI0</span>(<span style="color:#a6e22e">libc_fork_trampoline</span>), <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err1</span> <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">runtime_AfterFork</span>()
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>, <span style="color:#a6e22e">err1</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// fork 的函数原型: pid_t fork(void);
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// 调用成功后，父进程返回子进程的 pid，子进程返回 0。所以这里通过 r1 的值来判断是父进程还是子进程
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// 如果是父进程，那么在这里就返回了，子进程会继续执行下面的代码。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">r1</span> <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">runtime_AfterFork</span>()
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> int(<span style="color:#a6e22e">r1</span>), <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 调用系统调用来设置 子进程 的各种属性：
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// 会话ID、进程组ID、用户ID、组ID、工作目录、是否前台运行等等。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 找到 fd[i] &lt; i 并且把他们移到 len(fd) 之后，这样在后面的 dup2 中就不会被 “踩踏”。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// 踩踏：一个变量或者资源被无意中（通常是意外地）覆盖或修改的情况。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">i</span> = <span style="color:#ae81ff">0</span>; <span style="color:#a6e22e">i</span> &lt; len(<span style="color:#a6e22e">fd</span>); <span style="color:#a6e22e">i</span><span style="color:#f92672">++</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">fd</span>[<span style="color:#a6e22e">i</span>] <span style="color:#f92672">&gt;=</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">&amp;&amp;</span> <span style="color:#a6e22e">fd</span>[<span style="color:#a6e22e">i</span>] &lt; <span style="color:#a6e22e">i</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">nextfd</span> <span style="color:#f92672">==</span> <span style="color:#a6e22e">pipe</span> { <span style="color:#75715e">// don&#39;t stomp on pipe
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>				<span style="color:#a6e22e">nextfd</span><span style="color:#f92672">++</span>
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">runtime</span>.<span style="color:#a6e22e">GOOS</span> <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;openbsd&#34;</span> {
+</span></span><span style="display:flex;"><span>				<span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err1</span> = <span style="color:#a6e22e">rawSyscall</span>(<span style="color:#a6e22e">dupTrampoline</span>, uintptr(<span style="color:#a6e22e">fd</span>[<span style="color:#a6e22e">i</span>]), uintptr(<span style="color:#a6e22e">nextfd</span>), <span style="color:#a6e22e">O_CLOEXEC</span>)
+</span></span><span style="display:flex;"><span>			} <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>				<span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err1</span> = <span style="color:#a6e22e">rawSyscall</span>(<span style="color:#a6e22e">dupTrampoline</span>, uintptr(<span style="color:#a6e22e">fd</span>[<span style="color:#a6e22e">i</span>]), uintptr(<span style="color:#a6e22e">nextfd</span>), <span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>				<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err1</span> <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>					<span style="color:#66d9ef">goto</span> <span style="color:#a6e22e">childerror</span>
+</span></span><span style="display:flex;"><span>				}
+</span></span><span style="display:flex;"><span>				<span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err1</span> = <span style="color:#a6e22e">rawSyscall</span>(<span style="color:#a6e22e">abi</span>.<span style="color:#a6e22e">FuncPCABI0</span>(<span style="color:#a6e22e">libc_fcntl_trampoline</span>), uintptr(<span style="color:#a6e22e">nextfd</span>), <span style="color:#a6e22e">F_SETFD</span>, <span style="color:#a6e22e">FD_CLOEXEC</span>)
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err1</span> <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>				<span style="color:#66d9ef">goto</span> <span style="color:#a6e22e">childerror</span>
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">fd</span>[<span style="color:#a6e22e">i</span>] = <span style="color:#a6e22e">nextfd</span>
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">nextfd</span><span style="color:#f92672">++</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 调用 dup2 来复制父进程的文件描述符，也就是 gracefulTcpServer.gracefulRestart 中传递给子进程的文件描述符
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">i</span> = <span style="color:#ae81ff">0</span>; <span style="color:#a6e22e">i</span> &lt; len(<span style="color:#a6e22e">fd</span>); <span style="color:#a6e22e">i</span><span style="color:#f92672">++</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// ... some ignored codes
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 基本只有 0，1，2 会触发这里的逻辑
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">fd</span>[<span style="color:#a6e22e">i</span>] <span style="color:#f92672">==</span> <span style="color:#a6e22e">i</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#75715e">// dup2(i, i) won&#39;t clear close-on-exec flag on Linux,
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>			<span style="color:#75715e">// probably not elsewhere either.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>			<span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err1</span> = <span style="color:#a6e22e">rawSyscall</span>(<span style="color:#a6e22e">abi</span>.<span style="color:#a6e22e">FuncPCABI0</span>(<span style="color:#a6e22e">libc_fcntl_trampoline</span>), uintptr(<span style="color:#a6e22e">fd</span>[<span style="color:#a6e22e">i</span>]), <span style="color:#a6e22e">F_SETFD</span>, <span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err1</span> <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>				<span style="color:#66d9ef">goto</span> <span style="color:#a6e22e">childerror</span>
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">continue</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 其他的文件描述符，监听套接字 + 连接套接字采用 dup2 来复制
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#75715e">// 这样父进程退出后，子进程还可以继续使用这些套接字
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err1</span> = <span style="color:#a6e22e">rawSyscall</span>(<span style="color:#a6e22e">abi</span>.<span style="color:#a6e22e">FuncPCABI0</span>(<span style="color:#a6e22e">libc_dup2_trampoline</span>), uintptr(<span style="color:#a6e22e">fd</span>[<span style="color:#a6e22e">i</span>]), uintptr(<span style="color:#a6e22e">i</span>), <span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err1</span> <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">goto</span> <span style="color:#a6e22e">childerror</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ... some ignored codes
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 调用 execve 系统调用来执行新的程序
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err1</span> = <span style="color:#a6e22e">rawSyscall</span>(<span style="color:#a6e22e">abi</span>.<span style="color:#a6e22e">FuncPCABI0</span>(<span style="color:#a6e22e">libc_execve_trampoline</span>),
+</span></span><span style="display:flex;"><span>		uintptr(<span style="color:#a6e22e">unsafe</span>.<span style="color:#a6e22e">Pointer</span>(<span style="color:#a6e22e">argv0</span>)),
+</span></span><span style="display:flex;"><span>		uintptr(<span style="color:#a6e22e">unsafe</span>.<span style="color:#a6e22e">Pointer</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">argv</span>[<span style="color:#ae81ff">0</span>])),
+</span></span><span style="display:flex;"><span>		uintptr(<span style="color:#a6e22e">unsafe</span>.<span style="color:#a6e22e">Pointer</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">envv</span>[<span style="color:#ae81ff">0</span>])))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">childerror</span>:
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// send error code on pipe
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">rawSyscall</span>(<span style="color:#a6e22e">abi</span>.<span style="color:#a6e22e">FuncPCABI0</span>(<span style="color:#a6e22e">libc_write_trampoline</span>), uintptr(<span style="color:#a6e22e">pipe</span>), uintptr(<span style="color:#a6e22e">unsafe</span>.<span style="color:#a6e22e">Pointer</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">err1</span>)), <span style="color:#a6e22e">unsafe</span>.<span style="color:#a6e22e">Sizeof</span>(<span style="color:#a6e22e">err1</span>))
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">rawSyscall</span>(<span style="color:#a6e22e">abi</span>.<span style="color:#a6e22e">FuncPCABI0</span>(<span style="color:#a6e22e">libc_exit_trampoline</span>), <span style="color:#ae81ff">253</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><blockquote>
+<p>留个问题：这里为什么要对 fd[i] 数组进行处理呢？这些处理的效果是什么？</p>
+<p>后文有答案哦</p>
+</blockquote>
+<h4 id="一些系统调用">
+  一些系统调用
+  <a class="anchor" href="#%e4%b8%80%e4%ba%9b%e7%b3%bb%e7%bb%9f%e8%b0%83%e7%94%a8">#</a>
+</h4>
+<p>在探究 go 底层 fork + exec 的实现时，我们发现了一些系统调用，那么每个系统调用的函数原型和使用场景是什么呢？</p>
+<table>
+  <thead>
+      <tr>
+          <th>系统调用</th>
+          <th>函数原型</th>
+          <th>说明</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>fork</td>
+          <td><code>pid_t fork(void);</code></td>
+          <td>创建一个子进程，子进程会继承父进程的所有资源，包括文件描述符、内存、信号处理等等。</td>
+      </tr>
+      <tr>
+          <td>execve</td>
+          <td><code>int execve(const char *filename, char *const argv[], char *const envp[]);</code></td>
+          <td>执行一个新的程序，这个程序会替换当前进程的内存空间，但是会继承父进程的文件描述符、信号处理等等。如果成功这个函数不会返回，否则返回错误标志</td>
+      </tr>
+      <tr>
+          <td>dup</td>
+          <td><code>int dup(int oldfd);</code></td>
+          <td>复制文件描述符，oldfd 是文件描述符，dup 会把 oldfd 复制到当前进程中，返回新的文件描述符。</td>
+      </tr>
+      <tr>
+          <td>dup2</td>
+          <td><code>int dup2(int oldfd, int newfd);</code></td>
+          <td>复制文件描述符，oldfd 和 newfd 都是文件描述符，dup2 会把 oldfd 复制到 newfd，如果 newfd 已经打开，那么会先关闭 newfd。</td>
+      </tr>
+      <tr>
+          <td>fcntl</td>
+          <td><code>int fcntl(int fd, int cmd, ... /* arg */ );</code></td>
+          <td>对文件描述符进行各种操作，比如设置文件描述符的属性、获取文件描述符的属性等等。</td>
+      </tr>
+      <tr>
+          <td>close</td>
+          <td><code>int close(int fd);</code></td>
+          <td>关闭文件描述符。</td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="tableflip-源码分析">
+  tableflip 源码分析
+  <a class="anchor" href="#tableflip-%e6%ba%90%e7%a0%81%e5%88%86%e6%9e%90">#</a>
+</h4>
+<blockquote>
+<p>cloudflare/tableflip 是一个 Go 的库，用来实现 tcp 长连接服务的优雅重启。它的源码可以在 <a href="https://github.com/cloudflare/tableflip">https://github.com/cloudflare/tableflip</a> 中找到。</p>
+</blockquote>
+<p>如下是 tableflip 作为一个库的使用方式：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">upg</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">tableflip</span>.<span style="color:#a6e22e">New</span>(<span style="color:#a6e22e">tableflip</span>.<span style="color:#a6e22e">Options</span>{})
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">upg</span>.<span style="color:#a6e22e">Stop</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">go</span> <span style="color:#66d9ef">func</span>() {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">sig</span> <span style="color:#f92672">:=</span> make(<span style="color:#66d9ef">chan</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Signal</span>, <span style="color:#ae81ff">1</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">signal</span>.<span style="color:#a6e22e">Notify</span>(<span style="color:#a6e22e">sig</span>, <span style="color:#a6e22e">syscall</span>.<span style="color:#a6e22e">SIGHUP</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">sig</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">upg</span>.<span style="color:#a6e22e">Upgrade</span>()
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// Listen must be called before Ready
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">ln</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">upg</span>.<span style="color:#a6e22e">Listen</span>(<span style="color:#e6db74">&#34;tcp&#34;</span>, <span style="color:#e6db74">&#34;localhost:8080&#34;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">ln</span>.<span style="color:#a6e22e">Close</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 运行服务
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">go</span> <span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">Serve</span>(<span style="color:#a6e22e">ln</span>, <span style="color:#66d9ef">nil</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">upg</span>.<span style="color:#a6e22e">Ready</span>(); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>        panic(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">upg</span>.<span style="color:#a6e22e">Exit</span>()
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>结合之前提到的原理，我们可以看到 tableflip 的 API 跟我们之前实现的 demo 流程是类似的，因此这里我们只分析部分源码。</p>
+<ol>
+<li>Listen</li>
+</ol>
+<p><code>Listen</code> 是用于创建监听套接字的，tableflip 通过一个 <code>Fds</code> 的结构集中管理了子进程从父进程继承来的文件描述符，同时也是父进程向子进程复制文件描述符的数据结构：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Upgrader</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// Upgrader.Listen 调用使用的嵌入字段 Fds 的方法
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#f92672">*</span><span style="color:#a6e22e">Fds</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// Listen 返回从父进程继承来的文件描述符，如果没有继承来的文件描述符，那么就创建一个新的文件描述符。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">f</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Fds</span>) <span style="color:#a6e22e">Listen</span>(<span style="color:#a6e22e">network</span>, <span style="color:#a6e22e">addr</span> <span style="color:#66d9ef">string</span>) (<span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">Listener</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">f</span>.<span style="color:#a6e22e">ListenWithCallback</span>(<span style="color:#a6e22e">network</span>, <span style="color:#a6e22e">addr</span>, <span style="color:#a6e22e">f</span>.<span style="color:#a6e22e">newListener</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">f</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Fds</span>) <span style="color:#a6e22e">ListenWithCallback</span>(<span style="color:#a6e22e">network</span>, <span style="color:#a6e22e">addr</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">callback</span> <span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">network</span>, <span style="color:#a6e22e">addr</span> <span style="color:#66d9ef">string</span>) (<span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">Listener</span>, <span style="color:#66d9ef">error</span>)) (<span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">Listener</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 从父进程继承来的文件描述符尝试获取监听套接字
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">ln</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">f</span>.<span style="color:#a6e22e">listenerLocked</span>(<span style="color:#a6e22e">network</span>, <span style="color:#a6e22e">addr</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 如果找到那么就返回
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">ln</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">ln</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 调用回调函数 cllback(f.newListener) 来创建新的监听套接字
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 这里的 f.newListener = func(network, addr string) (net.Listener, error) { 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//  f.lc 默认是 空的 net.ListenConfig, 等价于 net.Listen(network, addr)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">//	return f.lc.Listen(context.Background(), network, addr)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// }
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">ln</span>, <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">callback</span>(<span style="color:#a6e22e">network</span>, <span style="color:#a6e22e">addr</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;can&#39;t create new listener: %s&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">ln</span>.(<span style="color:#a6e22e">Listener</span>); !<span style="color:#a6e22e">ok</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">ln</span>.<span style="color:#a6e22e">Close</span>()
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;%T doesn&#39;t implement tableflip.Listener&#34;</span>, <span style="color:#a6e22e">ln</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 加入到文件描述符集合中
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">f</span>.<span style="color:#a6e22e">addListenerLocked</span>(<span style="color:#a6e22e">network</span>, <span style="color:#a6e22e">addr</span>, <span style="color:#a6e22e">ln</span>.(<span style="color:#a6e22e">Listener</span>))
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">ln</span>.<span style="color:#a6e22e">Close</span>()
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">ln</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><ol start="2">
+<li>Upgrade</li>
+</ol>
+<p><code>Upgrade</code> 是触发优雅重启的入口，主要是发送一个升级信号，而 <code>upgrade</code> 信号的处理逻辑在 <code>upgrader.run</code> 中处理的：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">u</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Upgrader</span>) <span style="color:#a6e22e">Upgrade</span>() <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 需要注意的是 upgradeC 是一个 chan chan error 类型的，也就是说它是一个 chan 的 chan
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">response</span> <span style="color:#f92672">:=</span> make(<span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">error</span>, <span style="color:#ae81ff">1</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 这里事先检查下当前进程是否处于 退出/升级 状态
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">select</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">case</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">u</span>.<span style="color:#a6e22e">stopC</span>:
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">errors</span>.<span style="color:#a6e22e">New</span>(<span style="color:#e6db74">&#34;terminating&#34;</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">case</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">u</span>.<span style="color:#a6e22e">exitC</span>:
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">errors</span>.<span style="color:#a6e22e">New</span>(<span style="color:#e6db74">&#34;already upgraded&#34;</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">u</span>.<span style="color:#a6e22e">upgradeC</span> <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">response</span>:
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 阻塞在这里，等待升级结果
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">return</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">response</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">u</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Upgrader</span>) <span style="color:#a6e22e">run</span>() {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// ... some ignored codes
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">select</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">case</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">parentExited</span>:
+</span></span><span style="display:flex;"><span>			<span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#66d9ef">case</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">processReady</span>:
+</span></span><span style="display:flex;"><span>			<span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#66d9ef">case</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">u</span>.<span style="color:#a6e22e">stopC</span>:
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">u</span>.<span style="color:#a6e22e">Fds</span>.<span style="color:#a6e22e">closeAndRemoveUsed</span>()
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">request</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">u</span>.<span style="color:#a6e22e">upgradeC</span>:
+</span></span><span style="display:flex;"><span>			<span style="color:#75715e">// 一些异常情况检测
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>			<span style="color:#75715e">// 执行升级
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>			<span style="color:#a6e22e">file</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">u</span>.<span style="color:#a6e22e">doUpgrade</span>()
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">request</span> <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">==</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>				<span style="color:#75715e">// 告诉子进程，父进程已经退出
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>				<span style="color:#a6e22e">u</span>.<span style="color:#a6e22e">exitFd</span> <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">neverCloseThisFile</span>{<span style="color:#a6e22e">file</span>}
+</span></span><span style="display:flex;"><span>				<span style="color:#a6e22e">u</span>.<span style="color:#a6e22e">Fds</span>.<span style="color:#a6e22e">closeUsed</span>()
+</span></span><span style="display:flex;"><span>				<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">u</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Upgrader</span>) <span style="color:#a6e22e">doUpgrade</span>() (<span style="color:#f92672">*</span><span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">File</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 启动子进程
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// u.env 主要是对 startChild 需要的一些调用的抽象集合，为了适应不同的平台
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// u.Fds.copy() 是复制一份父进程的文件描述符集合，这样子进程就可以直接使用父进程的文件描述符
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">child</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">startChild</span>(<span style="color:#a6e22e">u</span>.<span style="color:#a6e22e">env</span>, <span style="color:#a6e22e">u</span>.<span style="color:#a6e22e">Fds</span>.copy())
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;can&#39;t start child: %s&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 更多的信号处理，退出/升级 等等
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">startChild</span>(<span style="color:#a6e22e">env</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">env</span>, <span style="color:#a6e22e">passedFiles</span> <span style="color:#66d9ef">map</span>[<span style="color:#a6e22e">fileName</span>]<span style="color:#f92672">*</span><span style="color:#a6e22e">file</span>) (<span style="color:#f92672">*</span><span style="color:#a6e22e">child</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 开启一个管道，用来通知父进程子进程已经准备好了
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 所以 readyR 是父进程用来读取的，readyW 是子进程用来写入的，因此 readyW 也需要传递给子进程
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">readyR</span>, <span style="color:#a6e22e">readyW</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Pipe</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;pipe failed: %s&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 传递文件描述符的名字
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">namesR</span>, <span style="color:#a6e22e">namesW</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Pipe</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">readyR</span>.<span style="color:#a6e22e">Close</span>()
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">readyW</span>.<span style="color:#a6e22e">Close</span>()
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;pipe failed: %s&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// fds 和 fdNames 保证相同的顺序记录 passedFiles 中的文件描述符
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">fds</span> <span style="color:#f92672">:=</span> []<span style="color:#f92672">*</span><span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">File</span>{<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Stdin</span>, <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Stdout</span>, <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Stderr</span>, <span style="color:#a6e22e">readyW</span>, <span style="color:#a6e22e">namesR</span>}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">fdNames</span> [][]<span style="color:#66d9ef">string</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">name</span>, <span style="color:#a6e22e">file</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">passedFiles</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">nameSlice</span> <span style="color:#f92672">:=</span> make([]<span style="color:#66d9ef">string</span>, len(<span style="color:#a6e22e">name</span>))
+</span></span><span style="display:flex;"><span>		copy(<span style="color:#a6e22e">nameSlice</span>, <span style="color:#a6e22e">name</span>[:])
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">fdNames</span> = append(<span style="color:#a6e22e">fdNames</span>, <span style="color:#a6e22e">nameSlice</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">fds</span> = append(<span style="color:#a6e22e">fds</span>, <span style="color:#a6e22e">file</span>.<span style="color:#a6e22e">File</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 传递环境变量，sentinelEnvVar=yes 也就是告诉新的子进程，这是一个升级的子进程
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 在 tableflip.New &gt; newUpgrader &gt; newParent 的开始处可以看到
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 这个变量决定了 Upgrader 中的 parent 字段是否有值，如果有值，那么就是一个优雅升级的子进程
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">sentinel</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Sprintf</span>(<span style="color:#e6db74">&#34;%s=yes&#34;</span>, <span style="color:#a6e22e">sentinelEnvVar</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">environ</span> []<span style="color:#66d9ef">string</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">val</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">env</span>.<span style="color:#a6e22e">environ</span>() {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">val</span> <span style="color:#f92672">!=</span> <span style="color:#a6e22e">sentinel</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">environ</span> = append(<span style="color:#a6e22e">environ</span>, <span style="color:#a6e22e">val</span>)
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">environ</span> = append(<span style="color:#a6e22e">environ</span>, <span style="color:#a6e22e">sentinel</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 准备好新的子进程的 command, args 文件描述符，环境变量后就可以启动子进程了
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// env.newProc 是一个抽象方法，用来创建子进程
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 默认使用 newOSProcess 其中核心还是调用 syscall.StartProcess 来创建子进程	
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// syscall.StartProcess 与 syscall.ForkExec 是一样的
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">proc</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">env</span>.<span style="color:#a6e22e">newProc</span>(<span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Args</span>[<span style="color:#ae81ff">0</span>], <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Args</span>[<span style="color:#ae81ff">1</span>:], <span style="color:#a6e22e">fds</span>, <span style="color:#a6e22e">environ</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// fork/exec 执行失败，那么释放之前创建的资源
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 后续，子进程启动成功后就不会执行到这里了，因此这里的代码都是在父进程中执行的
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 也就是说，父进程会想子进程传递一些数据（fdNames）然后等待了来自子进程的信号
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">exited</span> <span style="color:#f92672">:=</span> make(<span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">struct</span>{})
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">result</span> <span style="color:#f92672">:=</span> make(<span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">error</span>, <span style="color:#ae81ff">1</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ready</span> <span style="color:#f92672">:=</span> make(<span style="color:#66d9ef">chan</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">File</span>, <span style="color:#ae81ff">1</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">c</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">child</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">go</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">writeNames</span>(<span style="color:#a6e22e">fdNames</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">go</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">waitExit</span>(<span style="color:#a6e22e">result</span>, <span style="color:#a6e22e">exited</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">go</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">waitReady</span>(<span style="color:#a6e22e">ready</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">c</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>通过这部分代码，我们可以看到 tableflip 的实现方式跟我们之前的 demo 是类似的，只不过它把一些细节封装了起来，同时也提供了一些额外的功能，比如：</p>
+<ul>
+<li>发送 fdNames 给子进程</li>
+<li>父进程等待子进程的 ready 信号</li>
+<li>子进程等待父进程的 exited 信号</li>
+<li>等等</li>
+</ul>
+<ol start="3">
+<li>Ready</li>
+</ol>
+<p><code>Ready</code> 使用来通知父进程子进程已经准备好了，这个方法是在子进程中调用的：</p>
+<blockquote>
+<p>需要注意的是，需要在进程真正的可以接受请求后才调用这个方法，否则可能会出现父进程退出后，新连接无法处理的情况。</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">u</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Upgrader</span>) <span style="color:#a6e22e">Ready</span>() <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">u</span>.<span style="color:#a6e22e">readyOnce</span>.<span style="color:#a6e22e">Do</span>(<span style="color:#66d9ef">func</span>() {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">u</span>.<span style="color:#a6e22e">Fds</span>.<span style="color:#a6e22e">closeInherited</span>()
+</span></span><span style="display:flex;"><span>		close(<span style="color:#a6e22e">u</span>.<span style="color:#a6e22e">readyC</span>)
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// some ignored codes
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 如果没有父进程，那么就直接返回（parent == nil 意味着优雅升级进程来的）
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">u</span>.<span style="color:#a6e22e">parent</span> <span style="color:#f92672">==</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 通知父进程子进程已经准备好了, 父进程可以退出了
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 这里其实就是创建子进程时开辟的 ready 管道的 write 端写入特定的信号数据 (notifyReady)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">u</span>.<span style="color:#a6e22e">parent</span>.<span style="color:#a6e22e">sendReady</span>()
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>tableflip 的源码还有很多细节，这里就不一一分析了，有兴趣的可以自己看看，但我们可以发现底层实现的思路是一样的。这里留下一些问题：</p>
+<ol>
+<li>tableflip 在启动子进程时拷贝了 Fds, 但是纵观代码好像没有考虑已经建立的连接，那能否实现连接的继承呢？</li>
+<li>如果说进程中有一个嵌入式数据库，只允许单进程访问，这时候在 tableflip 中会出现什么情况？应该怎么解决呢？</li>
+</ol>
+<h4 id="syscall-的一些细节">
+  syscall 的一些细节
+  <a class="anchor" href="#syscall-%e7%9a%84%e4%b8%80%e4%ba%9b%e7%bb%86%e8%8a%82">#</a>
+</h4>
+<p>通过前文的讲述，我们了解到了实现优雅重启过程中的一些细节，但更深入的了解还需要我们去看一下 fork 和 exec 的一些细节。下面就对 fork 和 exec 的简单地分析一下。</p>
+<h6 id="fork2">
+  fork(2)
+  <a class="anchor" href="#fork2">#</a>
+</h6>
+<blockquote>
+<p><a href="https://man7.org/linux/man-pages/man2/fork.2.html">fork(2) Linux manual page</a></p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e">#include &lt;unistd.h&gt;</span>
+</span></span><span style="display:flex;"><span>pid_t fork<span style="color:#f92672">(</span>void<span style="color:#f92672">)</span>;
+</span></span></code></pre></div><p>通常我们使用以下的代码就可以快速的创建一个子进程：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">#include</span><span style="color:#75715e">&lt;sys/types.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span><span style="color:#75715e">&lt;unistd.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span><span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span><span style="color:#75715e">&lt;stdlib.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>()
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">pid_t</span> pid <span style="color:#f92672">=</span> <span style="color:#a6e22e">fork</span>(); <span style="color:#75715e">// 创建子进程
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> (pid <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">0</span>) {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">perror</span>(<span style="color:#e6db74">&#34;fork error&#34;</span>);
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">exit</span>(<span style="color:#ae81ff">1</span>);
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> (pid <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) 
+</span></span><span style="display:flex;"><span>	{
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// 父进程
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;this is parent process, PID is %d.</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, <span style="color:#a6e22e">getpid</span>());
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">exit</span>(<span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 子进程
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;this is child process %d, PID is %d.</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>, i, <span style="color:#a6e22e">getpid</span>());
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>我们知道在 linux 内核中，进程的核心结构体是 <code>task_struct</code> 如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">// linux-6.4/include/linux/sched.h#739
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">struct</span> task_struct {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">/* Filesystem information: */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">struct</span> fs_struct		<span style="color:#f92672">*</span>fs;
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">/* 记录了进程打开的文件 */</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">struct</span> files_struct		<span style="color:#f92672">*</span>files;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> files_struct {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">//...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 保存了进程打开的文件描述符, 是一个数组，数组的下标就是文件描述符 fd
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">struct</span> file __rcu <span style="color:#f92672">*</span> fd_array[NR_OPEN_DEFAULT];
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>在 fork 的过程中，通过调用 <code>copy_process</code> 来创建一个新的进程，这个函数的实现如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">// linux-6.4/kernel/fork.c#2246
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>__latent_entropy <span style="color:#66d9ef">struct</span> task_struct <span style="color:#f92672">*</span><span style="color:#a6e22e">copy_process</span>(
+</span></span><span style="display:flex;"><span>					<span style="color:#66d9ef">struct</span> pid <span style="color:#f92672">*</span>pid,
+</span></span><span style="display:flex;"><span>					<span style="color:#66d9ef">int</span> trace,
+</span></span><span style="display:flex;"><span>					<span style="color:#66d9ef">int</span> node,
+</span></span><span style="display:flex;"><span>					<span style="color:#66d9ef">struct</span> kernel_clone_args <span style="color:#f92672">*</span>args)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">struct</span> task_struct <span style="color:#f92672">*</span>p;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 拷贝进程打开的文件描述符
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	retval <span style="color:#f92672">=</span> <span style="color:#a6e22e">copy_files</span>(clone_flags, p, args<span style="color:#f92672">-&gt;</span>no_files);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>现在我们知道 <code>fork</code> 确实会复制父进程的文件描述符了，那么在子进程里该怎么使用呢？应该还记得我们是怎么恢复监听套接字的吧：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#a6e22e">listenFile</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">NewFile</span>(<span style="color:#ae81ff">3</span>, <span style="color:#e6db74">&#34;/tmp/graceful&#34;</span>)
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">ln</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">FileListener</span>(<span style="color:#a6e22e">listenFile</span>)
+</span></span></code></pre></div><p>其实这里有一个问题，我们知道对应的是 fd 也就是 <code>files_struct</code> 中 <code>fd_array</code> 的数组下标，fork 会复制父进程的 <code>files_struct</code>，但是为什么是3呢？其实通过断点调试我们可以知道，监听套接字的 fd 并不是 3 而是 10（我本地），那么为什么在新进程里面是 3 呢？这就需要回到 <code>forkAndExecInChild</code> 中对于 <code>fd</code> 数组的处理了，会重新排列 fd 的顺序，并且通过 <code>dup2</code> 系统调用使得 fd[i] = i。</p>
+<p>也就是说假如我传入的 fd 数组为：[0, 1, 2, 4, 5]，在经过处理后进程中的 fd_array 就会变成 [0, 1, 2, 3（dup 4）, 4(dup 5)]</p>
+<h6 id="execve2">
+  execve(2)
+  <a class="anchor" href="#execve2">#</a>
+</h6>
+<blockquote>
+<p><a href="https://man7.org/linux/man-pages/man2/execve.2.html">execve(2) Linux manual page</a></p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e">#include &lt;unistd.h&gt;</span>
+</span></span><span style="display:flex;"><span>int execve<span style="color:#f92672">(</span>const char *pathname, char *const _Nullable argv<span style="color:#f92672">[]</span>,
+</span></span><span style="display:flex;"><span>           char *const _Nullable envp<span style="color:#f92672">[])</span>;
+</span></span></code></pre></div><p><code>execve</code> 会执行一个新的程序，这个程序会替换当前进程的内存空间，但是会继承父进程的文件描述符、信号处理等等。如果成功这个函数不会返回，否则返回错误标志。</p>
+<blockquote>
+<p>代码就不贴了～ 跟本文的联系在于可以实现优雅升级：触发升级前，先替换老的二进制文件后，待子进程重新执行时，就实现升级了。</p>
+</blockquote>
+<h4 id="小结">
+  小结
+  <a class="anchor" href="#%e5%b0%8f%e7%bb%93">#</a>
+</h4>
+<p>tcp 长连接服务的优雅重启，其实就是通过 fork + exec 的方式来实现的。在启动子进程时，可以复制父进程的相关套接字，通过一些手段在子进程中恢复这些套接字，这样子进程就可以继续使用父进程的套接字，从而实现了客户端无感知的优雅重启。</p>
+<h4 id="参考文献">
+  参考文献
+  <a class="anchor" href="#%e5%8f%82%e8%80%83%e6%96%87%e7%8c%ae">#</a>
+</h4>
+<ol>
+<li><a href="https://blog.cloudflare.com/graceful-upgrades-in-go/">Graceful upgrades in Go</a></li>
+</ol>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#需求分析">需求分析</a></li>
+        <li><a href="#基本思路">基本思路</a></li>
+        <li><a href="#实现方式">实现方式</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,1894 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/tags/lua/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="Lua">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="website">
+<title>Lua | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/tags/lua/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><link rel="alternate" type="application/rss+xml" href="https://www.yeqown.xyz/tags/lua/index.xml" title="Yeqown" />
+<!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>Lua</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  <nav>
+  <ul>
+  
+    
+    <li class="book-section-flat">
+      <strong>Categories</strong>
+      <ul>
+      
+        <li class="flex justify-between">
+          <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>
+          <span>33</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/%E6%9E%B6%E6%9E%84/">架构</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Golang/">Golang</a>
+          <span>12</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Kubernetes/">Kubernetes</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F/">分布式</a>
+          <span>6</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/">数据库</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Service-Mesh/">Service Mesh</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/design/">Design</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Tracing/">Tracing</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Algorithm/">Algorithm</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/DevOps/">DevOps</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Test/">Test</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4/">常用命令</a>
+          <span>1</span>
+        </li>
+      
+      </ul>
+    </li>
+    
+  
+    
+    <li class="book-section-flat">
+      <strong>Tags</strong>
+      <ul>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Victoria-Logs/">Victoria Logs</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%88%97%E5%BC%8F%E5%AD%98%E5%82%A8/">列式存储</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%AD%98%E5%82%A8/">存储</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E6%97%A5%E5%BF%97/">日志</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/GC/">GC</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Golang/">Golang</a>
+          <span>30</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Green-Tea/">Green Tea</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Debezium/">Debezium</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Incremental-Snapshot/">Incremental Snapshot</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Kafka-Connect/">Kafka Connect</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Mongodb/">Mongodb</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Source-Connector/">Source Connector</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Apache-Doris/">Apache Doris</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/MySQL/">Mysql</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Prepared-Statements/">Prepared Statements</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Kafka/">Kafka</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/MirrorMaker2/">MirrorMaker2</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Replication/">Replication</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Javascript/">Javascript</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/python/">Python</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Rust/">Rust</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/WASM/">WASM</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/WebAssembly/">WebAssembly</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/gRPC/">GRPC</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/grpcreplay/">Grpcreplay</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Istio/">Istio</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Kubernetes/">Kubernetes</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/sidecar/">Sidecar</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/traffic-mirror/">Traffic Mirror</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%8D%8F%E8%AE%AE/">协议</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Doris/">Doris</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/FoundationDB/">FoundationDB</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%AD%98%E7%AE%97%E5%88%86%E7%A6%BB/">存算分离</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/memcached/">Memcached</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Rendezvous-Hashing/">Rendezvous Hashing</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/tcpdump/">Tcpdump</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/wireshark/">Wireshark</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/APISIX/">APISIX</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/CDC/">CDC</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/DMS/">DMS</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Pyroscope/">Pyroscope</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/ShardingSphere-Proxy/">ShardingSphere Proxy</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/shardingsphere/">Shardingsphere</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F/">分布式</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%88%86%E5%BA%93%E5%88%86%E8%A1%A8/">分库分表</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Envoy/">Envoy</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/kubenertes/">Kubenertes</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/service-mesh/">Service Mesh</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/MQ/">MQ</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/multi-raft/">Multi-Raft</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/nats/">Nats</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/raft/">Raft</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/fsnotify/">Fsnotify</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/inotify/">Inotify</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/linux/">Linux</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/c/">C</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/lua/">Lua</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/redis/">Redis</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/exec/">Exec</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/fork/">Fork</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Graceful-Restart/">Graceful Restart</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/tcp/">TCP</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Cloudflare/">Cloudflare</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/SSH/">SSH</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Tunnel/">Tunnel</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/CGO/">CGO</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/POSIX/">POSIX</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/CronJob/">CronJob</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Distributed/">Distributed</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/k8s/">K8s</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Fieldmask/">Fieldmask</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/protocol-buffers/">Protocol-Buffers</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/OpenTelemetry/">OpenTelemetry</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Sentry/">Sentry</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Tools/">Tools</a>
+          <span>6</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Load-Balancing/">Load Balancing</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/docker/">Docker</a>
+          <span>6</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E9%95%9C%E5%83%8F/">镜像</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Jaeger/">Jaeger</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Opentracing/">Opentracing</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Tracing/">Tracing</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Channel/">Channel</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/goim/">Goim</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Gin/">Gin</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/memory-leak/">Memory Leak</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/pprof/">Pprof</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/hashtable/">Hashtable</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/im/">Im</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/socket.io/">Socket.io</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/cache/">Cache</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/repository/">Repository</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/AMQP/">AMQP</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Network/">Network</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Ring-Buffer/">Ring Buffer</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Algorithm/">Algorithm</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Caching/">Caching</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/LRU/">LRU</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/LRU-K/">LRU-K</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Crypto/">Crypto</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/RC4/">RC4</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/snowflake/">Snowflake</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/hot-reload/">Hot-Reload</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Swagger/">Swagger</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/QR-Code/">QR Code</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/etcd/">Etcd</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/microservice/">Microservice</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E6%9C%8D%E5%8A%A1%E6%B3%A8%E5%86%8C%E5%8F%91%E7%8E%B0/">服务注册发现</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/DTO/">DTO</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/HTTP/">HTTP</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Note/">Note</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/api-gateway/">Api-Gateway</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/round-robin/">Round-Robin</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/weighted-round-robin/">Weighted-Round-Robin</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/JSON-RPC2.0/">JSON-RPC2.0</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/RPC/">RPC</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/App/">App</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/RN/">RN</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Spider/">Spider</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/CD/">CD</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/CI/">CI</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Jenkins/">Jenkins</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Distributed-Architecture/">Distributed Architecture</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/aliyun/">Aliyun</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/rds/">Rds</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Trie/">Trie</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Dynamic-Programming/">Dynamic Programming</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Levenshtein-Distance/">Levenshtein Distance</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/ShortURL/">ShortURL</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/drone/">Drone</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/docker-compose/">Docker Compose</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/selenium/">Selenium</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Test/">Test</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Pytest/">Pytest</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Git/">Git</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/database/">Database</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/index/">Index</a>
+          <span>1</span>
+        </li>
+      
+      </ul>
+    </li>
+    
+  
+  </ul>
+</nav>
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+  
+  <article class="markdown book-post">
+    <h2>
+      <a href="/2023/08/22/c%E5%92%8Clua%E4%BA%92%E6%93%8D%E4%BD%9C%E5%AE%9E%E8%B7%B5/">C和lua互操作实践</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>August 22, 2023</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/lua/">Lua</a>, 
+      <a href="/tags/c/">C</a>, 
+      <a href="/tags/redis/">Redis</a>
+  </div>
+  
+
+
+    <p><p>相信了解 redis 和 openresty 的小伙伴们都知道 lua 代码可以嵌入这两种程序中运行，极大的提高了软件的扩展性；尤其是 openresty 中，通过使用 lua 我们可以很快速（相比c）的定制web服务器，或者增强 nginx 的功能。那么 lua 是如何嵌入到这些程序中的呢？lua 和 c 是如何互操作的呢？</p>
+<p>下文的相关环境和工具版本为：Lua 5.4.6; Mac OS 13.4.1 (Darwin Kernel Version 22.5.0) arm64 M2 pro; Apple clang version 14.0.3 (clang-1403.0.22.14.1)</p>
+<h3 id="redis-中的-lua">
+  redis 中的 lua
+  <a class="anchor" href="#redis-%e4%b8%ad%e7%9a%84-lua">#</a>
+</h3>
+<p>下面展示了一段 redis 中操作 lua API 的代码：</p>
+<blockquote>
+<p>这里出现了很多 <strong>lua_</strong> 开头的函数，这些函数都是 lua 库中的函数，redis 通过这些函数来操作 lua 环境，
+这里先不展开讲，后面会详细介绍。</p>
+</blockquote>
+<blockquote>
+<p>更多的代码，如 luaRegisterRedisAPI 就不展示了，有兴趣的可以去看源码。</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">// redis-v7.2/src/eval.c#183
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">/* 初始化 lua 环境
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> *
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * redis 首次启动时调用，此时 setup 为 1,
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * 这个函数也会在 redis 的其他生命周期中被调用，此时 setup 为 0，但是被简化为 scriptingReset 调用。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> */</span> 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">scriptingInit</span>(<span style="color:#66d9ef">int</span> setup) {
+</span></span><span style="display:flex;"><span>    lua_State <span style="color:#f92672">*</span>lua <span style="color:#f92672">=</span> <span style="color:#a6e22e">lua_open</span>();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (setup) {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 首次启动时，初始化 lua 环境 和 ldb (Lua debugger) 的一些数据结构
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        lctx.lua_client <span style="color:#f92672">=</span> NULL;
+</span></span><span style="display:flex;"><span>        server.script_disable_deny_script <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">ldbInit</span>();
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* 初始化 lua 脚本字典，用于存储 sha1 -&gt; lua 脚本的映射
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * 用户使用 EVALSHA 命令时，从这个字典中查找对应的 lua 脚本。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
+</span></span><span style="display:flex;"><span>    lctx.lua_scripts <span style="color:#f92672">=</span> <span style="color:#a6e22e">dictCreate</span>(<span style="color:#f92672">&amp;</span>shaScriptObjectDictType);
+</span></span><span style="display:flex;"><span>    lctx.lua_scripts_mem <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* 注册 redis 的一些 api 到 lua 环境中 */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">luaRegisterRedisAPI</span>(lua);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* 注册调试命令 */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_getglobal</span>(lua,<span style="color:#e6db74">&#34;redis&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* redis.breakpoint */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_pushstring</span>(lua,<span style="color:#e6db74">&#34;breakpoint&#34;</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_pushcfunction</span>(lua,luaRedisBreakpointCommand);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_settable</span>(lua, <span style="color:#f92672">-</span><span style="color:#ae81ff">3</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* redis.debug */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_pushstring</span>(lua,<span style="color:#e6db74">&#34;debug&#34;</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_pushcfunction</span>(lua,luaRedisDebugCommand);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_settable</span>(lua,<span style="color:#f92672">-</span><span style="color:#ae81ff">3</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* redis.replicate_commands */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_pushstring</span>(lua, <span style="color:#e6db74">&#34;replicate_commands&#34;</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_pushcfunction</span>(lua, luaRedisReplicateCommandsCommand);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_settable</span>(lua, <span style="color:#f92672">-</span><span style="color:#ae81ff">3</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_setglobal</span>(lua,<span style="color:#e6db74">&#34;redis&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* 注册一个错误处理函数，用于在 lua 脚本执行出错时，打印出错信息。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * 需要注意的是，当错误发生在 C 函数中时，我们需要打印出错的 lua 脚本的信息，
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * 这样才能帮助用户调试 lua 脚本。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>errh_func <span style="color:#f92672">=</span>       <span style="color:#e6db74">&#34;local dbg = debug</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;debug = nil</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;function __redis__err__handler(err)</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;  local i = dbg.getinfo(2,&#39;nSl&#39;)</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;  if i and i.what == &#39;C&#39; then</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;    i = dbg.getinfo(3,&#39;nSl&#39;)</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;  end</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;  if type(err) ~= &#39;table&#39; then</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;    err = {err=&#39;ERR &#39; .. tostring(err)}&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;  end&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;  if i then</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;    err[&#39;source&#39;] = i.source</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;    err[&#39;line&#39;] = i.currentline</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;  end&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;  return err</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;end</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">luaL_loadbuffer</span>(lua,errh_func,<span style="color:#a6e22e">strlen</span>(errh_func),<span style="color:#e6db74">&#34;@err_handler_def&#34;</span>);
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">lua_pcall</span>(lua,<span style="color:#ae81ff">0</span>,<span style="color:#ae81ff">0</span>,<span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* 创建一个 lua client (没有网络连接)，用于在 lua 环境中执行 redis 命令。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * 这个客户端没必要在 scriptingReset() 调用时重新创建。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (lctx.lua_client <span style="color:#f92672">==</span> NULL) {
+</span></span><span style="display:flex;"><span>        lctx.lua_client <span style="color:#f92672">=</span> <span style="color:#a6e22e">createClient</span>(NULL);
+</span></span><span style="display:flex;"><span>        lctx.lua_client<span style="color:#f92672">-&gt;</span>flags <span style="color:#f92672">|=</span> CLIENT_SCRIPT;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">/* We do not want to allow blocking commands inside Lua */</span>
+</span></span><span style="display:flex;"><span>        lctx.lua_client<span style="color:#f92672">-&gt;</span>flags <span style="color:#f92672">|=</span> CLIENT_DENY_BLOCKING;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Lock the global table from any changes */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_pushvalue</span>(lua, LUA_GLOBALSINDEX);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">luaSetErrorMetatable</span>(lua);
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Recursively lock all tables that can be reached from the global table */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">luaSetTableProtectionRecursively</span>(lua);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_pop</span>(lua, <span style="color:#ae81ff">1</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    lctx.lua <span style="color:#f92672">=</span> lua;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>通过这部分代码，应该对于 lua 的嵌入式使用有了一个大概的印象。这里可以回答以下的问题：</p>
+        <a href="/2023/08/22/c%E5%92%8Clua%E4%BA%92%E6%93%8D%E4%BD%9C%E5%AE%9E%E8%B7%B5/">...</a>
+      
+    </p>
+  </article>
+  
+
+  
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  <nav>
+  <ul>
+  
+    
+    <li class="book-section-flat">
+      <strong>Categories</strong>
+      <ul>
+      
+        <li class="flex justify-between">
+          <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>
+          <span>33</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/%E6%9E%B6%E6%9E%84/">架构</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Golang/">Golang</a>
+          <span>12</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Kubernetes/">Kubernetes</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F/">分布式</a>
+          <span>6</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/">数据库</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Service-Mesh/">Service Mesh</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/design/">Design</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Tracing/">Tracing</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Algorithm/">Algorithm</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/DevOps/">DevOps</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Test/">Test</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4/">常用命令</a>
+          <span>1</span>
+        </li>
+      
+      </ul>
+    </li>
+    
+  
+    
+    <li class="book-section-flat">
+      <strong>Tags</strong>
+      <ul>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Victoria-Logs/">Victoria Logs</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%88%97%E5%BC%8F%E5%AD%98%E5%82%A8/">列式存储</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%AD%98%E5%82%A8/">存储</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E6%97%A5%E5%BF%97/">日志</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/GC/">GC</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Golang/">Golang</a>
+          <span>30</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Green-Tea/">Green Tea</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Debezium/">Debezium</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Incremental-Snapshot/">Incremental Snapshot</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Kafka-Connect/">Kafka Connect</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Mongodb/">Mongodb</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Source-Connector/">Source Connector</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Apache-Doris/">Apache Doris</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/MySQL/">Mysql</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Prepared-Statements/">Prepared Statements</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Kafka/">Kafka</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/MirrorMaker2/">MirrorMaker2</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Replication/">Replication</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Javascript/">Javascript</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/python/">Python</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Rust/">Rust</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/WASM/">WASM</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/WebAssembly/">WebAssembly</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/gRPC/">GRPC</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/grpcreplay/">Grpcreplay</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Istio/">Istio</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Kubernetes/">Kubernetes</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/sidecar/">Sidecar</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/traffic-mirror/">Traffic Mirror</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%8D%8F%E8%AE%AE/">协议</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Doris/">Doris</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/FoundationDB/">FoundationDB</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%AD%98%E7%AE%97%E5%88%86%E7%A6%BB/">存算分离</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/memcached/">Memcached</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Rendezvous-Hashing/">Rendezvous Hashing</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/tcpdump/">Tcpdump</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/wireshark/">Wireshark</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/APISIX/">APISIX</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/CDC/">CDC</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/DMS/">DMS</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Pyroscope/">Pyroscope</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/ShardingSphere-Proxy/">ShardingSphere Proxy</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/shardingsphere/">Shardingsphere</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F/">分布式</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%88%86%E5%BA%93%E5%88%86%E8%A1%A8/">分库分表</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Envoy/">Envoy</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/kubenertes/">Kubenertes</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/service-mesh/">Service Mesh</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/MQ/">MQ</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/multi-raft/">Multi-Raft</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/nats/">Nats</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/raft/">Raft</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/fsnotify/">Fsnotify</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/inotify/">Inotify</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/linux/">Linux</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/c/">C</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/lua/">Lua</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/redis/">Redis</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/exec/">Exec</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/fork/">Fork</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Graceful-Restart/">Graceful Restart</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/tcp/">TCP</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Cloudflare/">Cloudflare</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/SSH/">SSH</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Tunnel/">Tunnel</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/CGO/">CGO</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/POSIX/">POSIX</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/CronJob/">CronJob</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Distributed/">Distributed</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/k8s/">K8s</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Fieldmask/">Fieldmask</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/protocol-buffers/">Protocol-Buffers</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/OpenTelemetry/">OpenTelemetry</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Sentry/">Sentry</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Tools/">Tools</a>
+          <span>6</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Load-Balancing/">Load Balancing</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/docker/">Docker</a>
+          <span>6</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E9%95%9C%E5%83%8F/">镜像</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Jaeger/">Jaeger</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Opentracing/">Opentracing</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Tracing/">Tracing</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Channel/">Channel</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/goim/">Goim</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Gin/">Gin</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/memory-leak/">Memory Leak</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/pprof/">Pprof</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/hashtable/">Hashtable</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/im/">Im</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/socket.io/">Socket.io</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/cache/">Cache</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/repository/">Repository</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/AMQP/">AMQP</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Network/">Network</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Ring-Buffer/">Ring Buffer</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Algorithm/">Algorithm</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Caching/">Caching</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/LRU/">LRU</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/LRU-K/">LRU-K</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Crypto/">Crypto</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/RC4/">RC4</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/snowflake/">Snowflake</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/hot-reload/">Hot-Reload</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Swagger/">Swagger</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/QR-Code/">QR Code</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/etcd/">Etcd</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/microservice/">Microservice</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E6%9C%8D%E5%8A%A1%E6%B3%A8%E5%86%8C%E5%8F%91%E7%8E%B0/">服务注册发现</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/DTO/">DTO</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/HTTP/">HTTP</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Note/">Note</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/api-gateway/">Api-Gateway</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/round-robin/">Round-Robin</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/weighted-round-robin/">Weighted-Round-Robin</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/JSON-RPC2.0/">JSON-RPC2.0</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/RPC/">RPC</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/App/">App</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/RN/">RN</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Spider/">Spider</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/CD/">CD</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/CI/">CI</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Jenkins/">Jenkins</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Distributed-Architecture/">Distributed Architecture</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/aliyun/">Aliyun</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/rds/">Rds</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Trie/">Trie</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Dynamic-Programming/">Dynamic Programming</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Levenshtein-Distance/">Levenshtein Distance</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/ShortURL/">ShortURL</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/drone/">Drone</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/docker-compose/">Docker Compose</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/selenium/">Selenium</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Test/">Test</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Pytest/">Pytest</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Git/">Git</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/database/">Database</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/index/">Index</a>
+          <span>1</span>
+        </li>
+      
+      </ul>
+    </li>
+    
+  
+  </ul>
+</nav>
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

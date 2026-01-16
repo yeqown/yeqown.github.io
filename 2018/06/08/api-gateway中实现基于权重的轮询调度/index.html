@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Round-Robin Weighted loop.">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2018/06/08/api-gateway%E4%B8%AD%E5%AE%9E%E7%8E%B0%E5%9F%BA%E4%BA%8E%E6%9D%83%E9%87%8D%E7%9A%84%E8%BD%AE%E8%AF%A2%E8%B0%83%E5%BA%A6/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="api-gateway中实现基于权重的轮询调度">
+  <meta property="og:description" content="Round-Robin Weighted loop.">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2018-06-08T10:53:32+00:00">
+    <meta property="article:modified_time" content="2018-06-08T10:53:32+00:00">
+    <meta property="article:tag" content="Golang">
+    <meta property="article:tag" content="Api-Gateway">
+    <meta property="article:tag" content="Round-Robin">
+    <meta property="article:tag" content="Weighted-Round-Robin">
+<title>api-gateway中实现基于权重的轮询调度 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2018/06/08/api-gateway%E4%B8%AD%E5%AE%9E%E7%8E%B0%E5%9F%BA%E4%BA%8E%E6%9D%83%E9%87%8D%E7%9A%84%E8%BD%AE%E8%AF%A2%E8%B0%83%E5%BA%A6/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>api-gateway中实现基于权重的轮询调度</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#背景和目标">背景和目标</a></li>
+        <li><a href="#轮询调度算法介绍">轮询调度算法介绍</a></li>
+        <li><a href="#调度器实现">调度器实现</a></li>
+        <li><a href="#嵌入api-gateway">嵌入Api-Gateway</a></li>
+        <li><a href="#注">注</a></li>
+        <li><a href="#参考文献">参考文献</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    api-gateway中实现基于权重的轮询调度
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>June 8, 2018</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/api-gateway/">Api-Gateway</a>, 
+      <a href="/tags/round-robin/">Round-Robin</a>, 
+      <a href="/tags/weighted-round-robin/">Weighted-Round-Robin</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><h3 id="背景和目标">
+  背景和目标
+  <a class="anchor" href="#%e8%83%8c%e6%99%af%e5%92%8c%e7%9b%ae%e6%a0%87">#</a>
+</h3>
+<h4 id="背景">
+  背景
+  <a class="anchor" href="#%e8%83%8c%e6%99%af">#</a>
+</h4>
+<p>项目需要在现有项目的基础上实现权限系统，但为了低耦合，选择实现了一个基于<a href="https://github.com/ne7ermore/gRBAC">ne7ermore/gRBAC</a>的auth-server，用于实现权限，角色，用户的管理，以及提供鉴权服务。在开发环境对接没有问题，正常的鉴权访问。到了线上部署的时候，才发现：</p>
+<ol>
+<li><strong>线上某服务部署在多台机器上</strong>;</li>
+<li><strong>目前的api-gateway并不支持同一服务配置多个node</strong>;</li>
+</ol>
+<p>想的办法有：</p>
+<table>
+  <thead>
+      <tr>
+          <th>序号</th>
+          <th>描述</th>
+          <th>优点</th>
+          <th>缺点</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>1</td>
+          <td>api-gateway通过url来转发请求，之前是配置IP加端口</td>
+          <td>api-gateway改动小</td>
+          <td>影响web和APP升级</td>
+      </tr>
+      <tr>
+          <td>2</td>
+          <td>api-gateway能支持多台机器，并进行调度</td>
+          <td>api-gateway功能更强大，把以后要做的事情提前做好基础</td>
+          <td>好像没啥缺点，只是费点时间支持下多节点配置，并调度</td>
+      </tr>
+  </tbody>
+</table>
+<!-- more -->
+<blockquote>
+<p>如果没说清，请看下图：</p>
+</blockquote>
+<p><img src="/images/api-gateway-changing.png" alt="api-gateway-changing" /></p>
+<h4 id="目标">
+  目标
+  <a class="anchor" href="#%e7%9b%ae%e6%a0%87">#</a>
+</h4>
+<p>那么，目标也就明确了，需要实现<strong>api-gateway中实现基于权重的调度</strong>。为啥要基于权重？其一是仿照nginx基于权重的负载均衡，其二是服务器性能差异。</p>
+<h3 id="轮询调度算法介绍">
+  轮询调度算法介绍
+  <a class="anchor" href="#%e8%bd%ae%e8%af%a2%e8%b0%83%e5%ba%a6%e7%ae%97%e6%b3%95%e4%bb%8b%e7%bb%8d">#</a>
+</h3>
+<h4 id="轮询调度算法">
+  <strong>轮询调度算法</strong>:
+  <a class="anchor" href="#%e8%bd%ae%e8%af%a2%e8%b0%83%e5%ba%a6%e7%ae%97%e6%b3%95">#</a>
+</h4>
+<blockquote>
+<p>轮询调度算法的原理是每一次把来自用户的请求轮流分配给内部中的服务器，从1开始，直到N(内部服务器个数)，然后重新开始循环。该算法的优点是其简洁性，它无需记录当前所有连接的状态，所以它是一种无状态调度。</p>
+</blockquote>
+<p>假设有一组服务器N台，S = {S1, S2, …, Sn}，一个指示变量i表示上一次选择的服务器ID。变量i被初始化为N-1。其算法如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-C" data-lang="C"><span style="display:flex;"><span>j <span style="color:#f92672">=</span> i;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">do</span> {
+</span></span><span style="display:flex;"><span>  j <span style="color:#f92672">=</span> (j <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>) mod n;
+</span></span><span style="display:flex;"><span>  i <span style="color:#f92672">=</span> j;
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">return</span> Si;
+</span></span><span style="display:flex;"><span>} <span style="color:#66d9ef">while</span> (j <span style="color:#f92672">!=</span> i);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">return</span> NULL;
+</span></span></code></pre></div><!-- #### **加权轮询调度算法**： -->
+<h4 id="平滑加权轮询调度算法">
+  <strong>平滑加权轮询调度算法</strong>：
+  <a class="anchor" href="#%e5%b9%b3%e6%bb%91%e5%8a%a0%e6%9d%83%e8%bd%ae%e8%af%a2%e8%b0%83%e5%ba%a6%e7%ae%97%e6%b3%95">#</a>
+</h4>
+<blockquote>
+<p>上述的轮询调度算法，并没有考虑服务器性能的差异，实际生产环境中，每一台服务器配置和安装的业务并不一定相同，处理能力不完全一样。因此需要根据服务器能力，分配不同的权值，以免服务的超负荷和过分闲余。</p>
+</blockquote>
+<p>假设有一组服务器S = {S0, S1, …, Sn-1}, 其算法如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">// i表示上一次选择的服务器，变量i初始化为-1
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// W(Si)表示服务器Si的权值
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// cw表示当前调度的权值 cw初始化为0
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// max(S)表示集合S中所有服务器的最大权值
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// gcd(S)表示集合S中所有服务器权值的最大公约数
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">while</span> (true) {
+</span></span><span style="display:flex;"><span>  i <span style="color:#f92672">=</span> (i <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>) mod n;
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">if</span> (i <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) {
+</span></span><span style="display:flex;"><span>     cw <span style="color:#f92672">=</span> cw <span style="color:#f92672">-</span> <span style="color:#a6e22e">gcd</span>(S);
+</span></span><span style="display:flex;"><span>     <span style="color:#66d9ef">if</span> (cw <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>) {
+</span></span><span style="display:flex;"><span>       cw <span style="color:#f92672">=</span> <span style="color:#a6e22e">max</span>(S);
+</span></span><span style="display:flex;"><span>       <span style="color:#66d9ef">if</span> (cw <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>         <span style="color:#66d9ef">return</span> NULL;
+</span></span><span style="display:flex;"><span>     }
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">if</span> (<span style="color:#a6e22e">W</span>(Si) <span style="color:#f92672">&gt;=</span> cw)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> Si;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><blockquote>
+<p>Nginx基于权重的轮询算法的实现可以参考它的一次代码提交： Upstream: <a href="https://github.com/phusion/nginx/commit/27e94984486058d73157038f7950a0a36ecc6e35">smooth weighted round-robin balancing</a>。</p>
+</blockquote>
+<blockquote>
+<p>它不但实现了基于权重的轮询算法，而且还实现了平滑的算法。所谓平滑，就是在一段时间内，不仅服务器被选择的次数的分布和它们的权重一致，而且调度算法还比较均匀的选择服务器，而不会集中一段时间之内只选择某一个权重比较高的服务器。如果使用随机算法选择或者普通的基于权重的轮询算法，就比较容易造成某个服务集中被调用压力过大。</p>
+</blockquote>
+<blockquote>
+<p>举个例子，比如权重为{a:5, b:1, c:1)的一组服务器，Nginx的平滑的轮询算法选择的序列为{ a, a, b, a, c, a, a },这显然要比{ c, b, a, a, a, a, a }序列更平滑，更合理，不会造成对a服务器的集中访问。</p>
+</blockquote>
+<p>在参考文献<a href="http://colobu.com/2016/12/04/smooth-weighted-round-robin-algorithm/">平滑的基于权重的调度算法</a>中，作者给出了仿照nginxd的平滑权重轮询调度算法的Golang版本代码，还有一个<a href="https://github.com/smallnest/weighted">weighted</a>库自荐。这里做一个延伸～</p>
+<p>贴一下测试测试代码及结果：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-Golang" data-lang="Golang"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">Test_Init</span>(<span style="color:#a6e22e">t</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">testing</span>.<span style="color:#a6e22e">T</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">servers</span> <span style="color:#f92672">:=</span> []<span style="color:#f92672">*</span><span style="color:#a6e22e">conf</span>.<span style="color:#a6e22e">ProxyServerConfig</span>{
+</span></span><span style="display:flex;"><span>		{
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">Schema</span>: <span style="color:#e6db74">&#34;http://&#34;</span>,
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">Host</span>:   <span style="color:#e6db74">&#34;127.0.0.1&#34;</span>,
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">Prefix</span>: <span style="color:#e6db74">&#34;/api&#34;</span>,
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">Port</span>:   <span style="color:#ae81ff">8808</span>,
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">Weight</span>: <span style="color:#ae81ff">4</span>,
+</span></span><span style="display:flex;"><span>		},
+</span></span><span style="display:flex;"><span>		{
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">Schema</span>: <span style="color:#e6db74">&#34;http://&#34;</span>,
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">Host</span>:   <span style="color:#e6db74">&#34;127.0.0.1&#34;</span>,
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">Prefix</span>: <span style="color:#e6db74">&#34;/api&#34;</span>,
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">Port</span>:   <span style="color:#ae81ff">8808</span>,
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">Weight</span>: <span style="color:#ae81ff">4</span>,
+</span></span><span style="display:flex;"><span>		},
+</span></span><span style="display:flex;"><span>		{
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">Schema</span>: <span style="color:#e6db74">&#34;http://&#34;</span>,
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">Host</span>:   <span style="color:#e6db74">&#34;127.0.0.1&#34;</span>,
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">Prefix</span>: <span style="color:#e6db74">&#34;/api&#34;</span>,
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">Port</span>:   <span style="color:#ae81ff">8808</span>,
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">Weight</span>: <span style="color:#ae81ff">2</span>,
+</span></span><span style="display:flex;"><span>		},
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">bla</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">InitBalancer</span>(<span style="color:#a6e22e">servers</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">cnt</span> <span style="color:#f92672">:=</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mark</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">int</span>]<span style="color:#66d9ef">int</span>{}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">cnt</span> &lt; <span style="color:#ae81ff">10</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">idx</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">bla</span>.<span style="color:#a6e22e">Distribute</span>()
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">t</span>.<span style="color:#a6e22e">Log</span>(<span style="color:#a6e22e">idx</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">mark</span>[<span style="color:#a6e22e">idx</span>]<span style="color:#f92672">++</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">cnt</span><span style="color:#f92672">++</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">t</span>.<span style="color:#a6e22e">Log</span>(<span style="color:#a6e22e">mark</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// === RUN   Test_Init
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// --- PASS: Test_Init (0.00s)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// 	balance_test.go:45: 0
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// 	balance_test.go:45: 1
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// 	balance_test.go:45: 0
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// 	balance_test.go:45: 1
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// 	balance_test.go:45: 2
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// 	balance_test.go:45: 0
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// 	balance_test.go:45: 1
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// 	balance_test.go:45: 0
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// 	balance_test.go:45: 1
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// 	balance_test.go:45: 2
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// 	balance_test.go:50: map[0:4 1:4 2:2]
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// 	在10次调度中，三个服务分别被调用了响应权重的次数，且顺序并不是[0,0,0,0,1,1,1,1,2,2]
+</span></span></span></code></pre></div><h3 id="调度器实现">
+  调度器实现
+  <a class="anchor" href="#%e8%b0%83%e5%ba%a6%e5%99%a8%e5%ae%9e%e7%8e%b0">#</a>
+</h3>
+<p>算法讲完了，我就直接上代码了。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Balancer</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">serverWeights</span> <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">int</span>]<span style="color:#66d9ef">int</span> <span style="color:#75715e">// host and weight
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">maxWeight</span>     <span style="color:#66d9ef">int</span>         <span style="color:#75715e">// 0
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">maxGCD</span>        <span style="color:#66d9ef">int</span>         <span style="color:#75715e">// 1
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">lenOfSW</span>       <span style="color:#66d9ef">int</span>         <span style="color:#75715e">// 0
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">i</span>             <span style="color:#66d9ef">int</span>         <span style="color:#75715e">//表示上一次选择的服务器, -1
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">cw</span>            <span style="color:#66d9ef">int</span>         <span style="color:#75715e">//表示当前调度的权值, 0
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 根据服务配置初始化调度器
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// conf.ProxyServerConfig 配置可以参见上述测试代码
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">InitBalancer</span>(<span style="color:#a6e22e">servers</span> []<span style="color:#f92672">*</span><span style="color:#a6e22e">conf</span>.<span style="color:#a6e22e">ProxyServerConfig</span>) <span style="color:#f92672">*</span><span style="color:#a6e22e">Balancer</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">bla</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">Balancer</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">serverWeights</span>: make(<span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">int</span>]<span style="color:#66d9ef">int</span>),
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">maxWeight</span>:     <span style="color:#ae81ff">0</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">maxGCD</span>:        <span style="color:#ae81ff">1</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">lenOfSW</span>:       len(<span style="color:#a6e22e">servers</span>),
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">i</span>:             <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">cw</span>:            <span style="color:#ae81ff">0</span>,
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">_tmp_gcd</span> <span style="color:#f92672">:=</span> make([]<span style="color:#66d9ef">int</span>, <span style="color:#ae81ff">0</span>, <span style="color:#a6e22e">bla</span>.<span style="color:#a6e22e">lenOfSW</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">idx</span>, <span style="color:#a6e22e">psc</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">servers</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">bla</span>.<span style="color:#a6e22e">serverWeights</span>[<span style="color:#a6e22e">idx</span>] = <span style="color:#a6e22e">psc</span>.<span style="color:#a6e22e">Weight</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">psc</span>.<span style="color:#a6e22e">Weight</span> &gt; <span style="color:#a6e22e">bla</span>.<span style="color:#a6e22e">maxWeight</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">bla</span>.<span style="color:#a6e22e">maxWeight</span> = <span style="color:#a6e22e">psc</span>.<span style="color:#a6e22e">Weight</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">_tmp_gcd</span> = append(<span style="color:#a6e22e">_tmp_gcd</span>, <span style="color:#a6e22e">psc</span>.<span style="color:#a6e22e">Weight</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 求最大公约数
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">bla</span>.<span style="color:#a6e22e">maxGCD</span> = <span style="color:#a6e22e">nGCD</span>(<span style="color:#a6e22e">_tmp_gcd</span>, <span style="color:#a6e22e">bla</span>.<span style="color:#a6e22e">lenOfSW</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">bla</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 调度
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">bla</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Balancer</span>) <span style="color:#a6e22e">Distribute</span>() <span style="color:#66d9ef">int</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#66d9ef">true</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">bla</span>.<span style="color:#a6e22e">i</span> = (<span style="color:#a6e22e">bla</span>.<span style="color:#a6e22e">i</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>) <span style="color:#f92672">%</span> <span style="color:#a6e22e">bla</span>.<span style="color:#a6e22e">lenOfSW</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">bla</span>.<span style="color:#a6e22e">i</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">bla</span>.<span style="color:#a6e22e">cw</span> = <span style="color:#a6e22e">bla</span>.<span style="color:#a6e22e">cw</span> <span style="color:#f92672">-</span> <span style="color:#a6e22e">bla</span>.<span style="color:#a6e22e">maxGCD</span>
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">bla</span>.<span style="color:#a6e22e">cw</span> <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>				<span style="color:#a6e22e">bla</span>.<span style="color:#a6e22e">cw</span> = <span style="color:#a6e22e">bla</span>.<span style="color:#a6e22e">maxWeight</span>
+</span></span><span style="display:flex;"><span>				<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">bla</span>.<span style="color:#a6e22e">cw</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>					<span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>				}
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">bla</span>.<span style="color:#a6e22e">serverWeights</span>[<span style="color:#a6e22e">bla</span>.<span style="color:#a6e22e">i</span>] <span style="color:#f92672">&gt;=</span> <span style="color:#a6e22e">bla</span>.<span style="color:#a6e22e">cw</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">bla</span>.<span style="color:#a6e22e">i</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 求最大公约数
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">GCD</span>(<span style="color:#a6e22e">a</span>, <span style="color:#a6e22e">b</span> <span style="color:#66d9ef">int</span>) <span style="color:#66d9ef">int</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">a</span> &lt; <span style="color:#a6e22e">b</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">a</span>, <span style="color:#a6e22e">b</span> = <span style="color:#a6e22e">b</span>, <span style="color:#a6e22e">a</span> <span style="color:#75715e">// swap a &amp; b
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">b</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">a</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">GCD</span>(<span style="color:#a6e22e">b</span>, <span style="color:#a6e22e">a</span><span style="color:#f92672">%</span><span style="color:#a6e22e">b</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// N个数的最大公约数
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">nGCD</span>(<span style="color:#a6e22e">data</span> []<span style="color:#66d9ef">int</span>, <span style="color:#a6e22e">n</span> <span style="color:#66d9ef">int</span>) <span style="color:#66d9ef">int</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">n</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">data</span>[<span style="color:#ae81ff">0</span>]
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">GCD</span>(<span style="color:#a6e22e">data</span>[<span style="color:#a6e22e">n</span><span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>], <span style="color:#a6e22e">nGCD</span>(<span style="color:#a6e22e">data</span>, <span style="color:#a6e22e">n</span><span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>))
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="嵌入api-gateway">
+  嵌入Api-Gateway
+  <a class="anchor" href="#%e5%b5%8c%e5%85%a5api-gateway">#</a>
+</h3>
+<p>已经实现了调度器，并测试妥当，那么如何实际放到网关服务中去呢？我先简单描述下，之前的服务是如何调用的。在Golang标准库里有一个东西叫做：</p>
+<p><strong>httputil.NewSingleHostReverseProxy</strong> <a href="https://golang.org/pkg/net/http/httputil/#NewSingleHostReverseProxy">文档由此去</a></p>
+<p>这就是本网关中主要用于请求转发的关键。在转发请求之前，我需要做的事就是：匹配本次请求应该转发给哪一个服务？大家都通过：api.xxx.com的域名来访问，但是对于不同的功能会有不同的路径前缀如：&quot;/api&quot;, &ldquo;/auth&rdquo;, &ldquo;/res&quot;等等。匹配完成，那么问题来了：我要转发给的服务有多个，咋个调度呢？这个位置就是我需要把调度器嵌入的位置，上代码：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">ProxyServer</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// ... some other data
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">Servers</span>  <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>][]<span style="color:#f92672">*</span><span style="color:#a6e22e">conf</span>.<span style="color:#a6e22e">ProxyServerConfig</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Balancer</span> <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#f92672">*</span><span style="color:#a6e22e">Balancer</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">ps</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">ProxyServer</span>) <span style="color:#a6e22e">InitBalancer</span>() {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">srv_name</span>, <span style="color:#a6e22e">srvs</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">ps</span>.<span style="color:#a6e22e">Servers</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">ps</span>.<span style="color:#a6e22e">Balancer</span>[<span style="color:#a6e22e">srv_name</span>] = <span style="color:#a6e22e">InitBalancer</span>(<span style="color:#a6e22e">srvs</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 匹配需要转发的前缀
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">ps</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">ProxyServer</span>) <span style="color:#a6e22e">MatchProxy</span>(<span style="color:#a6e22e">path</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">req</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">Request</span>) (<span style="color:#66d9ef">error</span>, <span style="color:#f92672">*</span><span style="color:#a6e22e">url</span>.<span style="color:#a6e22e">URL</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">srv_name</span>, <span style="color:#a6e22e">srvs</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">ps</span>.<span style="color:#a6e22e">Servers</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// default set 0, to choose srvs to service
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">srv</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">srvs</span>[<span style="color:#ae81ff">0</span>]
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">strings</span>.<span style="color:#a6e22e">HasPrefix</span>(<span style="color:#a6e22e">path</span>, <span style="color:#a6e22e">srv</span>.<span style="color:#a6e22e">Prefix</span>) {
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>			<span style="color:#75715e">// load balance
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>			<span style="color:#a6e22e">srv_idx</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">ps</span>.<span style="color:#a6e22e">Balancer</span>[<span style="color:#a6e22e">srv_name</span>].<span style="color:#a6e22e">Distribute</span>()
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">srv</span> = <span style="color:#a6e22e">srvs</span>[<span style="color:#a6e22e">srv_idx</span>]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">_url</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">utils</span>.<span style="color:#a6e22e">Fstring</span>(<span style="color:#e6db74">&#34;%s%s:%d&#34;</span>, <span style="color:#a6e22e">srv</span>.<span style="color:#a6e22e">Schema</span>, <span style="color:#a6e22e">srv</span>.<span style="color:#a6e22e">Host</span>, <span style="color:#a6e22e">srv</span>.<span style="color:#a6e22e">Port</span>)
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">remote</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">url</span>.<span style="color:#a6e22e">Parse</span>(<span style="color:#a6e22e">_url</span>)
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>				<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">req</span>.<span style="color:#a6e22e">URL</span>.<span style="color:#a6e22e">Path</span> = <span style="color:#a6e22e">strings</span>.<span style="color:#a6e22e">TrimPrefix</span>(<span style="color:#a6e22e">path</span>, <span style="color:#a6e22e">srv</span>.<span style="color:#a6e22e">Prefix</span>)
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">remote</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">errors</span>.<span style="color:#a6e22e">New</span>(<span style="color:#e6db74">&#34;did not match any proxy server&#34;</span>), <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>至此，也就完成了在api-gateway中嵌入基于权重的轮询调度。</p>
+<h3 id="注">
+  注
+  <a class="anchor" href="#%e6%b3%a8">#</a>
+</h3>
+<p>用词表述不当，还望谅解并及时告知。其次没有过多的分析算法是如何设计的，这并非我所擅长，也不是本文的重点～ 以上</p>
+<h3 id="参考文献">
+  参考文献
+  <a class="anchor" href="#%e5%8f%82%e8%80%83%e6%96%87%e7%8c%ae">#</a>
+</h3>
+<ul>
+<li><a href="http://blog.163.com/s_u/blog/static/1330836720105233102894/">轮询调度算法(Round-Robin Scheduling)</a></li>
+<li><a href="https://www.ctolib.com/topics-75349.html">golang实现权重轮询调度算法</a></li>
+<li><a href="http://colobu.com/2016/12/04/smooth-weighted-round-robin-algorithm/">平滑的基于权重的调度算法</a></li>
+</ul>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "api-gateway-weight-round-robin", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#背景和目标">背景和目标</a></li>
+        <li><a href="#轮询调度算法介绍">轮询调度算法介绍</a></li>
+        <li><a href="#调度器实现">调度器实现</a></li>
+        <li><a href="#嵌入api-gateway">嵌入Api-Gateway</a></li>
+        <li><a href="#注">注</a></li>
+        <li><a href="#参考文献">参考文献</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

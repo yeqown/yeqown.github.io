@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="持续集成是一种软件开发实践，即团队开发成员经常集成它们的工作，通过每个成员每天至少集成一次，也就意味着每天可能会发生多次集成。每次集成都通过自动化的构建（包括编译，发布，自动化测试）来验证，从而尽早地发现集成错误。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2018/01/13/%E6%8C%81%E7%BB%AD%E9%9B%86%E6%88%90/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="持续集成-Jenkins">
+  <meta property="og:description" content="持续集成是一种软件开发实践，即团队开发成员经常集成它们的工作，通过每个成员每天至少集成一次，也就意味着每天可能会发生多次集成。每次集成都通过自动化的构建（包括编译，发布，自动化测试）来验证，从而尽早地发现集成错误。">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2018-01-13T15:23:30+00:00">
+    <meta property="article:modified_time" content="2018-01-13T15:23:30+00:00">
+    <meta property="article:tag" content="Jenkins">
+    <meta property="article:tag" content="CI">
+    <meta property="article:tag" content="CD">
+<title>持续集成-Jenkins | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2018/01/13/%E6%8C%81%E7%BB%AD%E9%9B%86%E6%88%90/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>持续集成-Jenkins</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#关于持续集成">关于持续集成</a></li>
+        <li><a href="#jenkins的搭建与使用">Jenkins的搭建与使用：</a></li>
+        <li><a href="#更改jenkins服务端口">更改jenkins服务端口</a></li>
+        <li><a href="#zsh设置jenkins环境变量">zsh设置Jenkins环境变量</a></li>
+        <li><a href="#补充">补充</a></li>
+        <li><a href="#最后">最后</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    持续集成-Jenkins
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>January 13, 2018</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/DevOps/">DevOps</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Jenkins/">Jenkins</a>, 
+      <a href="/tags/CI/">CI</a>, 
+      <a href="/tags/CD/">CD</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><p>持续集成是一种软件开发实践，即团队开发成员经常集成它们的工作，通过每个成员每天至少集成一次，也就意味着每天可能会发生多次集成。每次集成都通过自动化的构建（包括编译，发布，自动化测试）来验证，从而尽早地发现集成错误。</p>
+<!-- more -->
+<h3 id="关于持续集成">
+  关于持续集成
+  <a class="anchor" href="#%e5%85%b3%e4%ba%8e%e6%8c%81%e7%bb%ad%e9%9b%86%e6%88%90">#</a>
+</h3>
+<blockquote>
+<p>要素</p>
+</blockquote>
+<p>. 统一的代码库
+. 自动构建
+. 自动测试
+. 每个人每天都要向代码库主干提交代码
+. 每次代码递交后都会在持续集成服务器上触发一次构建
+. 保证快速构建
+. 模拟生产环境的自动测试
+. 每个人都可以很容易的获取最新可执行的应用程序
+. 每个人都清楚正在发生的状况
+. 自动化的部署</p>
+<h3 id="jenkins的搭建与使用">
+  Jenkins的搭建与使用：
+  <a class="anchor" href="#jenkins%e7%9a%84%e6%90%ad%e5%bb%ba%e4%b8%8e%e4%bd%bf%e7%94%a8">#</a>
+</h3>
+<blockquote>
+<p>前提：安装好Java环境</p>
+</blockquote>
+<p>. 下载参见<a href="https://jenkins.io/download/">下载地址</a>, 我采用的是<code>java -jar jenkins.war</code>的方式部署
+. 可能有用的教程 <a href="http://geek.csdn.net/news/detail/95824">http://geek.csdn.net/news/detail/95824</a></p>
+<h3 id="更改jenkins服务端口">
+  更改jenkins服务端口
+  <a class="anchor" href="#%e6%9b%b4%e6%94%b9jenkins%e6%9c%8d%e5%8a%a1%e7%ab%af%e5%8f%a3">#</a>
+</h3>
+<p>使用<code>java -jar jenkins.war</code>这样的命令来启动jenkins时会使用默认的端口8080，有些情况下8080端口已经被我们使用了，这个时候如果希望修改这个端口应该怎么办呢？</p>
+<p>在命令行后面添加 <code>--httpPort=8899</code>，其实就是配置jetty的启动端口。如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>set JENKINS_HOME<span style="color:#f92672">=</span>./
+</span></span><span style="display:flex;"><span>java -Djsse.enableSNIExtension<span style="color:#f92672">=</span>false -jar path/to/jenkins.war --httpPort<span style="color:#f92672">=</span>8899 
+</span></span></code></pre></div><h3 id="zsh设置jenkins环境变量">
+  zsh设置Jenkins环境变量
+  <a class="anchor" href="#zsh%e8%ae%be%e7%bd%aejenkins%e7%8e%af%e5%a2%83%e5%8f%98%e9%87%8f">#</a>
+</h3>
+<pre tabindex="0"><code>export JENKINS_HOME = &#34;your/jenkins/path&#34;
+</code></pre><h3 id="补充">
+  补充
+  <a class="anchor" href="#%e8%a1%a5%e5%85%85">#</a>
+</h3>
+<blockquote>
+<p>于2018-1-26日更新</p>
+</blockquote>
+<p>鉴于尝试了drone和docker, 强烈建议采用docker部署jenkins，或者替换Jenkins为<a href="http://drone.io">Drone</a></p>
+<h3 id="最后">
+  最后
+  <a class="anchor" href="#%e6%9c%80%e5%90%8e">#</a>
+</h3>
+<p>写得很简略，没有提供配置时候遇到的坑以及解决方法，遇到之后再补上。。。以上hahah</p>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "continuous-integration-jenkins", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#关于持续集成">关于持续集成</a></li>
+        <li><a href="#jenkins的搭建与使用">Jenkins的搭建与使用：</a></li>
+        <li><a href="#更改jenkins服务端口">更改jenkins服务端口</a></li>
+        <li><a href="#zsh设置jenkins环境变量">zsh设置Jenkins环境变量</a></li>
+        <li><a href="#补充">补充</a></li>
+        <li><a href="#最后">最后</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

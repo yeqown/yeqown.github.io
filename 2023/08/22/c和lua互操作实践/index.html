@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="lua底层采用C语言实现，在设计时就考虑到了C和lua的互操作性，在某些场景下可以使用lua来提高c程序的灵活性，在使用lua的时候也可以用过c来提高性能。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2023/08/22/c%E5%92%8Clua%E4%BA%92%E6%93%8D%E4%BD%9C%E5%AE%9E%E8%B7%B5/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="C和lua互操作实践">
+  <meta property="og:description" content="lua底层采用C语言实现，在设计时就考虑到了C和lua的互操作性，在某些场景下可以使用lua来提高c程序的灵活性，在使用lua的时候也可以用过c来提高性能。">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-08-22T10:51:43+08:00">
+    <meta property="article:modified_time" content="2023-08-22T10:51:43+08:00">
+    <meta property="article:tag" content="Lua">
+    <meta property="article:tag" content="C">
+    <meta property="article:tag" content="Redis">
+<title>C和lua互操作实践 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2023/08/22/c%E5%92%8Clua%E4%BA%92%E6%93%8D%E4%BD%9C%E5%AE%9E%E8%B7%B5/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>C和lua互操作实践</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#redis-中的-lua">redis 中的 lua</a></li>
+        <li><a href="#lua-json-中的-c">lua-json 中的 C</a></li>
+        <li><a href="#lua-和-c-互操作的基础">lua 和 C 互操作的基础</a></li>
+        <li><a href="#动手实践">动手实践</a></li>
+        <li><a href="#总结">总结</a></li>
+        <li><a href="#参考">参考</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    C和lua互操作实践
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>August 22, 2023</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/lua/">Lua</a>, 
+      <a href="/tags/c/">C</a>, 
+      <a href="/tags/redis/">Redis</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><p>相信了解 redis 和 openresty 的小伙伴们都知道 lua 代码可以嵌入这两种程序中运行，极大的提高了软件的扩展性；尤其是 openresty 中，通过使用 lua 我们可以很快速（相比c）的定制web服务器，或者增强 nginx 的功能。那么 lua 是如何嵌入到这些程序中的呢？lua 和 c 是如何互操作的呢？</p>
+<p>下文的相关环境和工具版本为：Lua 5.4.6; Mac OS 13.4.1 (Darwin Kernel Version 22.5.0) arm64 M2 pro; Apple clang version 14.0.3 (clang-1403.0.22.14.1)</p>
+<h3 id="redis-中的-lua">
+  redis 中的 lua
+  <a class="anchor" href="#redis-%e4%b8%ad%e7%9a%84-lua">#</a>
+</h3>
+<p>下面展示了一段 redis 中操作 lua API 的代码：</p>
+<blockquote>
+<p>这里出现了很多 <strong>lua_</strong> 开头的函数，这些函数都是 lua 库中的函数，redis 通过这些函数来操作 lua 环境，
+这里先不展开讲，后面会详细介绍。</p>
+</blockquote>
+<blockquote>
+<p>更多的代码，如 luaRegisterRedisAPI 就不展示了，有兴趣的可以去看源码。</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">// redis-v7.2/src/eval.c#183
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">/* 初始化 lua 环境
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> *
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * redis 首次启动时调用，此时 setup 为 1,
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * 这个函数也会在 redis 的其他生命周期中被调用，此时 setup 为 0，但是被简化为 scriptingReset 调用。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> */</span> 
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">scriptingInit</span>(<span style="color:#66d9ef">int</span> setup) {
+</span></span><span style="display:flex;"><span>    lua_State <span style="color:#f92672">*</span>lua <span style="color:#f92672">=</span> <span style="color:#a6e22e">lua_open</span>();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (setup) {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 首次启动时，初始化 lua 环境 和 ldb (Lua debugger) 的一些数据结构
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        lctx.lua_client <span style="color:#f92672">=</span> NULL;
+</span></span><span style="display:flex;"><span>        server.script_disable_deny_script <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">ldbInit</span>();
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* 初始化 lua 脚本字典，用于存储 sha1 -&gt; lua 脚本的映射
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * 用户使用 EVALSHA 命令时，从这个字典中查找对应的 lua 脚本。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
+</span></span><span style="display:flex;"><span>    lctx.lua_scripts <span style="color:#f92672">=</span> <span style="color:#a6e22e">dictCreate</span>(<span style="color:#f92672">&amp;</span>shaScriptObjectDictType);
+</span></span><span style="display:flex;"><span>    lctx.lua_scripts_mem <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* 注册 redis 的一些 api 到 lua 环境中 */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">luaRegisterRedisAPI</span>(lua);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* 注册调试命令 */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_getglobal</span>(lua,<span style="color:#e6db74">&#34;redis&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* redis.breakpoint */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_pushstring</span>(lua,<span style="color:#e6db74">&#34;breakpoint&#34;</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_pushcfunction</span>(lua,luaRedisBreakpointCommand);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_settable</span>(lua, <span style="color:#f92672">-</span><span style="color:#ae81ff">3</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* redis.debug */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_pushstring</span>(lua,<span style="color:#e6db74">&#34;debug&#34;</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_pushcfunction</span>(lua,luaRedisDebugCommand);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_settable</span>(lua,<span style="color:#f92672">-</span><span style="color:#ae81ff">3</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* redis.replicate_commands */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_pushstring</span>(lua, <span style="color:#e6db74">&#34;replicate_commands&#34;</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_pushcfunction</span>(lua, luaRedisReplicateCommandsCommand);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_settable</span>(lua, <span style="color:#f92672">-</span><span style="color:#ae81ff">3</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_setglobal</span>(lua,<span style="color:#e6db74">&#34;redis&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* 注册一个错误处理函数，用于在 lua 脚本执行出错时，打印出错信息。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * 需要注意的是，当错误发生在 C 函数中时，我们需要打印出错的 lua 脚本的信息，
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * 这样才能帮助用户调试 lua 脚本。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>errh_func <span style="color:#f92672">=</span>       <span style="color:#e6db74">&#34;local dbg = debug</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;debug = nil</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;function __redis__err__handler(err)</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;  local i = dbg.getinfo(2,&#39;nSl&#39;)</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;  if i and i.what == &#39;C&#39; then</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;    i = dbg.getinfo(3,&#39;nSl&#39;)</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;  end</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;  if type(err) ~= &#39;table&#39; then</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;    err = {err=&#39;ERR &#39; .. tostring(err)}&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;  end&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;  if i then</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;    err[&#39;source&#39;] = i.source</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;    err[&#39;line&#39;] = i.currentline</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;  end&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;  return err</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;end</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">luaL_loadbuffer</span>(lua,errh_func,<span style="color:#a6e22e">strlen</span>(errh_func),<span style="color:#e6db74">&#34;@err_handler_def&#34;</span>);
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">lua_pcall</span>(lua,<span style="color:#ae81ff">0</span>,<span style="color:#ae81ff">0</span>,<span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* 创建一个 lua client (没有网络连接)，用于在 lua 环境中执行 redis 命令。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * 这个客户端没必要在 scriptingReset() 调用时重新创建。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (lctx.lua_client <span style="color:#f92672">==</span> NULL) {
+</span></span><span style="display:flex;"><span>        lctx.lua_client <span style="color:#f92672">=</span> <span style="color:#a6e22e">createClient</span>(NULL);
+</span></span><span style="display:flex;"><span>        lctx.lua_client<span style="color:#f92672">-&gt;</span>flags <span style="color:#f92672">|=</span> CLIENT_SCRIPT;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">/* We do not want to allow blocking commands inside Lua */</span>
+</span></span><span style="display:flex;"><span>        lctx.lua_client<span style="color:#f92672">-&gt;</span>flags <span style="color:#f92672">|=</span> CLIENT_DENY_BLOCKING;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Lock the global table from any changes */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_pushvalue</span>(lua, LUA_GLOBALSINDEX);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">luaSetErrorMetatable</span>(lua);
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* Recursively lock all tables that can be reached from the global table */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">luaSetTableProtectionRecursively</span>(lua);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_pop</span>(lua, <span style="color:#ae81ff">1</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    lctx.lua <span style="color:#f92672">=</span> lua;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>通过这部分代码，应该对于 lua 的嵌入式使用有了一个大概的印象。这里可以回答以下的问题：</p>
+<ol>
+<li>
+<p>lua 是如何嵌入到 redis 中的？</p>
+<p>通过包含 lua 的相关库，然后通过 API 来操作 lua 环境。主要分为以下几个步骤：</p>
+<ul>
+<li>初始化 lua 环境，也就是 lua_State</li>
+<li>通过 lua 的 API 来操作 lua_State，比如注册 redis 的 api 到 lua 环境中</li>
+</ul>
+</li>
+<li>
+<p>redis 中的 lua 可以使用那些 redis 的 api？</p>
+<p>这部分从 luaRegisterRedisAPI 函数中可以看到，redis 注册了以下的 api 到 lua 环境中：</p>
+<table>
+  <thead>
+      <tr>
+          <th>API</th>
+          <th>说明</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>pcall</td>
+          <td>执行函数，如果出错返回false和错误 (lua 内置，但是 redis 用了自己的实现)</td>
+      </tr>
+      <tr>
+          <td>redis.call</td>
+          <td>执行 redis 命令</td>
+      </tr>
+      <tr>
+          <td>redis.pcall</td>
+          <td>执行 redis 命令，如果产生异常（如内存不足），返回错误信息</td>
+      </tr>
+      <tr>
+          <td>redis.error_reply</td>
+          <td>返回错误回复的辅助函数 { err = text } = redis.error_reply(text)</td>
+      </tr>
+      <tr>
+          <td>redis.status_reply</td>
+          <td>返回简单字符串回复的辅助函数 { ok = text } = redis.status_reply(text)</td>
+      </tr>
+      <tr>
+          <td>redis.sha1hex</td>
+          <td>返回其单个字符串参数的 SHA1 十六进制摘要</td>
+      </tr>
+      <tr>
+          <td>redis.log</td>
+          <td>打印日志  redis.log(redis.LOG_WARNING, &lsquo;Something is terribly wrong&rsquo;)</td>
+      </tr>
+      <tr>
+          <td>redis.setresp(n)</td>
+          <td>允许执行脚本在 redis.call() 和 redis.pcall() 返回的回复的 Redis 序列化协议 (RESP) 版本之间切换，默认2</td>
+      </tr>
+      <tr>
+          <td>redis.set_repl</td>
+          <td>脚本执行过程中控制指令是否 同步/复制</td>
+      </tr>
+      <tr>
+          <td>redis.replicate_commands</td>
+          <td>将脚本的复制模式从 逐字复制(复制脚本) 切换为 效果复制(复制脚本生成的写入命令)。从 7.0 以后默认效果复制。</td>
+      </tr>
+      <tr>
+          <td>redis.breakpoint</td>
+          <td>使用 Redis Lua 调试器时，此函数会触发断点</td>
+      </tr>
+      <tr>
+          <td>redis.debug</td>
+          <td>该函数在 Redis Lua 调试器控制台中打印其参数</td>
+      </tr>
+      <tr>
+          <td>redis.register_function</td>
+          <td>此函数只能在 FUNCTION LOAD 命令的上下文中使用。调用时，它会向加载的库注册一个函数。</td>
+      </tr>
+      <tr>
+          <td>math.random</td>
+          <td>生成随机数 (lua 内置，但是 redis 用了自己的实现)</td>
+      </tr>
+      <tr>
+          <td>math.randomseed</td>
+          <td>设置随机数种子 (lua 内置，但是 redis 用了自己的实现)</td>
+      </tr>
+  </tbody>
+</table>
+<p>除此之外，还有一些调试的 api，这里就不展开了。可以参考 <a href="https://redis.io/docs/interact/programmability/lua-api/">REDIS-LUA-API</a> 了解更多。</p>
+</li>
+<li>
+<p>redis 中的 lua 可以使用那些变量？</p>
+<p>这部分从 luaRegisterRedisAPI 函数中可以看到，redis 注册了以下的变量到 lua 环境中：</p>
+<table>
+  <thead>
+      <tr>
+          <th>变量名</th>
+          <th>说明</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>redis</td>
+          <td>redis 的命名空间</td>
+      </tr>
+      <tr>
+          <td>REPL_NONE</td>
+          <td>REPL 模式，不复制命令</td>
+      </tr>
+      <tr>
+          <td>REPL_AOF</td>
+          <td>REPL 模式，执行 lua 脚本，将命令复制到 AOF 文件中</td>
+      </tr>
+      <tr>
+          <td>REPL_SLAVE</td>
+          <td>REPL 模式，执行 lua 脚本，将命令复制到从节点中</td>
+      </tr>
+      <tr>
+          <td>REPL_REPLICA</td>
+          <td>REPL 模式，执行 lua 脚本，将命令复制到从节点中</td>
+      </tr>
+      <tr>
+          <td>REPL_ALL</td>
+          <td>REPL 模式，执行 lua 脚本，将命令复制到 AOF 文件中和从节点中</td>
+      </tr>
+      <tr>
+          <td>REDIS_VERSION_NUM</td>
+          <td>redis 版本号，比如 0x00070200 表示 7.2.0</td>
+      </tr>
+      <tr>
+          <td>REDIS_VERSION</td>
+          <td>redis 版本号，比如 7.2.0</td>
+      </tr>
+      <tr>
+          <td>LOG_DEBUG</td>
+          <td>日志级别，debug</td>
+      </tr>
+      <tr>
+          <td>LOG_VERBOSE</td>
+          <td>日志级别，verbose</td>
+      </tr>
+      <tr>
+          <td>LOG_NOTICE</td>
+          <td>日志级别，notice</td>
+      </tr>
+      <tr>
+          <td>LOG_WARNING</td>
+          <td>日志级别，warning</td>
+      </tr>
+  </tbody>
+</table>
+</li>
+</ol>
+<h3 id="lua-json-中的-c">
+  lua-json 中的 C
+  <a class="anchor" href="#lua-json-%e4%b8%ad%e7%9a%84-c">#</a>
+</h3>
+<blockquote>
+<p><a href="https://github.com/mpx/lua-cjson">lua-json</a> 是一个 lua 的 json 库，这里只是用来展示 lua 中调用 C 的例子。更多信息请查阅 lua-cjson 的使用手册 <a href="https://www.kyne.com.au/~mark/software/lua-cjson-manual.html">https://www.kyne.com.au/~mark/software/lua-cjson-manual.html</a></p>
+</blockquote>
+<p>从它的帮助手册我们可以看到如下的代码：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-lua" data-lang="lua"><span style="display:flex;"><span><span style="color:#75715e">-- 模块实例化</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">local</span> cjson <span style="color:#f92672">=</span> require <span style="color:#e6db74">&#34;cjson&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">local</span> cjson2 <span style="color:#f92672">=</span> cjson.new()
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">local</span> cjson_safe <span style="color:#f92672">=</span> require <span style="color:#e6db74">&#34;cjson.safe&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-- 在 lua 和 json 之间转换</span>
+</span></span><span style="display:flex;"><span>text <span style="color:#f92672">=</span> cjson.encode(value)
+</span></span><span style="display:flex;"><span>value <span style="color:#f92672">=</span> cjson.decode(text)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-- 读取 lua json 中的值</span>
+</span></span><span style="display:flex;"><span>setting <span style="color:#f92672">=</span> cjson.decode_invalid_numbers([setting])
+</span></span><span style="display:flex;"><span>setting <span style="color:#f92672">=</span> cjson.encode_invalid_numbers([setting])
+</span></span><span style="display:flex;"><span>keep <span style="color:#f92672">=</span> cjson.encode_keep_buffer([keep])
+</span></span><span style="display:flex;"><span>depth <span style="color:#f92672">=</span> cjson.encode_max_depth([depth])
+</span></span><span style="display:flex;"><span>depth <span style="color:#f92672">=</span> cjson.decode_max_depth([depth])
+</span></span><span style="display:flex;"><span>convert, ratio, safe <span style="color:#f92672">=</span> cjson.encode_sparse_array([convert[, ratio[, safe]]])
+</span></span></code></pre></div><p>同时在 <a href="https://www.kyne.com.au/~mark/software/lua-cjson-manual.html#_make">make 安装</a> 一节中, 指明了如果需要手动安装的话，需要执行以下的命令：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>make
+</span></span><span style="display:flex;"><span>cp cjson.so $LUA_MODULE_DIRECTORY
+</span></span></code></pre></div><p>很明显，这里的 cjson.so 是一个共享库，也就是说在 lua 中如果想要调用 c 的扩展，那么共享库是一种方式。</p>
+<blockquote>
+<p>这里需要注意的是，lua 中通过 require 来引入的时候，需要保证 cjson.so 在 lua 的搜索路径中（package.cpath）。</p>
+</blockquote>
+<p>为什么说只是一种方式呢？因为 lua 还提供了一种方式，那就是通过 lua 的 API 让 c 代码编写的函数注册到 lua 环境中，然后在 c 中执行 lua 脚本，如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdarg.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdlib.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;lua.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;lauxlib.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;lualib.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">sumForLua</span>(lua_State <span style="color:#f92672">*</span>lua)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 如果给定虚拟栈中索引处的元素可以转换为数字，则返回转换后的数字，否则报错。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">double</span> a <span style="color:#f92672">=</span> <span style="color:#a6e22e">luaL_checknumber</span>(lua, <span style="color:#ae81ff">1</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">double</span> b <span style="color:#f92672">=</span> <span style="color:#a6e22e">luaL_checknumber</span>(lua, <span style="color:#ae81ff">2</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// push 计算结果到 lua 虚拟栈中
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">lua_pushnumber</span>(lua, a<span style="color:#f92672">+</span>b); 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* 返回值用于提示该C函数的返回值数量。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * 这里可以看出，C可以返回给Lua多个结果，
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * 通过多次调用lua_push*()，之后return返回结果的数量。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">1</span>;  
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>(<span style="color:#66d9ef">void</span>)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    lua_State <span style="color:#f92672">*</span>lua <span style="color:#f92672">=</span> <span style="color:#a6e22e">lua_open</span>(); <span style="color:#75715e">// 创建 Lua 环境
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">luaL_openlibs</span>(lua);          <span style="color:#75715e">// 打开Lua状态机&#34;L&#34;中的所有Lua标准库。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 注册 C函数到 lua 中 csum 函数
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">lua_register</span>(lua, <span style="color:#e6db74">&#34;csum&#34;</span>, sumForLua);  
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 执行 Lua 脚本
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span><span style="color:#f92672">*</span> script <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;print(csum(3.14, 2.0))&#34;</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span>(<span style="color:#a6e22e">luaL_dostring</span>(lua, script))    
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;Failed to invoke.</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_close</span>(lua); 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>我们还没有搞清楚 c 是如何给 lua 扩展的，再回到 lua-cjson 的源码中去：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">// https://github.com/mpx/lua-cjson/blob/master/lua_cjson.c#1416
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>CJSON_EXPORT <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">luaopen_cjson</span>(lua_State <span style="color:#f92672">*</span>l)
+</span></span><span style="display:flex;"><span>{   
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// local cjson = require &#34;cjson&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">lua_cjson_new</span>(l);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 如果编译时定义了 ENABLE_CJSON_GLOBAL，注册 cjson (table) 到全局变量中
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#75715e">#ifdef ENABLE_CJSON_GLOBAL
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">lua_pushvalue</span>(l, <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// #define CJSON_MODNAME &#34;cjson&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">lua_setglobal</span>(l, CJSON_MODNAME);
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#endif
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// cjson 模块（table）的初始化
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">lua_cjson_new</span>(lua_State <span style="color:#f92672">*</span>l)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 函数注册表, 这些函数的函数原型都满足：
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// int (*lua_CFunction) (lua_State *L); return value: number of results
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// 注册表结构体：
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// typedef struct luaL_Reg {
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">//   const char *name;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">//   lua_CFunction func;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// } luaL_Reg;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    luaL_Reg reg[] <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>        { <span style="color:#e6db74">&#34;encode&#34;</span>, json_encode },
+</span></span><span style="display:flex;"><span>        { <span style="color:#e6db74">&#34;decode&#34;</span>, json_decode },
+</span></span><span style="display:flex;"><span>        { <span style="color:#e6db74">&#34;encode_sparse_array&#34;</span>, json_cfg_encode_sparse_array },
+</span></span><span style="display:flex;"><span>        { <span style="color:#e6db74">&#34;encode_max_depth&#34;</span>, json_cfg_encode_max_depth },
+</span></span><span style="display:flex;"><span>        { <span style="color:#e6db74">&#34;decode_max_depth&#34;</span>, json_cfg_decode_max_depth },
+</span></span><span style="display:flex;"><span>        { <span style="color:#e6db74">&#34;encode_number_precision&#34;</span>, json_cfg_encode_number_precision },
+</span></span><span style="display:flex;"><span>        { <span style="color:#e6db74">&#34;encode_keep_buffer&#34;</span>, json_cfg_encode_keep_buffer },
+</span></span><span style="display:flex;"><span>        { <span style="color:#e6db74">&#34;encode_invalid_numbers&#34;</span>, json_cfg_encode_invalid_numbers },
+</span></span><span style="display:flex;"><span>        { <span style="color:#e6db74">&#34;decode_invalid_numbers&#34;</span>, json_cfg_decode_invalid_numbers },
+</span></span><span style="display:flex;"><span>        { <span style="color:#e6db74">&#34;new&#34;</span>, lua_cjson_new },
+</span></span><span style="display:flex;"><span>        { NULL, NULL } <span style="color:#75715e">/* 以 NULL, NULL 结束 */</span>
+</span></span><span style="display:flex;"><span>    };
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 创建一个新的 table, 并且将其压入栈中
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">lua_newtable</span>(l);
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">json_create_config</span>(l);
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 将 reg 中的函数注册到 table 中
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup);
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// nup = 1 (不等于0) 表示将 nup 位置的值副本来初始化所有的函数，这些值会弹出栈。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// 因此这里是给 reg 中的所有函数都隐式的传入了一个 config 参数, 函数内部可以通过
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// int lua_upvalueindex(int i); lua_to* 函数来获取这个参数。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">luaL_setfuncs</span>(l, reg, <span style="color:#ae81ff">1</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 设置 table.null = nil, userdata 代表 Lua中的 C 值
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">lua_pushlightuserdata</span>(l, NULL);
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// void lua_setfield (lua_State *L, int index, const char *k);
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// table = stack[index]; table[k] = v (stack[-1]), 设置后 v会从栈中弹出
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">lua_setfield</span>(l, <span style="color:#f92672">-</span><span style="color:#ae81ff">2</span>, <span style="color:#e6db74">&#34;null&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 下面的类似，都是在设置 table 中的字段, 如: _NAME, _VERSION
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">lua_pushliteral</span>(l, CJSON_MODNAME);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_setfield</span>(l, <span style="color:#f92672">-</span><span style="color:#ae81ff">2</span>, <span style="color:#e6db74">&#34;_NAME&#34;</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_pushliteral</span>(l, CJSON_VERSION);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_setfield</span>(l, <span style="color:#f92672">-</span><span style="color:#ae81ff">2</span>, <span style="color:#e6db74">&#34;_VERSION&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 此时栈中还剩下 1 个 table
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>我们来引入 lua-cjson 模块来看看：</p>
+<blockquote>
+<p>这里因为我使用的是 lua 5.4, 而 lua-cjson 貌似不兼容？</p>
+</blockquote>
+<img src="/images/lua_c_cjson_demo.png" />
+<p>这样我们也大概弄清楚了，如何为 lua 扩展 c 代码了:</p>
+<ul>
+<li>编写一个 luaopen_xxx 函数，该函数会在 lua 中通过 require &ldquo;xxx&rdquo; 时被调用；</li>
+<li>在 luaopen_xxx 去注册 c 模块或者函数到 lua 环境中；</li>
+<li>将 c 扩展编译为 so 文件，然后将 so 文件放到 lua 的搜索路径中；</li>
+</ul>
+<h3 id="lua-和-c-互操作的基础">
+  lua 和 C 互操作的基础
+  <a class="anchor" href="#lua-%e5%92%8c-c-%e4%ba%92%e6%93%8d%e4%bd%9c%e7%9a%84%e5%9f%ba%e7%a1%80">#</a>
+</h3>
+<p>通过上述的例子，对于 lua 和 C 互操作有了一个大概的印象，那么我们看到的代码中那些 <em><strong>lua_</strong></em> 和 <em><strong>luaL_</strong></em> 开头的函数是什么呢？各种 <em><strong>lua_push</strong></em>* 和 <em><strong>lua_pop</strong></em>* 之类的函数又是做什么的呢？</p>
+<p>在 <a href="https://www.lua.org/pil/24.2.html">PIL</a> 的 24.2 小节中解释在 Lua 和 C API 交互的过程中，会使用一抽象栈来传递数据，这个虚拟栈是一个 LIFO 栈，它由 Lua 来管理（方便 lua 的垃圾收集器工作）。该栈中的每个槽都可以保存任何 Lua 值。每当你想从 Lua 请求一个值（例如全局变量的值）时，你就调用 Lua，它将所需的值压入堆栈。每当你想向 Lua 传递一个值时，你首先将值压入堆栈，然后调用 Lua（这将弹出该值）。</p>
+<img src="/images/lua_c_virtual_stack_overview.svg" />
+<p>需要注意的是，虚拟栈并不是无限的，它的大小可以通过 lua.h 中的 LUA_MINSTACK 定义的。通常来说虚拟栈的大小是 20，一般情况足够使用了。如果不确实栈空间是否足够，可以通过使用 <code>int lua_checkstack (lua_State *L, int sz);</code> 来检查。</p>
+<p>有了这个基础我们就很容易理解，上面 redis 中的是如何去初始化 lua 环境的。</p>
+<h4 id="重新解读-redis-中的-lua-初始化">
+  重新解读 redis 中的 lua 初始化
+  <a class="anchor" href="#%e9%87%8d%e6%96%b0%e8%a7%a3%e8%af%bb-redis-%e4%b8%ad%e7%9a%84-lua-%e5%88%9d%e5%a7%8b%e5%8c%96">#</a>
+</h4>
+<p>为了更容易的解读，这里把一些 <strong>lua_</strong> 函数做了简单的说明：</p>
+<table>
+  <thead>
+      <tr>
+          <th>函数名</th>
+          <th>说明</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><em>lua_State *lua_newstate (lua_Alloc f, void *ud);</em></td>
+          <td>创建一个新的 lua 环境, lua_open 的替代</td>
+      </tr>
+      <tr>
+          <td><em>int lua_getglobal (lua_State *L, const char *name);</em></td>
+          <td>把全局变量的值压入堆栈, 等价声明了一个 name 的全局变量</td>
+      </tr>
+      <tr>
+          <td><em>void lua_setglobal (lua_State *L, const char *name);</em></td>
+          <td>把堆栈顶部的值弹出并设置为 name 全局变量</td>
+      </tr>
+      <tr>
+          <td><em>const char *lua_pushstring (lua_State *L, const char *s);</em></td>
+          <td>把一个字符串压入堆栈，lua 会创建 s 的副本或者复用内部的副本</td>
+      </tr>
+      <tr>
+          <td><em>void lua_pushcfunction (lua_State *L, lua_CFunction f);</em></td>
+          <td>把一个 C 函数压入堆栈</td>
+      </tr>
+      <tr>
+          <td><em>void lua_settable (lua_State *L, int index);</em></td>
+          <td>给 table 的设定 kv, 等价于 table[k] = v, table = stack[index], v=stack[-1], k=stack[-2], 会从栈中弹出 k/v</td>
+      </tr>
+  </tbody>
+</table>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">// redis-v7.2/src/eval.c#183
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">scriptingInit</span>(<span style="color:#66d9ef">int</span> setup) {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ... some codes ignored
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 声明全局变量 redis, 同时压入栈中
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">lua_getglobal</span>(lua, <span style="color:#e6db74">&#34;redis&#34;</span>); 
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 往虚拟栈中压入 字符串 &#34;breakpoint&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">lua_pushstring</span>(lua, <span style="color:#e6db74">&#34;breakpoint&#34;</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 往虚拟栈中压入 C 函数 luaRedisBreakpointCommand
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">lua_pushcfunction</span>(lua, luaRedisBreakpointCommand);
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 设置 redis[&#34;breakpoint&#34;] = luaRedisBreakpointCommand
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">lua_settable</span>(lua, <span style="color:#f92672">-</span><span style="color:#ae81ff">3</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 将 redis 弹出栈
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">lua_setglobal</span>(lua, <span style="color:#e6db74">&#34;redis&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ... some codes ignored
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div><p>上面的片段等价于以下的 lua 代码：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-lua" data-lang="lua"><span style="display:flex;"><span>redis <span style="color:#f92672">=</span> {}
+</span></span><span style="display:flex;"><span>redis[<span style="color:#e6db74">&#34;breakpoint&#34;</span>] <span style="color:#f92672">=</span> luaRedisBreakpointCommand
+</span></span></code></pre></div><p>这期间的栈空间变化可以用下面的图来表示：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>+----bottom----+
+</span></span><span style="display:flex;"><span>|      <span style="color:#f92672">{}</span>      | <span style="color:#f92672">[</span>1, -3<span style="color:#f92672">]</span>  lua_getglobal<span style="color:#f92672">(</span>lua, <span style="color:#e6db74">&#34;redis&#34;</span><span style="color:#f92672">)</span>;
+</span></span><span style="display:flex;"><span>+--------------+
+</span></span><span style="display:flex;"><span>| <span style="color:#e6db74">&#34;breakpoint&#34;</span> | <span style="color:#f92672">[</span>2, -2<span style="color:#f92672">]</span>  lua_pushstring<span style="color:#f92672">(</span>lua,<span style="color:#e6db74">&#34;breakpoint&#34;</span><span style="color:#f92672">)</span>;
+</span></span><span style="display:flex;"><span>+--------------+
+</span></span><span style="display:flex;"><span>|   <span style="color:#66d9ef">function</span>   | <span style="color:#f92672">[</span>3, -1<span style="color:#f92672">]</span>  lua_pushcfunction<span style="color:#f92672">(</span>lua,luaRedisBreakpointCommand<span style="color:#f92672">)</span>;
+</span></span><span style="display:flex;"><span>+------top-----+
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>+---------------------bottom--------------------------+
+</span></span><span style="display:flex;"><span>|      <span style="color:#f92672">{</span><span style="color:#e6db74">&#34;breakpoint&#34;</span>: luaRedisBreakpointCommand<span style="color:#f92672">}</span>      | <span style="color:#f92672">[</span>1, -1<span style="color:#f92672">]</span>  lua_settable<span style="color:#f92672">(</span>lua, -3<span style="color:#f92672">)</span>;
+</span></span><span style="display:flex;"><span>+-----------------------top---------------------------+
+</span></span></code></pre></div><h4 id="异常处理">
+  异常处理
+  <a class="anchor" href="#%e5%bc%82%e5%b8%b8%e5%a4%84%e7%90%86">#</a>
+</h4>
+<p>虽然 C 语言没有提供异常处理机制，但是在 lua 中提供了 <code>error</code> 和 <code>pcall</code> 函数来抛出异常，处理异常。因此在 lua 和 C 交互的过程中，特意提供了一些函数来处理异常。如 <code>lua_pcall</code>，在调用期间如果没有异常，那么 lua_pcall 和 lua_call 行为一致，反之如果发生了异常，那么 lua_pcall 会捕获异常，并把错误对象（单个值）压入堆栈，并返回错误码。同时从堆栈中删除函数和参数。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">// 普通调用
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">lua_call</span> (lua_State <span style="color:#f92672">*</span>L, <span style="color:#66d9ef">int</span> nargs, <span style="color:#66d9ef">int</span> nresults);
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 异常捕获调用
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// msgh 用于是否使用自定义的错误处理函数，如果为 0，那么使用默认的错误处理函数
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// 否则，msgh 用于说明：异常消息处理函数在堆栈中的位置
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">lua_pcall</span> (lua_State <span style="color:#f92672">*</span>L, <span style="color:#66d9ef">int</span> nargs, <span style="color:#66d9ef">int</span> nresults, <span style="color:#66d9ef">int</span> msgh);
+</span></span></code></pre></div><p>应该还记得 redis 中的 lua 初始化代码中有这么一段：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">// redis-v7.2/src/eval.c#183
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">scriptingInit</span>(<span style="color:#66d9ef">int</span> setup) {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* 注册一个错误处理函数，用于在 lua 脚本执行出错时，打印出错信息。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * 需要注意的是，当错误发生在 C 函数中时，我们需要打印出错的 lua 脚本的信息，
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * 这样才能帮助用户调试 lua 脚本。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>errh_func <span style="color:#f92672">=</span>       <span style="color:#e6db74">&#34;local dbg = debug</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;debug = nil</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;function __redis__err__handler(err)</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;  local i = dbg.getinfo(2,&#39;nSl&#39;)</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;  if i and i.what == &#39;C&#39; then</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;    i = dbg.getinfo(3,&#39;nSl&#39;)</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;  end</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;  if type(err) ~= &#39;table&#39; then</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;    err = {err=&#39;ERR &#39; .. tostring(err)}&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;  end&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;  if i then</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;    err[&#39;source&#39;] = i.source</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;    err[&#39;line&#39;] = i.currentline</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;  end&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;  return err</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>                                <span style="color:#e6db74">&#34;end</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// int luaL_loadbuffer (lua_State *L, const char *buff, size_t sz, const char *name);
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#75715e">// 加载 lua 块，但是不执行，会将编译后的 lua 块压入栈中，如果出错会将错误信息压入栈中
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">luaL_loadbuffer</span>(lua, errh_func, <span style="color:#a6e22e">strlen</span>(errh_func), <span style="color:#e6db74">&#34;@err_handler_def&#34;</span>);
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// int lua_pcall (lua_State *L, int nargs, int nresults, int msgh);
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#75715e">// 执行 lua 块，如果出错，pcall 会将错误信息压入栈中
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">lua_pcall</span>(lua, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div><p>这里这么只是完成了定义错误处理函数，但是并没有使用，因为需要在 <code>lua_pcall(lua_State *L, int nargs, int nresults, int msgh)</code> 通过 msgh 来指定才能使用。那么再看看 redis 中的关于 <code>__redis__err__handler</code> 的使用：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">// redis-v7.2/src/eval.c#472
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">evalGenericCommand</span>(client <span style="color:#f92672">*</span>c, <span style="color:#66d9ef">int</span> evalsha) {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 将 __redis__err__handler 压入栈中，已经在初始化过程中通过 lua 块定义成了全局变量
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">lua_getglobal</span>(lua, <span style="color:#e6db74">&#34;__redis__err__handler&#34;</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ... 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// void luaCallFunction(scriptRunCtx* run_ctx, lua_State *lua, robj** keys, size_t nkeys, robj** args, size_t nargs, int debug_enabled)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">luaCallFunction</span>(<span style="color:#f92672">&amp;</span>rctx, lua, c<span style="color:#f92672">-&gt;</span>argv<span style="color:#f92672">+</span><span style="color:#ae81ff">3</span>, numkeys, c<span style="color:#f92672">-&gt;</span>argv<span style="color:#f92672">+</span><span style="color:#ae81ff">3</span><span style="color:#f92672">+</span>numkeys, c<span style="color:#f92672">-&gt;</span>argc<span style="color:#f92672">-</span><span style="color:#ae81ff">3</span><span style="color:#f92672">-</span>numkeys, ldb.active);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 从栈中移除 __redis__err__handler 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">lua_pop</span>(lua,<span style="color:#ae81ff">1</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// redis-v7.2/src/script_lua.c#L1615
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">luaCallFunction</span>(scriptRunCtx<span style="color:#f92672">*</span> run_ctx, lua_State <span style="color:#f92672">*</span>lua, robj<span style="color:#f92672">**</span> keys, <span style="color:#66d9ef">size_t</span> nkeys, robj<span style="color:#f92672">**</span> args, <span style="color:#66d9ef">size_t</span> nargs, <span style="color:#66d9ef">int</span> debug_enabled) {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 创建一个数组，用于存储 keys
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">luaCreateArray</span>(lua,keys,nkeys);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (run_ctx<span style="color:#f92672">-&gt;</span>flags <span style="color:#f92672">&amp;</span> SCRIPT_EVAL_MODE){
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// EVAL模式：KEYS 从栈中弹出成为全局变量 KEYS
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">lua_enablereadonlytable</span>(lua, LUA_GLOBALSINDEX, <span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">lua_setglobal</span>(lua,<span style="color:#e6db74">&#34;KEYS&#34;</span>);
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">lua_enablereadonlytable</span>(lua, LUA_GLOBALSINDEX, <span style="color:#ae81ff">1</span>);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 下同，创建一个数组，用于存储 args
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">luaCreateArray</span>(lua,args,nargs);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (run_ctx<span style="color:#f92672">-&gt;</span>flags <span style="color:#f92672">&amp;</span> SCRIPT_EVAL_MODE){
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">lua_enablereadonlytable</span>(lua, LUA_GLOBALSINDEX, <span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">lua_setglobal</span>(lua,<span style="color:#e6db74">&#34;ARGV&#34;</span>);
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">lua_enablereadonlytable</span>(lua, LUA_GLOBALSINDEX, <span style="color:#ae81ff">1</span>);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* 执行 lua 脚本
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * 如果是 EVAL 模式, 那么 lua 代码应该没有参数，然后接受一个返回值，此时 error_handler 在 -2 的位置。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * 如果是 FUNCTION 模式，那么 lua 代码应该有两个参数（keys 和 args 数组），然后接受一个返回值，
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * 此时 error_handler 在 -4 (stack: error_handler, callback, keys, args) 的位置。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> err;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (run_ctx<span style="color:#f92672">-&gt;</span>flags <span style="color:#f92672">&amp;</span> SCRIPT_EVAL_MODE) {
+</span></span><span style="display:flex;"><span>        err <span style="color:#f92672">=</span> <span style="color:#a6e22e">lua_pcall</span>(lua,<span style="color:#ae81ff">0</span>,<span style="color:#ae81ff">1</span>,<span style="color:#f92672">-</span><span style="color:#ae81ff">2</span>);
+</span></span><span style="display:flex;"><span>    } <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>        err <span style="color:#f92672">=</span> <span style="color:#a6e22e">lua_pcall</span>(lua,<span style="color:#ae81ff">2</span>,<span style="color:#ae81ff">1</span>,<span style="color:#f92672">-</span><span style="color:#ae81ff">4</span>);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div><h3 id="动手实践">
+  动手实践
+  <a class="anchor" href="#%e5%8a%a8%e6%89%8b%e5%ae%9e%e8%b7%b5">#</a>
+</h3>
+<p>使用 c 编写一个生成 snowflake ID 的库， 同时提供 lua 扩展，主要代码如下：</p>
+<blockquote>
+<p>完整代码可以在 <a href="https://github.com/yeqown/snowflake/blob/main/contrib/lua">yeqown/snowflake/contrib/lua</a> 查看</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-lua" data-lang="lua"><span style="display:flex;"><span>require <span style="color:#e6db74">&#34;snowflake&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>print(<span style="color:#e6db74">&#34;   NAME: &#34;</span> <span style="color:#f92672">..</span> snowflake._NAME)
+</span></span><span style="display:flex;"><span>print(<span style="color:#e6db74">&#34;VERSION: &#34;</span> <span style="color:#f92672">..</span> snowflake._VERSION)
+</span></span><span style="display:flex;"><span>print(<span style="color:#e6db74">&#34; AUTHOR: &#34;</span> <span style="color:#f92672">..</span> snowflake._AUTHOR)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">local</span> worker <span style="color:#f92672">=</span> snowflake.new(<span style="color:#ae81ff">1</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">local</span> id <span style="color:#f92672">=</span> worker.next_id()
+</span></span><span style="display:flex;"><span>print(<span style="color:#e6db74">&#34;generating one id: &#34;</span> <span style="color:#f92672">..</span> id <span style="color:#f92672">..</span> <span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>print(<span style="color:#e6db74">&#34;parsing snowflake id: &#34;</span> <span style="color:#f92672">..</span> id)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">local</span> state <span style="color:#f92672">=</span> snowflake.parse(id);
+</span></span><span style="display:flex;"><span>print(<span style="color:#e6db74">&#34;timestamp: &#34;</span> <span style="color:#f92672">..</span> state.timestamp)
+</span></span><span style="display:flex;"><span>print(<span style="color:#e6db74">&#34;worker_id: &#34;</span> <span style="color:#f92672">..</span> state.worker_id)
+</span></span><span style="display:flex;"><span>print(<span style="color:#e6db74">&#34;    count: &#34;</span> <span style="color:#f92672">..</span> state.count <span style="color:#f92672">..</span> <span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>print(<span style="color:#e6db74">&#34;generating 10 ids in a batch: &#34;</span>)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">local</span> ids <span style="color:#f92672">=</span> worker.next_ids(<span style="color:#ae81ff">10</span>)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">for</span> i, id <span style="color:#66d9ef">in</span> ipairs(ids) <span style="color:#66d9ef">do</span>
+</span></span><span style="display:flex;"><span>    print(id)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">end</span>
+</span></span></code></pre></div><p>运行效果如下：</p>
+<img src="/images/lua_c_mylib_demo.png">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * Usage in lua:
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * worker = snowflake.new(1?)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> */</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">l_snowflake_new</span>(lua_State <span style="color:#f92672">*</span>L) {
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">uint64_t</span> worker_id <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; 
+</span></span><span style="display:flex;"><span>  <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>  <span style="color:#a6e22e">lua_newtable</span>(L);
+</span></span><span style="display:flex;"><span>  snowflake_Worker <span style="color:#f92672">*</span>worker <span style="color:#f92672">=</span> <span style="color:#a6e22e">snowflake_NewWorker</span>(worker_id);
+</span></span><span style="display:flex;"><span>  <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>  <span style="color:#a6e22e">lua_pushlightuserdata</span>(L, worker);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  luaL_Reg snowflake_worker_funcs[] <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>      {<span style="color:#e6db74">&#34;next_id&#34;</span>, l_snowflake_worker_next_id},
+</span></span><span style="display:flex;"><span>      {<span style="color:#e6db74">&#34;next_ids&#34;</span>, l_snowflake_worker_next_ids},
+</span></span><span style="display:flex;"><span>      {NULL, NULL},
+</span></span><span style="display:flex;"><span>  };
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">luaL_setfuncs</span>(L, snowflake_worker_funcs, <span style="color:#ae81ff">1</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * Usage in Lua:
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * snowflake.parse()
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> */</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">l_snowflake_parse</span>(lua_State <span style="color:#f92672">*</span>L) {
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">uint64_t</span> id <span style="color:#f92672">=</span> (<span style="color:#66d9ef">uint64_t</span>) <span style="color:#a6e22e">lua_tointegerx</span>(L, <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>, NULL);
+</span></span><span style="display:flex;"><span>  <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>  <span style="color:#a6e22e">lua_pop</span>(L, <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">const</span> snowflake_IDState <span style="color:#f92672">*</span>state <span style="color:#f92672">=</span> <span style="color:#a6e22e">snowflake_ParseId</span>((snowflake_ID) id);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">lua_newtable</span>(L);
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">lua_pushinteger</span>(L, (<span style="color:#66d9ef">long</span> <span style="color:#66d9ef">long</span>) state<span style="color:#f92672">-&gt;</span>timestamp);
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">lua_setfield</span>(L, <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>, <span style="color:#e6db74">&#34;timestamp&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">lua_pushinteger</span>(L, (<span style="color:#66d9ef">long</span> <span style="color:#66d9ef">long</span>) state<span style="color:#f92672">-&gt;</span>worker_id);
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">lua_setfield</span>(L, <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>, <span style="color:#e6db74">&#34;worker_id&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">lua_pushinteger</span>(L, (<span style="color:#66d9ef">long</span> <span style="color:#66d9ef">long</span>) state<span style="color:#f92672">-&gt;</span>count);
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">lua_setfield</span>(L, <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>, <span style="color:#e6db74">&#34;count&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * Usage in lua:
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * local worker = snowflake.new(1)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * local id = worker.next_id()
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> */</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">l_snowflake_worker_next_id</span>(lua_State <span style="color:#f92672">*</span>L) {
+</span></span><span style="display:flex;"><span>  snowflake_Worker <span style="color:#f92672">*</span>worker <span style="color:#f92672">=</span> (snowflake_Worker <span style="color:#f92672">*</span>) <span style="color:#a6e22e">lua_touserdata</span>(L, <span style="color:#a6e22e">lua_upvalueindex</span>(<span style="color:#ae81ff">1</span>));
+</span></span><span style="display:flex;"><span>  <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>  snowflake_ID id <span style="color:#f92672">=</span> <span style="color:#a6e22e">snowflake_NextId</span>(worker, true);
+</span></span><span style="display:flex;"><span>  <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">lua_pushinteger</span>(L, (<span style="color:#66d9ef">long</span> <span style="color:#66d9ef">long</span>) id);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">/*
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * Usage in Lua:
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * local worker = snowflake.new(1)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * local ids = worker.next_ids(10)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> */</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">l_snowflake_worker_next_ids</span>(lua_State <span style="color:#f92672">*</span>L) {
+</span></span><span style="display:flex;"><span>  <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>  <span style="color:#66d9ef">uint64_t</span> count <span style="color:#f92672">=</span> (<span style="color:#66d9ef">uint64_t</span>) <span style="color:#a6e22e">lua_tointegerx</span>(L, <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>, NULL);
+</span></span><span style="display:flex;"><span>  <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>  <span style="color:#a6e22e">lua_pop</span>(L, <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  snowflake_Worker <span style="color:#f92672">*</span>worker <span style="color:#f92672">=</span> (snowflake_Worker <span style="color:#f92672">*</span>) <span style="color:#a6e22e">lua_touserdata</span>(L, <span style="color:#a6e22e">lua_upvalueindex</span>(<span style="color:#ae81ff">1</span>));
+</span></span><span style="display:flex;"><span>  <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>  snowflake_ID <span style="color:#f92672">*</span>ids <span style="color:#f92672">=</span> <span style="color:#a6e22e">malloc</span>(<span style="color:#66d9ef">sizeof</span>(snowflake_ID) <span style="color:#f92672">*</span> count);
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">if</span> (<span style="color:#a6e22e">snowflake_NextIds</span>(worker, count, ids, false) <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_pushstring</span>(L, <span style="color:#e6db74">&#34;failed to generate snowflake ids&#34;</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_error</span>(L);
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">lua_newtable</span>(L);
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">for</span> (<span style="color:#66d9ef">uint64_t</span> i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>; i <span style="color:#f92672">&lt;</span> count; i<span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_pushinteger</span>(L, (<span style="color:#66d9ef">long</span> <span style="color:#66d9ef">long</span>) ids[i]);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lua_rawseti</span>(L, <span style="color:#f92672">-</span><span style="color:#ae81ff">2</span>, i <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>);
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">free</span>(ids);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">luaopen_snowflake</span>(lua_State <span style="color:#f92672">*</span>L) {
+</span></span><span style="display:flex;"><span>  luaL_Reg snowflake_lib[] <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>      {<span style="color:#e6db74">&#34;new&#34;</span>, l_snowflake_new},
+</span></span><span style="display:flex;"><span>      {<span style="color:#e6db74">&#34;parse&#34;</span>, l_snowflake_parse},
+</span></span><span style="display:flex;"><span>      {NULL, NULL}
+</span></span><span style="display:flex;"><span>  };
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">luaL_newlib</span>(L, snowflake_lib);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">lua_pushliteral</span>(L, <span style="color:#e6db74">&#34;_AUTHOR&#34;</span>);
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">lua_setfield</span>(L, <span style="color:#f92672">-</span><span style="color:#ae81ff">2</span>, <span style="color:#e6db74">&#34;yeqown&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">lua_pushliteral</span>(L, <span style="color:#e6db74">&#34;lua-snowflake&#34;</span>);
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">lua_setfield</span>(L, <span style="color:#f92672">-</span><span style="color:#ae81ff">2</span>, <span style="color:#e6db74">&#34;_NAME&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">lua_pushliteral</span>(L, <span style="color:#e6db74">&#34;0.1.0&#34;</span>);
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">lua_setfield</span>(L, <span style="color:#f92672">-</span><span style="color:#ae81ff">2</span>, <span style="color:#e6db74">&#34;_VERSION&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#75715e">// set snowflake as global variable
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>  <span style="color:#a6e22e">lua_pushvalue</span>(L, <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>);
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">lua_setglobal</span>(L, <span style="color:#e6db74">&#34;snowflake&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>这里就不再展开讲解了，里面的每一部分都是前面讲解的内容，这里只是做了一个简单的整合。当然实际扩展的时候，不会这么简单，可能需要处理复杂的数据结构，繁琐的流程，但这不在本文的讨论范围内，请善用工具和官方文档。</p>
+<h3 id="总结">
+  总结
+  <a class="anchor" href="#%e6%80%bb%e7%bb%93">#</a>
+</h3>
+<p>lua 本身就是由 C 语言编写的，因此 lua 和 C 之间的交互是非常方便的。而他们交互的核心方式就是通过 lua 的虚拟栈来传递数据，然后通过 lua 的 API 来操作虚拟栈。</p>
+<h3 id="参考">
+  参考
+  <a class="anchor" href="#%e5%8f%82%e8%80%83">#</a>
+</h3>
+<ul>
+<li><a href="https://www.lua.org/manual/5.4/">lua.org manual v5.4</a> C-API 和 auxiliary library</li>
+<li><a href="https://www.lua.org/pil/contents.html">Programming in Lua</a> Part IV - The C API</li>
+<li><a href="https://www.lua.org/manual/5.4/manual.html#4">The Application API</a></li>
+</ul>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#redis-中的-lua">redis 中的 lua</a></li>
+        <li><a href="#lua-json-中的-c">lua-json 中的 C</a></li>
+        <li><a href="#lua-和-c-互操作的基础">lua 和 C 互操作的基础</a></li>
+        <li><a href="#动手实践">动手实践</a></li>
+        <li><a href="#总结">总结</a></li>
+        <li><a href="#参考">参考</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="docker 学习实战笔记。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2018/01/18/docker%E6%8E%A2%E7%B4%A2/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="docker探索">
+  <meta property="og:description" content="docker 学习实战笔记。">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2018-01-18T15:02:49+00:00">
+    <meta property="article:modified_time" content="2018-01-18T15:02:49+00:00">
+    <meta property="article:tag" content="Docker">
+<title>docker探索 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2018/01/18/docker%E6%8E%A2%E7%B4%A2/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>docker探索</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#实战一-简单部署可执行文件">实战一 简单部署可执行文件</a></li>
+        <li><a href="#实战二-docker多阶段构建">实战二 Docker多阶段构建</a></li>
+        <li><a href="#实战三-docker网络基础及容器互联">实战三 Docker网络基础及容器互联</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    docker探索
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>January 18, 2018</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/DevOps/">DevOps</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/docker/">Docker</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><p>docker 学习实战笔记。关于docker的详细信息参见<a href="https://docs.docker.com/docker-for-mac/networking/#i-cannot-ping-my-containers">官方文档</a></p>
+<!-- more -->
+<p>实战环境配置：</p>
+<table>
+  <thead>
+      <tr>
+          <th>系统</th>
+          <th>Docker</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>MacOS</td>
+          <td>17.12.0-ce</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="实战一-简单部署可执行文件">
+  实战一 简单部署可执行文件
+  <a class="anchor" href="#%e5%ae%9e%e6%88%98%e4%b8%80-%e7%ae%80%e5%8d%95%e9%83%a8%e7%bd%b2%e5%8f%af%e6%89%a7%e8%a1%8c%e6%96%87%e4%bb%b6">#</a>
+</h3>
+<p>本次实战是部署一个golang的web服务, 需要mongo, redis支持</p>
+<ol>
+<li>
+<p>省略代码，打包过程（Mac用户别忘了打包GOOS=linux，0·0）</p>
+</li>
+<li>
+<p>编写Dockerfile</p>
+</li>
+</ol>
+<pre tabindex="0"><code>FROM alpine # 简版linux
+
+RUN mkdir /app # 在镜像中创建一个文件夹
+
+COPY ./webapp /app 
+COPY ./config /app/config
+COPY ./logs /app/logs
+
+EXPOSE 35764 # 暴露35764端口，也就是为了从外部可以访问到容器类的服务
+
+WORKDIR /app # 切换到应用文件夹（在镜像执行的时候，会自动切换）
+</code></pre><ol start="3">
+<li>构建镜像
+执行命令 <code>docker build -t tp-api:v1 .</code></li>
+</ol>
+<p>执行结果如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>Sending build context to Docker daemon   55.5MB
+</span></span><span style="display:flex;"><span>Step 1/7 : FROM alpine
+</span></span><span style="display:flex;"><span> ---&gt; 3fd9065eaf02
+</span></span><span style="display:flex;"><span>Step 2/7 : RUN mkdir /app
+</span></span><span style="display:flex;"><span> ---&gt; Using cache
+</span></span><span style="display:flex;"><span> ---&gt; 6948fdc89bbd
+</span></span><span style="display:flex;"><span>Step 3/7 : COPY ./webapp /app
+</span></span><span style="display:flex;"><span> ---&gt; Using cache
+</span></span><span style="display:flex;"><span> ---&gt; <span style="color:#ae81ff">555307961735</span>
+</span></span><span style="display:flex;"><span>Step 4/7 : COPY ./config /app/config
+</span></span><span style="display:flex;"><span> ---&gt; ab15feb5a3ab
+</span></span><span style="display:flex;"><span>Step 5/7 : COPY ./logs /app/logs
+</span></span><span style="display:flex;"><span> ---&gt; 0055512da60b
+</span></span><span style="display:flex;"><span>Step 6/7 : EXPOSE <span style="color:#ae81ff">35764</span>
+</span></span><span style="display:flex;"><span> ---&gt; Running in db0503538961
+</span></span><span style="display:flex;"><span>Removing intermediate container db0503538961
+</span></span><span style="display:flex;"><span> ---&gt; 1d214b7aff6d
+</span></span><span style="display:flex;"><span>Step 7/7 : WORKDIR /app
+</span></span><span style="display:flex;"><span>Removing intermediate container 42889dd384a7
+</span></span><span style="display:flex;"><span> ---&gt; f0b05bcb428d
+</span></span><span style="display:flex;"><span>Successfully built f0b05bcb428d
+</span></span><span style="display:flex;"><span>Successfully tagged tp-api:v2
+</span></span></code></pre></div><ol start="4">
+<li>调试容器</li>
+</ol>
+<p>执行命令<code>docker run -it --rm -p 35765:35764 tp-api:v1</code>,会进入容器交互模式，如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>-&gt; /app <span style="color:#75715e">#</span>
+</span></span><span style="display:flex;"><span>-&gt; /app <span style="color:#75715e">#</span>
+</span></span><span style="display:flex;"><span>-&gt; /app <span style="color:#75715e"># ls</span>
+</span></span><span style="display:flex;"><span>config  logs    webapp
+</span></span><span style="display:flex;"><span>-&gt; /app <span style="color:#75715e">#</span>
+</span></span></code></pre></div><p>此时输入<code>./webapp</code> 就可以在容器内运行该二进制文件了。</p>
+<pre tabindex="0"><code>-&gt; /app #
+-&gt; /app #
+-&gt; /app # ls
+config  logs    webapp
+-&gt; /app # ./webapp
+-&gt; 2018/01/22 07:38:50 loading config from: [ ./config/dev/config.json &amp; ./config/dev/server.json ]
+-&gt; 2018/01/22 07:38:50 load dbconfig file done
+-&gt; 2018/01/22 07:38:50 load server config file done
+-&gt; /app #
+</code></pre><ol start="5">
+<li>总结</li>
+</ol>
+<p>本次实战遇到的问题有：</p>
+<ul>
+<li>如何让容器内的应用可以访问宿主机的应用，譬如（mongo，redis）？</li>
+</ul>
+<p>A： 经过查阅官方文档和google检索。docker会创建一个网桥来负责容器之间，容器与宿主机的通信，如下图：
+<img src="https://yeasy.gitbooks.io/docker_practice/content/advanced_network/_images/network.png" alt="docker网桥" />
+更多资料可以参考<a href="https://yeasy.gitbooks.io/docker_practice/content/advanced_network">Docker — 从入门到实践</a>
+总的来说，不想通过容器互联的方式来运行程序，那么就需要配置一个host来提供给容器内的应用访问。那么这个host怎么确认呢？</p>
+<pre tabindex="0"><code>docker inspect --format &#34;{{.NetworkSettings.Gateway}}&#34; c41c11eefc83 # c41c11eefc83 容器ID
+</code></pre><p>会得到<code>172.17.0.1</code>（根据系统不同会得到不一样的网关地址）</p>
+<p>注意： Mac 上到这里仍然没有成功运行程序，因为这样的配置还是无法访问宿主机器上的Mongo和Redis服务。最终正确的Host应该是<code>docker.for.mac.localhost</code>	附上官方文档的说明<a href="https://docs.docker.com/docker-for-mac/networking/#i-cannot-ping-my-containers">Docker-for-Mac-Networking</a></p>
+<blockquote>
+<p>从17.06开始，我们的建议是连接到特殊的仅限于Mac的DNS名称docker.for.mac.localhost，该名称将解析为主机使用的内部IP地址。</p>
+</blockquote>
+<!-- 然而，到这里并没有结束。。。。
+在修改配置文件之后，并没有成功启动程序，错误日志：“no reachable servers”，这是没有成功连接上mongo数据库的节奏啊。
+确认mongo处于运行中之后，经过反复修改配置，google，查看官方文档，终于找到了 -->
+<h3 id="实战二-docker多阶段构建">
+  实战二 Docker多阶段构建
+  <a class="anchor" href="#%e5%ae%9e%e6%88%98%e4%ba%8c-docker%e5%a4%9a%e9%98%b6%e6%ae%b5%e6%9e%84%e5%bb%ba">#</a>
+</h3>
+<blockquote>
+<p><a href="https://yeasy.gitbooks.io/docker_practice/content/image/multistage-builds.html">https://yeasy.gitbooks.io/docker_practice/content/image/multistage-builds.html</a> 链接中已经充分阐述了，多阶段构建的使用场景，本实战只是描述我自己在使用过程中的状况及小小思考。</p>
+</blockquote>
+<p>在实战一中，部署的web服务是一个手动打包好的可执行程序文件。之所以这样部署，是因为当时在练习使用docker，不知道如何制作自动打包的镜像（监介0-0）。
+再后来便尝试了自动打包，Dockerfile如下：</p>
+<pre tabindex="0"><code>FROM golang:1.9-alpine
+
+WORKDIR /go/src/myapp
+COPY ./vendor ./vendor
+COPY ./webapp.go ./
+
+RUN CGO_ENABLED=0 GOOS=linux ARCH=amd64 go build -o webapp webapp.go
+
+EXPOSE 35764
+
+CMD [&#34;./webapp&#34;]
+</code></pre><p>查看下打包的镜像，足足有282MB，相比第一种打包方式，体积变大了很多（尽管已经使用了golang:1.9-alpine镜像，如果不是使用这个的话，还会更大。。。）。</p>
+<pre tabindex="0"><code>➜  test-platform git:(master) ✗ docker images
+REPOSITORY                   TAG                 IMAGE ID            CREATED             SIZE
+tp-api                       v1.2                9cbe31c46664        7 seconds ago       282MB
+</code></pre><p>当然为了减小镜像体积，有如下方案：</p>
+<h4 id="方案一可以采用编写shell脚本或手动打包然后再部署服务">
+  方案一：可以采用编写shell脚本或手动打包，然后再部署服务。
+  <a class="anchor" href="#%e6%96%b9%e6%a1%88%e4%b8%80%e5%8f%af%e4%bb%a5%e9%87%87%e7%94%a8%e7%bc%96%e5%86%99shell%e8%84%9a%e6%9c%ac%e6%88%96%e6%89%8b%e5%8a%a8%e6%89%93%e5%8c%85%e7%84%b6%e5%90%8e%e5%86%8d%e9%83%a8%e7%bd%b2%e6%9c%8d%e5%8a%a1">#</a>
+</h4>
+<pre><code>弊端：但是在不同的环境上，shell脚本不能保证百分百可靠，而且还需要该环境支持
+</code></pre>
+<h4 id="方案二多个dockerfile-将编译后的程序及其他文件放入用于部署的镜像中">
+  方案二：多个Dockerfile, 将编译后的程序及其他文件放入用于部署的镜像中
+  <a class="anchor" href="#%e6%96%b9%e6%a1%88%e4%ba%8c%e5%a4%9a%e4%b8%aadockerfile-%e5%b0%86%e7%bc%96%e8%af%91%e5%90%8e%e7%9a%84%e7%a8%8b%e5%ba%8f%e5%8f%8a%e5%85%b6%e4%bb%96%e6%96%87%e4%bb%b6%e6%94%be%e5%85%a5%e7%94%a8%e4%ba%8e%e9%83%a8%e7%bd%b2%e7%9a%84%e9%95%9c%e5%83%8f%e4%b8%ad">#</a>
+</h4>
+<pre><code>弊端：步骤较为繁琐，因为编译后的文件位于镜像中，必须先将其复制出来；其次是至少需要编写三个文件，一个用于编译的dockerfile.build, 一个用于部署的dockerfile.deploy，一个用于链接两个步骤的shell脚本
+</code></pre>
+<h4 id="方案三-docker多阶段构建">
+  方案三： docker多阶段构建
+  <a class="anchor" href="#%e6%96%b9%e6%a1%88%e4%b8%89-docker%e5%a4%9a%e9%98%b6%e6%ae%b5%e6%9e%84%e5%bb%ba">#</a>
+</h4>
+<blockquote>
+<p>为解决以上问题，Docker v17.05 开始支持多阶段构建 (multistage builds)。使用多阶段构建我们就可以很容易解决前面提到的问题，并且只需要编写一个 Dockerfile</p>
+</blockquote>
+<p>相比于方案二，这是一种更优雅的解决方案。因为在一个dockerfile中你可以给各个阶段命名，然后复制的时候带上<code>--from=stage_name</code>便可以方便的复制编译后的文件了。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#75715e">#####</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 编译阶段</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">####</span>
+</span></span><span style="display:flex;"><span>FROM golang:1.9-alpine AS build
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>WORKDIR /go/src/test-platform
+</span></span><span style="display:flex;"><span>COPY ./vendor ./vendor
+</span></span><span style="display:flex;"><span>COPY ./webapp.go ./
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>RUN CGO_ENABLED<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span> GOOS<span style="color:#f92672">=</span>linux go build ./webapp.go
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#####</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 部署阶段</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#####</span>
+</span></span><span style="display:flex;"><span>FROM alpine
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>RUN mkdir /app
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>COPY --from<span style="color:#f92672">=</span>build /go/src/test-platform/webapp /app 
+</span></span><span style="display:flex;"><span>COPY ./config /app/config
+</span></span><span style="display:flex;"><span>COPY ./logs /app/logs
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>EXPOSE <span style="color:#ae81ff">35764</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>WORKDIR /app
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>CMD <span style="color:#f92672">[</span><span style="color:#e6db74">&#34;./webapp&#34;</span>, <span style="color:#e6db74">&#34;-env </span>$RUN_ENV<span style="color:#e6db74">&#34;</span><span style="color:#f92672">]</span>
+</span></span></code></pre></div><h3 id="实战三-docker网络基础及容器互联">
+  实战三 Docker网络基础及容器互联
+  <a class="anchor" href="#%e5%ae%9e%e6%88%98%e4%b8%89-docker%e7%bd%91%e7%bb%9c%e5%9f%ba%e7%a1%80%e5%8f%8a%e5%ae%b9%e5%99%a8%e4%ba%92%e8%81%94">#</a>
+</h3>
+<p>使用docker部署web服务的时候，一定会接触到的就是：</p>
+<ul>
+<li>如何从容器外访问容器内的服务？</li>
+<li>如何从容器内访问宿主机的服务？</li>
+<li>如何容器间通信？</li>
+</ul>
+<h4 id="1如何从容器外访问容器内的服务">
+  1.如何从容器外访问容器内的服务？
+  <a class="anchor" href="#1%e5%a6%82%e4%bd%95%e4%bb%8e%e5%ae%b9%e5%99%a8%e5%a4%96%e8%ae%bf%e9%97%ae%e5%ae%b9%e5%99%a8%e5%86%85%e7%9a%84%e6%9c%8d%e5%8a%a1">#</a>
+</h4>
+<h4 id="2如何从容器内访问宿主机的服务">
+  2.如何从容器内访问宿主机的服务？
+  <a class="anchor" href="#2%e5%a6%82%e4%bd%95%e4%bb%8e%e5%ae%b9%e5%99%a8%e5%86%85%e8%ae%bf%e9%97%ae%e5%ae%bf%e4%b8%bb%e6%9c%ba%e7%9a%84%e6%9c%8d%e5%8a%a1">#</a>
+</h4>
+<h4 id="3如何容器间通信">
+  3.如何容器间通信？
+  <a class="anchor" href="#3%e5%a6%82%e4%bd%95%e5%ae%b9%e5%99%a8%e9%97%b4%e9%80%9a%e4%bf%a1">#</a>
+</h4>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "docker-usage-explore", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#实战一-简单部署可执行文件">实战一 简单部署可执行文件</a></li>
+        <li><a href="#实战二-docker多阶段构建">实战二 Docker多阶段构建</a></li>
+        <li><a href="#实战三-docker网络基础及容器互联">实战三 Docker网络基础及容器互联</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

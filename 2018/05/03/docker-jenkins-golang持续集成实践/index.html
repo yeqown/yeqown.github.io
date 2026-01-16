@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="因为生产需要最近又重新折腾了一下Jenkins和docker。主要目的是想自动编译，打包，部署一些Golang的HttpServer。于是决定使用Jenkins来做这个持续集成的载体。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2018/05/03/docker-jenkins-golang%E6%8C%81%E7%BB%AD%E9%9B%86%E6%88%90%E5%AE%9E%E8%B7%B5/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="docker&#43;jenkins&#43;golang持续集成实践">
+  <meta property="og:description" content="因为生产需要最近又重新折腾了一下Jenkins和docker。主要目的是想自动编译，打包，部署一些Golang的HttpServer。于是决定使用Jenkins来做这个持续集成的载体。">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2018-05-03T16:54:10+00:00">
+    <meta property="article:modified_time" content="2018-05-03T16:54:10+00:00">
+    <meta property="article:tag" content="Golang">
+    <meta property="article:tag" content="Jenkins">
+    <meta property="article:tag" content="Docker">
+    <meta property="article:tag" content="CI">
+    <meta property="article:tag" content="CD">
+<title>docker&#43;jenkins&#43;golang持续集成实践 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2018/05/03/docker-jenkins-golang%E6%8C%81%E7%BB%AD%E9%9B%86%E6%88%90%E5%AE%9E%E8%B7%B5/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>docker&#43;jenkins&#43;golang持续集成实践</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#起因">起因</a></li>
+        <li><a href="#安装docker和pull-jenkins镜像">安装Docker和Pull Jenkins镜像</a></li>
+        <li><a href="#jenkins--docker-compose配置">Jenkins &amp; docker-compose配置</a></li>
+        <li><a href="#publish-over-ssh配置">Publish Over SSH配置</a></li>
+        <li><a href="#golang-build-env">Golang Build-env</a></li>
+        <li><a href="#如何打包部署">如何打包部署</a></li>
+        <li><a href="#总结">总结</a></li>
+        <li><a href="#参考资料">参考资料</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    docker&#43;jenkins&#43;golang持续集成实践
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>May 3, 2018</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/DevOps/">DevOps</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/Jenkins/">Jenkins</a>, 
+      <a href="/tags/docker/">Docker</a>, 
+      <a href="/tags/CI/">CI</a>, 
+      <a href="/tags/CD/">CD</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><hr>
+<h3 id="起因">
+  起因
+  <a class="anchor" href="#%e8%b5%b7%e5%9b%a0">#</a>
+</h3>
+<p>因为生产需要最近又重新折腾了一下Jenkins和docker。主要目的是想自动编译，打包，部署一些Golang的HttpServer。于是决定使用Jenkins来做这个持续集成的载体，选择Jenkins出于两点原因：</p>
+<p><em>1. 以前就使用过，上手会更快</em>
+<em>2. 社区比较成熟，插件和文档丰富</em></p>
+<!-- more -->
+<hr>
+<h3 id="安装docker和pull-jenkins镜像">
+  安装Docker和Pull Jenkins镜像
+  <a class="anchor" href="#%e5%ae%89%e8%a3%85docker%e5%92%8cpull-jenkins%e9%95%9c%e5%83%8f">#</a>
+</h3>
+<p>这一步，作为前置条件且不是本文主要要描述的步骤，因此略去。网上也有很多参考资料～</p>
+<hr>
+<h3 id="jenkins--docker-compose配置">
+  Jenkins &amp; docker-compose配置
+  <a class="anchor" href="#jenkins--docker-compose%e9%85%8d%e7%bd%ae">#</a>
+</h3>
+<p>为了方便我才用了docker-compose这个工具，docker-compose 基础可以参见我的<a href="https://yeqown.github.io/2018/01/24/Docker-Compose%E4%B8%8A%E6%89%8B/">docker-compose上手</a>。这里直接上配置：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yml" data-lang="yml"><span style="display:flex;"><span><span style="color:#f92672">version</span>: <span style="color:#e6db74">&#39;2&#39;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">services</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">jenkins</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">container_name</span>: <span style="color:#ae81ff">jenkins-lts</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">ports</span>:
+</span></span><span style="display:flex;"><span>      - <span style="color:#ae81ff">9001</span>:<span style="color:#ae81ff">8080</span>
+</span></span><span style="display:flex;"><span>      - <span style="color:#ae81ff">50000</span>:<span style="color:#ae81ff">50000</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">image</span>: <span style="color:#ae81ff">jenkins/jenkins:lts</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">volumes</span>:
+</span></span><span style="display:flex;"><span>      - <span style="color:#ae81ff">/home/worker/jenkins/jenkins_home:/var/jenkins_home</span>
+</span></span></code></pre></div><p>配置也是官方的示例配置。</p>
+<blockquote>
+<p>Note: 将宿主机的/home/worker/jenkins/jenkins_home挂载为容器的/var/jenkins_home目录。这样做的目的是，如果容器被不小心删除也不至于Jenkins的数据丢失。</p>
+</blockquote>
+<p>到这里，我们只需要执行<code>docker-compose up -d</code>便可以将Jenkins容器跑起来了，再配置一下Nginx，便可以直接访问到Jenkins页面了，并进行初始化。</p>
+<p>我的目录结构如下：</p>
+<pre><code>➜  jenkins ll
+total 8.0K
+-rw-rw-r--  1 worker worker  220 May  2 17:19 docker-compose.yml
+drwxrwxr-x 19 worker worker 4.0K May  3 15:53 jenkins_home
+➜  jenkins pwd
+/home/worker/jenkins
+➜  jenkins docker-compose up -d # 运行
+</code></pre>
+<hr>
+<h3 id="publish-over-ssh配置">
+  Publish Over SSH配置
+  <a class="anchor" href="#publish-over-ssh%e9%85%8d%e7%bd%ae">#</a>
+</h3>
+<p><code>Publish Over SSH</code>配置，由于我们是通过docker运行的Jenkins，因此要特别配置一下SSH，方便Jenkins部署项目。这里先列出步骤：</p>
+<ol>
+<li>安装<code>Publish Over SSH</code></li>
+<li>容器内ssh-keygen</li>
+<li>配置<code>Publish Over SSH</code></li>
+<li>配置Git仓库部署公钥 #这一步相当于拉取代码的Credentials</li>
+</ol>
+<hr>
+<h3 id="golang-build-env">
+  Golang Build-env
+  <a class="anchor" href="#golang-build-env">#</a>
+</h3>
+<p>因为默认的Jenkins镜像是不带有Go的编译工具的，所以我们很有必要安装一个<code>Go</code>插件<a href="https://wiki.jenkins.io/display/JENKINS/Go&#43;Plugin">Go-Plugin-Jenkins</a>
+具体步骤如下：</p>
+<ol>
+<li>安装Jenkins<code>Go</code>插件</li>
+<li>在全局工具配置中，安装Go</li>
+<li>在对应任务配置-&gt; 构建环境项，选择Go版本</li>
+</ol>
+<p>这一步的详细步骤可以在参考文献第一条中查询<code>Setup Go Build Environment</code></p>
+<blockquote>
+<p>Note: 官方文档中说全局配置Go是在系统设置中进行的，但是我用的<code>Jenkins ver. 2.107.2</code>，这一项配置是在全局工具配置中。</p>
+</blockquote>
+<hr>
+<h3 id="如何打包部署">
+  如何打包部署
+  <a class="anchor" href="#%e5%a6%82%e4%bd%95%e6%89%93%e5%8c%85%e9%83%a8%e7%bd%b2">#</a>
+</h3>
+<p>编写一个makefile来打包项目，通过<code>scp</code>来分发部署服务，这也是配置<code>Publish Over SSH</code>的目的。</p>
+<blockquote>
+<p>由于Jenkins镜像不带有make相关工具（甚至Vim也没有），所以需要安装Make及其相关工具。与此同时，如果项目使用了相关的依赖管理工具，因此还有必要去配置相关的GO环境变量。其中Go的安装路径在：
+/var/jenkins_home/tools/org.jenkinsci.plugins.golang.GolangInstallation/$GOVERSION中。</p>
+</blockquote>
+<p>这里贴上我的Makefile</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-makefile" data-lang="makefile"><span style="display:flex;"><span><span style="color:#75715e"># To test, build, deploy offline-tasks
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#   -: ignore this commnad error
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#   @: no display current commnad to std output
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Commnads declare
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>GOCMD<span style="color:#f92672">=</span>go
+</span></span><span style="display:flex;"><span>GOTEST<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>GOCMD<span style="color:#66d9ef">)</span> test
+</span></span><span style="display:flex;"><span>GOBUILD<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>GOCMD<span style="color:#66d9ef">)</span> build
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Params define
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>MAIN_PATH<span style="color:#f92672">=</span>../main
+</span></span><span style="display:flex;"><span>PACKAGE_PATH<span style="color:#f92672">=</span>../package
+</span></span><span style="display:flex;"><span>PACKAGE_BIN_PATH<span style="color:#f92672">=</span>../package/bin
+</span></span><span style="display:flex;"><span>BIN<span style="color:#f92672">=</span>offline-tasks
+</span></span><span style="display:flex;"><span>FILENAME<span style="color:#f92672">=</span>offline-tasks.tar.gz
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Deploy Params
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>DEV_HOST<span style="color:#f92672">=</span>zy-dev
+</span></span><span style="display:flex;"><span>DEV_TAR_PATH<span style="color:#f92672">=</span>/home/worker/project/offline-tasks
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>PROD_HOST<span style="color:#f92672">=</span>zy-pro2
+</span></span><span style="display:flex;"><span>PROD_TAR_PATH<span style="color:#f92672">=</span>/home/worker/project/offline-tasks
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">default</span><span style="color:#f92672">:</span> build pack
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">test</span><span style="color:#f92672">:</span> 
+</span></span><span style="display:flex;"><span>  <span style="color:#75715e"># testing</span>
+</span></span><span style="display:flex;"><span>  - <span style="color:#66d9ef">$(</span>GOTEST<span style="color:#66d9ef">)</span> ../... -v
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">build</span><span style="color:#f92672">:</span> 
+</span></span><span style="display:flex;"><span>  <span style="color:#75715e"># building</span>
+</span></span><span style="display:flex;"><span>  mkdir <span style="color:#66d9ef">$(</span>PACKAGE_PATH<span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>  mkdir <span style="color:#66d9ef">$(</span>PACKAGE_BIN_PATH<span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>  cd <span style="color:#66d9ef">$(</span>MAIN_PATH<span style="color:#66d9ef">)</span> <span style="color:#f92672">&amp;&amp;</span> <span style="color:#66d9ef">$(</span>GOBUILD<span style="color:#66d9ef">)</span> -o <span style="color:#66d9ef">$(</span>BIN<span style="color:#66d9ef">)</span> 
+</span></span><span style="display:flex;"><span>  mv <span style="color:#e6db74">&#34;</span><span style="color:#66d9ef">$(</span>MAIN_PATH<span style="color:#66d9ef">)</span><span style="color:#e6db74">/</span><span style="color:#66d9ef">$(</span>BIN<span style="color:#66d9ef">)</span><span style="color:#e6db74">&#34;</span> <span style="color:#66d9ef">$(</span>PACKAGE_BIN_PATH<span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>  cp -r <span style="color:#e6db74">&#34;../configs&#34;</span> <span style="color:#66d9ef">$(</span>PACKAGE_PATH<span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>  cp <span style="color:#e6db74">&#34;../sh/start.sh&#34;</span> <span style="color:#66d9ef">$(</span>PACKAGE_BIN_PATH<span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">pack</span><span style="color:#f92672">:</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#75715e"># packing</span>
+</span></span><span style="display:flex;"><span>  cd <span style="color:#66d9ef">$(</span>PACKAGE_PATH<span style="color:#66d9ef">)</span> <span style="color:#f92672">&amp;&amp;</span> tar -zcvf ../<span style="color:#66d9ef">$(</span>FILENAME<span style="color:#66d9ef">)</span> ./*
+</span></span><span style="display:flex;"><span>  mv ../<span style="color:#66d9ef">$(</span>FILENAME<span style="color:#66d9ef">)</span> <span style="color:#66d9ef">$(</span>PACKAGE_PATH<span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">##################################################
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#                                                #
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#   deploy:         from zy-dev to execute       #
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#   deploy-dev:     from dev-CI to execute       #
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#   deploy-prod:    from prod-CI to execute      #
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#                                                #
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">##################################################
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">deploy</span><span style="color:#f92672">:</span> clean build pack
+</span></span><span style="display:flex;"><span>  <span style="color:#75715e"># deploy dev from dev</span>
+</span></span><span style="display:flex;"><span>  cp <span style="color:#66d9ef">$(</span>PACKAGE_PATH<span style="color:#66d9ef">)</span>/<span style="color:#66d9ef">$(</span>FILENAME<span style="color:#66d9ef">)</span> <span style="color:#66d9ef">$(</span>DEV_TAR_PATH<span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>  cd <span style="color:#66d9ef">$(</span>DEV_TAR_PATH<span style="color:#66d9ef">)</span> <span style="color:#f92672">&amp;&amp;</span> tar zxvf <span style="color:#66d9ef">$(</span>FILENAME<span style="color:#66d9ef">)</span> <span style="color:#f92672">&amp;&amp;</span> supervisorctl -c configs/dev.supervisord.conf restart offline-tasks
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">deploy-dev</span><span style="color:#f92672">:</span> clean build pack
+</span></span><span style="display:flex;"><span>  <span style="color:#75715e"># deploy-dev from CI</span>
+</span></span><span style="display:flex;"><span>  scp <span style="color:#66d9ef">$(</span>PACKAGE_PATH<span style="color:#66d9ef">)</span>/<span style="color:#66d9ef">$(</span>FILENAME<span style="color:#66d9ef">)</span> <span style="color:#66d9ef">$(</span>DEV_HOST<span style="color:#66d9ef">)</span>:<span style="color:#66d9ef">$(</span>DEV_TAR_PATH<span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>  ssh <span style="color:#66d9ef">$(</span>DEV_HOST<span style="color:#66d9ef">)</span> <span style="color:#e6db74">&#34;cd </span><span style="color:#66d9ef">$(</span>DEV_TAR_PATH<span style="color:#66d9ef">)</span><span style="color:#e6db74"> &amp;&amp; tar zxvf </span><span style="color:#66d9ef">$(</span>FILENAME<span style="color:#66d9ef">)</span><span style="color:#e6db74"> &amp;&amp; supervisorctl -c configs/dev.supervisord.conf restart offline-tasks&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">deploy-prod</span><span style="color:#f92672">:</span> clean build pack
+</span></span><span style="display:flex;"><span>  <span style="color:#75715e"># deploying prod from dev or CI</span>
+</span></span><span style="display:flex;"><span>  scp <span style="color:#66d9ef">$(</span>PACKAGE_PATH<span style="color:#66d9ef">)</span>/<span style="color:#66d9ef">$(</span>FILENAME<span style="color:#66d9ef">)</span> <span style="color:#66d9ef">$(</span>PROD_HOST<span style="color:#66d9ef">)</span>:<span style="color:#66d9ef">$(</span>PROD_TAR_PATH<span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>  ssh <span style="color:#66d9ef">$(</span>PROD_HOST<span style="color:#66d9ef">)</span> <span style="color:#e6db74">&#34;cd </span><span style="color:#66d9ef">$(</span>PROD_TAR_PATH<span style="color:#66d9ef">)</span><span style="color:#e6db74"> &amp;&amp; tar zxvf </span><span style="color:#66d9ef">$(</span>FILENAME<span style="color:#66d9ef">)</span><span style="color:#e6db74"> &amp;&amp; supervisorctl -c configs/prod.supervisord.conf restart offline-tasks&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">clean</span><span style="color:#f92672">:</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#75715e"># cleaning</span>
+</span></span><span style="display:flex;"><span>  rm -fr <span style="color:#66d9ef">$(</span>PACKAGE_PATH<span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>  rm -fr ../<span style="color:#66d9ef">$(</span>FILENAME<span style="color:#66d9ef">)</span>
+</span></span></code></pre></div><hr>
+<h3 id="总结">
+  总结
+  <a class="anchor" href="#%e6%80%bb%e7%bb%93">#</a>
+</h3>
+<p>进过上述的一系列操作之后，只剩下一个比较尴尬的问题了：如果Go代码仓库中vendor不带有依赖项目，那么获取依赖的动作就要自己手动来操作了～。或许可以在makefile中新增一个deps，如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-makefile" data-lang="makefile"><span style="display:flex;"><span><span style="color:#75715e"># default set $CURDIR=&#34;$PROJ_ROOT/sh&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"># preparing works...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>GVT_RESTORE<span style="color:#f92672">=</span>gvt restore
+</span></span><span style="display:flex;"><span>PROJ_ROOT<span style="color:#f92672">=</span>../
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">deps</span><span style="color:#f92672">:</span>
+</span></span><span style="display:flex;"><span>  cd <span style="color:#f92672">(</span>$PROJ_ROOT<span style="color:#f92672">)</span> <span style="color:#f92672">&amp;&amp;</span> <span style="color:#66d9ef">$(</span>GVT_RESTORE<span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">build</span><span style="color:#f92672">:</span> deps
+</span></span><span style="display:flex;"><span>  <span style="color:#75715e"># building</span>
+</span></span><span style="display:flex;"><span>  mkdir <span style="color:#66d9ef">$(</span>PACKAGE_PATH<span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>  mkdir <span style="color:#66d9ef">$(</span>PACKAGE_BIN_PATH<span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>  cd <span style="color:#66d9ef">$(</span>MAIN_PATH<span style="color:#66d9ef">)</span> <span style="color:#f92672">&amp;&amp;</span> <span style="color:#66d9ef">$(</span>GOBUILD<span style="color:#66d9ef">)</span> -o <span style="color:#66d9ef">$(</span>BIN<span style="color:#66d9ef">)</span> 
+</span></span><span style="display:flex;"><span>  mv <span style="color:#e6db74">&#34;</span><span style="color:#66d9ef">$(</span>MAIN_PATH<span style="color:#66d9ef">)</span><span style="color:#e6db74">/</span><span style="color:#66d9ef">$(</span>BIN<span style="color:#66d9ef">)</span><span style="color:#e6db74">&#34;</span> <span style="color:#66d9ef">$(</span>PACKAGE_BIN_PATH<span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>  cp -r <span style="color:#e6db74">&#34;../configs&#34;</span> <span style="color:#66d9ef">$(</span>PACKAGE_PATH<span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>  cp <span style="color:#e6db74">&#34;../sh/start.sh&#34;</span> <span style="color:#66d9ef">$(</span>PACKAGE_BIN_PATH<span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># other commands...
+</span></span></span></code></pre></div><p>并且加deps命令，加build命令中，每次打包都检查一下依赖。</p>
+<hr>
+<h3 id="参考资料">
+  参考资料
+  <a class="anchor" href="#%e5%8f%82%e8%80%83%e8%b5%84%e6%96%99">#</a>
+</h3>
+<ul>
+<li><a href="https://zpjiang.me/2017/08/09/Setup-Jenkins-for-Go-Projects/">https://zpjiang.me/2017/08/09/Setup-Jenkins-for-Go-Projects/</a></li>
+<li><a href="https://wiki.jenkins.io/display/JENKINS/Go&#43;Plugin">https://wiki.jenkins.io/display/JENKINS/Go+Plugin</a></li>
+</ul>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "jenkins-golang-docker-ci-cd", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#起因">起因</a></li>
+        <li><a href="#安装docker和pull-jenkins镜像">安装Docker和Pull Jenkins镜像</a></li>
+        <li><a href="#jenkins--docker-compose配置">Jenkins &amp; docker-compose配置</a></li>
+        <li><a href="#publish-over-ssh配置">Publish Over SSH配置</a></li>
+        <li><a href="#golang-build-env">Golang Build-env</a></li>
+        <li><a href="#如何打包部署">如何打包部署</a></li>
+        <li><a href="#总结">总结</a></li>
+        <li><a href="#参考资料">参考资料</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

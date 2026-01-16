@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="动手做一个 protoc-gen-fieldmask 插件来解决，gRPC在服务侧的增量更新和屏蔽字段的场景问题；同时总结下使用 PG* 开发 protoc 插件的一些经验。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2022/01/25/protoc-gen-fieldmask%E6%8F%92%E4%BB%B6/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="protoc-gen-fieldmask插件">
+  <meta property="og:description" content="动手做一个 protoc-gen-fieldmask 插件来解决，gRPC在服务侧的增量更新和屏蔽字段的场景问题；同时总结下使用 PG* 开发 protoc 插件的一些经验。">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2022-01-25T13:46:36+08:00">
+    <meta property="article:modified_time" content="2022-01-25T13:46:36+08:00">
+    <meta property="article:tag" content="Golang">
+    <meta property="article:tag" content="Protocol-Buffers">
+    <meta property="article:tag" content="Fieldmask">
+    <meta property="article:tag" content="GRPC">
+<title>protoc-gen-fieldmask插件 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2022/01/25/protoc-gen-fieldmask%E6%8F%92%E4%BB%B6/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>protoc-gen-fieldmask插件</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#背景">背景</a></li>
+        <li><a href="#解决方案">解决方案</a></li>
+        <li><a href="#关于-_pg_-的一些总结">关于 <em>PG*</em> 的一些总结</a></li>
+        <li><a href="#总结">总结</a></li>
+        <li><a href="#参考资料">参考资料</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    protoc-gen-fieldmask插件
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>January 25, 2022</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Golang/">Golang</a>, 
+      <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/protocol-buffers/">Protocol-Buffers</a>, 
+      <a href="/tags/Fieldmask/">Fieldmask</a>, 
+      <a href="/tags/gRPC/">GRPC</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><h3 id="背景">
+  背景
+  <a class="anchor" href="#%e8%83%8c%e6%99%af">#</a>
+</h3>
+<p>gRPC 作为服务端的常用框架，它通过 protocol-buffers 语言来定义服务，同时也约定了请求和响应的格式，这样在服务端和客户端之间就可以通过 protoc 生成的代码直接运行而不用考虑编码传输问题了。</p>
+<p>但是，可能会遇到这样的场景：</p>
+<ul>
+<li>
+<p>RPC 响应中 <strong><em>无用的字段过多</em></strong> , 浪费带宽和无效计算，如下图所示：</p>
+<blockquote>
+<p>这里的无用字段是指，在响应中，没有用到的字段，这些字段可以忽略掉，不会影响客户端的使用。</p>
+</blockquote>
+  <img src="/images/fieldmask-case1.jpg">
+<p>或许 <strong>拆分接口</strong> 是一个好的办法，但是可能会因为这样那样的原因（信息粒度降低导致接口太多了，有些地方就是需要聚合信息；细粒度的API设计同时会导致代码重复增加），可能无法推动拆分改造。同时如果没有拆分标准，亦或团队内成员不能严格遵守标准，那么拆分也只是重复问题而已。</p>
+</li>
+<li>
+<p>RPC 增量更新时，如何判断零值字段是否需要更新？</p>
+<p>对于 unset 和 zero value 不好区分的语言中（比如：go），在提供服务的一方遇到 <strong><em>增量更新</em></strong> 的场景时就会遇到这样的情况：</p>
+<p>对于这种情况当然可以也有一些方法来解决，比如：<strong>使用指针来定义数据基本类型</strong>，那么在使用的时候如果判定为 <code>nil</code> 就说明没有设置，如果不为 <code>nil</code> 且为零值，那么就说明也是需要更新的。不过这样解决的缺点就是，<code>nil refference panic</code> 的概率又增加了，在使用时也稍微麻烦了一点。</p>
+<p><img src="/images/fieldmask-case2.jpg">·</p>
+</li>
+</ul>
+<h3 id="解决方案">
+  解决方案
+  <a class="anchor" href="#%e8%a7%a3%e5%86%b3%e6%96%b9%e6%a1%88">#</a>
+</h3>
+<p>其实我们在思考上述两种场景的时候，把 <strong>客户端</strong> 和 <strong>服务端</strong> 的角色提取出来，就会发现这两个场景都是从 <strong>服务端</strong> 的视角遇到的问题，两个场景都是类似的：</p>
+<ol>
+<li>客户端需要哪些字段，服务端不知道</li>
+<li>客户端更新了哪些字段，服务端也不知道</li>
+</ol>
+<p>但是，其实客户端是知道的，因此让客户端把这部分信息传递给服务端就行了。因此我们可以用 <a href="">FieldMask</a> 字段，用来传递客户端需要的字段，服务端就只返回需要的字段；客户端的告诉服务端需要哪些字段，服务端就更新哪些字段。</p>
+<p>但是 <code>FieldMask</code> 只是一个定义，在具体的使用场景中还需要开发者自己编写一些辅助方法，来实现功能。那么是不是可以提供一个插件，让开发者可以只编写 <code>proto</code> 文件，便可以自动生成一些辅助方法呢？答案是肯定的，预览效果如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-protobuf" data-lang="protobuf"><span style="display:flex;"><span><span style="color:#66d9ef">message</span> <span style="color:#a6e22e">UserInfoRequest</span> {<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>  <span style="color:#66d9ef">string</span> user_id <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>  google.protobuf.FieldMask field_mask <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span> [<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>    (fieldmask.option.Option)<span style="color:#f92672">.</span>in <span style="color:#f92672">=</span> {gen<span style="color:#f92672">:</span> <span style="color:#66d9ef">true</span>},<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>    (fieldmask.option.Option)<span style="color:#f92672">.</span>out <span style="color:#f92672">=</span> {gen<span style="color:#f92672">:</span> <span style="color:#66d9ef">true</span>, message<span style="color:#f92672">:</span><span style="color:#e6db74">&#34;UserInfoResponse&#34;</span>}<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>  ];<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>}<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">message</span> <span style="color:#a6e22e">Address</span> {<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>  <span style="color:#66d9ef">string</span> country <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>  <span style="color:#66d9ef">string</span> province <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>}<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">message</span> <span style="color:#a6e22e">UserInfoResponse</span> {<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>  <span style="color:#66d9ef">string</span> user_id <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>  <span style="color:#66d9ef">string</span> name <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>  <span style="color:#66d9ef">string</span> email <span style="color:#f92672">=</span> <span style="color:#ae81ff">3</span>;<span style="color:#960050;background-color:#1e0010">·
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>  Address address <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>}<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">message</span> <span style="color:#a6e22e">NonEmpty</span> {}<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">service</span> UserInfo {<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>  <span style="color:#66d9ef">rpc</span> GetUserInfo(UserInfoRequest) <span style="color:#66d9ef">returns</span> (UserInfoResponse) {}<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>  <span style="color:#66d9ef">rpc</span> UpdateUserInfo(UserInfoRequest) <span style="color:#66d9ef">returns</span> (NonEmpty) {}<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>}<span style="color:#960050;background-color:#1e0010">
+</span></span></span></code></pre></div><p>生成的代码如下：</p>
+<blockquote>
+<p>因为篇幅有限，对代码进行了删减，如果需要查阅完整代码请参见 <a href="https://github.com/yeqown/protoc-gen-fieldmask/blob/main/examples/pb/user.pb.fm.go">github.com/yeqown/protoc-gen-fieldmask/examples/pb/user.pb.fm.go</a></p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// FieldMask 公共部分代码
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// FieldMaskWithMode 根据不同的模式决定不同的使用姿势（Filter 和 Prune）
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">x</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">UserInfoRequest</span>) <span style="color:#a6e22e">FieldMaskWithMode</span>(<span style="color:#a6e22e">mode</span> <span style="color:#a6e22e">pbfieldmask</span>.<span style="color:#a6e22e">MaskMode</span>) <span style="color:#f92672">*</span><span style="color:#a6e22e">UserInfoRequest_FieldMask</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">fm</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">UserInfoRequest_FieldMask</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">maskMode</span>:    <span style="color:#a6e22e">mode</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">maskMapping</span>: make(<span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#66d9ef">struct</span>{}, len(<span style="color:#a6e22e">x</span>.<span style="color:#a6e22e">FieldMask</span>.<span style="color:#a6e22e">GetPaths</span>())),
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">path</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">x</span>.<span style="color:#a6e22e">FieldMask</span>.<span style="color:#a6e22e">GetPaths</span>() {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">fm</span>.<span style="color:#a6e22e">maskMapping</span>[<span style="color:#a6e22e">path</span>] = <span style="color:#66d9ef">struct</span>{}{}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">fm</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// Filter 模式下，包含在 FieldMask 中的字段代表 保留 / 更新。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">x</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">UserInfoRequest</span>) <span style="color:#a6e22e">FieldMask_Filter</span>() <span style="color:#f92672">*</span><span style="color:#a6e22e">UserInfoRequest_FieldMask</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">x</span>.<span style="color:#a6e22e">FieldMaskWithMode</span>(<span style="color:#a6e22e">pbfieldmask</span>.<span style="color:#a6e22e">MaskMode_Filter</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// Prune 模式下，包含在 FieldMask 的字段代表需要 去除 / 不更新。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">x</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">UserInfoRequest</span>) <span style="color:#a6e22e">FieldMask_Prune</span>() <span style="color:#f92672">*</span><span style="color:#a6e22e">UserInfoRequest_FieldMask</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">x</span>.<span style="color:#a6e22e">FieldMaskWithMode</span>(<span style="color:#a6e22e">pbfieldmask</span>.<span style="color:#a6e22e">MaskMode_Prune</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// UserInfoRequest_FieldMask provide provide helper functions to deal with FieldMask.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">UserInfoRequest_FieldMask</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">maskMode</span>    <span style="color:#a6e22e">pbfieldmask</span>.<span style="color:#a6e22e">MaskMode</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">maskMapping</span> <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#66d9ef">struct</span>{}
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 增量更新的服务部分代码 (fieldmask.option.Option).in = {gen: true} 控制生成
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">x</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">UserInfoRequest</span>) <span style="color:#a6e22e">MaskIn_UserId</span>() <span style="color:#f92672">*</span><span style="color:#a6e22e">UserInfoRequest</span> {}
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">x</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">UserInfoRequest_FieldMask</span>) <span style="color:#a6e22e">MaskedIn_UserId</span>() <span style="color:#66d9ef">bool</span> {}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 响应字段裁剪部分代码 (fieldmask.option.Option).out = {gen: true, message:&#34;UserInfoResponse&#34;} 控制生成
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">x</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">UserInfoRequest</span>) <span style="color:#a6e22e">MaskOut_UserId</span>() <span style="color:#f92672">*</span><span style="color:#a6e22e">UserInfoRequest</span> {}
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">x</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">UserInfoRequest</span>) <span style="color:#a6e22e">MaskOut_Name</span>() <span style="color:#f92672">*</span><span style="color:#a6e22e">UserInfoRequest</span> {}
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">x</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">UserInfoRequest_FieldMask</span>) <span style="color:#a6e22e">MaskedOut_UserId</span>() <span style="color:#66d9ef">bool</span> {}
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">x</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">UserInfoRequest_FieldMask</span>) <span style="color:#a6e22e">MaskedOut_Name</span>() <span style="color:#66d9ef">bool</span> {}
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// Mask 根据 FieldMask 和 mode 来裁剪响应字段。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">x</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">UserInfoRequest_FieldMask</span>) <span style="color:#a6e22e">Mask</span>(<span style="color:#a6e22e">m</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">UserInfoResponse</span>) <span style="color:#f92672">*</span><span style="color:#a6e22e">UserInfoResponse</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">switch</span> <span style="color:#a6e22e">x</span>.<span style="color:#a6e22e">maskMode</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">pbfieldmask</span>.<span style="color:#a6e22e">MaskMode_Filter</span>:
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">x</span>.<span style="color:#a6e22e">filter</span>(<span style="color:#a6e22e">m</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">pbfieldmask</span>.<span style="color:#a6e22e">MaskMode_Prune</span>:
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">x</span>.<span style="color:#a6e22e">prune</span>(<span style="color:#a6e22e">m</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">m</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">x</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">UserInfoRequest_FieldMask</span>) <span style="color:#a6e22e">filter</span>(<span style="color:#a6e22e">m</span> <span style="color:#a6e22e">proto</span>.<span style="color:#a6e22e">Message</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> len(<span style="color:#a6e22e">x</span>.<span style="color:#a6e22e">maskMapping</span>) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">pr</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">m</span>.<span style="color:#a6e22e">ProtoReflect</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">pr</span>.<span style="color:#a6e22e">Range</span>(<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">fd</span> <span style="color:#a6e22e">protoreflect</span>.<span style="color:#a6e22e">FieldDescriptor</span>, <span style="color:#a6e22e">_</span> <span style="color:#a6e22e">protoreflect</span>.<span style="color:#a6e22e">Value</span>) <span style="color:#66d9ef">bool</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">x</span>.<span style="color:#a6e22e">maskMapping</span>[string(<span style="color:#a6e22e">fd</span>.<span style="color:#a6e22e">Name</span>())]
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">ok</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">pr</span>.<span style="color:#a6e22e">Clear</span>(<span style="color:#a6e22e">fd</span>)
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">x</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">UserInfoRequest_FieldMask</span>) <span style="color:#a6e22e">prune</span>(<span style="color:#a6e22e">m</span> <span style="color:#a6e22e">proto</span>.<span style="color:#a6e22e">Message</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> len(<span style="color:#a6e22e">x</span>.<span style="color:#a6e22e">maskMapping</span>) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">pr</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">m</span>.<span style="color:#a6e22e">ProtoReflect</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">pr</span>.<span style="color:#a6e22e">Range</span>(<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">fd</span> <span style="color:#a6e22e">protoreflect</span>.<span style="color:#a6e22e">FieldDescriptor</span>, <span style="color:#a6e22e">_</span> <span style="color:#a6e22e">protoreflect</span>.<span style="color:#a6e22e">Value</span>) <span style="color:#66d9ef">bool</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">x</span>.<span style="color:#a6e22e">maskMapping</span>[string(<span style="color:#a6e22e">fd</span>.<span style="color:#a6e22e">Name</span>())]
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">ok</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">pr</span>.<span style="color:#a6e22e">Clear</span>(<span style="color:#a6e22e">fd</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>又了上述的辅助代码，因此我们就可以在客户端和服务端直接使用了：</p>
+<p>客户端侧：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">maskedReq</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">pb</span>.<span style="color:#a6e22e">UserInfoRequest</span>{
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">UserId</span>: <span style="color:#e6db74">&#34;1&#34;</span>,
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">maskedReq</span>.
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">MaskOut_Email</span>(). <span style="color:#75715e">// masking email field in response
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">MaskOut_Address</span>() <span style="color:#75715e">// masking address field in response
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div><p>服务端侧：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// 响应裁剪示例
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">u</span> <span style="color:#a6e22e">userServer</span>) <span style="color:#a6e22e">GetUserInfo</span>(
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>,
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">request</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">pb</span>.<span style="color:#a6e22e">UserInfoRequest</span>,
+</span></span><span style="display:flex;"><span>) (<span style="color:#f92672">*</span><span style="color:#a6e22e">pb</span>.<span style="color:#a6e22e">UserInfoResponse</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// FieldMask_Filter means that the fields are included in the response,
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// otherwise they are omitted.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// FieldMask_Prune means masked fields are not included in the response,
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// otherwise they are included.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">fm</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">request</span>.<span style="color:#a6e22e">FieldMask_Filter</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// fm2 := request.FieldMask_Prune()
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;userServer.GetUserInfo is called: %v\n&#34;</span>, <span style="color:#a6e22e">request</span>.<span style="color:#a6e22e">String</span>())
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">resp</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">pb</span>.<span style="color:#a6e22e">UserInfoResponse</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">UserId</span>:  <span style="color:#e6db74">&#34;69781&#34;</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Name</span>:    <span style="color:#e6db74">&#34;yeqown&#34;</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Email</span>:   <span style="color:#e6db74">&#34;yeqown@gmail.com&#34;</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Address</span>: <span style="color:#66d9ef">nil</span>,
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// judge if the field masked or not, avoid unnecessary call or calculation.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">fm</span>.<span style="color:#a6e22e">MaskedOut_Address</span>() {
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// filter more, so the address field should be included.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">resp</span>.<span style="color:#a6e22e">Address</span> = <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">pb</span>.<span style="color:#a6e22e">Address</span>{
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">Country</span>:  <span style="color:#e6db74">&#34;China&#34;</span>,
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">Province</span>: <span style="color:#e6db74">&#34;Sichuan&#34;</span>,
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// filter the field masked out.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">_</span> = <span style="color:#a6e22e">fm</span>.<span style="color:#a6e22e">Mask</span>(<span style="color:#a6e22e">resp</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">resp</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 增量更新示例
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">u</span> <span style="color:#a6e22e">userServer</span>) <span style="color:#a6e22e">UpdateUserInfo</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">request</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">pb</span>.<span style="color:#a6e22e">UserInfoRequest</span>) (<span style="color:#f92672">*</span><span style="color:#a6e22e">pb</span>.<span style="color:#a6e22e">NonEmpty</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// FieldMask_Filter means that the fields are expected to update,
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// otherwise they are ignored.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// FieldMask_Prune means masked fields are ignored to update,
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// otherwise they are expected to update.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">fm</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">request</span>.<span style="color:#a6e22e">FieldMask_Filter</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// fm2 := request.FieldMask_Prune()
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;userServer.UpdateUserInfo is called: %v\n&#34;</span>, <span style="color:#a6e22e">request</span>.<span style="color:#a6e22e">String</span>())
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">fm</span>.<span style="color:#a6e22e">MaskedIn_UserId</span>() {
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// userId want to be updated, so you should use request.UserId to update.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;userId want to be updated.&#34;</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> new(<span style="color:#a6e22e">pb</span>.<span style="color:#a6e22e">NonEmpty</span>), <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="关于-_pg_-的一些总结">
+  关于 <em>PG*</em> 的一些总结
+  <a class="anchor" href="#%e5%85%b3%e4%ba%8e-_pg_-%e7%9a%84%e4%b8%80%e4%ba%9b%e6%80%bb%e7%bb%93">#</a>
+</h3>
+<blockquote>
+<p>PG* 就是 protoc-gen-star 的缩写，是一个高效开发 protoc 插件的 go 语言库。</p>
+</blockquote>
+<p><a href="https://github.com/yeqown/protoc-gen-fieldmask">protoc-gen-fieldmask</a> 就是以它为基础开发的一个插件（PGV也是）。比较早以前就知道了这么个库的存在，但是但是并没有什么好的点子，也就一直没有实践过，这次就顺便学习了一下这个库的一些用法：</p>
+<ul>
+<li>
+<p>基本原理</p>
+<p>所有的插件都是配合 protoc 一起工作的，protoc 会处理源代码然后生成一个 <code>CodeGeneratorRequest</code> 的请求，调用插件，插件处理这个请求，生成一个 <code>CodeGeneratorResponse</code> 的响应，protoc 会处理这个响应并生成文件。</p>
+<p>整个流程如下：</p>
+<p><code>foo.proto → protoc → CodeGeneratorRequest → protoc-gen-myplugin → CodeGeneratorResponse → protoc → foo.pb.go</code></p>
+</li>
+<li>
+<p>基本用法</p>
+<p><code>protoc-gen-star</code> 抽象了一个 <code>Module</code>, 并提供一个一系列的辅助方法，因此你需要做的事就是实现这个 <code>Module</code>。那么如何实现呢？</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// Module describes the interface for a domain-specific code generation module
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// that can be registered with the PG* generator.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Module</span> <span style="color:#66d9ef">interface</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// The Name of the Module, used when establishing the build context and used
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// as the base prefix for all debugger output.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">Name</span>() <span style="color:#66d9ef">string</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// InitContext is called on a Module with a pre-configured BuildContext that
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// should be stored and used by the Module.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">InitContext</span>(<span style="color:#a6e22e">c</span> <span style="color:#a6e22e">BuildContext</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// Execute is called on the module with the target Files as well as all
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// loaded Packages from the gatherer. The module should return a slice of
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// Artifacts that it would like to be generated.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">Execute</span>(<span style="color:#a6e22e">targets</span> <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#a6e22e">File</span>, <span style="color:#a6e22e">packages</span> <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#a6e22e">Package</span>) []<span style="color:#a6e22e">Artifact</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>重点就是 <code>Execute</code> 方法，在其中遍历所有文件的 <code>AST</code>，识别你的插件需要处理的特征，然后准备好一个 <code>Artifact</code>，然后返回这个 <code>Artifact</code>。</p>
+<p><code>Artifact</code> 就是预期生成的 <code>文件对象</code>，在 <code>protoc-gen-star</code> 中，它可以是通过模板生成，也可以就是完整的文件内容。</p>
+</li>
+<li>
+<p>如何调试你的插件</p>
+<blockquote>
+<p>在开发过程中，调试/测试环节必不可少，那么对于依赖于 protoc 编译的插件该怎么调试呢？尤其是怎么断点调试呢？</p>
+</blockquote>
+<ul>
+<li>日志调试</li>
+</ul>
+<p><code>protoc-gen-star</code> 已经在 <code>ModuleBase</code> 中内置了日志记录，只需要调用 <code>ModuleBase.Debugf</code> 或者 <code>ModuleBase.Logf</code> 方法即可。</p>
+<ul>
+<li>IDE 断点调试</li>
+</ul>
+<p>光有日志可不够，想要追踪某个变量的值，打日志可能会让你崩溃。我们得想办法，可以在IDE中调试自己的插件。想要断点调试，那么就不能依赖 protoc, 必须得让插件可以独立运行，这样才能调试。</p>
+<p>回顾一下前面的基本原理，我们的插件其实是依赖 <code>CodeGeneratorRequest</code>，因此如果我们可以构造一个 <code>CodeGeneratorRequest</code>，那么就可以构建一个测试用例，用来调试运行了。<code>proto-gen-star</code> 已经提供了一个 <code>protoc-gen-debug</code> 来生成 <code>CodeGeneratorRequest</code>。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>protoc <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>    -I<span style="color:#f92672">=</span>./examples/pb <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>    -I<span style="color:#f92672">=</span>./proto <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>    --plugin<span style="color:#f92672">=</span>protoc-gen-debug<span style="color:#f92672">=</span>/usr/local/bin/proto-gen-debug <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>    --debug_out<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;./internal/module/debugdata:.&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>    ./examples/pb/user.proto
+</span></span></code></pre></div><p>再编写一个类似的测试用例，就可以在IDE中调试了自己的插件了。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">m</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">moduleTestSuite</span>) <span style="color:#a6e22e">Test_ForDebug</span>() {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// please look up the README at repository root directory to see how to
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// generate the `debugdata` and code_generator_request binary.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">req</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Open</span>(<span style="color:#e6db74">&#34;./debugdata/code_generator_request.pb.bin&#34;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">m</span>.<span style="color:#a6e22e">NoError</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">fs</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">afero</span>.<span style="color:#a6e22e">NewMemMapFs</span>()
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">res</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">bytes</span>.<span style="color:#a6e22e">Buffer</span>{}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">pgs</span>.<span style="color:#a6e22e">Init</span>(
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">pgs</span>.<span style="color:#a6e22e">ProtocInput</span>(<span style="color:#a6e22e">req</span>),                    <span style="color:#75715e">// use the pre-generated request
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">pgs</span>.<span style="color:#a6e22e">ProtocOutput</span>(<span style="color:#a6e22e">res</span>),                   <span style="color:#75715e">// capture CodeGeneratorResponse
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">pgs</span>.<span style="color:#a6e22e">FileSystem</span>(<span style="color:#a6e22e">fs</span>),                      <span style="color:#75715e">// capture any custom files written directly to disk
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">pgs</span>.<span style="color:#a6e22e">MutateParams</span>(<span style="color:#a6e22e">mutateLangParam</span>(<span style="color:#e6db74">&#34;go&#34;</span>)), <span style="color:#75715e">// mutate params
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    ).
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">RegisterModule</span>(<span style="color:#a6e22e">m</span>.<span style="color:#a6e22e">module</span>).
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">Render</span>()
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div></li>
+</ul>
+<h3 id="总结">
+  总结
+  <a class="anchor" href="#%e6%80%bb%e7%bb%93">#</a>
+</h3>
+<p><code>FieldMask</code> 在屏蔽字段功能上类似 <code>GraphQL</code> 的功能，但是实现机理更加简单，更加灵活；最重要的是，gRPC 的使用范围更广，更多的被微服务场景中使用。</p>
+<blockquote>
+<p>水平有限，如有错误，欢迎勘误指正🙏。</p>
+</blockquote>
+<h3 id="参考资料">
+  参考资料
+  <a class="anchor" href="#%e5%8f%82%e8%80%83%e8%b5%84%e6%96%99">#</a>
+</h3>
+<ul>
+<li><a href="https://pkg.go.dev/google.golang.org/protobuf/types/known/fieldmaskpb">go.dev fieldmaskpb</a></li>
+<li><a href="https://github.com/yeqown/protoc-gen-fieldmask">protoc-gen-fieldmask</a></li>
+<li><a href="https://github.com/lyft/protoc-gen-star">protoc-gen-star</a></li>
+</ul>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#背景">背景</a></li>
+        <li><a href="#解决方案">解决方案</a></li>
+        <li><a href="#关于-_pg_-的一些总结">关于 <em>PG*</em> 的一些总结</a></li>
+        <li><a href="#总结">总结</a></li>
+        <li><a href="#参考资料">参考资料</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="在使用 istio 时，有时候会遇到连接超时的问题，这个问题可能是由于 envoy 的 tcp_idle_timeout 导致的，本文将介绍如何复现和解决这个问题。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2024/03/25/istio-idle-timeout%E9%97%AE%E9%A2%98%E5%A4%8D%E7%8E%B0%E5%92%8C%E8%A7%A3%E5%86%B3/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="Istio Idle Timeout问题复现和解决">
+  <meta property="og:description" content="在使用 istio 时，有时候会遇到连接超时的问题，这个问题可能是由于 envoy 的 tcp_idle_timeout 导致的，本文将介绍如何复现和解决这个问题。">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-03-25T09:37:25+08:00">
+    <meta property="article:modified_time" content="2024-03-25T09:37:25+08:00">
+    <meta property="article:tag" content="Istio">
+    <meta property="article:tag" content="Sidecar">
+    <meta property="article:tag" content="Envoy">
+    <meta property="article:tag" content="Kubenertes">
+    <meta property="article:tag" content="Service Mesh">
+<title>Istio Idle Timeout问题复现和解决 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2024/03/25/istio-idle-timeout%E9%97%AE%E9%A2%98%E5%A4%8D%E7%8E%B0%E5%92%8C%E8%A7%A3%E5%86%B3/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>Istio Idle Timeout问题复现和解决</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#更新">更新</a>
+      <ul>
+        <li><a href="#更新-2024-04-01">更新 2024-04-01</a></li>
+      </ul>
+    </li>
+    <li><a href="#问题描述">问题描述</a></li>
+    <li><a href="#istio-和-envoy-的基本概念">Istio 和 envoy 的基本概念</a></li>
+    <li><a href="#猜测问题原因">猜测问题原因</a>
+      <ul>
+        <li><a href="#数据库连接超时">数据库连接超时</a></li>
+        <li><a href="#envoy-关闭连接">envoy 关闭连接</a></li>
+      </ul>
+    </li>
+    <li><a href="#设计复现">设计复现</a></li>
+    <li><a href="#观察并配置调整">观察并配置调整</a>
+      <ul>
+        <li><a href="#清除-idle_timeout-参数">清除 idle_timeout 参数</a></li>
+      </ul>
+    </li>
+    <li><a href="#总结">总结</a>
+      <ul>
+        <li><a href="#解决">解决</a></li>
+      </ul>
+    </li>
+    <li><a href="#其他">其他</a></li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    Istio Idle Timeout问题复现和解决
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>March 25, 2024</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Kubernetes/">Kubernetes</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Istio/">Istio</a>, 
+      <a href="/tags/sidecar/">Sidecar</a>, 
+      <a href="/tags/Envoy/">Envoy</a>, 
+      <a href="/tags/kubenertes/">Kubenertes</a>, 
+      <a href="/tags/service-mesh/">Service Mesh</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><h2 id="更新">
+  更新
+  <a class="anchor" href="#%e6%9b%b4%e6%96%b0">#</a>
+</h2>
+<h3 id="更新-2024-04-01">
+  更新 2024-04-01
+  <a class="anchor" href="#%e6%9b%b4%e6%96%b0-2024-04-01">#</a>
+</h3>
+<p>通过调整 tcp_proxy 的 idle_timeout 参数后，部分中间件（redis, mongo）的异常问题不再出现，但是 mysql(sharding-spere) 和 memcached 仍然存在 &ldquo;invalid connection&rdquo; 错误，所以还需要找到能够解决 mysql(sharding-spere) 和 memcached 的方法。</p>
+<blockquote>
+<p>上述描述的现象非常主观，不一定正确也不能作为最终结论，但是 idle_timeout 配置确实没有解决所有的问题。</p>
+</blockquote>
+<p>这里，需要知道 istio 在 inject 时会通过 iptables 对应用的流量进行劫持，对于 outbound 的流量 iptables 规则拦截转发到 OUTPUT 链。OUTPUT 的链转发流量到 ISTIO_OUTPUT，这个链会决定服务访问外部服务的流量发往何处。</p>
+<p>这样产生的效果是，除了应用自己建立的连接之外 envoy 也会创建一个代理连接。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ netstat -notp | grep <span style="color:#ae81ff">3307</span>
+</span></span><span style="display:flex;"><span>tcp         <span style="color:#ae81ff">0</span>             172.23.105.25:41030        x.x.x.x:3307         ESTABLISHED -      off<span style="color:#f92672">(</span>0.00/0/0<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>tcp         <span style="color:#ae81ff">0</span>             172.23.105.25:41022        x.x.x.x:3307         ESTABLISHED 1/./app      keepalive<span style="color:#f92672">(</span>0.88/0/0<span style="color:#f92672">)</span>
+</span></span></code></pre></div><p>我遇到的问题可以确定问题就出在 envoy 建立的连接上，因为应用自己建立的连接是正常的，同时还可以看到应用自己的连接开启了 keepalive, 而 envoy 建立的连接没有开启。这样可能会出现这个连接会因为超时而被关闭的情况，或者其他原因导致连接被释放。那如果可以避免将中间件的流量通过 envoy 代理，这样就可以避免这个问题。</p>
+<p>在官方的文档中也提到，https://istio.io/latest/zh/docs/tasks/traffic-management/egress/egress-control/ 对于外部服务，可以通过配置 <code>excludeOutboundPorts</code> 或者 <code>excludeOutboundIPRanges</code> 来使得某些服务的流量不经过 istio sidecar。其背后的原理是通过 iptables 的规则中排除这些端口或者 IP 地址。</p>
+<p>经过实验，发现这个方法可以 <del>解决</del>（绕过）这个问题。还是没有定位到 envoy 代理过程中发生了什么导致连接被关闭的原因，这个问题还需要进一步的分析。</p>
+<h2 id="问题描述">
+  问题描述
+  <a class="anchor" href="#%e9%97%ae%e9%a2%98%e6%8f%8f%e8%bf%b0">#</a>
+</h2>
+<p>在 kubernetes 集群中使用 istio 时，开发同学反馈经常会出现 “invalid connection” 错误，导致业务逻辑错误，而在没有使用 istio 的情况下，这个问题并不会出现。通过查看日志，发现这种错误常发生在集群外的服务连接，如：memcached、redis, mysql, mongodb 等。</p>
+<blockquote>
+<p>通过上述的描述，首先怀疑的是 istio 的 sidecar 代理导致的问题，因为这种错误只有在使用 istio 时才会出现。</p>
+</blockquote>
+<h2 id="istio-和-envoy-的基本概念">
+  Istio 和 envoy 的基本概念
+  <a class="anchor" href="#istio-%e5%92%8c-envoy-%e7%9a%84%e5%9f%ba%e6%9c%ac%e6%a6%82%e5%bf%b5">#</a>
+</h2>
+<p>Istio 服务网格从逻辑上分为数据面和控制面，其中数据面由 Envoy 代理组成，控制面由 Pilot、Citadel、Galley 等组件组成。数据面是由 Envoy 代理组成的，负责实际的流量代理和控制。</p>
+<p>也就是说，当我们在 kubernetes 集群中部署了 istio 时，每个 pod 都会有一个 sidecar 容器，这个容器中就包含了 Envoy 代理，会劫持 pod 中的所有流量。再回到上面的问题，在没有这个代理的情况下，这个问题并不会出现，所以这个问题很有可能是由 Envoy 代理导致的。</p>
+<image src="/images/istio_arch.svg" />
+<h2 id="猜测问题原因">
+  猜测问题原因
+  <a class="anchor" href="#%e7%8c%9c%e6%b5%8b%e9%97%ae%e9%a2%98%e5%8e%9f%e5%9b%a0">#</a>
+</h2>
+<h3 id="数据库连接超时">
+  数据库连接超时
+  <a class="anchor" href="#%e6%95%b0%e6%8d%ae%e5%ba%93%e8%bf%9e%e6%8e%a5%e8%b6%85%e6%97%b6">#</a>
+</h3>
+<p>这里使用的开发语言为 go，&ldquo;invalid connection&rdquo; 错误往往发生在“连接超时”的情况下（连接被服务端单方面关闭，而客户端还在使用）。在数据库连接场景中，往往还会有“连接池”这个概念，连接池会在连接空闲一段时间后关闭连接，与此同时服务端也会设置相应的超时时间，当连接空闲时间超过这个时间时，服务端会主动关闭连接。</p>
+<p>如：</p>
+<ul>
+<li>mysql 的 wait_timeout 参数，当连接空闲时间超过这个时间时，服务端会主动关闭连接。</li>
+<li>mongodb 的 maxIdleTimeMS 参数，连接在池中可保持空闲状态的最大毫秒数，超过这个时间后，连接会被删除或关闭。</li>
+</ul>
+<blockquote>
+<p>在外部没有代理的情况时，如果出现 “invalid connection” 错误，很有可能是由于连接超时导致的。可以检查下客户端和服务端的连接超时时间是否合理设置了（服务端的超时时间要大于客户端的超时时间）。</p>
+</blockquote>
+<h3 id="envoy-关闭连接">
+  envoy 关闭连接
+  <a class="anchor" href="#envoy-%e5%85%b3%e9%97%ad%e8%bf%9e%e6%8e%a5">#</a>
+</h3>
+<p>根据上面的描述，我们可以猜测这个问题是由于 Envoy 代理产生的，那么经过在网上查找资料，发现这个问题可能是由于 Envoy 的 tcp_idle_timeout 导致的。</p>
+<ul>
+<li>
+<p><a href="https://github.com/istio/istio/issues/24387">https://github.com/istio/istio/issues/24387</a></p>
+</li>
+<li>
+<p><a href="https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/timeouts#tcp">https://www.envoyproxy.io/docs/envoy/latest/faq/configuration/timeouts#tcp</a></p>
+<blockquote>
+<p>The TCP proxy idle_timeout is the amount of time that the TCP proxy will allow a connection to exist with no upstream or downstream activity. The default idle timeout if not otherwise specified is 1 hour.</p>
+<p>TCP 代理空闲超时是 TCP 代理允许连接在没有上游或下游活动的情况下存在的时间量。如果没有另外指定，默认空闲超时为 1 小时。</p>
+</blockquote>
+</li>
+<li>
+<p><a href="https://stackoverflow.com/questions/63843610/istio-proxy-closing-long-running-tcp-connection-after-1-hour">https://stackoverflow.com/questions/63843610/istio-proxy-closing-long-running-tcp-connection-after-1-hour</a></p>
+</li>
+</ul>
+<p>那是不是 enovy 关闭了连接，导致了这个问题呢？下面，我们将通过设计一个简单的复现场景来验证这个问题。</p>
+<h2 id="设计复现">
+  设计复现
+  <a class="anchor" href="#%e8%ae%be%e8%ae%a1%e5%a4%8d%e7%8e%b0">#</a>
+</h2>
+<ol>
+<li>准备一个 k8s 集群 ,并安装好 istio</li>
+<li>在集群外部署一个 redis 服务</li>
+<li>设置一个较小的 tcp idle timeout 参数（10s），便于观察</li>
+<li>在集群内部署一个两个 POD, 一个接入 istio，一个不接入 istio（两个 POD 都通过 telnet 连接 redis 服务）</li>
+<li>调整 istio 的 tcp_idle_timeout 参数，观察连接情况</li>
+</ol>
+<blockquote>
+<p>使用到的相关文件参见 <a href="https://github.com/yeqown/playground/tree/master/k8s/istio-idle-timeout">https://github.com/yeqown/playground/tree/master/k8s/istio-idle-timeout</a></p>
+</blockquote>
+<ol>
+<li>EnovyFilter 修改 tcp_idle_timeout 参数</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl apply -f envoyfilter-10s.yaml
+</span></span></code></pre></div><ol start="2">
+<li>部署 POD</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl create ns istio-idle-timeout <span style="color:#f92672">&amp;&amp;</span> kubectl label ns istio-idle-timeout istio-injection<span style="color:#f92672">=</span>enabled
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 部署没有 istio 的 POD</span>
+</span></span><span style="display:flex;"><span>kubectl apply -f deployment.yaml -n default
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 部署有 istio 的 POD</span>
+</span></span><span style="display:flex;"><span>kubectl apply -f deployment.yaml -n istio-idle-timeout
+</span></span></code></pre></div><ol start="3">
+<li>连接外部 redis 服务</li>
+</ol>
+<blockquote>
+<p>在本地通过 minikube 启动 k8s 集群，并且在本机部署一个 redis 服务。</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>time telnet host.minikube.internal <span style="color:#ae81ff">3306</span>
+</span></span></code></pre></div><h2 id="观察并配置调整">
+  观察并配置调整
+  <a class="anchor" href="#%e8%a7%82%e5%af%9f%e5%b9%b6%e9%85%8d%e7%bd%ae%e8%b0%83%e6%95%b4">#</a>
+</h2>
+<ol>
+<li>没有 istio sidecar 的 POD, 连接不会断开。</li>
+<li>有 istio sidecar 的 POD, 10s 后连接会断开。</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>/ <span style="color:#75715e"># time telnet 192.168.105.1 6379</span>
+</span></span><span style="display:flex;"><span>Connected to 192.168.105.1
+</span></span><span style="display:flex;"><span>Connection closed by foreign host
+</span></span><span style="display:flex;"><span>Command exited with non-zero status <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>real	0m 10.00s
+</span></span><span style="display:flex;"><span>user	0m 0.00s
+</span></span><span style="display:flex;"><span>sys	0m 0.00s
+</span></span></code></pre></div><h3 id="清除-idle_timeout-参数">
+  清除 idle_timeout 参数
+  <a class="anchor" href="#%e6%b8%85%e9%99%a4-idle_timeout-%e5%8f%82%e6%95%b0">#</a>
+</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl delete -f envoyfilter-remove.yaml
+</span></span></code></pre></div><p>重新连接到 redis ，观察连接情况。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>/ <span style="color:#75715e"># time telnet 192.168.105.1 6379</span>
+</span></span><span style="display:flex;"><span>Connected to 192.168.105.1
+</span></span><span style="display:flex;"><span>Connection closed by foreign host
+</span></span><span style="display:flex;"><span>Command exited with non-zero status <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>real	1h 0m 00s
+</span></span><span style="display:flex;"><span>user	0m 0.00s
+</span></span><span style="display:flex;"><span>sys	0m 0.00s
+</span></span></code></pre></div><h2 id="总结">
+  总结
+  <a class="anchor" href="#%e6%80%bb%e7%bb%93">#</a>
+</h2>
+<p>enovy 的 tcp_idle_timeout 参数默认为 1h，这个参数会导致一些连接超时的问题，可以通过修改 istio EnvoyFilter 来调整这个参数。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">networking.istio.io/v1alpha3</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">kind</span>: <span style="color:#ae81ff">EnvoyFilter</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">idle-timeout</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">namespace</span>: <span style="color:#ae81ff">istio-system</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">spec</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">configPatches</span>:
+</span></span><span style="display:flex;"><span>    - <span style="color:#f92672">applyTo</span>: <span style="color:#ae81ff">NETWORK_FILTER</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">match</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">context</span>: <span style="color:#ae81ff">SIDECAR_OUTBOUND</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">listener</span>:
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">filterChain</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">filter</span>:
+</span></span><span style="display:flex;"><span>              <span style="color:#f92672">name</span>: <span style="color:#ae81ff">envoy.filters.network.tcp_proxy</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">patch</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">operation</span>: <span style="color:#ae81ff">MERGE</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">value</span>:
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">name</span>: <span style="color:#ae81ff">envoy.filters.network.tcp_proxy</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">typed_config</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&#34;@type&#34;: </span><span style="color:#ae81ff">type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">idle_timeout</span>: <span style="color:#ae81ff">10s</span>
+</span></span></code></pre></div><p>需要注意的是，这里的 envov filter 是作用在 sidecar 的 outbound 上的，所以只会影响 sidecar 代理的连接。但是 envoy 还会作为 ingress 和 egress 的代理，这个参数不会影响到这两个场景。</p>
+<h3 id="解决">
+  解决
+  <a class="anchor" href="#%e8%a7%a3%e5%86%b3">#</a>
+</h3>
+<p>知道 envoy 的 tcp_idle_timeout 参数的影响后，那么可以通过调大这个参数来解决这个问题。比如设置为比客户端超时时间更大的值，比服务端超时时间更大的值。</p>
+<h2 id="其他">
+  其他
+  <a class="anchor" href="#%e5%85%b6%e4%bb%96">#</a>
+</h2>
+<ol>
+<li>可能相关的日志输出</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># 调整日志级别</span>
+</span></span><span style="display:flex;"><span>curl -X POST http://127.0.0.1:15000/logging?level<span style="color:#f92672">=</span>debug
+</span></span></code></pre></div><p>通过日志发现，连接在 10s 后断开时伴随着 invoking idle callbacks 的日志输出。如下：(前后一共测试了4次)</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>➜  istio-1.19.3 klf istio-idle-timeout-demo-5b4894b67d-tdpb5 -n istio-idle-timeout -c istio-proxy | grep <span style="color:#e6db74">&#34;invoking idle callbacks&#34;</span>
+</span></span><span style="display:flex;"><span>2024-03-01T07:22:21.481180Z	debug	envoy pool external/envoy/source/common/conn_pool/conn_pool_base.cc:454	invoking idle callbacks - is_draining_for_deletion_<span style="color:#f92672">=</span>false	thread<span style="color:#f92672">=</span><span style="color:#ae81ff">22</span>
+</span></span><span style="display:flex;"><span>2024-03-01T07:22:21.481310Z	debug	envoy pool external/envoy/source/common/conn_pool/conn_pool_base.cc:454	invoking idle callbacks - is_draining_for_deletion_<span style="color:#f92672">=</span>false	thread<span style="color:#f92672">=</span><span style="color:#ae81ff">22</span>
+</span></span><span style="display:flex;"><span>2024-03-01T07:24:03.947896Z	debug	envoy pool external/envoy/source/common/conn_pool/conn_pool_base.cc:454	invoking idle callbacks - is_draining_for_deletion_<span style="color:#f92672">=</span>false	thread<span style="color:#f92672">=</span><span style="color:#ae81ff">23</span>
+</span></span><span style="display:flex;"><span>2024-03-01T07:24:03.947903Z	debug	envoy pool external/envoy/source/common/conn_pool/conn_pool_base.cc:454	invoking idle callbacks - is_draining_for_deletion_<span style="color:#f92672">=</span>false	thread<span style="color:#f92672">=</span><span style="color:#ae81ff">23</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>2024-03-01T07:25:04.884340Z	debug	envoy pool external/envoy/source/common/conn_pool/conn_pool_base.cc:454	invoking idle callbacks - is_draining_for_deletion_<span style="color:#f92672">=</span>false	thread<span style="color:#f92672">=</span><span style="color:#ae81ff">22</span>
+</span></span><span style="display:flex;"><span>2024-03-01T07:25:04.884394Z	debug	envoy pool external/envoy/source/common/conn_pool/conn_pool_base.cc:454	invoking idle callbacks - is_draining_for_deletion_<span style="color:#f92672">=</span>false	thread<span style="color:#f92672">=</span><span style="color:#ae81ff">22</span>
+</span></span><span style="display:flex;"><span>2024-03-01T07:25:17.629907Z	debug	envoy pool external/envoy/source/common/conn_pool/conn_pool_base.cc:454	invoking idle callbacks - is_draining_for_deletion_<span style="color:#f92672">=</span>false	thread<span style="color:#f92672">=</span><span style="color:#ae81ff">22</span>
+</span></span><span style="display:flex;"><span>2024-03-01T07:25:17.629912Z	debug	envoy pool external/envoy/source/common/conn_pool/conn_pool_base.cc:454	invoking idle callbacks - is_draining_for_deletion_<span style="color:#f92672">=</span>false	thread<span style="color:#f92672">=</span><span style="color:#ae81ff">22</span>
+</span></span></code></pre></div><ol start="2">
+<li>应用 envoy filter 超时设置后，已经建立的连接不会应用新的超时设置，只有新的连接才会应用新的超时时间？</li>
+<li>EnovyFilter 设置超时后，可以通过设置为空来清除超时设置。</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span>      <span style="color:#f92672">patch</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">operation</span>: <span style="color:#ae81ff">MERGE</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">value</span>:
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">name</span>: <span style="color:#ae81ff">envoy.filters.network.tcp_proxy</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">typed_config</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&#34;@type&#34;: </span><span style="color:#ae81ff">type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">idle_timeout</span>:
+</span></span></code></pre></div></div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#更新">更新</a>
+      <ul>
+        <li><a href="#更新-2024-04-01">更新 2024-04-01</a></li>
+      </ul>
+    </li>
+    <li><a href="#问题描述">问题描述</a></li>
+    <li><a href="#istio-和-envoy-的基本概念">Istio 和 envoy 的基本概念</a></li>
+    <li><a href="#猜测问题原因">猜测问题原因</a>
+      <ul>
+        <li><a href="#数据库连接超时">数据库连接超时</a></li>
+        <li><a href="#envoy-关闭连接">envoy 关闭连接</a></li>
+      </ul>
+    </li>
+    <li><a href="#设计复现">设计复现</a></li>
+    <li><a href="#观察并配置调整">观察并配置调整</a>
+      <ul>
+        <li><a href="#清除-idle_timeout-参数">清除 idle_timeout 参数</a></li>
+      </ul>
+    </li>
+    <li><a href="#总结">总结</a>
+      <ul>
+        <li><a href="#解决">解决</a></li>
+      </ul>
+    </li>
+    <li><a href="#其他">其他</a></li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

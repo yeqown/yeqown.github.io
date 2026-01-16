@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="项目地址：github.com/yeqown/recipe">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2018/05/18/%E8%87%AA%E5%B7%B1%E5%86%99%E4%B8%80%E4%B8%AA%E6%89%8B%E6%9C%BA%E8%8F%9C%E8%B0%B1APP/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="自己写一个手机菜谱APP">
+  <meta property="og:description" content="项目地址：github.com/yeqown/recipe">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2018-05-18T12:38:14+00:00">
+    <meta property="article:modified_time" content="2018-05-18T12:38:14+00:00">
+    <meta property="article:tag" content="RN">
+    <meta property="article:tag" content="Golang">
+    <meta property="article:tag" content="Python">
+    <meta property="article:tag" content="Spider">
+    <meta property="article:tag" content="App">
+<title>自己写一个手机菜谱APP | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2018/05/18/%E8%87%AA%E5%B7%B1%E5%86%99%E4%B8%80%E4%B8%AA%E6%89%8B%E6%9C%BA%E8%8F%9C%E8%B0%B1APP/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>自己写一个手机菜谱APP</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#项目构思及构成">项目构思及构成</a></li>
+        <li><a href="#实战爬虫">实战爬虫</a></li>
+        <li><a href="#实战手机app">实战手机App</a></li>
+        <li><a href="#实战web-api">实战web-api</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    自己写一个手机菜谱APP
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>May 18, 2018</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/RN/">RN</a>, 
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/python/">Python</a>, 
+      <a href="/tags/Spider/">Spider</a>, 
+      <a href="/tags/App/">App</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><p>需要的技术及工具：</p>
+<ul>
+<li>Python3 + Selenuium</li>
+<li>Golang net/http</li>
+<li>React-Native 相关（使用了react-navigation）</li>
+<li>MongoDB</li>
+<li>Redis</li>
+</ul>
+<p>代码地址：</p>
+<ul>
+<li><a href="https://github.com/yeqown/recipe">github.com/yeqown/recipe</a></li>
+</ul>
+<!-- more -->
+<h3 id="项目构思及构成">
+  项目构思及构成
+  <a class="anchor" href="#%e9%a1%b9%e7%9b%ae%e6%9e%84%e6%80%9d%e5%8f%8a%e6%9e%84%e6%88%90">#</a>
+</h3>
+<p>食谱类型的App，应用市场肯定有更好的的食谱APP。所以自己开发的目的，首先是写代码，其次是定制APP～
+好的，现在化身产品经理，设计一下APP有哪些功能：</p>
+<ul>
+<li>每日菜谱推荐，推荐可更换</li>
+<li>每天需要准备的材料提醒</li>
+<li>发现更多菜谱</li>
+<li>分类筛选菜谱</li>
+<li>搜索菜谱</li>
+<li>查看菜谱详情</li>
+<li>设置（不知道设置啥，提前准备吧）</li>
+</ul>
+<blockquote>
+<p>设计稿？不存在的，随心所欲。</p>
+</blockquote>
+<p>现在分析下我需要做的事情：</p>
+<ol>
+<li>能跑起来的APP，与restful web api 交互。</li>
+<li>能跑起来的web-api，提供菜谱数据，筛选，推荐，搜索等功能</li>
+<li>能跑起来的简易spider，从网上获取菜谱信息。（这个爬虫能解析动态生成网站就够用了，姑且称之为爬虫吧）</li>
+</ol>
+<blockquote>
+<p>没有考虑大量数据，因此爬虫并不通用，只适合特定XX网站。</p>
+</blockquote>
+<h3 id="实战爬虫">
+  实战爬虫
+  <a class="anchor" href="#%e5%ae%9e%e6%88%98%e7%88%ac%e8%99%ab">#</a>
+</h3>
+<p>这个APP里面最重要的就是菜谱数据了，那么开发之前，需要明确的数据格式，如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;name&#34;</span>: <span style="color:#e6db74">&#34;name&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;cat&#34;</span>: <span style="color:#e6db74">&#34;cat&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;img&#34;</span>: <span style="color:#e6db74">&#34;img_url&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;mark_cnt&#34;</span>: <span style="color:#ae81ff">19101</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;view_cnt&#34;</span>: <span style="color:#ae81ff">181891</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;setps&#34;</span>: [
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&#34;desc&#34;</span>: <span style="color:#e6db74">&#34;&#34;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">&#34;img&#34;</span>: <span style="color:#e6db74">&#34;&#34;</span>,
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// more step
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    ],
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;material&#34;</span>: {
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&#34;ingredients&#34;</span>: [
+</span></span><span style="display:flex;"><span>            {
+</span></span><span style="display:flex;"><span>                <span style="color:#f92672">&#34;name&#34;</span>: <span style="color:#e6db74">&#34;ingredients_name&#34;</span>,
+</span></span><span style="display:flex;"><span>                <span style="color:#f92672">&#34;weight&#34;</span>: <span style="color:#e6db74">&#34;ingredients_weight&#34;</span>,
+</span></span><span style="display:flex;"><span>            },
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">// more ingredients
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        ],
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&#34;seasoning&#34;</span>: [
+</span></span><span style="display:flex;"><span>            {
+</span></span><span style="display:flex;"><span>                <span style="color:#f92672">&#34;name&#34;</span>: <span style="color:#e6db74">&#34;seasoning_name&#34;</span>,
+</span></span><span style="display:flex;"><span>                <span style="color:#f92672">&#34;weight&#34;</span>: <span style="color:#e6db74">&#34;seasoning_weight&#34;</span>,
+</span></span><span style="display:flex;"><span>            },
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">// more seasoning
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        ],
+</span></span><span style="display:flex;"><span>    },
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;create_time&#34;</span>: <span style="color:#e6db74">&#34;2018xxxxxx&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;update_time&#34;</span>: <span style="color:#e6db74">&#34;2018xxxxxx&#34;</span>,
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h4 id="目标">
+  目标
+  <a class="anchor" href="#%e7%9b%ae%e6%a0%87">#</a>
+</h4>
+<blockquote>
+<p>前提：无法直接获取到该网站的服务API，才使用爬虫间接获取数据。</p>
+</blockquote>
+<p>目标是某个网站的菜谱，网页层次和结构比较明确，信息也正好。结合需要的数据量级和信息，因此爬虫遵循了以下流程：</p>
+<pre><code>step1. 获取特定分类的入口网址
+step2. 从分类的入口网址获取该分类的的所有菜谱详情网址
+step3. 从单个菜谱详情网址中解析菜谱数据。
+</code></pre>
+<p>使用了redis作为爬虫间的数据通道，主要是为了方便开多个进程爬取。</p>
+<h4 id="问题">
+  问题
+  <a class="anchor" href="#%e9%97%ae%e9%a2%98">#</a>
+</h4>
+<h5 id="翻页和判定当前页为最后一页">
+  翻页和判定当前页为最后一页
+  <a class="anchor" href="#%e7%bf%bb%e9%a1%b5%e5%92%8c%e5%88%a4%e5%ae%9a%e5%bd%93%e5%89%8d%e9%a1%b5%e4%b8%ba%e6%9c%80%e5%90%8e%e4%b8%80%e9%a1%b5">#</a>
+</h5>
+<pre><code>描述：某些分类下不止一页数据，如何进行翻页和下一页的判定。
+原因：无
+解决：点击翻页按钮，观察url的变化（30 * (page-1)）；直接跳转到最后一页，观察页面特征（无“下一页”按钮）
+</code></pre>
+<h4 id="爬取动态页面">
+  爬取动态页面
+  <a class="anchor" href="#%e7%88%ac%e5%8f%96%e5%8a%a8%e6%80%81%e9%a1%b5%e9%9d%a2">#</a>
+</h4>
+<pre><code>描述：菜谱详情页面是动态生成的，无法直接使用bs4 + requests来爬取。
+原因：无
+解决：查看了requests获取到的页面结构，发现在script标签中，有需要的数据，但是需要额外处理，而且某些数据信息缺失。因此
+开始考虑selenium来加载页面，解析菜谱信息。
+</code></pre>
+<h3 id="实战手机app">
+  实战手机App
+  <a class="anchor" href="#%e5%ae%9e%e6%88%98%e6%89%8b%e6%9c%baapp">#</a>
+</h3>
+<p>为了方便高效，没有选用原生的的开发方式，而是选择了React-Native来撸App。App主要运行于Android，吾等吊丝用不起iPhone）。</p>
+<h4 id="运行截图">
+  运行截图
+  <a class="anchor" href="#%e8%bf%90%e8%a1%8c%e6%88%aa%e5%9b%be">#</a>
+</h4>
+<p><img src="https://raw.githubusercontent.com/yeqown/recipe/master/screenshots/WechatIMG83.jpeg" alt="landingpage" />
+<img src="/images/app_homepage.jpeg" alt="app_homepage" />
+<img src="https://raw.githubusercontent.com/yeqown/recipe/master/screenshots/WechatIMG84.jpeg" alt="发现" />
+<img src="https://raw.githubusercontent.com/yeqown/recipe/master/screenshots/WechatIMG86.jpeg" alt="detail" /></p>
+<h4 id="问题-1">
+  问题
+  <a class="anchor" href="#%e9%97%ae%e9%a2%98-1">#</a>
+</h4>
+<p>怎么用React-Native来撸一个App的步骤，这里就不多说了。主要记录一下这期间遇到的问题：</p>
+<h5 id="问题一无法访问本地的api服务">
+  问题一：无法访问本地的API服务
+  <a class="anchor" href="#%e9%97%ae%e9%a2%98%e4%b8%80%e6%97%a0%e6%b3%95%e8%ae%bf%e9%97%ae%e6%9c%ac%e5%9c%b0%e7%9a%84api%e6%9c%8d%e5%8a%a1">#</a>
+</h5>
+<pre><code>描述：开发过程中遇到了使用`fetch\axios`均无法访问`localhost`api服务的问题，错误提示“network request failed”，本地的api服务也确实没有接收到任何请求。但是尝试访问其他域名api却可以正常。
+原因：React-Native把自己当成了localhost，因此localhost并没有请求的到真的api服务。
+解决：将localhost替换为`10.0.2.2`便定向到了本地。
+</code></pre>
+<h5 id="问题二tabnavigator无法使用icon">
+  问题二：TabNavigator无法使用icon
+  <a class="anchor" href="#%e9%97%ae%e9%a2%98%e4%ba%8ctabnavigator%e6%97%a0%e6%b3%95%e4%bd%bf%e7%94%a8icon">#</a>
+</h5>
+<pre><code>描述：根据官方文档来设置Icon，一直报错，Icon也看不见。
+原因：不晓得。
+解决：在TabNavigator注册的各个Screen中指定。
+</code></pre>
+<p><code>TabNavigator</code>定义参见：<a href="https://github.com/yeqown/recipe/blob/master/recipes-mobile/index.js#L18">https://github.com/yeqown/recipe/blob/master/recipes-mobile/index.js#L18</a>
+指定代码：<a href="https://github.com/yeqown/recipe/blob/master/recipes-mobile/src/Home.js#L34">https://github.com/yeqown/recipe/blob/master/recipes-mobile/src/Home.js#L34</a></p>
+<h3 id="实战web-api">
+  实战web-api
+  <a class="anchor" href="#%e5%ae%9e%e6%88%98web-api">#</a>
+</h3>
+<p><a href="https://github.com/yeqown/recipe/tree/master/recipes-server">代码由此去</a></p>
+<p>这一部分没有啥特别的地方，就略过了。在这里推销一下:
+<a href="https://github.com/yeqown/gweb">github.com/yeqown/gweb</a>一个简易封装的golang web 框架。</p>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "write-a-mobile-cookbook-app", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#项目构思及构成">项目构思及构成</a></li>
+        <li><a href="#实战爬虫">实战爬虫</a></li>
+        <li><a href="#实战手机app">实战手机App</a></li>
+        <li><a href="#实战web-api">实战web-api</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

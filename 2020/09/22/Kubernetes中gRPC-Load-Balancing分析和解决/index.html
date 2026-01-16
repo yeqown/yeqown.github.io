@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="在k8s集群中部署gRPC服务并使用k8s中的Service来对外暴露服务，这是比较常见的用法，但是这种方式却会导致gRPC服务负载不均衡，进而影响整个系统的负载能力甚至‘雪崩’。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2020/09/22/Kubernetes%E4%B8%ADgRPC-Load-Balancing%E5%88%86%E6%9E%90%E5%92%8C%E8%A7%A3%E5%86%B3/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="Kubernetes中gRPC Load Balancing分析和解决">
+  <meta property="og:description" content="在k8s集群中部署gRPC服务并使用k8s中的Service来对外暴露服务，这是比较常见的用法，但是这种方式却会导致gRPC服务负载不均衡，进而影响整个系统的负载能力甚至‘雪崩’。">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2020-09-22T13:33:20+08:00">
+    <meta property="article:modified_time" content="2020-09-22T13:33:20+08:00">
+    <meta property="article:tag" content="Kubernetes">
+    <meta property="article:tag" content="GRPC">
+    <meta property="article:tag" content="Load Balancing">
+<title>Kubernetes中gRPC Load Balancing分析和解决 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2020/09/22/Kubernetes%E4%B8%ADgRPC-Load-Balancing%E5%88%86%E6%9E%90%E5%92%8C%E8%A7%A3%E5%86%B3/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>Kubernetes中gRPC Load Balancing分析和解决</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#背景">背景</a></li>
+        <li><a href="#猜想和验证">猜想和验证</a></li>
+        <li><a href="#解决办法">解决办法</a></li>
+        <li><a href="#参考文献">参考文献</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    Kubernetes中gRPC Load Balancing分析和解决
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>September 22, 2020</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>, 
+      <a href="/categories/Kubernetes/">Kubernetes</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Kubernetes/">Kubernetes</a>, 
+      <a href="/tags/gRPC/">GRPC</a>, 
+      <a href="/tags/Load-Balancing/">Load Balancing</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><h3 id="背景">
+  背景
+  <a class="anchor" href="#%e8%83%8c%e6%99%af">#</a>
+</h3>
+<p>第一次，线上遇到大量接口RT超过10s触发了系统告警，运维反馈k8s集群无异常，负载无明显上升。将报警接口相关的服务重启一番后发现并无改善。但是开发人员使用链路追踪系统发现，比较慢的请求总是某个gRPC服务中的几个POD导致，由其他POD处理的请求并不会出现超时告警。</p>
+<p>第二次，同样遇到接口RT超过阈值触发告警，从k8s中查到某个gRPC服务（关键服务）重启次数异常，查看重启原因时发现是<code>OOM Killed</code>，<code>OOM killed</code>并不是负载不均衡直接导致的，但是也有一定的关系，这个后面再说。前两次由于监控不够完善（于我而言，运维的很多面板都没有权限，没办法排查）。期间利用pprof分析了该服务内存泄漏点，并修复上线观察。经过第二次问题并解决之后，线上超时告警恢复正常水平，但是该 deployment 下的几个POD占用资源（Mem / CPU / Network-IO），差距甚大。</p>
+<img src="/images/k8s-grpc-lb-mem1.jpg"/>
+<img src="/images/k8s-grpc-lb-mem2.jpg"/>
+<blockquote>
+<p>第二张图是运维第一次发现该服务OOM killed 之后调整了内存上限从 512MB =&gt; 1G，然而只是让它死得慢一点而已。
+从上面两张图能够石锤的是该服务一定存在内存泄漏。Go项目内存占用的分析，我总结了如下的排查步骤：</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>1. 代码泄漏（pprof）（可能原因 goroutine泄漏；闭包）
+</span></span><span style="display:flex;"><span>2. Go Runtime + Linux 内核（RSS虚高导致OOM）https://github.com/golang/go/issues/23687
+</span></span><span style="display:flex;"><span>3. 采集指标不正常（container_memory_working_set_bytes）
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>2，3 是基于第1点能基本排除代码问题的后续步骤。
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>解决和排查手段：
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>1. pprof 通过heap + goroutine 是否异常，来定位泄漏点
+</span></span><span style="display:flex;"><span>运行<span style="color:#e6db74">`</span>go tool pprof<span style="color:#e6db74">`</span>命令时加上--nodefration<span style="color:#f92672">=</span>0.05参数，表示如果调用的子函数使用的CPU、memory不超过 5%，就忽略它。
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>2. 确认go版本和内核版本，确认是否开启了MADV_FREE，导致RSS下降不及时<span style="color:#f92672">(</span>1.12+ 和 linux内核版本大于 4.5<span style="color:#f92672">)</span>。
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>3.  RSS + Cache 内存检查
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>&gt; Cache 过大的原因 https://www.cnblogs.com/zh94/p/11922714.html 
+</span></span><span style="display:flex;"><span>// IO密集：手动释放或者定期重启
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>查看服务器内存使用情况： <span style="color:#e6db74">`</span>free -g<span style="color:#e6db74">`</span>
+</span></span><span style="display:flex;"><span>查看进程内存情况：      <span style="color:#e6db74">`</span>pidstat -rI -p 13744<span style="color:#e6db74">`</span>
+</span></span><span style="display:flex;"><span>查看进程打开的文件：    <span style="color:#e6db74">`</span>lsof -p 13744<span style="color:#e6db74">`</span>
+</span></span><span style="display:flex;"><span>查看容器内的PID：      <span style="color:#e6db74">`</span>docker inspect --format <span style="color:#e6db74">&#34;{{ .State.Pid}}&#34;</span> 6e7efbb80a9d<span style="color:#e6db74">`</span>
+</span></span><span style="display:flex;"><span>查看进程树，找到目标:   <span style="color:#e6db74">`</span>pstree -p 13744<span style="color:#e6db74">`</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>参考：https://eddycjy.com/posts/why-container-memory-exceed/
+</span></span></code></pre></div><p>通过上述步骤，我发现了该POD被<code>OOM killed</code>还有另一个元凶就是，<strong>日志文件占用</strong>。这里就不过多的详述了，搜索方向是 “一个运行中程序在内存中如何组织 + Cache内存是由哪些部分构成的”。这部分要达到的目标是：一个程序运行起来它为什么占用了这么些内存，而不是更多或者更少。</p>
+<p>问题到此并没有结束，<code>OOM Killed</code> 只是集群中发现的最显眼的问题。这里还有几个疑点：</p>
+<ol>
+<li>服务大量超时，而运维资源却没有异常，整体的请求量没有大幅度上涨？</li>
+<li>为什么重启不能让系统恢复？</li>
+<li><code>OOM Killed</code>是什么原因导致的？（go项目 / 内存限制 1GB / 近底层数据服务，主要和DB打交道）除内存泄漏还有什么会导致服务内存占用上升？</li>
+<li>同一个 <code>Deployment</code> 的 <code>Pods</code> 在一个 <code>Service</code> 下对外提供服务，为什么占用的资源并不是近乎相等的？</li>
+</ol>
+<h3 id="猜想和验证">
+  猜想和验证
+  <a class="anchor" href="#%e7%8c%9c%e6%83%b3%e5%92%8c%e9%aa%8c%e8%af%81">#</a>
+</h3>
+<p>上面说了那么多和gRPC 和 k8s Service 有半毛钱关系吗？有半毛钱。</p>
+<p>其实发现gRPC负载不均衡很简单，从上面的疑或者看一看k8s资源监控面板，就能看的出来同一个service中的不同POD负载不一样，因为有负载才有压力，有负载才需要消耗资源。当然因为个别<strong>POD负载极大导致内存泄漏问题突出，日志文件上升快<code>OOM killed</code>频繁</strong>。</p>
+<img src="/images/k8s-grpc-lb-01.png"/>
+<p>知道上述的现象之后，那么就可以猜想了，为什么负载不均衡呢？现列举以下的关键点：</p>
+<ul>
+<li>该服务是一个基于gRPC-go编写的服务端。</li>
+<li>gRPC使用的应用层协议是<code>http2</code>。</li>
+<li>http2最大的特点是长链接。</li>
+<li>该服务是基于了k8s Service来对内部应用提供服务。</li>
+<li>k8s Service 自带L4负载均衡（轮询）。</li>
+<li>k8s 的负载均衡是基于 iptables 实现的。</li>
+<li>iptables 是通过修改 netfilter 规则来实现的（这里可以简单理解为：k8s的负载均衡是无法感知服务的负载压力的）。</li>
+</ul>
+<p>说了上面这些，再来理一理整个系统的请求处理流程。</p>
+<pre tabindex="0"><code>SLB =&gt; k8s 集群 (nginx) ==&gt; API服务 (k8s Service) ... gRPC-Client ==
+                                                                 ||
+   gRPC Server &lt;== gRPC-Client ... gRPC-Server (k8s Service)  &lt;==||
+</code></pre><p>到这里，结合最开始的背景中提到的“负载不均衡”，基本上可以得出结论：<strong>“一个请求确定了由某个API服务处理之后，后续调用的POD几乎是确定的”</strong>。那么这种确定性是从哪里来的，明明k8s有自己的L4负载均衡？</p>
+<p>不会吧，不会吧，你竟然才知道L4层负载均衡对长连接没有意义。</p>
+<p>因为L4负载均衡是让客户端和服务端直接连接，而不是通过自己转发。那连接上了之后又没有重新连接，那么自然该客户端的所有请求都会交给连接上的服务端处理，而不是其他的服务端了。因此，系统中的大多数客户端在启动时，如果被k8s的负载均衡分配到了几乎同一个服务端POD上，那么这个服务端POD自然会处理大部分请求，相比其他服务它的负载自然会高出很多。这也解释了 <strong>1</strong> 和 <strong>4</strong> 疑问。</p>
+<p>对于疑问 <strong>2</strong> “为什么重启也不行呢？” 这个问题等价于 “为什么k8s会把客户端分配得不均匀呢？”</p>
+<p>这里说的重启不行是指盲目重启，没有策略和优先级。大多数人理解的重启，多半会是只重启有问题的服务。事实上也是这样操作的。既然知道是k8s让服务端POD负载不均衡，进而导致接口响应慢，那么重启的目的是让“请求尽可能的均匀一些”。那么首先重启服务端，服务端重启完成后再重启依赖该服务的客户端，依赖的最底端依次往上重启。</p>
+<blockquote>
+<p>k8s L4轮询负载均衡存在的问题是：服务没有完全部署或重启完成（滚动更新），这时候客户端通过service发现的只有其中的部分POD而不是全部，当然会让后加入的服务分配到较少的客户端连接。</p>
+</blockquote>
+<h3 id="解决办法">
+  解决办法
+  <a class="anchor" href="#%e8%a7%a3%e5%86%b3%e5%8a%9e%e6%b3%95">#</a>
+</h3>
+<p>知道了问题在哪儿，那么解决思路就很明确了。正如标题中说的一样 “gRPC LoadBalancing”，这里需要找到一种能够将gRPC连接负载均衡的手段。这里提出以下三种解决办法：</p>
+<table>
+  <thead>
+      <tr>
+          <th>序号</th>
+          <th>方案</th>
+          <th>描述</th>
+          <th>优缺点</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>1</td>
+          <td>集中LB</td>
+          <td>服务端LB</td>
+          <td>客户端无感知；存在单点问题</td>
+      </tr>
+      <tr>
+          <td>2</td>
+          <td>客户端LB</td>
+          <td>gRPC resolver + LB</td>
+          <td>客户端自定义LB策略；需要注册中心或者对接k8s的API以获取服务列表;不好升级</td>
+      </tr>
+      <tr>
+          <td>3</td>
+          <td>Service Mesh</td>
+          <td>linkerd之类的组件</td>
+          <td>服务端客户端无感知；增加延迟</td>
+      </tr>
+  </tbody>
+</table>
+<p>这里推荐的只有两种（视体量的技术栈而定）： 客户端LB 和 Service Mesh。</p>
+<p><code>Service Mesh</code>自不用多说，因为改造简单无代码入侵，维护成本的话就见人见智了。
+客户端LB最大的缺点就是“不好升级，代码入侵”，但从gRPC这一套方案出发，客户端服务发现和LB都已经被集成到了gRPC（Resolver + LB Policy）里，只需要提供自己的方案并注册到gRPC就行了，相比其他两种更加可控。</p>
+<p>这里使用了linkerd来尝试解决问题，下图是使用了linkerd之后的监控：</p>
+<img src="/images/k8s-grpc-lb-02.png"/>
+<blockquote>
+<p>因为还处于测试环境观察阶段，因此数据指标不是特别高，也没有那么明显。</p>
+</blockquote>
+<p>从上图可以发现，两个POD基本上做到的波峰波谷同步，而不是我已原地爆炸，你还快活逍遥。</p>
+<p>客户端LB我也在尝试，有两个方向：</p>
+<ol>
+<li>客户端使用<code>k8s API</code>获取服务列表甚至负载，以实现 服务发现 + 基于负载的LB策略。</li>
+<li>使用额外的服务注册和发现中心，记录服务负载指标，客户端只需要实现LB策略即可。</li>
+</ol>
+<blockquote>
+<p>水平有限，如有错误，欢迎勘误指正🙏</p>
+</blockquote>
+<h3 id="参考文献">
+  参考文献
+  <a class="anchor" href="#%e5%8f%82%e8%80%83%e6%96%87%e7%8c%ae">#</a>
+</h3>
+<ul>
+<li><a href="https://github.com/yeqown/k8s-grpc-lb-solutions">https://github.com/yeqown/k8s-grpc-lb-solutions</a></li>
+<li><a href="https://www.youtube.com/watch?v=F2znfxn_5Hg">https://www.youtube.com/watch?v=F2znfxn_5Hg</a></li>
+<li><a href="https://linkerd.io/2/overview/">https://linkerd.io/2/overview/</a></li>
+<li><a href="https://github.com/grpc/grpc/blob/master/doc/load-balancing.md">https://github.com/grpc/grpc/blob/master/doc/load-balancing.md</a></li>
+</ul>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "kubernetes-grpc-load-balancing-analysis-and-solve", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#背景">背景</a></li>
+        <li><a href="#猜想和验证">猜想和验证</a></li>
+        <li><a href="#解决办法">解决办法</a></li>
+        <li><a href="#参考文献">参考文献</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

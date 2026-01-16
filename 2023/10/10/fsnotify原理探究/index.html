@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="从 kratos 群里看到有人问软链接的配置文件无法热更新的问题。突然发现自己对于文件监控的底层实现和原理并不清楚，因此有了这边文章，从上层应用一直深入到linux内部实现，弄清楚文件监控怎么用，怎么实现。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2023/10/10/fsnotify%E5%8E%9F%E7%90%86%E6%8E%A2%E7%A9%B6/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="fsnotify原理探究">
+  <meta property="og:description" content="从 kratos 群里看到有人问软链接的配置文件无法热更新的问题。突然发现自己对于文件监控的底层实现和原理并不清楚，因此有了这边文章，从上层应用一直深入到linux内部实现，弄清楚文件监控怎么用，怎么实现。">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-10-10T20:02:28+08:00">
+    <meta property="article:modified_time" content="2023-10-10T20:02:28+08:00">
+    <meta property="article:tag" content="Golang">
+    <meta property="article:tag" content="Linux">
+    <meta property="article:tag" content="Fsnotify">
+    <meta property="article:tag" content="Inotify">
+<title>fsnotify原理探究 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2023/10/10/fsnotify%E5%8E%9F%E7%90%86%E6%8E%A2%E7%A9%B6/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>fsnotify原理探究</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#软链接和硬链接的区别">软链接和硬链接的区别</a></li>
+        <li><a href="#fsnotify-的实现">fsnotify 的实现</a></li>
+        <li><a href="#inotify-系统">inotify 系统</a></li>
+        <li><a href="#inotify-的实现和-linux-文件系统">inotify 的实现和 linux 文件系统</a></li>
+        <li><a href="#总结">总结</a></li>
+        <li><a href="#参考资料">参考资料</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    fsnotify原理探究
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>October 10, 2023</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/linux/">Linux</a>, 
+      <a href="/tags/fsnotify/">Fsnotify</a>, 
+      <a href="/tags/inotify/">Inotify</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><blockquote>
+<p>本文如果没有特殊说明，所有的内容都是指 linux 系统</p>
+</blockquote>
+<p>起因是从 kratos 群里看到有人问：“测了下kratos的config watch，好像对软链不生效”，他提供的屏幕截图如下类似：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ pwd
+</span></span><span style="display:flex;"><span>/tmp/testconfig
+</span></span><span style="display:flex;"><span>$ ls -l
+</span></span><span style="display:flex;"><span>drwxr-xr-x  <span style="color:#ae81ff">3</span> root root <span style="color:#ae81ff">4096</span> Oct <span style="color:#ae81ff">10</span> 19:48 .
+</span></span><span style="display:flex;"><span>drwxr-xr-x <span style="color:#ae81ff">10</span> root root <span style="color:#ae81ff">4096</span> Oct <span style="color:#ae81ff">10</span> 19:48 ..
+</span></span><span style="display:flex;"><span>drwxr-xr-x  <span style="color:#ae81ff">1</span> root root   <span style="color:#ae81ff">11</span> Oct <span style="color:#ae81ff">10</span> 19:48 ..ver1
+</span></span><span style="display:flex;"><span>drwxr-xr-x  <span style="color:#ae81ff">1</span> root root   <span style="color:#ae81ff">11</span> Oct <span style="color:#ae81ff">10</span> 19:48 ..ver2
+</span></span><span style="display:flex;"><span>lrwxr-xr-x  <span style="color:#ae81ff">1</span> root root   <span style="color:#ae81ff">11</span> Oct <span style="color:#ae81ff">10</span> 19:48 ..data -&gt; ..ver1
+</span></span><span style="display:flex;"><span>drwxr-xr-x  <span style="color:#ae81ff">1</span> root root   <span style="color:#ae81ff">11</span> Oct <span style="color:#ae81ff">10</span> 19:48 data
+</span></span><span style="display:flex;"><span>$
+</span></span><span style="display:flex;"><span>$ ll -a data
+</span></span><span style="display:flex;"><span>drwxr-xr-x  <span style="color:#ae81ff">3</span> root root <span style="color:#ae81ff">4096</span> Oct <span style="color:#ae81ff">10</span> 19:48 .
+</span></span><span style="display:flex;"><span>drwxr-xr-x <span style="color:#ae81ff">10</span> root root <span style="color:#ae81ff">4096</span> Oct <span style="color:#ae81ff">10</span> 19:48 ..
+</span></span><span style="display:flex;"><span>lrwxrwxrwx  <span style="color:#ae81ff">1</span> root root   <span style="color:#ae81ff">11</span> Oct <span style="color:#ae81ff">10</span> 19:48 registry.yaml -&gt; /tmp/testconfig/..data/registry.yaml
+</span></span></code></pre></div><p>然后触发更新的动作其实是把 <code>..data</code> 的源改成了 <code>..ver2</code>，但是发现并没有触发更新，于是就问了一下。</p>
+<p>看到这个问题的第一反应是：软链接的文件无法监控，那么硬链接的文件可以监控吗？（第一反应是软链接的实现决定）于是便回复让这位小伙伴是否硬链接可以，他给答复是可以。</p>
+<p>突然我脑海里冒出了两个问题：</p>
+<ul>
+<li>Q1 软链接和硬链接的区别是什么？</li>
+<li>Q2 fsnotify 的原理是什么？</li>
+</ul>
+<h3 id="软链接和硬链接的区别">
+  软链接和硬链接的区别
+  <a class="anchor" href="#%e8%bd%af%e9%93%be%e6%8e%a5%e5%92%8c%e7%a1%ac%e9%93%be%e6%8e%a5%e7%9a%84%e5%8c%ba%e5%88%ab">#</a>
+</h3>
+<p>在使用的时候，软链接和硬链接的区别是什么呢？</p>
+<table>
+  <thead>
+      <tr>
+          <th>特点/操作</th>
+          <th>软链接</th>
+          <th>硬链接</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>创建</td>
+          <td><code>ln -s 源文件 目标文件</code></td>
+          <td><code>ln 源文件 目标文件</code></td>
+      </tr>
+      <tr>
+          <td>创建（源文件不存在）</td>
+          <td>可以创建</td>
+          <td>不可以创建</td>
+      </tr>
+      <tr>
+          <td>删除源文件</td>
+          <td>软链接文件无法访问</td>
+          <td>硬链接文件可以访问</td>
+      </tr>
+      <tr>
+          <td>修改源文件</td>
+          <td>软链接文件无法访问</td>
+          <td>硬链接文件可以访问</td>
+      </tr>
+      <tr>
+          <td>修改链接文件</td>
+          <td>源文件可以访问</td>
+          <td>源文件可以访问</td>
+      </tr>
+      <tr>
+          <td>实现差异</td>
+          <td>保存源文件的路径</td>
+          <td>和源文件的 inode 一致</td>
+      </tr>
+  </tbody>
+</table>
+<p>这里的 inode 是 linux 文件系统的一个概念，每个文件都有一个 inode，inode 保存了文件的元数据，比如文件的权限、文件的大小、文件的创建时间等等。</p>
+<h4 id="两者在-linux-中的实现区别">
+  两者在 linux 中的实现区别
+  <a class="anchor" href="#%e4%b8%a4%e8%80%85%e5%9c%a8-linux-%e4%b8%ad%e7%9a%84%e5%ae%9e%e7%8e%b0%e5%8c%ba%e5%88%ab">#</a>
+</h4>
+<p>通过 <code>man ln</code> 手册，我们知道硬链接对应 link(2) 系统调用，软链接对应 symlink(2) 系统调用。硬链接声明系统调用 <code>do_linkat</code>，最终调用 <code>vfs_symlink</code>；而软链接声明系统调用 <code>do_symlinkat</code>, 最终调用 <code>vfs_symlink</code>。这两个都会调用实际的文件系统实现，比如 ext4 文件系统的实现。这里就只贴关键的部分代码：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">do_linkat</span>(<span style="color:#66d9ef">int</span> olddfd, <span style="color:#66d9ef">struct</span> filename <span style="color:#f92672">*</span>old, <span style="color:#66d9ef">int</span> newdfd,
+</span></span><span style="display:flex;"><span>          <span style="color:#66d9ef">struct</span> filename <span style="color:#f92672">*</span>new, <span style="color:#66d9ef">int</span> flags)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    ...
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 转到 vfs_link 函数
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    error <span style="color:#f92672">=</span> <span style="color:#a6e22e">vfs_link</span>(old_path.dentry, idmap, new_path.dentry<span style="color:#f92672">-&gt;</span>d_inode,
+</span></span><span style="display:flex;"><span>             new_dentry, <span style="color:#f92672">&amp;</span>delegated_inode);
+</span></span><span style="display:flex;"><span>    ...
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">vfs_link</span>(<span style="color:#66d9ef">struct</span> dentry <span style="color:#f92672">*</span>old_dentry, <span style="color:#66d9ef">struct</span> mnt_idmap <span style="color:#f92672">*</span>idmap,
+</span></span><span style="display:flex;"><span>         <span style="color:#66d9ef">struct</span> inode <span style="color:#f92672">*</span>dir, <span style="color:#66d9ef">struct</span> dentry <span style="color:#f92672">*</span>new_dentry,
+</span></span><span style="display:flex;"><span>         <span style="color:#66d9ef">struct</span> inode <span style="color:#f92672">**</span>delegated_inode)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 调用具体的文件系统实现
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// inode 中 i_nlink 表示的是硬链接的数量，因此一般的实现都会将这个计数器 +1
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    error <span style="color:#f92672">=</span> dir<span style="color:#f92672">-&gt;</span>i_op<span style="color:#f92672">-&gt;</span><span style="color:#a6e22e">link</span>(old_dentry, dir, new_dentry);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 触发 fsnotify 事件
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>error)
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">fsnotify_link</span>(dir, inode, new_dentry);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> error;
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">/////////// 参考 ext4 文件系统的实现 ///////////
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">__ext4_link</span>(<span style="color:#66d9ef">struct</span> inode <span style="color:#f92672">*</span>dir, <span style="color:#66d9ef">struct</span> inode <span style="color:#f92672">*</span>inode, <span style="color:#66d9ef">struct</span> dentry <span style="color:#f92672">*</span>dentry)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    ...
+</span></span><span style="display:flex;"><span>    inode<span style="color:#f92672">-&gt;</span>i_ctime <span style="color:#f92672">=</span> <span style="color:#a6e22e">current_time</span>(inode);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">ext4_inc_count</span>(inode);
+</span></span><span style="display:flex;"><span>    ...
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">ext4_symlink</span>(<span style="color:#66d9ef">struct</span> mnt_idmap <span style="color:#f92672">*</span>idmap, <span style="color:#66d9ef">struct</span> inode <span style="color:#f92672">*</span>dir,
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">struct</span> dentry <span style="color:#f92672">*</span>dentry, <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>symname)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    ...
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 新建一个 inode
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    inode <span style="color:#f92672">=</span> <span style="color:#a6e22e">ext4_new_inode_start_handle</span>(idmap, dir, S_IFLNK<span style="color:#f92672">|</span>S_IRWXUGO,
+</span></span><span style="display:flex;"><span>                        <span style="color:#f92672">&amp;</span>dentry<span style="color:#f92672">-&gt;</span>d_name, <span style="color:#ae81ff">0</span>, NULL,
+</span></span><span style="display:flex;"><span>                        EXT4_HT_DIR, credits);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 设置软链接的内容
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// 1. 如果内容长度超过 EXT4_N_BLOCKS * 4，函数 ext4_init_symlink_block 会被调用用来分配一个新的符号链接块并填充它。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">if</span> ((disk_link.len <span style="color:#f92672">&gt;</span> EXT4_N_BLOCKS <span style="color:#f92672">*</span> <span style="color:#ae81ff">4</span>)) {
+</span></span><span style="display:flex;"><span>		err <span style="color:#f92672">=</span> <span style="color:#a6e22e">ext4_init_symlink_block</span>(handle, inode, <span style="color:#f92672">&amp;</span>disk_link);
+</span></span><span style="display:flex;"><span>	} <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// 如果长度较短，内存会被直接拷贝到 inode 结构的 i_data 字段。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#75715e">// 在设置链接内容后，还会更新 inode 的 i_size 和 i_disksize 字段以反映链接内容的长度。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">ext4_clear_inode_flag</span>(inode, EXT4_INODE_EXTENTS);
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">memcpy</span>((<span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>)<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">EXT4_I</span>(inode)<span style="color:#f92672">-&gt;</span>i_data, disk_link.name,
+</span></span><span style="display:flex;"><span>		       disk_link.len);
+</span></span><span style="display:flex;"><span>		inode<span style="color:#f92672">-&gt;</span>i_size <span style="color:#f92672">=</span> disk_link.len <span style="color:#f92672">-</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">EXT4_I</span>(inode)<span style="color:#f92672">-&gt;</span>i_disksize <span style="color:#f92672">=</span> inode<span style="color:#f92672">-&gt;</span>i_size;
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p><strong>小结：</strong> 想要彻底搞懂，还需要看下 VFS 的设计，尤其是 inode 的结构，这里就不展开了。</p>
+<h3 id="fsnotify-的实现">
+  fsnotify 的实现
+  <a class="anchor" href="#fsnotify-%e7%9a%84%e5%ae%9e%e7%8e%b0">#</a>
+</h3>
+<p>kratos 使用的是 <a href="https://github.com/fsnotify/fsnotify">fsnotify</a> 这个仓库，因此我们可以直接从这个仓库入手，看看它是如何实现的。从仓库对应的 README 中可以发现这么一个使用实例：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// Create new watcher.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">watcher</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">fsnotify</span>.<span style="color:#a6e22e">NewWatcher</span>()
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">watcher</span>.<span style="color:#a6e22e">Close</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// Start listening for events.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">go</span> <span style="color:#66d9ef">func</span>() {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">select</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">case</span> <span style="color:#a6e22e">event</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">watcher</span>.<span style="color:#a6e22e">Events</span>:
+</span></span><span style="display:flex;"><span>                <span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;event:&#34;</span>, <span style="color:#a6e22e">event</span>)
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">event</span>.<span style="color:#a6e22e">Has</span>(<span style="color:#a6e22e">fsnotify</span>.<span style="color:#a6e22e">Write</span>) {
+</span></span><span style="display:flex;"><span>                    <span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;modified file:&#34;</span>, <span style="color:#a6e22e">event</span>.<span style="color:#a6e22e">Name</span>)
+</span></span><span style="display:flex;"><span>                }
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">case</span> <span style="color:#a6e22e">err</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">watcher</span>.<span style="color:#a6e22e">Errors</span>:
+</span></span><span style="display:flex;"><span>                <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            }
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// Add a path.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">watcher</span>.<span style="color:#a6e22e">Add</span>(<span style="color:#e6db74">&#34;/tmp&#34;</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>从中可以发现这个库的主要 API/对象 有如下几个：</p>
+<ul>
+<li>NewWatcher()</li>
+<li>Watcher.Add()</li>
+<li>Watcher.Events</li>
+</ul>
+<blockquote>
+<p>这个库拥有跨平台支持能力，我们这里也只关注 linux 平台的实现也就是 backend_inotify.go 这个文件</p>
+</blockquote>
+<h4 id="watcher-和-newwacther-构造方法">
+  Watcher 和 NewWacther 构造方法
+  <a class="anchor" href="#watcher-%e5%92%8c-newwacther-%e6%9e%84%e9%80%a0%e6%96%b9%e6%b3%95">#</a>
+</h4>
+<p>Watcher 是一个结构体，定义如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Watcher</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// Events 是一个文件系统变更事件的 channel，可以发送以下的事件：
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">//  fsnotify.Create
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// fsnotify.Remove
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// fsnotify.Rename
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// fsnotify.Write
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// fsnotify.Chmod
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// 具体什么场景下会触发什么事件，不同平台上可能也会有差异，就参考官方文档为准。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">Events</span> <span style="color:#66d9ef">chan</span> <span style="color:#a6e22e">Event</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// Errors 是一个错误的 channel，当发生错误的时候，会发送到这个 channel
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">Errors</span> <span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">error</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// Store fd here as os.File.Read() will no longer return on close after
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// calling Fd(). See: https://github.com/golang/go/issues/26439
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">fd</span>          <span style="color:#66d9ef">int</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">inotifyFile</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">File</span> <span style="color:#75715e">// inotify 文件
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">watches</span>     <span style="color:#f92672">*</span><span style="color:#a6e22e">watches</span> <span style="color:#75715e">// 监听对象的集合
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">done</span>        <span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">struct</span>{} 
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">closeMu</span>     <span style="color:#a6e22e">sync</span>.<span style="color:#a6e22e">Mutex</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">doneResp</span>    <span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">struct</span>{}
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 这两个结构用于管理 通过 inotify_add_watch() 添加的监听文件对象
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> (
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">watches</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">mu</span>   <span style="color:#a6e22e">sync</span>.<span style="color:#a6e22e">RWMutex</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">wd</span>   <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">uint32</span>]<span style="color:#f92672">*</span><span style="color:#a6e22e">watch</span> <span style="color:#75715e">// wd -&gt; watch
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">path</span> <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#66d9ef">uint32</span> <span style="color:#75715e">// pathname -&gt; wd
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">watch</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">wd</span>    <span style="color:#66d9ef">uint32</span> <span style="color:#75715e">// Watch descriptor (as returned by the inotify_add_watch() syscall)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">flags</span> <span style="color:#66d9ef">uint32</span> <span style="color:#75715e">// inotify flags of this watch (see inotify(7) for the list of valid flags)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">path</span>  <span style="color:#66d9ef">string</span> <span style="color:#75715e">// Watch path.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    }
+</span></span><span style="display:flex;"><span>)
+</span></span></code></pre></div><p>NewWatcher 函数的实现如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// NewWatcher creates a new Watcher.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">NewWatcher</span>() (<span style="color:#f92672">*</span><span style="color:#a6e22e">Watcher</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// Need to set nonblocking mode for SetDeadline to work, otherwise blocking
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// I/O operations won&#39;t terminate on close.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">fd</span>, <span style="color:#a6e22e">errno</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">unix</span>.<span style="color:#a6e22e">InotifyInit1</span>(<span style="color:#a6e22e">unix</span>.<span style="color:#a6e22e">IN_CLOEXEC</span> | <span style="color:#a6e22e">unix</span>.<span style="color:#a6e22e">IN_NONBLOCK</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">fd</span> <span style="color:#f92672">==</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">errno</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">w</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">Watcher</span>{
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">fd</span>:          <span style="color:#a6e22e">fd</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">inotifyFile</span>: <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">NewFile</span>(uintptr(<span style="color:#a6e22e">fd</span>), <span style="color:#e6db74">&#34;&#34;</span>),
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">watches</span>:     <span style="color:#a6e22e">newWatches</span>(),
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">Events</span>:      make(<span style="color:#66d9ef">chan</span> <span style="color:#a6e22e">Event</span>),
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">Errors</span>:      make(<span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">error</span>),
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">done</span>:        make(<span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">struct</span>{}),
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">doneResp</span>:    make(<span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">struct</span>{}),
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">go</span> <span style="color:#a6e22e">w</span>.<span style="color:#a6e22e">readEvents</span>()
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">w</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>可以看到其中最核心的就是 <code>unix.InotifyInit1</code> 调用了，通过深入源码可以发现，这个函数的实现是调用了 linux 的系统调用 <code>inotify_init1</code>，而这个系统调用的作用是：初始化一个新的 inotify 实例并返回与新的 inotify 事件队列关联的文件描述符，这个文件描述符可以用于后续的操作（可以先理解成和网络编程中的监听套接字一样的文件描述符）。</p>
+<p>这里关于 inotify 先不急着展开，我们继续看另外的两个函数。</p>
+<h4 id="watcheradd">
+  Watcher.Add
+  <a class="anchor" href="#watcheradd">#</a>
+</h4>
+<p>Watcher.Add 是对 Watcher.AddWith 的包装，因此我们直接看 AddWith 的实现：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// AddWith 允许传入一些选项：
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// - WithBufferSize 设置缓冲区大小，这个选项只对 windows 有效，其他平台无效 默认是 64K
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">w</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Watcher</span>) <span style="color:#a6e22e">AddWith</span>(<span style="color:#a6e22e">name</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">opts</span> <span style="color:#f92672">...</span><span style="color:#a6e22e">addOpt</span>) <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">w</span>.<span style="color:#a6e22e">isClosed</span>() {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">ErrClosed</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">name</span> = <span style="color:#a6e22e">filepath</span>.<span style="color:#a6e22e">Clean</span>(<span style="color:#a6e22e">name</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">_</span> = <span style="color:#a6e22e">getOptions</span>(<span style="color:#a6e22e">opts</span><span style="color:#f92672">...</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">var</span> <span style="color:#a6e22e">flags</span> <span style="color:#66d9ef">uint32</span> = <span style="color:#a6e22e">unix</span>.<span style="color:#a6e22e">IN_MOVED_TO</span> | <span style="color:#a6e22e">unix</span>.<span style="color:#a6e22e">IN_MOVED_FROM</span> |
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">unix</span>.<span style="color:#a6e22e">IN_CREATE</span> | <span style="color:#a6e22e">unix</span>.<span style="color:#a6e22e">IN_ATTRIB</span> | <span style="color:#a6e22e">unix</span>.<span style="color:#a6e22e">IN_MODIFY</span> |
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">unix</span>.<span style="color:#a6e22e">IN_MOVE_SELF</span> | <span style="color:#a6e22e">unix</span>.<span style="color:#a6e22e">IN_DELETE</span> | <span style="color:#a6e22e">unix</span>.<span style="color:#a6e22e">IN_DELETE_SELF</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">w</span>.<span style="color:#a6e22e">watches</span>.<span style="color:#a6e22e">updatePath</span>(<span style="color:#a6e22e">name</span>, <span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">existing</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">watch</span>) (<span style="color:#f92672">*</span><span style="color:#a6e22e">watch</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">existing</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">flags</span> <span style="color:#f92672">|=</span> <span style="color:#a6e22e">existing</span>.<span style="color:#a6e22e">flags</span> | <span style="color:#a6e22e">unix</span>.<span style="color:#a6e22e">IN_MASK_ADD</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// inotify 系统调用，把文件/目录添加到 inotify 实例中
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">wd</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">unix</span>.<span style="color:#a6e22e">InotifyAddWatch</span>(<span style="color:#a6e22e">w</span>.<span style="color:#a6e22e">fd</span>, <span style="color:#a6e22e">name</span>, <span style="color:#a6e22e">flags</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">wd</span> <span style="color:#f92672">==</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">existing</span> <span style="color:#f92672">==</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">watch</span>{
+</span></span><span style="display:flex;"><span>                <span style="color:#a6e22e">wd</span>:    uint32(<span style="color:#a6e22e">wd</span>),
+</span></span><span style="display:flex;"><span>                <span style="color:#a6e22e">path</span>:  <span style="color:#a6e22e">name</span>,
+</span></span><span style="display:flex;"><span>                <span style="color:#a6e22e">flags</span>: <span style="color:#a6e22e">flags</span>,
+</span></span><span style="display:flex;"><span>            }, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">existing</span>.<span style="color:#a6e22e">wd</span> = uint32(<span style="color:#a6e22e">wd</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">existing</span>.<span style="color:#a6e22e">flags</span> = <span style="color:#a6e22e">flags</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">existing</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>    })
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>从这里又发现了一个新的 inotify 系统调用 inotify_add_watch, 它传入的参数是一个文件描述符，一个文件路径和一些 flags，这个系统调用的作用是：将监视添加到初始化的 inotify 实例中。</p>
+<p>同样的关于这个系统调用的细节，我们先不展开，我们继续看最后一个API。</p>
+<h4 id="watcherevents">
+  Watcher.Events
+  <a class="anchor" href="#watcherevents">#</a>
+</h4>
+<p>要分析和理解 Watcher.Events 的使用，需要先看一下 Watcher.readEvents 的实现：代码贴在这里稍微有点冗长，因此只显示了核心的部分，完整的代码可以参考 <a href="https://github.com/fsnotify/fsnotify/blob/main/backend_inotify.go#L453-L560">https://github.com/fsnotify/fsnotify/blob/main/backend_inotify.go#L453-L560</a></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">w</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Watcher</span>) <span style="color:#a6e22e">readEvents</span>() {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ... 省略部分代码
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">var</span> (
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">buf</span>   [<span style="color:#a6e22e">unix</span>.<span style="color:#a6e22e">SizeofInotifyEvent</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">4096</span>]<span style="color:#66d9ef">byte</span> <span style="color:#75715e">// Buffer for a maximum of 4096 raw events
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">errno</span> <span style="color:#66d9ef">error</span>                                <span style="color:#75715e">// Syscall errno
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    )
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// See if we have been closed.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">w</span>.<span style="color:#a6e22e">isClosed</span>() {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 从 inotify 文件中读取
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">n</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">w</span>.<span style="color:#a6e22e">inotifyFile</span>.<span style="color:#a6e22e">Read</span>(<span style="color:#a6e22e">buf</span>[:])
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 省略错误处理的代码
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">n</span> &lt; <span style="color:#a6e22e">unix</span>.<span style="color:#a6e22e">SizeofInotifyEvent</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">// 如果读取的数据字节数小于一个事件的大小，那么就认为是错误，那么进行错误处理
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#75715e">// 省略处理逻辑
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">var</span> <span style="color:#a6e22e">offset</span> <span style="color:#66d9ef">uint32</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 处理缓冲区中的所有事件，至少要有一个事件
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">for</span> <span style="color:#a6e22e">offset</span> <span style="color:#f92672">&lt;=</span> uint32(<span style="color:#a6e22e">n</span><span style="color:#f92672">-</span><span style="color:#a6e22e">unix</span>.<span style="color:#a6e22e">SizeofInotifyEvent</span>) {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">var</span> (
+</span></span><span style="display:flex;"><span>                <span style="color:#75715e">// unix.InotifyEvent 是一个结构体，定义如下：
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                <span style="color:#75715e">// type InotifyEvent struct {
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                <span style="color:#75715e">//     Wd     int32
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                <span style="color:#75715e">//     Mask   uint32
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                <span style="color:#75715e">//     Cookie uint32
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                <span style="color:#75715e">//     Len    uint32
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                <span style="color:#75715e">// }
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                <span style="color:#75715e">// 这里使用了 unsafe.Pointer 将 buf 中正在处理的事件，转换成了 InotifyEvent 结构体
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                <span style="color:#a6e22e">raw</span>     = (<span style="color:#f92672">*</span><span style="color:#a6e22e">unix</span>.<span style="color:#a6e22e">InotifyEvent</span>)(<span style="color:#a6e22e">unsafe</span>.<span style="color:#a6e22e">Pointer</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">buf</span>[<span style="color:#a6e22e">offset</span>]))
+</span></span><span style="display:flex;"><span>                <span style="color:#a6e22e">mask</span>    = uint32(<span style="color:#a6e22e">raw</span>.<span style="color:#a6e22e">Mask</span>)
+</span></span><span style="display:flex;"><span>                <span style="color:#a6e22e">nameLen</span> = uint32(<span style="color:#a6e22e">raw</span>.<span style="color:#a6e22e">Len</span>)
+</span></span><span style="display:flex;"><span>            )
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">// 省略部分代码
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">// 如果有事件发生在监控的目录或者文件上，但是内核不会将文件名附加到事件上，但是又希望
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#75715e">// &#34;Name&#34; 能说明文件名，因此从 watches.path 中根据 wd 获取文件名。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#a6e22e">watch</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">w</span>.<span style="color:#a6e22e">watches</span>.<span style="color:#a6e22e">byWd</span>(uint32(<span style="color:#a6e22e">raw</span>.<span style="color:#a6e22e">Wd</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">// 自动移除监控的目录或者文件，如果目录或者文件被删除了
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">watch</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> <span style="color:#f92672">&amp;&amp;</span> <span style="color:#a6e22e">mask</span><span style="color:#f92672">&amp;</span><span style="color:#a6e22e">unix</span>.<span style="color:#a6e22e">IN_DELETE_SELF</span> <span style="color:#f92672">==</span> <span style="color:#a6e22e">unix</span>.<span style="color:#a6e22e">IN_DELETE_SELF</span> {
+</span></span><span style="display:flex;"><span>                <span style="color:#a6e22e">w</span>.<span style="color:#a6e22e">watches</span>.<span style="color:#a6e22e">remove</span>(<span style="color:#a6e22e">watch</span>.<span style="color:#a6e22e">wd</span>)
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">watch</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> <span style="color:#f92672">&amp;&amp;</span> <span style="color:#a6e22e">mask</span><span style="color:#f92672">&amp;</span><span style="color:#a6e22e">unix</span>.<span style="color:#a6e22e">IN_MOVE_SELF</span> <span style="color:#f92672">==</span> <span style="color:#a6e22e">unix</span>.<span style="color:#a6e22e">IN_MOVE_SELF</span> {
+</span></span><span style="display:flex;"><span>                <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">w</span>.<span style="color:#a6e22e">remove</span>(<span style="color:#a6e22e">watch</span>.<span style="color:#a6e22e">path</span>)
+</span></span><span style="display:flex;"><span>                <span style="color:#75715e">// 省略错误处理
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">var</span> <span style="color:#a6e22e">name</span> <span style="color:#66d9ef">string</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">// 省略 name 处理
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#75715e">// 事件处理完成后就可以给使用方发送事件了
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#a6e22e">event</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">w</span>.<span style="color:#a6e22e">newEvent</span>(<span style="color:#a6e22e">name</span>, <span style="color:#a6e22e">mask</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">mask</span><span style="color:#f92672">&amp;</span><span style="color:#a6e22e">unix</span>.<span style="color:#a6e22e">IN_IGNORED</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">w</span>.<span style="color:#a6e22e">sendEvent</span>(<span style="color:#a6e22e">event</span>) {
+</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>                }
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">// 处理下一个事件
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#a6e22e">offset</span> <span style="color:#f92672">+=</span> <span style="color:#a6e22e">unix</span>.<span style="color:#a6e22e">SizeofInotifyEvent</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">nameLen</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>至此我们已经弄清楚了 fsnotify 中在 linux 系统上在处理流程，那么可以更加深入的去了解关于 inotify 的一些细节了。</p>
+<h3 id="inotify-系统">
+  inotify 系统
+  <a class="anchor" href="#inotify-%e7%b3%bb%e7%bb%9f">#</a>
+</h3>
+<p>从 fsnotify 的 backend_inotify.go 文件命名上我们早就可以发现 inotify 这个词，那么它是什么呢？</p>
+<p>inotify 是 linux VFS 的一个子系统，它可以监控文件系统的变化，当文件系统发生变化的时候，内核会将这些变化通知给用户空间，用户空间可以根据这些变化做一些事情。</p>
+<p>从 fsnotify 的代码中我们已经发现了 inotify 相关的系统调用了，我们可以看一下它的系统调用的文档：</p>
+<p>初始化一个 inotify 实例：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">// 如果flags为0，则inotify_init1()与inotify_init()相同
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// flags 包含以下的标志：
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// - IN_NONBLOCK 说明 inotify 文件描述符应该被设置为非阻塞模式，这样的话，如果没有事件发生，inotify_read() 将会立即返回，而不是阻塞等待
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// - IN_CLOEXEC  说明 inotify 文件描述符应该被设置为 close-on-exec，这样的话，当调用 execve(2) 时，inotify 文件描述符将会被关闭
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// 成功后，这些系统调用将返回一个新的文件描述符。出错时，返回 -1，并设置 errno 来指示错误。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">inotify_init</span>(<span style="color:#66d9ef">void</span>);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">inotify_init1</span>(<span style="color:#66d9ef">int</span> flags);
+</span></span></code></pre></div><p>添加移除文件的监控：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">// 为路径名中指定位置的文件添加新的监视，或修改现有的监视；调用者必须具有该文件的读取权限。fd 参数是 inotify 实例对应的文件描述符。要监视路径名的事件在掩码位参数中指定。有关可在 mask 中设置的位的完整说明，请参阅 inotify(7)。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">inotify_add_watch</span>(<span style="color:#66d9ef">int</span> fd, <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>pathname, <span style="color:#66d9ef">uint32_t</span> mask);
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 从与文件描述符 fd 关联的 inotify 实例中删除与监视描述符 wd 关联的监视。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">inotify_rm_watch</span>(<span style="color:#66d9ef">int</span> fd, <span style="color:#66d9ef">int</span> wd);
+</span></span></code></pre></div><p>关于读取的部分 inotify(7) 中是这么说的：</p>
+<blockquote>
+<p>To determine what events have occurred, an application read(2)s from the inotify file descriptor. If no events have so far occurred, then, assuming a blocking file descriptor, read(2) will block until at least one event occurs (unless interrupted by a signal, in which case the call fails with the error EINTR; see signal(7)).</p>
+<p>为了确定发生了哪些事件，应用程序从 inotify 文件描述符中读取(2)。如果到目前为止还没有发生任何事件，则假设有一个阻塞文件描述符，read(2) 将阻塞，直到至少发生一个事件（除非被信号中断，在这种情况下，调用会失败并出现错误 EINTR；请参阅signal(7)）。</p>
+</blockquote>
+<p>每次成功的读取都会返回一个包含以下一个或多个结构的缓冲区：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> inotify_event {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span>      wd;       <span style="color:#75715e">/* 监视的文件描述符，也就是 inotify_add_watch 返回的 wd */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">uint32_t</span> mask;     <span style="color:#75715e">/* 包含描述 发生 的事件的掩码位 */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">uint32_t</span> cookie;   <span style="color:#75715e">/* 连接相关事件的唯一整数标识，目前仅用于 rename 事件 */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">uint32_t</span> len;      <span style="color:#75715e">/* 说明 name 的长度 */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">char</span>     name[];   <span style="color:#75715e">/* 文件名仅在被监视目录中的事件发生时才有值，也就是直接监视文件，这里是不会有文件名的 */</span>
+</span></span><span style="display:flex;"><span>};
+</span></span></code></pre></div><p>inotify 相关的东西我们也搞清楚了，可以通过以下一个简单的 c 代码例子来串联一下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdlib.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;errno.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;sys/inotify.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#define EVENT_SIZE  (sizeof (struct inotify_event))
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#define BUF_LEN     (1024 * (EVENT_SIZE + 16))
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">main</span>(<span style="color:#66d9ef">int</span> argc, <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span>argv[]) {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> fd, wd;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">char</span> buf[BUF_LEN];
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">ssize_t</span> len;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> inotify_event <span style="color:#f92672">*</span>event;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    fd <span style="color:#f92672">=</span> <span style="color:#a6e22e">inotify_init</span>();
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (fd <span style="color:#f92672">==</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">perror</span>(<span style="color:#e6db74">&#34;inotify_init&#34;</span>);
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">exit</span>(EXIT_FAILURE);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    wd <span style="color:#f92672">=</span> <span style="color:#a6e22e">inotify_add_watch</span>(fd, <span style="color:#e6db74">&#34;/tmp/test&#34;</span>, IN_MODIFY);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (wd <span style="color:#f92672">==</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">perror</span>(<span style="color:#e6db74">&#34;inotify_add_watch&#34;</span>);
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">exit</span>(EXIT_FAILURE);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;Watching /tmp/test for changes...</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">while</span> (<span style="color:#ae81ff">1</span>) {
+</span></span><span style="display:flex;"><span>        len <span style="color:#f92672">=</span> <span style="color:#a6e22e">read</span>(fd, buf, BUF_LEN);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (len <span style="color:#f92672">==</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span> <span style="color:#f92672">&amp;&amp;</span> errno <span style="color:#f92672">!=</span> EAGAIN) {
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">perror</span>(<span style="color:#e6db74">&#34;read&#34;</span>);
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">exit</span>(EXIT_FAILURE);
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (len <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0</span>) {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">continue</span>;
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        event <span style="color:#f92672">=</span> (<span style="color:#66d9ef">struct</span> inotify_event <span style="color:#f92672">*</span>) buf;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (event<span style="color:#f92672">-&gt;</span>mask <span style="color:#f92672">&amp;</span> IN_MODIFY) {
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">printf</span>(<span style="color:#e6db74">&#34;File /tmp/test was modified!</span><span style="color:#ae81ff">\n</span><span style="color:#e6db74">&#34;</span>);
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">inotify_rm_watch</span>(fd, wd);
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">close</span>(fd);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>实际执行效果如下：</p>
+<img src="/images/inotify_c_demo.jpg" />
+<h3 id="inotify-的实现和-linux-文件系统">
+  inotify 的实现和 linux 文件系统
+  <a class="anchor" href="#inotify-%e7%9a%84%e5%ae%9e%e7%8e%b0%e5%92%8c-linux-%e6%96%87%e4%bb%b6%e7%b3%bb%e7%bb%9f">#</a>
+</h3>
+<p>到现在我们才算是真正的搞清楚了 fsnotify 是如何实现的。但是我们还是不知道在 linux 内部 inotify 到底是怎么回事？跟文件系统有什么关系？</p>
+<h4 id="inotify-的实现">
+  inotify 的实现
+  <a class="anchor" href="#inotify-%e7%9a%84%e5%ae%9e%e7%8e%b0">#</a>
+</h4>
+<p>为了搞清楚 inotify 的实现，我们有必要翻一下 linux 的源码，看看它是如何实现的。通过系统调用我们知道，inotify 的使用主要是通过 inotify_init 和 inotify_add_watch 这两个系统调用来实现 fsnotify 实例的初始化和 watch 添加, 通过 read 系统调用来获取发生的事件。因此我们主要解答这三个问题：</p>
+<ul>
+<li>inotify_init 做了什么事情？</li>
+<li>inotify_add_watch 做了什么事情？</li>
+<li>inotify 事件如何产生的？</li>
+</ul>
+<blockquote>
+<p>这里的源码是 linux 6.4.11，为了缩短篇幅只提供了这里最关心的部分代码</p>
+</blockquote>
+<h6 id="inotify_init-做了什么">
+  inotify_init 做了什么？
+  <a class="anchor" href="#inotify_init-%e5%81%9a%e4%ba%86%e4%bb%80%e4%b9%88">#</a>
+</h6>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">// fs/notify/inotify/inotify_user.c#L695
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">do_inotify_init</span>(<span style="color:#66d9ef">int</span> flags)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* 初始化一个 fsnotify_group, 这是 linux 中 fsnotify 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">       的一个概念，也就是前文提到的实例。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">    */</span>
+</span></span><span style="display:flex;"><span>    group <span style="color:#f92672">=</span> <span style="color:#a6e22e">inotify_new_group</span>(inotify_max_queued_events);
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 创建一个匿名 inode，这个 inode 会被用于 inotify 实例
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// 继续追下去会发现， 这里会创建一个文件，ret 就是这个文件的文件描述符，
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// 同时 group 会被设置到文件的 private_data 中，这样就可以通过文件描述符获取到 group 了
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">//（后续 inotify_add_watch 等操作都是通过这个文件描述符来获取 group 的）
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// 同时 inotify_fops 会被设置到文件的 f_op 中，文件对应的 f_op 就是 inotify 相关的操作
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">anon_inode_getfd</span>(<span style="color:#e6db74">&#34;inotify&#34;</span>, <span style="color:#f92672">&amp;</span>inotify_fops, group,
+</span></span><span style="display:flex;"><span>                  O_RDONLY <span style="color:#f92672">|</span> flags);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> ret;
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> file_operations inotify_fops <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>    .show_fdinfo	<span style="color:#f92672">=</span> inotify_show_fdinfo,
+</span></span><span style="display:flex;"><span>    .poll		<span style="color:#f92672">=</span> inotify_poll,
+</span></span><span style="display:flex;"><span>    .read		<span style="color:#f92672">=</span> inotify_read,
+</span></span><span style="display:flex;"><span>    .fasync		<span style="color:#f92672">=</span> fsnotify_fasync,
+</span></span><span style="display:flex;"><span>    .release	<span style="color:#f92672">=</span> inotify_release,
+</span></span><span style="display:flex;"><span>    .unlocked_ioctl	<span style="color:#f92672">=</span> inotify_ioctl,
+</span></span><span style="display:flex;"><span>    .compat_ioctl	<span style="color:#f92672">=</span> inotify_ioctl,
+</span></span><span style="display:flex;"><span>    .llseek		<span style="color:#f92672">=</span> noop_llseek,
+</span></span><span style="display:flex;"><span>};
+</span></span></code></pre></div><p>关于 fsnotify_group 的定义如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">// include/linux/fsnotify_backend.h#L185
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// group 是一个想要接收文件系统事件的通知的结构体。mask 保存了这个 group 关心的事件类型的子集。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// group 的 refcnt 由实现者决定，任何时候如果它变成了 0，那么所有的东西都会被清理掉。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">struct</span> fsnotify_group {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> fsnotify_ops <span style="color:#f92672">*</span>ops; <span style="color:#75715e">// 用于处理事件的回调函数，inotify 对应的是 inotify_fsnotify_ops
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">refcount_t</span> refcnt;              <span style="color:#75715e">// 表示这个 group 实例的引用计数，如果为0则销毁
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> list_head notification_list;   <span style="color:#75715e">// 用于保存通知的链表
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">wait_queue_head_t</span> notification_waitq; <span style="color:#75715e">// 用于等待通知的等待队列，阻塞在这个队列上的进程会被唤醒
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">int</span> q_len;      <span style="color:#75715e">// 事件队列的长度
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">int</span> max_events; <span style="color:#75715e">// 事件队列的最大长度
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    ...
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> fsnotify_event <span style="color:#f92672">*</span>overflow_event; <span style="color:#75715e">// 当事件队列满了的时候，会将事件放到这里
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>};
+</span></span></code></pre></div><p><strong>小结：</strong> inotify_init 主要做了两件事情：</p>
+<ul>
+<li>创建一个 fsnotify_group 实例</li>
+<li>创建一个匿名 inode，这个 inode 会被用于 inotify 实例，同时设定了 f_op 为 inotify_fops，private_data 为 group</li>
+</ul>
+<h6 id="inotify_add_watch-做了什么">
+  inotify_add_watch 做了什么？
+  <a class="anchor" href="#inotify_add_watch-%e5%81%9a%e4%ba%86%e4%bb%80%e4%b9%88">#</a>
+</h6>
+<p>通过检索 inotify_add_watch 的调用链，我们可以找到它的实现，如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#a6e22e">SYSCALL_DEFINE3</span>(inotify_add_watch, <span style="color:#66d9ef">int</span>, fd, <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">char</span> __user <span style="color:#f92672">*</span>, pathname, u32, mask)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 从 inotify_init 返回的文件描述符中获取 group 实例
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    f <span style="color:#f92672">=</span> <span style="color:#a6e22e">fdget</span>(fd);
+</span></span><span style="display:flex;"><span>    group <span style="color:#f92672">=</span> f.file<span style="color:#f92672">-&gt;</span>private_data;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 创建或者更新 watch
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">inotify_update_watch</span>(group, inode, mask); 
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">inotify_update_watch</span>(<span style="color:#66d9ef">struct</span> fsnotify_group <span style="color:#f92672">*</span>group, <span style="color:#66d9ef">struct</span> inode <span style="color:#f92672">*</span>inode, u32 arg)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 先尝试更新已经存在的 watch
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">inotify_update_existing_watch</span>(group, inode, arg);
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 如果不存在，那么创建
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">if</span> (ret <span style="color:#f92672">==</span> <span style="color:#f92672">-</span>ENOENT)
+</span></span><span style="display:flex;"><span>        ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">inotify_new_watch</span>(group, inode, arg);
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">inotify_new_watch</span>(<span style="color:#66d9ef">struct</span> fsnotify_group <span style="color:#f92672">*</span>group,
+</span></span><span style="display:flex;"><span>                 <span style="color:#66d9ef">struct</span> inode <span style="color:#f92672">*</span>inode,
+</span></span><span style="display:flex;"><span>                 u32 arg)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> inotify_inode_mark <span style="color:#f92672">*</span>tmp_i_mark;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> ret;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> idr <span style="color:#f92672">*</span>idr <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>group<span style="color:#f92672">-&gt;</span>inotify_data.idr;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">spinlock_t</span> <span style="color:#f92672">*</span>idr_lock <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>group<span style="color:#f92672">-&gt;</span>inotify_data.idr_lock;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    tmp_i_mark <span style="color:#f92672">=</span> <span style="color:#a6e22e">kmem_cache_alloc</span>(inotify_inode_mark_cachep, GFP_KERNEL);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (<span style="color:#a6e22e">unlikely</span>(<span style="color:#f92672">!</span>tmp_i_mark))
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#f92672">-</span>ENOMEM;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">fsnotify_init_mark</span>(<span style="color:#f92672">&amp;</span>tmp_i_mark<span style="color:#f92672">-&gt;</span>fsn_mark, group);
+</span></span><span style="display:flex;"><span>    tmp_i_mark<span style="color:#f92672">-&gt;</span>fsn_mark.mask <span style="color:#f92672">=</span> <span style="color:#a6e22e">inotify_arg_to_mask</span>(inode, arg);
+</span></span><span style="display:flex;"><span>    tmp_i_mark<span style="color:#f92672">-&gt;</span>fsn_mark.flags <span style="color:#f92672">=</span> <span style="color:#a6e22e">inotify_arg_to_flags</span>(arg);
+</span></span><span style="display:flex;"><span>    tmp_i_mark<span style="color:#f92672">-&gt;</span>wd <span style="color:#f92672">=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// idr 是 group-&gt;inotify_data.idr，这是一个 radix 树，用于保存所有的 inotify_inode_mark
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">inotify_add_to_idr</span>(idr, idr_lock, tmp_i_mark);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (ret)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">goto</span> out_err;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* increment the number of watches the user has */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span><span style="color:#a6e22e">inc_inotify_watches</span>(group<span style="color:#f92672">-&gt;</span>inotify_data.ucounts)) {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">inotify_remove_from_idr</span>(group, tmp_i_mark);
+</span></span><span style="display:flex;"><span>        ret <span style="color:#f92672">=</span> <span style="color:#f92672">-</span>ENOSPC;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">goto</span> out_err;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* we are on the idr, now get on the inode */</span>
+</span></span><span style="display:flex;"><span>    ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">fsnotify_add_inode_mark_locked</span>(<span style="color:#f92672">&amp;</span>tmp_i_mark<span style="color:#f92672">-&gt;</span>fsn_mark, inode, <span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (ret) {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">/* we failed to get on the inode, get off the idr */</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">inotify_remove_from_idr</span>(group, tmp_i_mark);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">goto</span> out_err;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* return the watch descriptor for this new mark */</span>
+</span></span><span style="display:flex;"><span>    ret <span style="color:#f92672">=</span> tmp_i_mark<span style="color:#f92672">-&gt;</span>wd;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>out_err:
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* match the ref from fsnotify_init_mark() */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">fsnotify_put_mark</span>(<span style="color:#f92672">&amp;</span>tmp_i_mark<span style="color:#f92672">-&gt;</span>fsn_mark);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> ret;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p><strong>小结：</strong> inotify_add_watch 主要做了以下几件事情：</p>
+<ol>
+<li>创建一个 inotify_inode_mark 实例</li>
+<li>将 inotify_inode_mark 实例添加到 group-&gt;inotify_data.idr 中</li>
+</ol>
+<h6 id="inotify-事件如何产生的">
+  inotify 事件如何产生的？
+  <a class="anchor" href="#inotify-%e4%ba%8b%e4%bb%b6%e5%a6%82%e4%bd%95%e4%ba%a7%e7%94%9f%e7%9a%84">#</a>
+</h6>
+<p>在阅读 inotify 相关的源码时 fsnotify.h 中有这么些函数：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">// include/linux/fsnotify.h
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// fsnotify_create - &#39;name&#39; was linked in
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">inline</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">fsnotify_create</span>(<span style="color:#66d9ef">struct</span> inode <span style="color:#f92672">*</span>dir, <span style="color:#66d9ef">struct</span> dentry <span style="color:#f92672">*</span>dentry)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// fsnotify_link - &#39;name&#39; was created
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">inline</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">fsnotify_link</span>(<span style="color:#66d9ef">struct</span> inode <span style="color:#f92672">*</span>dir, <span style="color:#66d9ef">struct</span> inode <span style="color:#f92672">*</span>inode, <span style="color:#66d9ef">struct</span> dentry <span style="color:#f92672">*</span>new_dentry)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// fsnotify_delete - @dentry was unlinked and unhashed
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">inline</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">fsnotify_delete</span>(<span style="color:#66d9ef">struct</span> inode <span style="color:#f92672">*</span>dir, <span style="color:#66d9ef">struct</span> inode <span style="color:#f92672">*</span>inode, <span style="color:#66d9ef">struct</span> dentry <span style="color:#f92672">*</span>dentry)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// fsnotify_access - @file was accessed
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">inline</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">fsnotify_access</span>(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file)
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// ... 还有更多
+</span></span></span></code></pre></div><p>很明显，从名字就可以看出大概是给其他的系统调用提供了一些 hook，这样在这些系统调用中就可以调用这些 hook 来通知到用户空间了。跟踪下 fsnotify_access 的调用链，可以发现它存在于 read syscall &gt; ksys_read &gt; vfs_read &gt; fsnotify_access 调用链中，也可以从侧面佐证这一点。</p>
+<blockquote>
+<p>这一部分链路较长，代码也很多，因此只关注两个点:</p>
+<ol>
+<li>文件触发事件后，哪些 group 应该收到事件，是怎么判断的？</li>
+<li>事件是怎么通知到用户空间的？</li>
+</ol>
+</blockquote>
+<p>下面我们以 fsnotify_access 为例，看看它是怎么通知到用户空间的：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>fsnoify_access -&gt; fsnotify_file -&gt; fsnotify_parent -&gt; __fsnotify_parent -&gt; fsnotify
+</span></span><span style="display:flex;"><span>-&gt; <span style="color:#f92672">(</span>group-&gt;ops.handle_inode_event<span style="color:#f92672">)</span>inotify_handle_inode_event -&gt; fsnotify_add_event -&gt; 
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">inline</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">fsnotify_access</span>(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">fsnotify_file</span>(file, FS_ACCESS);
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">inline</span> <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">fsnotify_file</span>(<span style="color:#66d9ef">struct</span> file <span style="color:#f92672">*</span>file, __u32 mask)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    ...
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">fsnotify_parent</span>(path<span style="color:#f92672">-&gt;</span>dentry, mask, path, FSNOTIFY_EVENT_PATH);
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">/* Notify this dentry&#39;s parent about a child&#39;s events. */</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">static</span> <span style="color:#66d9ef">inline</span> <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">fsnotify_parent</span>(<span style="color:#66d9ef">struct</span> dentry <span style="color:#f92672">*</span>dentry, __u32 mask,
+</span></span><span style="display:flex;"><span>                  <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>data, <span style="color:#66d9ef">int</span> data_type)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    ...
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">__fsnotify_parent</span>(dentry, mask, data, data_type);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>notify_child:
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">fsnotify</span>(mask, data, data_type, NULL, NULL, inode, <span style="color:#ae81ff">0</span>);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>这里重点关注 fsnotify 函数，它的主要作用就是</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">fsnotify</span>(__u32 mask, <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">void</span> <span style="color:#f92672">*</span>data, <span style="color:#66d9ef">int</span> data_type, <span style="color:#66d9ef">struct</span> inode <span style="color:#f92672">*</span>dir,
+</span></span><span style="display:flex;"><span>         <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">struct</span> qstr <span style="color:#f92672">*</span>file_name, <span style="color:#66d9ef">struct</span> inode <span style="color:#f92672">*</span>inode, u32 cookie)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 从 inode 结构中的 xxx_fsnotify_marks 获取到 fsnotify_mark 信息
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    iter_info.marks[FSNOTIFY_ITER_TYPE_SB] <span style="color:#f92672">=</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">fsnotify_first_mark</span>(<span style="color:#f92672">&amp;</span>sb<span style="color:#f92672">-&gt;</span>s_fsnotify_marks);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (mnt) {
+</span></span><span style="display:flex;"><span>        iter_info.marks[FSNOTIFY_ITER_TYPE_VFSMOUNT] <span style="color:#f92672">=</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">fsnotify_first_mark</span>(<span style="color:#f92672">&amp;</span>mnt<span style="color:#f92672">-&gt;</span>mnt_fsnotify_marks);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (inode) {
+</span></span><span style="display:flex;"><span>        iter_info.marks[FSNOTIFY_ITER_TYPE_INODE] <span style="color:#f92672">=</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">fsnotify_first_mark</span>(<span style="color:#f92672">&amp;</span>inode<span style="color:#f92672">-&gt;</span>i_fsnotify_marks);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (inode2) {
+</span></span><span style="display:flex;"><span>        iter_info.marks[inode2_type] <span style="color:#f92672">=</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">fsnotify_first_mark</span>(<span style="color:#f92672">&amp;</span>inode2<span style="color:#f92672">-&gt;</span>i_fsnotify_marks);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">while</span> (<span style="color:#a6e22e">fsnotify_iter_select_report_types</span>(<span style="color:#f92672">&amp;</span>iter_info)) {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 遍历 iter_info.marks，检查是否有 group 关心这个事件，如果有的话
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#75715e">// 就将事件添加到 group 的事件队列中。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">send_to_group</span>(mask, data, data_type, dir, file_name,
+</span></span><span style="display:flex;"><span>                    cookie, <span style="color:#f92672">&amp;</span>iter_info);
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 继续遍历下一个 mark
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">fsnotify_iter_next</span>(<span style="color:#f92672">&amp;</span>iter_info);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    ret <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    ...
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><blockquote>
+<p>这部分逻辑解析得比较简单，代码也比较多，初次读会有很多问题，所以就掌握一点： inode 结构中记录一个 i_fsnotify_marks 字段, super_block 中也有一个 s_fsnotify_marks 字段，这两个字段都是 fsnotify_mark_connector 类型，fsnotify 系统可以通过这两个字段来获取到该文件对应的 fsnotify_mark 信息。</p>
+</blockquote>
+<p>最终，事件 fsnotify_insert_event 完成 event 的插入，然后唤醒等待事件的进程，增加计数：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">// 给特定 group 新增事件
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">fsnotify_insert_event</span>(<span style="color:#66d9ef">struct</span> fsnotify_group <span style="color:#f92672">*</span>group,
+</span></span><span style="display:flex;"><span>              <span style="color:#66d9ef">struct</span> fsnotify_event <span style="color:#f92672">*</span>event,
+</span></span><span style="display:flex;"><span>              <span style="color:#66d9ef">int</span> (<span style="color:#f92672">*</span>merge)(<span style="color:#66d9ef">struct</span> fsnotify_group <span style="color:#f92672">*</span>,
+</span></span><span style="display:flex;"><span>                       <span style="color:#66d9ef">struct</span> fsnotify_event <span style="color:#f92672">*</span>),
+</span></span><span style="display:flex;"><span>              <span style="color:#66d9ef">void</span> (<span style="color:#f92672">*</span>insert)(<span style="color:#66d9ef">struct</span> fsnotify_group <span style="color:#f92672">*</span>,
+</span></span><span style="display:flex;"><span>                     <span style="color:#66d9ef">struct</span> fsnotify_event <span style="color:#f92672">*</span>))
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> ret <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// event 队列
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">struct</span> list_head <span style="color:#f92672">*</span>list <span style="color:#f92672">=</span> <span style="color:#f92672">&amp;</span>group<span style="color:#f92672">-&gt;</span>notification_list;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 这里的判断是为了处理溢出事件，如果事件队列已经满了，那么就将事件放到溢出事件中
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">if</span> (event <span style="color:#f92672">==</span> group<span style="color:#f92672">-&gt;</span>overflow_event <span style="color:#f92672">||</span>
+</span></span><span style="display:flex;"><span>        group<span style="color:#f92672">-&gt;</span>q_len <span style="color:#f92672">&gt;=</span> group<span style="color:#f92672">-&gt;</span>max_events) {
+</span></span><span style="display:flex;"><span>        ret <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 溢出事件队列还不为空，那么该事件就丢弃
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span><span style="color:#a6e22e">list_empty</span>(<span style="color:#f92672">&amp;</span>group<span style="color:#f92672">-&gt;</span>overflow_event<span style="color:#f92672">-&gt;</span>list)) {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> ret;
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        event <span style="color:#f92672">=</span> group<span style="color:#f92672">-&gt;</span>overflow_event;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">goto</span> queue;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 如果事件队列不为空且 merge 被指定，那么就尝试合并事件
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// 这里合并的意思是：如果事件队列中已经有了这个事件（判断最后一个事件），那么就不用添加
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span><span style="color:#a6e22e">list_empty</span>(list) <span style="color:#f92672">&amp;&amp;</span> merge) {
+</span></span><span style="display:flex;"><span>        ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">merge</span>(group, event);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (ret) {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> ret;
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>queue:
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 将事件添加到队尾，然后唤醒等待事件的进程，增加计数
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    group<span style="color:#f92672">-&gt;</span>q_len<span style="color:#f92672">++</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">list_add_tail</span>(<span style="color:#f92672">&amp;</span>event<span style="color:#f92672">-&gt;</span>list, list);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 唤醒等待事件的进程
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">wake_up</span>(<span style="color:#f92672">&amp;</span>group<span style="color:#f92672">-&gt;</span>notification_waitq);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>最后再重新梳理下 inotify 的事件通知流程：</p>
+<ol>
+<li>系统调用触发事件，比如 read 系统调用触发了 fsnotify_access</li>
+<li>fsnotify_access 经过一系列的逻辑判断，最终调用 fsnotify 函数，该函数的主要作用是从 inode 结构（xxx_fsnotify_marks）开始迭代循环调用 send_to_group</li>
+<li>send_to_group 函数检查 group 是否关心这个事件，如果是，那么就将事件添加到 group 的事件队列中，并唤醒等待事件的进程。</li>
+</ol>
+<h3 id="总结">
+  总结
+  <a class="anchor" href="#%e6%80%bb%e7%bb%93">#</a>
+</h3>
+<p>本文从一个 kratos 的问题出发，分析了 fsnotify 的实现，在 linux 中 fsnotify 其实是基于 inotify 系统调用而实现的。inotify 是 linux VFS 的一个子系统，它可以监控文件系统的变化，当文件系统发生变化的时候，内核会将这些变化通知给用户空间，用户空间可以根据这些变化做一些事情。</p>
+<p>这里还是留了些问题：</p>
+<ul>
+<li>Q1 多层软链接的情况下，inotify 源文件的改动是否还能被监听到？</li>
+<li>Q2 本文开头说的场景能不能实现（两层软链接，修改第二层的时候有变更事件）？</li>
+</ul>
+<h3 id="参考资料">
+  参考资料
+  <a class="anchor" href="#%e5%8f%82%e8%80%83%e8%b5%84%e6%96%99">#</a>
+</h3>
+<ul>
+<li><a href="https://linux.die.net/man/7/inotify">https://linux.die.net/man/7/inotify</a></li>
+<li><a href="https://github.com/fsnotify/fsnotify">https://github.com/fsnotify/fsnotify</a></li>
+</ul>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#软链接和硬链接的区别">软链接和硬链接的区别</a></li>
+        <li><a href="#fsnotify-的实现">fsnotify 的实现</a></li>
+        <li><a href="#inotify-系统">inotify 系统</a></li>
+        <li><a href="#inotify-的实现和-linux-文件系统">inotify 的实现和 linux 文件系统</a></li>
+        <li><a href="#总结">总结</a></li>
+        <li><a href="#参考资料">参考资料</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

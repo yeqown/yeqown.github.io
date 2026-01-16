@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="本文对etcd的原理，实现细节，性能等均不考虑，仅将etcd作为一个分布式的K-V存储组件。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2018/10/23/etcd-service-registration-discovery/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="etcd与service-registration-discovery">
+  <meta property="og:description" content="本文对etcd的原理，实现细节，性能等均不考虑，仅将etcd作为一个分布式的K-V存储组件。">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2018-10-23T17:20:48+00:00">
+    <meta property="article:modified_time" content="2018-10-23T17:20:48+00:00">
+    <meta property="article:tag" content="Golang">
+    <meta property="article:tag" content="Etcd">
+    <meta property="article:tag" content="Microservice">
+    <meta property="article:tag" content="服务注册发现">
+<title>etcd与service-registration-discovery | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2018/10/23/etcd-service-registration-discovery/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>etcd与service-registration-discovery</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#一个核心">一个核心</a></li>
+        <li><a href="#两个对象">两个对象</a></li>
+        <li><a href="#关于服务注册与发现">关于服务注册与发现</a></li>
+        <li><a href="#将现行服务改造成为上述模式需要解决的问题">将现行服务改造成为上述模式需要解决的问题：</a></li>
+        <li><a href="#测试">测试</a></li>
+        <li><a href="#总结">总结</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    etcd与service-registration-discovery
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>October 23, 2018</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F/">分布式</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/etcd/">Etcd</a>, 
+      <a href="/tags/microservice/">Microservice</a>, 
+      <a href="/tags/%E6%9C%8D%E5%8A%A1%E6%B3%A8%E5%86%8C%E5%8F%91%E7%8E%B0/">服务注册发现</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><blockquote>
+<p>声明：本文对etcd的原理，实现细节，性能等均不考虑，仅将etcd作为一个分布式的K-V存储组件。本文提价代码均在： <a href="https://github.com/yeqown/server-common/tree/master/framework/etcd">github.com/yeqown/server-common/tree/master/framework/etcd</a></p>
+</blockquote>
+<h3 id="一个核心">
+  一个核心
+  <a class="anchor" href="#%e4%b8%80%e4%b8%aa%e6%a0%b8%e5%bf%83">#</a>
+</h3>
+<p>etcd, 分布式Key-Value存储工具。详细资料<a href="https://github.com/etcd-io/etcd/blob/master/Documentation/docs.md">由此去</a></p>
+<ul>
+<li><a href="https://github.com/etcd-io/etcd/releases">etcd下载安装</a></li>
+</ul>
+<h3 id="两个对象">
+  两个对象
+  <a class="anchor" href="#%e4%b8%a4%e4%b8%aa%e5%af%b9%e8%b1%a1">#</a>
+</h3>
+<ul>
+<li>服务提供者（在测试环境中，我定义为单独的服务实例），也就是服务的提供者，需要向其他服务暴露自己的ip和端口，方便调用。</li>
+<li>服务调用者（同样地，在测试环境中我定义为反向代理网关程序），也就是服务的调用者，需要获取到 <em><strong>可使用</strong></em> 地服务地址并调用。</li>
+</ul>
+<!-- more -->
+<h3 id="关于服务注册与发现">
+  关于服务注册与发现
+  <a class="anchor" href="#%e5%85%b3%e4%ba%8e%e6%9c%8d%e5%8a%a1%e6%b3%a8%e5%86%8c%e4%b8%8e%e5%8f%91%e7%8e%b0">#</a>
+</h3>
+<p>就具体场景而言：我们的生产环境中使用了一个代理网关服务器，用于转发移动端和PC端的API请求，并完成其他功能。所有的服务实例配置都是硬编码在网关程序中，顶多就是抽离出来成了一个配置文件。这样做的缺点很明显：“非动态”。也就意味着，一旦有服务Down掉，那么用户访问则可能异常，甚至导致整个服务的崩溃；其次，需要对服务进行扩容的情况下，则需要先进行服务部署再更新网关程序，步骤繁琐且容易出错。</p>
+<p>那么如果我们设计成为如下图的样子：
+<img src="/images/etcd-service-regisration-discovery.png" alt="etcd-service-regisration-discovery" />
+对于新添加的服务实例，只需要启动新的服务，并注册到etcd相应的路径下就行了。</p>
+<blockquote>
+<p>注册：对于同一组服务，配置一个统一的前缀（如图上的&quot;/specServer&quot;），不同实例使用ID加以区分。</p>
+</blockquote>
+<h3 id="将现行服务改造成为上述模式需要解决的问题">
+  将现行服务改造成为上述模式需要解决的问题：
+  <a class="anchor" href="#%e5%b0%86%e7%8e%b0%e8%a1%8c%e6%9c%8d%e5%8a%a1%e6%94%b9%e9%80%a0%e6%88%90%e4%b8%ba%e4%b8%8a%e8%bf%b0%e6%a8%a1%e5%bc%8f%e9%9c%80%e8%a6%81%e8%a7%a3%e5%86%b3%e7%9a%84%e9%97%ae%e9%a2%98">#</a>
+</h3>
+<ul>
+<li>etcd 配置安装</li>
+<li>网关程序改造（监听etcd的节点夹子/prefix;适配动态的服务实例调用）</li>
+<li>服务实例改造（注册服务实例到etcd;心跳更新;其他配套设施，异常退出删除注册信息）</li>
+</ul>
+<p>etcd安装配置在github.com已经非常详细了。在这里贴一下我在本地测试时候启动的脚本（这部分是从etcd-demo获取到的，做了针对端口的改动）：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#75715e">#!/bin/bash
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># For each machine</span>
+</span></span><span style="display:flex;"><span>TOKEN<span style="color:#f92672">=</span>token-01
+</span></span><span style="display:flex;"><span>CLUSTER_STATE<span style="color:#f92672">=</span>new
+</span></span><span style="display:flex;"><span>NAME_1<span style="color:#f92672">=</span>machine1
+</span></span><span style="display:flex;"><span>NAME_2<span style="color:#f92672">=</span>machine2
+</span></span><span style="display:flex;"><span>NAME_3<span style="color:#f92672">=</span>machine3
+</span></span><span style="display:flex;"><span>HOST_1<span style="color:#f92672">=</span>127.0.0.1
+</span></span><span style="display:flex;"><span>HOST_2<span style="color:#f92672">=</span>127.0.0.1
+</span></span><span style="display:flex;"><span>HOST_3<span style="color:#f92672">=</span>127.0.0.1
+</span></span><span style="display:flex;"><span>CLUSTER<span style="color:#f92672">=</span><span style="color:#e6db74">${</span>NAME_1<span style="color:#e6db74">}</span><span style="color:#f92672">=</span>http://<span style="color:#e6db74">${</span>HOST_1<span style="color:#e6db74">}</span>:2380,<span style="color:#e6db74">${</span>NAME_2<span style="color:#e6db74">}</span><span style="color:#f92672">=</span>http://<span style="color:#e6db74">${</span>HOST_2<span style="color:#e6db74">}</span>:2381,<span style="color:#e6db74">${</span>NAME_3<span style="color:#e6db74">}</span><span style="color:#f92672">=</span>http://<span style="color:#e6db74">${</span>HOST_3<span style="color:#e6db74">}</span>:2382
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># For machine 1</span>
+</span></span><span style="display:flex;"><span>THIS_NAME<span style="color:#f92672">=</span><span style="color:#e6db74">${</span>NAME_1<span style="color:#e6db74">}</span>
+</span></span><span style="display:flex;"><span>THIS_IP<span style="color:#f92672">=</span><span style="color:#e6db74">${</span>HOST_1<span style="color:#e6db74">}</span>
+</span></span><span style="display:flex;"><span>etcd --data-dir<span style="color:#f92672">=</span>machine1.etcd --name <span style="color:#e6db74">${</span>THIS_NAME<span style="color:#e6db74">}</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>	--initial-advertise-peer-urls http://<span style="color:#e6db74">${</span>THIS_IP<span style="color:#e6db74">}</span>:2380 --listen-peer-urls http://<span style="color:#e6db74">${</span>THIS_IP<span style="color:#e6db74">}</span>:2380 <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>	--advertise-client-urls http://<span style="color:#e6db74">${</span>THIS_IP<span style="color:#e6db74">}</span>:2377 --listen-client-urls http://<span style="color:#e6db74">${</span>THIS_IP<span style="color:#e6db74">}</span>:2377 <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>	--initial-cluster <span style="color:#e6db74">${</span>CLUSTER<span style="color:#e6db74">}</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>	--initial-cluster-state <span style="color:#e6db74">${</span>CLUSTER_STATE<span style="color:#e6db74">}</span> --initial-cluster-token <span style="color:#e6db74">${</span>TOKEN<span style="color:#e6db74">}</span> &amp;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># For machine 2</span>
+</span></span><span style="display:flex;"><span>THIS_NAME<span style="color:#f92672">=</span><span style="color:#e6db74">${</span>NAME_2<span style="color:#e6db74">}</span>
+</span></span><span style="display:flex;"><span>THIS_IP<span style="color:#f92672">=</span><span style="color:#e6db74">${</span>HOST_2<span style="color:#e6db74">}</span>
+</span></span><span style="display:flex;"><span>etcd --data-dir<span style="color:#f92672">=</span>machine2.etcd --name <span style="color:#e6db74">${</span>THIS_NAME<span style="color:#e6db74">}</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>	--initial-advertise-peer-urls http://<span style="color:#e6db74">${</span>THIS_IP<span style="color:#e6db74">}</span>:2381 --listen-peer-urls http://<span style="color:#e6db74">${</span>THIS_IP<span style="color:#e6db74">}</span>:2381 <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>	--advertise-client-urls http://<span style="color:#e6db74">${</span>THIS_IP<span style="color:#e6db74">}</span>:2378 --listen-client-urls http://<span style="color:#e6db74">${</span>THIS_IP<span style="color:#e6db74">}</span>:2378 <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>	--initial-cluster <span style="color:#e6db74">${</span>CLUSTER<span style="color:#e6db74">}</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>	--initial-cluster-state <span style="color:#e6db74">${</span>CLUSTER_STATE<span style="color:#e6db74">}</span> --initial-cluster-token <span style="color:#e6db74">${</span>TOKEN<span style="color:#e6db74">}</span> &amp; 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># For machine 3</span>
+</span></span><span style="display:flex;"><span>THIS_NAME<span style="color:#f92672">=</span><span style="color:#e6db74">${</span>NAME_3<span style="color:#e6db74">}</span>
+</span></span><span style="display:flex;"><span>THIS_IP<span style="color:#f92672">=</span><span style="color:#e6db74">${</span>HOST_3<span style="color:#e6db74">}</span>
+</span></span><span style="display:flex;"><span>etcd --data-dir<span style="color:#f92672">=</span>machine3.etcd --name <span style="color:#e6db74">${</span>THIS_NAME<span style="color:#e6db74">}</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>	--initial-advertise-peer-urls http://<span style="color:#e6db74">${</span>THIS_IP<span style="color:#e6db74">}</span>:2382 --listen-peer-urls http://<span style="color:#e6db74">${</span>THIS_IP<span style="color:#e6db74">}</span>:2382 <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>	--advertise-client-urls http://<span style="color:#e6db74">${</span>THIS_IP<span style="color:#e6db74">}</span>:2379 --listen-client-urls http://<span style="color:#e6db74">${</span>THIS_IP<span style="color:#e6db74">}</span>:2379 <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>	--initial-cluster <span style="color:#e6db74">${</span>CLUSTER<span style="color:#e6db74">}</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>	--initial-cluster-state <span style="color:#e6db74">${</span>CLUSTER_STATE<span style="color:#e6db74">}</span> --initial-cluster-token <span style="color:#e6db74">${</span>TOKEN<span style="color:#e6db74">}</span> &amp;
+</span></span></code></pre></div><p>对于程序的改造，鉴于服务较多且etcd操作流程大体一致，便简单包装了一下，项目地址见文首位置。</p>
+<p>1.对于调用方使用示例如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// etcdtest/gw.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">endpoints</span> <span style="color:#f92672">:=</span> []<span style="color:#66d9ef">string</span>{
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;http://127.0.0.1:2377&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;http://127.0.0.1:2379&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;http://127.0.0.1:2378&#34;</span>,
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 连接etcd获取KeysAPI
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">kapi</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">etcd</span>.<span style="color:#a6e22e">Connect</span>(<span style="color:#a6e22e">endpoints</span><span style="color:#f92672">...</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Exit</span>(<span style="color:#ae81ff">2</span>)
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// debug more, more log ~
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">etcd</span>.<span style="color:#a6e22e">OpenDebug</span>(<span style="color:#66d9ef">true</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// etcd watch, 监听/prefix目录下的改动（“expire;set;update;delete”）
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// 如：set {Key: /prefix/srv_3457, CreatedIndex: 1155, ModifiedIndex: 1155, TTL: 12}
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// 并更新watcher.members, 维持最新的节点状态和数量
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">watcher</span> = <span style="color:#a6e22e">etcd</span>.<span style="color:#a6e22e">NewWatcher</span>(<span style="color:#a6e22e">kapi</span>, <span style="color:#e6db74">&#34;prefix&#34;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">go</span> <span style="color:#a6e22e">watcher</span>.<span style="color:#a6e22e">Watch</span>()
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">ServeHTTP</span>() {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">srvs</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">watcher</span>.<span style="color:#a6e22e">RangeMember</span>() <span style="color:#75715e">// 获取所有可用的服务节点
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div><p>2.对于请求提供方，使用示例如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// etcdtest/server.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">endpoints</span> <span style="color:#f92672">:=</span> []<span style="color:#66d9ef">string</span>{
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;http://127.0.0.1:2377&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;http://127.0.0.1:2379&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;http://127.0.0.1:2378&#34;</span>,
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">etcd</span>.<span style="color:#a6e22e">OpenDebug</span>(<span style="color:#66d9ef">true</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">kapi</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">etcd</span>.<span style="color:#a6e22e">Connect</span>(<span style="color:#a6e22e">endpoints</span><span style="color:#f92672">...</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#a6e22e">err</span>.<span style="color:#a6e22e">Error</span>())
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">Exit</span>(<span style="color:#ae81ff">2</span>)
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 根据服务生成一个provider, 用于生成K:V
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">provider</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">etcd</span>.<span style="color:#a6e22e">NewProvider</span>(
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Sprintf</span>(<span style="color:#e6db74">&#34;srv_%d&#34;</span>, <span style="color:#f92672">*</span><span style="color:#a6e22e">port</span>),              <span style="color:#75715e">// name
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Sprintf</span>(<span style="color:#e6db74">&#34;http://127.0.0.1:%d&#34;</span>, <span style="color:#f92672">*</span><span style="color:#a6e22e">port</span>), <span style="color:#75715e">// addr
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    )
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">cancel</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">WithCancel</span>(<span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Background</span>())
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 每10s设置一个TTL=12s的 “/prefix/id”:“http://host:port” 的的键值对
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// 10s和12s是写死的，没有考虑动态～～，后续考虑升级，目前仅仅是测试。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">go</span> <span style="color:#a6e22e">provider</span>.<span style="color:#a6e22e">Heartbeat</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">kapi</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">etcd</span>.<span style="color:#a6e22e">ProvideOptions</span>{
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">NamePrefix</span>: <span style="color:#e6db74">&#34;prefix&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">SetOpts</span>:    <span style="color:#66d9ef">nil</span>,
+</span></span><span style="display:flex;"><span>    })
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">//...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div><p>关于详细的代码，可以参见:</p>
+<ul>
+<li><a href="https://godoc.org/go.etcd.io/etcd/client">godoc.org/go.etcd.io/etcd/client</a></li>
+<li><a href="https://github.com/yeqown/server-common/blob/master/framework/etcd/provider.go#L42">provider.go#L42</a></li>
+<li><a href="https://github.com/yeqown/server-common/blob/master/framework/etcd/requester.go#L134">requester.go#L134</a></li>
+<li><a href="https://github.com/yeqown/server-common/tree/master/framework/etcd/etcdtest">etcdtest-测试代码</a></li>
+</ul>
+<h3 id="测试">
+  测试
+  <a class="anchor" href="#%e6%b5%8b%e8%af%95">#</a>
+</h3>
+<div> dplayer "url=/mov/etcd-example-video.mov" "loop=no" "theme=#FADFA3" "autoplay=false" "token=tokendemo"</div>
+<h3 id="总结">
+  总结
+  <a class="anchor" href="#%e6%80%bb%e7%bb%93">#</a>
+</h3>
+<p>代码包装得比较粗糙，视频演示还没有包含到服务异常（退出）之后网关程序的应对（这部分是已经完成，只是没有演示）。</p>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "etcd-service-registration-discovery", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#一个核心">一个核心</a></li>
+        <li><a href="#两个对象">两个对象</a></li>
+        <li><a href="#关于服务注册与发现">关于服务注册与发现</a></li>
+        <li><a href="#将现行服务改造成为上述模式需要解决的问题">将现行服务改造成为上述模式需要解决的问题：</a></li>
+        <li><a href="#测试">测试</a></li>
+        <li><a href="#总结">总结</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

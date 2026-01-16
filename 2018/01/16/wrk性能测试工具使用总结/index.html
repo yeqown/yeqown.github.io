@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="wrk 压力测试工具的简单小结。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2018/01/16/wrk%E6%80%A7%E8%83%BD%E6%B5%8B%E8%AF%95%E5%B7%A5%E5%85%B7%E4%BD%BF%E7%94%A8%E6%80%BB%E7%BB%93/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="wrk性能测试工具使用总结">
+  <meta property="og:description" content="wrk 压力测试工具的简单小结。">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2018-01-16T11:28:59+00:00">
+    <meta property="article:modified_time" content="2018-01-16T11:28:59+00:00">
+    <meta property="article:tag" content="Test">
+<title>wrk性能测试工具使用总结 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2018/01/16/wrk%E6%80%A7%E8%83%BD%E6%B5%8B%E8%AF%95%E5%B7%A5%E5%85%B7%E4%BD%BF%E7%94%A8%E6%80%BB%E7%BB%93/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>wrk性能测试工具使用总结</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#安装">安装</a></li>
+        <li><a href="#基本命令">基本命令</a></li>
+        <li><a href="#简单使用及解释">简单使用及解释</a></li>
+        <li><a href="#报告分析">报告分析</a></li>
+        <li><a href="#编写lua脚本实现post请求">编写lua脚本实现post请求</a></li>
+        <li><a href="#定制化wrk">定制化wrk</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    wrk性能测试工具使用总结
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>January 16, 2018</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Test/">Test</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Test/">Test</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><p>wrk 压力测试工具的简单小结。
+项目地址：<a href="https://github.com/wg/wrk">https://github.com/wg/wrk</a></p>
+<!-- more -->
+<h3 id="安装">
+  安装
+  <a class="anchor" href="#%e5%ae%89%e8%a3%85">#</a>
+</h3>
+<p>Win: <a href="https://github.com/wg/wrk/wiki/Installing-wrk-on-Windows-10">https://github.com/wg/wrk/wiki/Installing-wrk-on-Windows-10</a>
+Linux: <a href="https://github.com/wg/wrk/wiki/Installing-wrk-on-Linux">https://github.com/wg/wrk/wiki/Installing-wrk-on-Linux</a>
+MacOS: <code>brew install wrk</code></p>
+<h3 id="基本命令">
+  基本命令
+  <a class="anchor" href="#%e5%9f%ba%e6%9c%ac%e5%91%bd%e4%bb%a4">#</a>
+</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>➜ ~ wrk
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Usage: wrk &lt;options&gt; &lt;url&gt;                            
+</span></span><span style="display:flex;"><span>  Options:                                            
+</span></span><span style="display:flex;"><span>    -c, --connections &lt;N&gt;  连接数   
+</span></span><span style="display:flex;"><span>    -d, --duration    &lt;T&gt;  持续时间          
+</span></span><span style="display:flex;"><span>    -t, --threads     &lt;N&gt;  线程数  
+</span></span><span style="display:flex;"><span>                                                      
+</span></span><span style="display:flex;"><span>    -s, --script      &lt;S&gt;  制定lua脚本       
+</span></span><span style="display:flex;"><span>    -H, --header      &lt;H&gt;  添加请求头     
+</span></span><span style="display:flex;"><span>        --latency          打印延迟分布信息
+</span></span><span style="display:flex;"><span>        --timeout     &lt;T&gt;  设置请求超时
+</span></span><span style="display:flex;"><span>    -v, --version          打印版本信息      
+</span></span><span style="display:flex;"><span>                                                      
+</span></span><span style="display:flex;"><span>  &lt;N&gt;表示数字参数，支持国际单位 <span style="color:#f92672">(</span>1k, 1M, 1G<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>  &lt;T&gt;表示时间参数，支持国际单位 <span style="color:#f92672">(</span>2s, 2m, 2h<span style="color:#f92672">)</span>
+</span></span></code></pre></div><h3 id="简单使用及解释">
+  简单使用及解释
+  <a class="anchor" href="#%e7%ae%80%e5%8d%95%e4%bd%bf%e7%94%a8%e5%8f%8a%e8%a7%a3%e9%87%8a">#</a>
+</h3>
+<p><code>wrk -t1 -d20s -c10 -s post.lua http://api.example.com/fake/post</code>
+以单线程 保持10个连接 持续20秒 运行post.lua脚本访问http://api.example.com/fake/post</p>
+<h3 id="报告分析">
+  报告分析
+  <a class="anchor" href="#%e6%8a%a5%e5%91%8a%e5%88%86%e6%9e%90">#</a>
+</h3>
+<p>如下是一个简单的性能测试报告</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span> Running 10s test @ http://api.example.com/vioce/url
+</span></span><span style="display:flex;"><span>  <span style="color:#ae81ff">1</span> threads and <span style="color:#ae81ff">1</span> connections
+</span></span><span style="display:flex;"><span>  Thread Stats   Avg      Stdev     Max   +/- Stdev
+</span></span><span style="display:flex;"><span>    Latency     1.71s    98.25ms   1.85s    75.00%
+</span></span><span style="display:flex;"><span>    Req/Sec     0.00      0.00     0.00    100.00%
+</span></span><span style="display:flex;"><span>  <span style="color:#ae81ff">5</span> requests in 10.04s, 1.55KB read
+</span></span><span style="display:flex;"><span>  Socket errors: connect 0, read 0, write 0, timeout <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>Requests/sec:      0.50   //QPS
+</span></span><span style="display:flex;"><span>Transfer/sec:     157.88B //每秒处理数据
+</span></span></code></pre></div><h3 id="编写lua脚本实现post请求">
+  编写lua脚本实现post请求
+  <a class="anchor" href="#%e7%bc%96%e5%86%99lua%e8%84%9a%e6%9c%ac%e5%ae%9e%e7%8e%b0post%e8%af%b7%e6%b1%82">#</a>
+</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-lua" data-lang="lua"><span style="display:flex;"><span><span style="color:#75715e">-- wrk 全局变量，改动之后会影响所有的请求</span>
+</span></span><span style="display:flex;"><span>wrk <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>    scheme  <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;http&#34;</span>,
+</span></span><span style="display:flex;"><span>    host    <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;localhost&#34;</span>,
+</span></span><span style="display:flex;"><span>    port    <span style="color:#f92672">=</span> <span style="color:#66d9ef">nil</span>,
+</span></span><span style="display:flex;"><span>    method  <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;GET&#34;</span>,
+</span></span><span style="display:flex;"><span>    path    <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;/&#34;</span>,
+</span></span><span style="display:flex;"><span>    headers <span style="color:#f92672">=</span> {},
+</span></span><span style="display:flex;"><span>    body    <span style="color:#f92672">=</span> <span style="color:#66d9ef">nil</span>,
+</span></span><span style="display:flex;"><span>    thread  <span style="color:#f92672">=</span> <span style="color:#f92672">&lt;</span>userdata<span style="color:#f92672">&gt;</span>,
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h4 id="json格式">
+  json格式
+  <a class="anchor" href="#json%e6%a0%bc%e5%bc%8f">#</a>
+</h4>
+<p>对于json格式数据发情post请求也是很简单的</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-lua" data-lang="lua"><span style="display:flex;"><span><span style="color:#75715e">-- filename: post.json.lua</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-- 设置请求方式</span>
+</span></span><span style="display:flex;"><span>wrk.method <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;POST&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-- json string</span>
+</span></span><span style="display:flex;"><span>wrk.body <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;{&#34;key1&#34;: &#34;val1&#34;, &#34;key2&#34;: &#34;val2&#34;}&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-- 设置content-type</span>
+</span></span><span style="display:flex;"><span>wrk.headers[<span style="color:#e6db74">&#34;Content-Type&#34;</span>] <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;application/json&#34;</span>
+</span></span></code></pre></div><p>使用<code>post.json.lua</code> 脚本：
+<code>wrk -t4 -d1m -c10 -s post.json.lua http://api.example.com/fake/post/json</code></p>
+<h4 id="上传文件">
+  上传文件
+  <a class="anchor" href="#%e4%b8%8a%e4%bc%a0%e6%96%87%e4%bb%b6">#</a>
+</h4>
+<p>实现上传文件测试，与json类似，也是设置<code>wrk.body</code>和<code>wrk.headers</code>, 只是body较麻烦一些</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-lua" data-lang="lua"><span style="display:flex;"><span>wrk.method <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;POST&#34;</span>
+</span></span><span style="display:flex;"><span>wrk.headers[<span style="color:#e6db74">&#34;Content-Type&#34;</span>] <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;multipart/form-data;boundary=------WebKitFormBoundaryX3bY6PBMcxB1vCan&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>file <span style="color:#f92672">=</span> io.open(<span style="color:#e6db74">&#34;path/to/fake.jpg&#34;</span>, <span style="color:#e6db74">&#34;rb&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-- 拼装form-data</span>
+</span></span><span style="display:flex;"><span>form <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;------WebKitFormBoundaryX3bY6PBMcxB1vCan</span><span style="color:#ae81ff">\r\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>form <span style="color:#f92672">=</span> form <span style="color:#f92672">..</span> <span style="color:#e6db74">&#34;Content-Disposition: form-data; name=&#34;</span>file<span style="color:#e6db74">&#34;; filename=&#34;</span>fake.jpg<span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\r\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>form <span style="color:#f92672">=</span> form <span style="color:#f92672">..</span> <span style="color:#e6db74">&#34;Content-Type: image/jpeg</span><span style="color:#ae81ff">\r\n\r\n</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>form <span style="color:#f92672">=</span> form <span style="color:#f92672">..</span> file:read(<span style="color:#e6db74">&#34;*a&#34;</span>)
+</span></span><span style="display:flex;"><span>form <span style="color:#f92672">=</span> form <span style="color:#f92672">..</span> <span style="color:#e6db74">&#34;</span><span style="color:#ae81ff">\r\n</span><span style="color:#e6db74">------WebKitFormBoundaryX3bY6PBMcxB1vCan--&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>wrk.body  <span style="color:#f92672">=</span> form
+</span></span></code></pre></div><h3 id="定制化wrk">
+  定制化wrk
+  <a class="anchor" href="#%e5%ae%9a%e5%88%b6%e5%8c%96wrk">#</a>
+</h3>
+<p>定制参考：
+<a href="https://github.com/wg/wrk/blob/master/SCRIPTING">https://github.com/wg/wrk/blob/master/SCRIPTING</a></p>
+<p>未完待续</p>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "wrk-performance-test-tool-use-summary", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#安装">安装</a></li>
+        <li><a href="#基本命令">基本命令</a></li>
+        <li><a href="#简单使用及解释">简单使用及解释</a></li>
+        <li><a href="#报告分析">报告分析</a></li>
+        <li><a href="#编写lua脚本实现post请求">编写lua脚本实现post请求</a></li>
+        <li><a href="#定制化wrk">定制化wrk</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

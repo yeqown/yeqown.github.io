@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="编写了一个二进制程序，想要替用户自动切换当前 Shell-Session 的工作路径，在程序内执行 `chdir` 系统调用却发现毫无作用。为什么没有产生作用？那应该怎么做才能产生作用？本文就此记录下解决这个问题的经历。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2022/07/25/%E5%9C%A8parent-shell%E4%B8%AD%E6%89%A7%E8%A1%8C%E5%86%85%E7%BD%AE%E5%91%BD%E4%BB%A4%E7%9A%84%E6%96%B9%E6%B3%95/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="在Parent Shell中执行内置命令的方法">
+  <meta property="og:description" content="编写了一个二进制程序，想要替用户自动切换当前 Shell-Session 的工作路径，在程序内执行 `chdir` 系统调用却发现毫无作用。为什么没有产生作用？那应该怎么做才能产生作用？本文就此记录下解决这个问题的经历。">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2022-07-25T10:05:09+08:00">
+    <meta property="article:modified_time" content="2022-07-25T10:05:09+08:00">
+    <meta property="article:tag" content="C">
+    <meta property="article:tag" content="POSIX">
+    <meta property="article:tag" content="Golang">
+    <meta property="article:tag" content="CGO">
+<title>在Parent Shell中执行内置命令的方法 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2022/07/25/%E5%9C%A8parent-shell%E4%B8%AD%E6%89%A7%E8%A1%8C%E5%86%85%E7%BD%AE%E5%91%BD%E4%BB%A4%E7%9A%84%E6%96%B9%E6%B3%95/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>在Parent Shell中执行内置命令的方法</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#背景">背景</a></li>
+        <li><a href="#chdir没作用">chdir没作用？</a></li>
+        <li><a href="#解决方案">解决方案</a></li>
+        <li><a href="#参考文献">参考文献</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    在Parent Shell中执行内置命令的方法
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>July 25, 2022</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Golang/">Golang</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/c/">C</a>, 
+      <a href="/tags/POSIX/">POSIX</a>, 
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/CGO/">CGO</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><h3 id="背景">
+  背景
+  <a class="anchor" href="#%e8%83%8c%e6%99%af">#</a>
+</h3>
+<p>最近在为 大仓项目(Monorepo) 制作一个脚手架，其中构思了一个自动替用户切换工作路径的工具（代码是通过模板初始化的，在结构上基本一致，但是代码文件较深，想要在terminal去和文件交互时，只能使用 <code>cd</code> 命令，费时费力），因此我期望一个小工具，能比较方便的帮我跳转到目标路径。预期的使用效果如下：</p>
+<image src="/images/hack_tty_command.svg" width="80%"/>
+<p>这个命令执行后，你可以从当前路径（任意路径）跳转到目标路径，那我就不用记我应该先跳转到根目录再前往目标目录了，少敲击很多次 tab。</p>
+<blockquote>
+<p>PS: 后续计划给这个命令扩展一下历史记录，可以通过筛选匹配历史快速补全命令，提高效率。</p>
+</blockquote>
+<h3 id="chdir没作用">
+  chdir没作用？
+  <a class="anchor" href="#chdir%e6%b2%a1%e4%bd%9c%e7%94%a8">#</a>
+</h3>
+<p>这个小工具是通过Go来编写的，我从文档中看到 <code>os.Chdir</code> 这个调用, 因此用它来试试：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// Chdir changes the current working directory to the named directory. 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// If there is an error, it will be of type *PathError.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">Chdir</span>(<span style="color:#a6e22e">dir</span> <span style="color:#66d9ef">string</span>) <span style="color:#66d9ef">error</span>
+</span></span></code></pre></div><p>结果我发现没有效果，通过 <code>os.Getwd()</code> 却能看到当前路径已经被改变了。这个切换的需求还没解决，我却产生了几个新的疑问：</p>
+<ul>
+<li><code>cd</code> 命令怎么实现的？</li>
+<li><code>chdir</code> 系统调用的使用和原理？</li>
+</ul>
+<p>通过执行如下的命令，会发现 <code>cd</code> 命令并不是通过一个独立的可执行文件来实现的，而是内置在 bash 等 shell 程序中，其次通过查阅资料可以发现
+大部分Linux发行版都部分符合 POSIX 标准。如果再检索一下shell程序的原理，我们会得出如下的结论：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ which cd
+</span></span><span style="display:flex;"><span>cd: shell built-in command
+</span></span></code></pre></div><p>shell 程序在执行内建命令时，是通过调用内部的函数的执行。而非内建的命令（如 git / gcc / gdb）都是通过 fork 一个进程来执行；cd 命令是通过 <code>chdir</code> [<a href="#https://standards.ieee.org/ieee/1003.1/1388/">IEEE Std 1003.1-1988</a>] 系统调用实现的；<code>chdir</code> 在 &lt;uinstd.h&gt; 头文件中定义；</p>
+<p>说人话：在另一个进程里执行 <code>chdir</code> 系统调用，只会影响当前进程而不是影响其他的进程（包括父进程）。</p>
+<blockquote>
+<p>POSIX: is a family of standards specified by the IEEE Computer Society for maintaining compatibility between operating systems.POSIX defines both the system- and user-level application programming interfaces (API), along with command line shells and utility interfaces, for software compatibility (portability) with variants of Unix and other operating systems.</p>
+</blockquote>
+<h3 id="解决方案">
+  解决方案
+  <a class="anchor" href="#%e8%a7%a3%e5%86%b3%e6%96%b9%e6%a1%88">#</a>
+</h3>
+<p>那么走编程语言提供的系统调用这条路已经不行了，那么应该咋办呢？在stackoverflow 上搜索良久，收集到如下的方法：</p>
+<ol>
+<li>gdb attach 到进程上，再执行 chdir 系统调用</li>
+<li>通过 bash 脚本执行 source 命令</li>
+<li>执行系统调用 ioctl 和 terminal-session 的 tty 文件交互</li>
+<li>通过 alias 来实现: pcd=cd $(program command))</li>
+</ol>
+<p>其中各种方法尝试的过程就略去不说，最终采用了第三种非常好用，下面提供一个小 demo 以供使用：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;unistd.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;sys/ioctl.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdio.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;fcntl.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">injectCmd</span>(<span style="color:#66d9ef">int</span> fd, <span style="color:#66d9ef">char</span><span style="color:#f92672">*</span> cmd) {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> i <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">while</span> (cmd[i] <span style="color:#f92672">!=</span> <span style="color:#e6db74">&#39;\0&#39;</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">int</span> ret <span style="color:#f92672">=</span> <span style="color:#a6e22e">ioctl</span>(fd, TIOSTI, <span style="color:#f92672">&amp;</span>cmd[i<span style="color:#f92672">++</span>])
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (ret <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">return</span> ret;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">/* getty help get terminal session tty filename, you can open the fie
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * and get the file descriptor to call injectCmd.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> */</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">char</span><span style="color:#f92672">*</span> <span style="color:#a6e22e">getty</span>() {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">const</span> <span style="color:#66d9ef">int</span> STDOUT <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">ttyname</span>(STDOUT);
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">void</span> <span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">char</span> <span style="color:#f92672">*</span> ttyfile <span style="color:#f92672">=</span> <span style="color:#a6e22e">getty</span>(); 
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">int</span> fd <span style="color:#f92672">=</span> <span style="color:#a6e22e">open</span>(ttyfile, <span style="color:#e6db74">&#34;w&#34;</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (fd <span style="color:#f92672">==</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">perror</span>(<span style="color:#e6db74">&#34;open ttyfile failed&#34;</span>);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>    } 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">injectCmd</span>(fd, <span style="color:#e6db74">&#34;echo &#39;hello world&#39;&#34;</span>);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><blockquote>
+<p>在 go 里可以直接使用 syscall 包或者 cgo 来执行，原理是是一致的，不过多赘述。</p>
+</blockquote>
+<h3 id="参考文献">
+  参考文献
+  <a class="anchor" href="#%e5%8f%82%e8%80%83%e6%96%87%e7%8c%ae">#</a>
+</h3>
+<ul>
+<li><a href="https://pubs.opengroup.org/onlinepubs/009696799/basedefs/unistd.h.html">https://pubs.opengroup.org/onlinepubs/009696799/basedefs/unistd.h.html</a></li>
+<li><a href="https://stackoverflow.com/questions/2375003/how-do-i-set-the-working-directory-of-the-parent-process/65406229#65406229">https://stackoverflow.com/questions/2375003/how-do-i-set-the-working-directory-of-the-parent-process/65406229#65406229</a></li>
+<li><a href="https://en.wikipedia.org/wiki/Process_isolation">https://en.wikipedia.org/wiki/Process_isolation</a></li>
+</ul>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#背景">背景</a></li>
+        <li><a href="#chdir没作用">chdir没作用？</a></li>
+        <li><a href="#解决方案">解决方案</a></li>
+        <li><a href="#参考文献">参考文献</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

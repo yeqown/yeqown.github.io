@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Network on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/Network/</link>
+    <description>Recent content in Network on Yeqown</description>
+    <generator>Hugo</generator>
+    <language>en</language>
+    <lastBuildDate>Sat, 21 Sep 2019 11:36:13 +0800</lastBuildDate>
+    <atom:link href="https://www.yeqown.xyz/tags/Network/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>TCP拆包与粘包：从字节流特性到应用层协议设计</title>
+      <link>https://www.yeqown.xyz/2019/09/21/TCP%E6%8B%86%E5%8C%85%E7%B2%98%E5%8C%85/</link>
+      <pubDate>Sat, 21 Sep 2019 11:36:13 +0800</pubDate>
+      <guid>https://www.yeqown.xyz/2019/09/21/TCP%E6%8B%86%E5%8C%85%E7%B2%98%E5%8C%85/</guid>
+      <description>&lt;blockquote&gt;&#xA;&lt;p&gt;&amp;ldquo;TCP is a stream-oriented protocol, not a message-oriented protocol.&amp;rdquo;&lt;/p&gt;&#xA;&lt;/blockquote&gt;&#xA;&lt;p&gt;在实现 RPC 协议或处理网络通信时，我们常听到的术语就是“拆包”（Packet Splitting）和“粘包”（Packet Aggregation）。这两个现象往往让初学者困惑：明明我发送的是两条独立的消息，为什么接收端收到的是一坨混乱的数据？或者为什么我发了一个大包，对面却分了几次才收全？&lt;/p&gt;&#xA;&lt;p&gt;本文将探究这背后的底层机制，并演示应用层协议如何设计来屏蔽这些底层细节。&lt;/p&gt;&#xA;&lt;h2 id=&#34;背景知识mtu-与-mss&#34;&gt;&#xA;  背景知识：MTU 与 MSS&#xA;  &lt;a class=&#34;anchor&#34; href=&#34;#%e8%83%8c%e6%99%af%e7%9f%a5%e8%af%86mtu-%e4%b8%8e-mss&#34;&gt;#&lt;/a&gt;&#xA;&lt;/h2&gt;&#xA;&lt;p&gt;要理解拆包和粘包，首先需要理解网络传输中的两个关键限制：&lt;strong&gt;MTU&lt;/strong&gt; 和 &lt;strong&gt;MSS&lt;/strong&gt;。&lt;/p&gt;&#xA;&lt;h3 id=&#34;mtumaximum-transmission-unit&#34;&gt;&#xA;  MTU（Maximum Transmission Unit）&#xA;  &lt;a class=&#34;anchor&#34; href=&#34;#mtumaximum-transmission-unit&#34;&gt;#&lt;/a&gt;&#xA;&lt;/h3&gt;&#xA;&lt;blockquote&gt;&#xA;&lt;p&gt;The maximum transmission unit (MTU) is the size of the largest protocol data unit (PDU) that can be communicated in a single network layer transaction. —— from Wiki&lt;/p&gt;&#xA;&lt;/blockquote&gt;&#xA;&lt;p&gt;简单来说，MTU 是&lt;strong&gt;数据链路层&lt;/strong&gt;（如以太网）对上层（通常是 IP 层）载荷的最大限制。&#xA;一般来说，以太网的 &lt;code&gt;MTU = 1500 bytes&lt;/code&gt;。&lt;/p&gt;&#xA;&lt;p&gt;如果 &lt;strong&gt;(IP Header + Transport Header + Data) &amp;gt; MTU&lt;/strong&gt;，那么 IP 层就必须进行分片（Fragmentation）。&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

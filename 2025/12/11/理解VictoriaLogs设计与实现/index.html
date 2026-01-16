@@ -1,0 +1,1708 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Victoria Logs 是一个基于列式存储的日志系统，其优点是高压缩率、高查询性能、低存储成本。在官方介绍中，宣称对比 Elasticsearch 或者 Loki 等系统，最多可以节省 30 倍 RAM 和 15 倍磁盘空间。所需资源之少，甚至能在 Raspberry Pi 上流畅运行。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2025/12/11/%E7%90%86%E8%A7%A3VictoriaLogs%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%AE%9E%E7%8E%B0/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="理解 Victoria Logs 设计与实现">
+  <meta property="og:description" content="Victoria Logs 是一个基于列式存储的日志系统，其优点是高压缩率、高查询性能、低存储成本。在官方介绍中，宣称对比 Elasticsearch 或者 Loki 等系统，最多可以节省 30 倍 RAM 和 15 倍磁盘空间。所需资源之少，甚至能在 Raspberry Pi 上流畅运行。">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2025-12-11T14:05:17+08:00">
+    <meta property="article:modified_time" content="2025-12-11T14:05:17+08:00">
+    <meta property="article:tag" content="Victoria Logs">
+    <meta property="article:tag" content="列式存储">
+    <meta property="article:tag" content="存储">
+    <meta property="article:tag" content="日志">
+<title>理解 Victoria Logs 设计与实现 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2025/12/11/%E7%90%86%E8%A7%A3VictoriaLogs%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%AE%9E%E7%8E%B0/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>理解 Victoria Logs 设计与实现</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#架构概览">架构概览</a>
+      <ul>
+        <li><a href="#vlagent">vlagent</a></li>
+        <li><a href="#vlinsert">vlinsert</a></li>
+        <li><a href="#vlselect">vlselect</a></li>
+        <li><a href="#vlstorage">vlstorage</a></li>
+      </ul>
+    </li>
+    <li><a href="#存储原理">存储原理</a>
+      <ul>
+        <li><a href="#写入流程">写入流程</a></li>
+        <li><a href="#读取流程">读取流程</a></li>
+        <li><a href="#存储模型">存储模型</a></li>
+      </ul>
+    </li>
+    <li><a href="#总结">总结</a></li>
+    <li><a href="#参考">参考</a></li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    理解 Victoria Logs 设计与实现
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>December 11, 2025</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E6%9E%B6%E6%9E%84/">架构</a>, 
+      <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Victoria-Logs/">Victoria Logs</a>, 
+      <a href="/tags/%E5%88%97%E5%BC%8F%E5%AD%98%E5%82%A8/">列式存储</a>, 
+      <a href="/tags/%E5%AD%98%E5%82%A8/">存储</a>, 
+      <a href="/tags/%E6%97%A5%E5%BF%97/">日志</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><p>Victoria Logs 简单易上手，非常适合中小团队使用，同时也适用于成本敏感的场景。</p>
+<blockquote>
+<p>官方建议：如果可以接受在单节点上垂直扩展来满足业务需求，那么就不必使用集群模式。</p>
+</blockquote>
+<p>本文包含大量源码片段，若不关注细节，可只阅读 <a href="#%e6%9e%b6%e6%9e%84%e6%a6%82%e8%a7%88">架构概览</a> 和 <a href="#%e5%ad%98%e5%82%a8%e6%a8%a1%e5%9e%8b">存储模型</a>。</p>
+<h2 id="架构概览">
+  架构概览
+  <a class="anchor" href="#%e6%9e%b6%e6%9e%84%e6%a6%82%e8%a7%88">#</a>
+</h2>
+<p>Victoria Logs 的集群架构如下：</p>
+<figure>
+    <img src="/images/victorialogs/vl-architecture.svg" alt="Victoria Logs 架构图">
+    <figcaption>Victoria Logs 架构图</figcaption>
+</figure>
+<ul>
+<li>通过 vlagent 完成类似 Replica 的功能，将日志数据复制到多个 vlstorage 组件中，实现高可用和数据冗余。</li>
+<li>通过 vlinsert 执行日志数据的写入策略。</li>
+<li>通过 vlselect 来聚合多个 vlstorage 组件中的日志数据，实现查询功能。</li>
+<li>通过 vlstorage 可以无缝的实现扩展存储容量，而不用考虑数据迁移（rebalance）。</li>
+</ul>
+<p>vlstorage 的缩容稍微复杂一些，这里提供一种方案：</p>
+<ol>
+<li>先将需要缩容的 vlstorage 节点从 vlinsert 的 <code>storageNode</code> 列表中移除，vlselect 中保留；</li>
+<li>利用 Victoria Logs 的数据保留功能，让数据随逐步过期，直到待删除节点上的数据全部过期；</li>
+<li>最后将其从 vlselect 中移除，并释放 vlstorage 节点。</li>
+</ol>
+<p>也可以参考 <a href="https://docs.victoriametrics.com/victorialogs/#partitions-lifecycle">Partitions lifecycle</a>，手动执行数据迁移。</p>
+<h3 id="vlagent">
+  vlagent
+  <a class="anchor" href="#vlagent">#</a>
+</h3>
+<p><code>vlagent</code> 是 Victoria Logs 的代理组件（类似 OpenTelemetry 的 Agent），位置更靠近日志源，同时也是一层缓冲区，负责接收日志数据并将其发送到 <code>vlinsert</code> 组件。</p>
+<p>它可以将数据写入到不同的 Victoria Logs 实例中，实现数据的多写（复制），是实现高可用的必要组件。</p>
+<blockquote>
+<p>PS：这里就不做过多的展开，有兴趣可以自行翻看源码。</p>
+</blockquote>
+<h3 id="vlinsert">
+  vlinsert
+  <a class="anchor" href="#vlinsert">#</a>
+</h3>
+<p><code>vlinsert</code> 是 Victoria Logs 的写入组件，为无状态服务。写入时根据“局部性”和“均匀分布”策略选择目标 <code>vlstorage</code> 节点。</p>
+<details open><summary>代码片段</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// app/vlstorage/netinsert/netinsert.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">s</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Storage</span>) <span style="color:#a6e22e">AddRow</span>(<span style="color:#a6e22e">streamHash</span> <span style="color:#66d9ef">uint64</span>, <span style="color:#a6e22e">r</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">logstorage</span>.<span style="color:#a6e22e">InsertRow</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">idx</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">srt</span>.<span style="color:#a6e22e">getNodeIdx</span>(<span style="color:#a6e22e">streamHash</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// sns []*storageNode 代表 vlstorage 节点组
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">sn</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">sns</span>[<span style="color:#a6e22e">idx</span>]
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 进一步追踪到 sn.mustSendInsertRequest 代表通过网络写入到 vlstorage 节点
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">sn</span>.<span style="color:#a6e22e">addRow</span>(<span style="color:#a6e22e">r</span>) 
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// app/vlstorage/netinsert/netinsert.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">srt</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">streamRowsTracker</span>) <span style="color:#a6e22e">getNodeIdx</span>(<span style="color:#a6e22e">streamHash</span> <span style="color:#66d9ef">uint64</span>) <span style="color:#66d9ef">uint64</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">srt</span>.<span style="color:#a6e22e">nodesCount</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// 如果只有一个 vlstorage 节点，那么就直接写入到该节点
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// streamHash := sid.id.lo ^ sid.id.hi，这里的 sid 就是 streamID
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// sid.id = hash128(bb.B) 就是 stream 的标签和值 hash 得来的
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// 可以参见 LogRows.MustAdd 中的过程
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">streamRows</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">srt</span>.<span style="color:#a6e22e">rowsPerStream</span>[<span style="color:#a6e22e">streamHash</span>] <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">srt</span>.<span style="color:#a6e22e">rowsPerStream</span>[<span style="color:#a6e22e">streamHash</span>] = <span style="color:#a6e22e">streamRows</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 如果 Stream 中的日志数量小于 1000 条，那么写入到同一个 vlstorage 组件中 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// 对于只包含少量日志的 Stream，可提高局部性；当某个 Stream 量较大时则
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// 分散到不同的 vlstorage 节点，以提高查询性能。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">streamRows</span> <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1000</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">streamHash</span> <span style="color:#f92672">%</span> uint64(<span style="color:#a6e22e">srt</span>.<span style="color:#a6e22e">nodesCount</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> uint64(<span style="color:#a6e22e">fastrand</span>.<span style="color:#a6e22e">Uint32n</span>(uint32(<span style="color:#a6e22e">srt</span>.<span style="color:#a6e22e">nodesCount</span>)))
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// app/vlstorage/netinsert/netinsert.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">sn</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">storageNode</span>) <span style="color:#a6e22e">mustSendInsertRequest</span>(<span style="color:#a6e22e">pendingData</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">bytesutil</span>.<span style="color:#a6e22e">ByteBuffer</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// sn 代表当前选中的写入节点
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">sn</span>.<span style="color:#a6e22e">sendInsertRequest</span>(<span style="color:#a6e22e">pendingData</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 如果写入成功，那么这里就直接返回了
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// 否则，会尝试其他节点
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// sn.s 代表的是 Storage 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// sendInsertRequestToAnyNode 方法则会随机选中一个节点尝试（实际调用 storageNode.sendInsertRequest）
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">for</span> !<span style="color:#a6e22e">sn</span>.<span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">sendInsertRequestToAnyNode</span>(<span style="color:#a6e22e">pendingData</span>) {
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// 省略
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// app/vlstorage/netinsert/netinsert.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">sn</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">storageNode</span>) <span style="color:#a6e22e">sendInsertRequest</span>(<span style="color:#a6e22e">pendingData</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">bytesutil</span>.<span style="color:#a6e22e">ByteBuffer</span>) <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 如果没有禁用压缩，就使用 zstd 压缩数据
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">body</span> <span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">Reader</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">sn</span>.<span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">disableCompression</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">bb</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">zstdBufPool</span>.<span style="color:#a6e22e">Get</span>()
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">zstdBufPool</span>.<span style="color:#a6e22e">Put</span>(<span style="color:#a6e22e">bb</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">bb</span>.<span style="color:#a6e22e">B</span> = <span style="color:#a6e22e">zstd</span>.<span style="color:#a6e22e">CompressLevel</span>(<span style="color:#a6e22e">bb</span>.<span style="color:#a6e22e">B</span>[:<span style="color:#ae81ff">0</span>], <span style="color:#a6e22e">pendingData</span>.<span style="color:#a6e22e">B</span>, <span style="color:#ae81ff">1</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">body</span> = <span style="color:#a6e22e">bb</span>.<span style="color:#a6e22e">NewReader</span>()
+</span></span><span style="display:flex;"><span>	} <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">body</span> = <span style="color:#a6e22e">pendingData</span>.<span style="color:#a6e22e">NewReader</span>()
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 对 vlstorage 节点请求 internal/insert 接口
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">reqURL</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">sn</span>.<span style="color:#a6e22e">getRequestURL</span>(<span style="color:#e6db74">&#34;/internal/insert&#34;</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">req</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">NewRequestWithContext</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#e6db74">&#34;POST&#34;</span>, <span style="color:#a6e22e">reqURL</span>, <span style="color:#a6e22e">body</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">resp</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">sn</span>.<span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Do</span>(<span style="color:#a6e22e">req</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div>  </div>
+</details>
+<p><em><strong>小结</strong></em></p>
+<p>在集群模式下，<code>vlinsert</code> 负责从 <code>vlstorage</code> 节点列表中选择写入目标，路由策略如下：</p>
+<ul>
+<li>Stream 中的日志数量小于 1000 时，同一个 Stream 的日志会被写入到同一个 vlstorage 组件中。</li>
+<li>Stream 中的日志数量大于等于 1000 时，会随机选择一个 vlstorage 节点，将日志写入到该组件中。</li>
+<li>如果写入失败，会尝试写入到其他节点。</li>
+</ul>
+<h3 id="vlselect">
+  vlselect
+  <a class="anchor" href="#vlselect">#</a>
+</h3>
+<p><code>vlselect</code> 是 Victoria Logs 的查询组件，负责接收查询请求并返回查询结果。这里以 <code>/select/logsql/query</code> 接口为例，介绍查询的过程。</p>
+<p>入口函数为：<code>app/vlselect/logsq/logsql.go#ProcessQueryRequest</code></p>
+<details open><summary>代码片段</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// app/vlselect/logsq/logsql.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// ProcessQueryRequest handles /select/logsql/query request.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// See https://docs.victoriametrics.com/victorialogs/querying/#querying-logs
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">ProcessQueryRequest</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">w</span> <span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">ResponseWriter</span>, <span style="color:#a6e22e">r</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">Request</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 省略参数解析，metrics 采集等等
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Execute the query
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">vlstorage</span>.<span style="color:#a6e22e">RunQuery</span>(<span style="color:#a6e22e">qctx</span>, <span style="color:#a6e22e">writeBlock</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// 省略错误处理
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// app/vlstorage/main.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">RunQuery</span>(<span style="color:#a6e22e">qctx</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">logstorage</span>.<span style="color:#a6e22e">QueryContext</span>, <span style="color:#a6e22e">writeBlock</span> <span style="color:#a6e22e">logstorage</span>.<span style="color:#a6e22e">WriteDataBlockFunc</span>) <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 这部分的目的是用来判断查询是否可以优化为：直接返回最后的 N 条日志，而不用先执行过滤再排序
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 比如：
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// - &#39;sort by (_time desc) offset &lt;offset&gt; limit &lt;limit&gt;&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// - &#39;first &lt;limit&gt; by (_time desc)&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// - &#39;last &lt;limit&gt; by (_time)&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">qOpt</span>, <span style="color:#a6e22e">offset</span>, <span style="color:#a6e22e">limit</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">qctx</span>.<span style="color:#a6e22e">Query</span>.<span style="color:#a6e22e">GetLastNResultsQuery</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">qOpt</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">qctxOpt</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">qctx</span>.<span style="color:#a6e22e">WithQuery</span>(<span style="color:#a6e22e">qOpt</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">runOptimizedLastNResultsQuery</span>(<span style="color:#a6e22e">qctxOpt</span>, <span style="color:#a6e22e">offset</span>, <span style="color:#a6e22e">limit</span>, <span style="color:#a6e22e">writeBlock</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// localStorage 在 vlstorage 节点中才会被赋值
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">localStorage</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">localStorage</span>.<span style="color:#a6e22e">RunQuery</span>(<span style="color:#a6e22e">qctx</span>, <span style="color:#a6e22e">writeBlock</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">netstorageSelect</span>.<span style="color:#a6e22e">RunQuery</span>(<span style="color:#a6e22e">qctx</span>, <span style="color:#a6e22e">writeBlock</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div>  </div>
+</details>
+<p>可以看出，<code>RunQuery</code> 方法不仅由 <code>vlselect</code> 调用，<code>vlstorage</code> 节点中也会调用。目前先关注 <code>netstorageSelect</code> 这个分支：</p>
+<details open><summary>代码片段</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// app/vlstorage/netselect/netselect.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">s</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Storage</span>) <span style="color:#a6e22e">RunQuery</span>(<span style="color:#a6e22e">qctx</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">logstorage</span>.<span style="color:#a6e22e">QueryContext</span>, <span style="color:#a6e22e">writeBlock</span> <span style="color:#a6e22e">logstorage</span>.<span style="color:#a6e22e">WriteDataBlockFunc</span>) <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// nqr 代表 NetQueryRunner，用于执行分布式查询
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">nqr</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">logstorage</span>.<span style="color:#a6e22e">NewNetQueryRunner</span>(<span style="color:#a6e22e">qctx</span>, <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">RunQuery</span>, <span style="color:#a6e22e">writeBlock</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">search</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">stopCh</span> <span style="color:#f92672">&lt;-</span><span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">struct</span>{}, <span style="color:#a6e22e">q</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">logstorage</span>.<span style="color:#a6e22e">Query</span>, <span style="color:#a6e22e">writeBlock</span> <span style="color:#a6e22e">logstorage</span>.<span style="color:#a6e22e">WriteDataBlockFunc</span>) <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">qctxLocal</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">qctx</span>.<span style="color:#a6e22e">WithQuery</span>(<span style="color:#a6e22e">q</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">runQuery</span>(<span style="color:#a6e22e">stopCh</span>, <span style="color:#a6e22e">qctxLocal</span>, <span style="color:#a6e22e">writeBlock</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// nqr.Run 实际执行的还是 Storage.runQuery 方法
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// nqr.Run 其中会将 pipe 分成 remote pipe 和 local pipe 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 分别执行分布式查询和本地查询
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">concurrency</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">qctx</span>.<span style="color:#a6e22e">Query</span>.<span style="color:#a6e22e">GetConcurrency</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">nqr</span>.<span style="color:#a6e22e">Run</span>(<span style="color:#a6e22e">qctx</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">concurrency</span>, <span style="color:#a6e22e">search</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// app/vlstorage/netselect/netselect.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">s</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Storage</span>) <span style="color:#a6e22e">runQuery</span>(<span style="color:#a6e22e">stopCh</span> <span style="color:#f92672">&lt;-</span><span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">struct</span>{}, <span style="color:#a6e22e">qctx</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">logstorage</span>.<span style="color:#a6e22e">QueryContext</span>, <span style="color:#a6e22e">writeBlock</span> <span style="color:#a6e22e">logstorage</span>.<span style="color:#a6e22e">WriteDataBlockFunc</span>) <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 这里可以看出来，runQuery 方法会并发执行所有的 vlstorage 节点的查询
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">i</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">sns</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">go</span> <span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">nodeIdx</span> <span style="color:#66d9ef">int</span>) {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">sn</span>.<span style="color:#a6e22e">runQuery</span>(<span style="color:#a6e22e">qctxLocal</span>, <span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">db</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">logstorage</span>.<span style="color:#a6e22e">DataBlock</span>) {
+</span></span><span style="display:flex;"><span>				<span style="color:#a6e22e">writeBlock</span>(uint(<span style="color:#a6e22e">nodeIdx</span>), <span style="color:#a6e22e">db</span>)
+</span></span><span style="display:flex;"><span>			})
+</span></span><span style="display:flex;"><span>		}(<span style="color:#a6e22e">i</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">sn</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">storageNode</span>) <span style="color:#a6e22e">runQuery</span>(<span style="color:#a6e22e">qctx</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">logstorage</span>.<span style="color:#a6e22e">QueryContext</span>, <span style="color:#a6e22e">processBlock</span> <span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">db</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">logstorage</span>.<span style="color:#a6e22e">DataBlock</span>)) <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">path</span> <span style="color:#f92672">:=</span> <span style="color:#e6db74">&#34;/internal/select/query&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">responseBody</span>, <span style="color:#a6e22e">reqURL</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">sn</span>.<span style="color:#a6e22e">getResponseBodyForPathAndArgs</span>(<span style="color:#a6e22e">qctx</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">path</span>, <span style="color:#a6e22e">args</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">responseBody</span>.<span style="color:#a6e22e">Close</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 解析响应，省略
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div>  </div>
+</details>
+<p><em><strong>小结</strong></em></p>
+<p><code>vlselect</code> 会并发向所有 <code>vlstorage</code> 节点发送查询请求，查询使用的是节点的 <code>/internal/select/query</code> 接口。</p>
+<p>从这部分实现也能看出，Victoria Logs 可以实现 <code>vlstorage</code> 的无缝扩展。这种查询方式会向所有 <code>vlstorage</code> 节点发送请求，并将各节点返回的结果进行合并。也存在一些缺点，例如：</p>
+<ul>
+<li>木桶效应：查询响应时间受最慢节点影响；</li>
+<li>即使某些节点不存在相关数据，仍会参与查询执行；</li>
+<li>网络开销不可避免，延迟会增加。</li>
+</ul>
+<p>这也解释了为什么 Victoria Logs 更推荐在可接受的情况下使用单节点模式，而非集群。</p>
+<h3 id="vlstorage">
+  vlstorage
+  <a class="anchor" href="#vlstorage">#</a>
+</h3>
+<p><code>vlstorage</code> 是 Victoria Logs 的存储组件，负责管理日志数据的存储，并为 <code>vlselect</code> 提供查询接口（<code>/internal/select/query</code>），为 <code>vlinsert</code> 提供写入接口（<code>/internal/insert</code>）。</p>
+<h4 id="查询接口">
+  查询接口
+  <a class="anchor" href="#%e6%9f%a5%e8%af%a2%e6%8e%a5%e5%8f%a3">#</a>
+</h4>
+<p><code>/internal/select/query</code> 映射为 <code>processQueryRequest</code> 方法：</p>
+<details open><summary>代码片段</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// app/vlselect/internalselect/internalselect.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">processQueryRequest</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">w</span> <span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">ResponseWriter</span>, <span style="color:#a6e22e">r</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">Request</span>) <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 这里就是在跟踪 vlselect 时调用的 RunQuery 方法
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">vlstorage</span>.<span style="color:#a6e22e">RunQuery</span>(<span style="color:#a6e22e">qctx</span>, <span style="color:#a6e22e">writeBlock</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// app/vlstorage/main.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">RunQuery</span>(<span style="color:#a6e22e">qctx</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">logstorage</span>.<span style="color:#a6e22e">QueryContext</span>, <span style="color:#a6e22e">writeBlock</span> <span style="color:#a6e22e">logstorage</span>.<span style="color:#a6e22e">WriteDataBlockFunc</span>) <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 这里就要关注 localStorage.RunQuery 方法
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">localStorage</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">localStorage</span>.<span style="color:#a6e22e">RunQuery</span>(<span style="color:#a6e22e">qctx</span>, <span style="color:#a6e22e">writeBlock</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">netstorageSelect</span>.<span style="color:#a6e22e">RunQuery</span>(<span style="color:#a6e22e">qctx</span>, <span style="color:#a6e22e">writeBlock</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div>  </div>
+</details>
+<p>这也进入了 Victoria Logs 的核心存储层，具体细节在后文“存储原理”部分展开。</p>
+<h4 id="写入接口">
+  写入接口
+  <a class="anchor" href="#%e5%86%99%e5%85%a5%e6%8e%a5%e5%8f%a3">#</a>
+</h4>
+<p><code>/internal/insert</code> 对应的处理方法在 <code>app/vlinsert/internalinsert/internalinsert.go#RequestHandler</code> 中：</p>
+<details open><summary>代码片段</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// app/vlinsert/internalinsert/internalinsert.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">RequestHandler</span>(<span style="color:#a6e22e">w</span> <span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">ResponseWriter</span>, <span style="color:#a6e22e">r</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">Request</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// CommonParams 包含了写入时的一些公共参数, 如：
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 	TenantID         logstorage.TenantID
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// TimeFields       []string
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// MsgFields        []string
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// StreamFields     []string
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// IgnoreFields     []string
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 等等
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">cp</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">insertutil</span>.<span style="color:#a6e22e">GetCommonParams</span>(<span style="color:#a6e22e">r</span>)
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 根据压缩类型解析 body 中的数据, 再通过 parseData 转为 InsertRow 类型
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">protoparserutil</span>.<span style="color:#a6e22e">ReadUncompressedData</span>(<span style="color:#a6e22e">r</span>.<span style="color:#a6e22e">Body</span>, <span style="color:#a6e22e">encoding</span>, <span style="color:#a6e22e">maxRequestSize</span>, <span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">data</span> []<span style="color:#66d9ef">byte</span>) <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">lmp</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">cp</span>.<span style="color:#a6e22e">NewLogMessageProcessor</span>(<span style="color:#e6db74">&#34;internalinsert&#34;</span>, <span style="color:#66d9ef">false</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">irp</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">lmp</span>.(<span style="color:#a6e22e">insertutil</span>.<span style="color:#a6e22e">InsertRowProcessor</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">parseData</span>(<span style="color:#a6e22e">irp</span>, <span style="color:#a6e22e">data</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">lmp</span>.<span style="color:#a6e22e">MustClose</span>()
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// app/vlinsert/internalinsert/internalinsert.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">parseData</span>(<span style="color:#a6e22e">irp</span> <span style="color:#a6e22e">insertutil</span>.<span style="color:#a6e22e">InsertRowProcessor</span>, <span style="color:#a6e22e">data</span> []<span style="color:#66d9ef">byte</span>) <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 从对象池中获取 InsertRow 对象
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">r</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">logstorage</span>.<span style="color:#a6e22e">GetInsertRow</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">src</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">data</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">i</span> <span style="color:#f92672">:=</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> len(<span style="color:#a6e22e">src</span>) &gt; <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">tail</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">r</span>.<span style="color:#a6e22e">UnmarshalInplace</span>(<span style="color:#a6e22e">src</span>)
+</span></span><span style="display:flex;"><span>		
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">src</span> = <span style="color:#a6e22e">tail</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">i</span><span style="color:#f92672">++</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// 将解析后的 InsertRow 添加到 InsertRowProcessor 中
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">irp</span>.<span style="color:#a6e22e">AddInsertRow</span>(<span style="color:#a6e22e">r</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div>  </div>
+</details>
+<p><code>InsertRowProcessor</code> 的实现是 <code>logMessageProcessor</code>：</p>
+<details open><summary>代码片段</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// app/vlinsert/insertutil/common_params.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">lmp</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">logMessageProcessor</span>) <span style="color:#a6e22e">AddInsertRow</span>(<span style="color:#a6e22e">r</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">logstorage</span>.<span style="color:#a6e22e">InsertRow</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 超过 MaxFieldsPerLine（默认 1000） 个字段的日志行会被丢弃
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> len(<span style="color:#a6e22e">r</span>.<span style="color:#a6e22e">Fields</span>) &gt; <span style="color:#f92672">*</span><span style="color:#a6e22e">MaxFieldsPerLine</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 调用 logstorage.LogRows 将 InsertRow 添加到 LogRows 中
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">lmp</span>.<span style="color:#a6e22e">lr</span>.<span style="color:#a6e22e">MustAddInsertRow</span>(<span style="color:#a6e22e">r</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 如果需要 flush，则调用 flushLocked 方法
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">lmp</span>.<span style="color:#a6e22e">lr</span>.<span style="color:#a6e22e">NeedFlush</span>() {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">lmp</span>.<span style="color:#a6e22e">flushLocked</span>()
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div>  </div>
+</details>
+<p>到这里也进入到 Victoria Logs 的核心存储层，同样在介绍存储原理中再展开。</p>
+<h2 id="存储原理">
+  存储原理
+  <a class="anchor" href="#%e5%ad%98%e5%82%a8%e5%8e%9f%e7%90%86">#</a>
+</h2>
+<p>从 <a href="https://docs.victoriametrics.com/victorialogs/faq/#how-does-victorialogs-work">Victoria Logs - How does victorialogs works</a> 可以得知，Victoria Logs 采用了以下设计：</p>
+<ul>
+<li>日志被作为 JSON 条目存储。</li>
+<li>日志的字段会保存到不同的数据块中。</li>
+<li>不同日志的相同字段会保存在同一个数据块中。</li>
+<li>数据块会压缩存储，以减少磁盘空间占用。</li>
+<li>较小的数据块会在后台合并成较大的数据块。</li>
+<li>查询过程中，每个数据块会被原子的并发的读取。</li>
+</ul>
+<p>此外，Victoria Logs 还采用以下优化以提升查询效率：</p>
+<ul>
+<li>引入了 Bloom Filter 来跳过没有给定关键字的数据块。</li>
+<li>针对不同数据类型的字段采用自定义编码和压缩。</li>
+<li>相同的 Stream 被物理的分组（使用 Stream Filter 可以跳过不需要的数据块）。</li>
+<li>为日志时间维护了一个稀疏索引（使用 Time Filter 可以提高查询效率）。</li>
+</ul>
+<p>仅凭文字说明难以充分理解 Victoria Logs 的存储原理，仍需进一步深入源码来把握细节。</p>
+<p>这部分源码在 <code>lib/logstorage/</code> 目录下。</p>
+<h3 id="写入流程">
+  写入流程
+  <a class="anchor" href="#%e5%86%99%e5%85%a5%e6%b5%81%e7%a8%8b">#</a>
+</h3>
+<p>前面我们跟踪到 <code>logMessageProcessor</code> 中的 <code>AddInsertRow</code> 方法，其中调用了 <code>flushLocked</code> 方法：</p>
+<details open><summary>代码片段</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// app/vlinsert/insertutil/common_params.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">lmp</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">logMessageProcessor</span>) <span style="color:#a6e22e">flushLocked</span>() {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">logRowsStorage</span>.<span style="color:#a6e22e">MustAddRows</span>(<span style="color:#a6e22e">lmp</span>.<span style="color:#a6e22e">lr</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// app/vlstorage/main.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// 这个方法在 vlinsert 中也被调用，只不过就是使用的 netstorageInsert.AddRow 方法
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#f92672">*</span><span style="color:#a6e22e">Storage</span>) <span style="color:#a6e22e">MustAddRows</span>(<span style="color:#a6e22e">lr</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">logstorage</span>.<span style="color:#a6e22e">LogRows</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">localStorage</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">localStorage</span>.<span style="color:#a6e22e">MustAddRows</span>(<span style="color:#a6e22e">lr</span>)
+</span></span><span style="display:flex;"><span>	} <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// Store lr across the remote storage nodes.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">lr</span>.<span style="color:#a6e22e">ForEachRow</span>(<span style="color:#a6e22e">netstorageInsert</span>.<span style="color:#a6e22e">AddRow</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div>  </div>
+</details>
+<p><code>localStorage（logstorage.Storage）</code> 代表的就是 Victoria Logs 的本地存储层实现：</p>
+<details ><summary>代码片段</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// lib/logstorage/storage.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Storage</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">path</span> <span style="color:#66d9ef">string</span> 			<span style="color:#75715e">// 存储目录的路径
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">retention</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Duration</span> <span style="color:#75715e">// 数据保留时间
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">flockF</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">os</span>.<span style="color:#a6e22e">File</span> 		<span style="color:#75715e">// 用于确保 Storage 仅被单个进程打开的文件锁
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">partitions</span> []<span style="color:#f92672">*</span><span style="color:#a6e22e">partitionWrapper</span> <span style="color:#75715e">// 分区列表，按时间排序，例如 partitions[0] 是最早的分区
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">ptwHot</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">partitionWrapper</span>       <span style="color:#75715e">// 最新的分区，用于写入新的日志行
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// ... 省略其他字段
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div>  </div>
+</details>
+<p>这里新出了 <code>partition</code> 的概念，其实对应的就是日期，每个日期对应一个分区。再回到 <code>MustAddRows</code> 方法：</p>
+<details open><summary>代码片段</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">s</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Storage</span>) <span style="color:#a6e22e">MustAddRows</span>(<span style="color:#a6e22e">lr</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">LogRows</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Fast path: 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 尝试将 LogRows 全部写入到 ptwHot 中
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">ptwHot</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">ptwHot</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">ptwHot</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">ptwHot</span>.<span style="color:#a6e22e">canAddAllRows</span>(<span style="color:#a6e22e">lr</span>) {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">ptwHot</span>.<span style="color:#a6e22e">pt</span>.<span style="color:#a6e22e">mustAddRows</span>(<span style="color:#a6e22e">lr</span>)
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Slow path:
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 如果 LogRows 不能被 ptwHot 全部写入，那么就需要把 LogRows 拆分成多个 LogRows，写入到不同的分区中
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// PS: 历史的分区可能需要从磁盘加载，会增加写入延迟
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">now</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Now</span>().<span style="color:#a6e22e">UnixNano</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">minAllowedDay</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">getMinAllowedDay</span>(<span style="color:#a6e22e">now</span>) <span style="color:#75715e">// 保留策略：过去的时间
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">maxAllowedDay</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">getMaxAllowedDay</span>(<span style="color:#a6e22e">now</span>) <span style="color:#75715e">// 保留策略：未来的时间
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">minAllowedTimestamp</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">now</span> <span style="color:#f92672">-</span> <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">maxBackfillAge</span>.<span style="color:#a6e22e">Nanoseconds</span>() <span style="color:#75715e">// 最大能接受的历史日志时间
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 遍历 LogRows 中的每个日志行，过滤掉不符合要求的日志行，
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 并根据日志行的时间戳，将其添加到同一分区（日期）的 LogRows 中
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">m</span> <span style="color:#f92672">:=</span> make(<span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">int64</span>]<span style="color:#f92672">*</span><span style="color:#a6e22e">LogRows</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">i</span>, <span style="color:#a6e22e">ts</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">lr</span>.<span style="color:#a6e22e">timestamps</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">day</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">ts</span> <span style="color:#f92672">/</span> <span style="color:#a6e22e">nsecsPerDay</span>		
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// 根据保留策略 和 最大能接受的历史日志时间 过滤掉不符合要求的日志行
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">lrPart</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">m</span>[<span style="color:#a6e22e">day</span>]
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">lrPart</span>.<span style="color:#a6e22e">mustAddInternal</span>(<span style="color:#a6e22e">lr</span>.<span style="color:#a6e22e">streamIDs</span>[<span style="color:#a6e22e">i</span>], <span style="color:#a6e22e">ts</span>, <span style="color:#a6e22e">lr</span>.<span style="color:#a6e22e">rows</span>[<span style="color:#a6e22e">i</span>], <span style="color:#a6e22e">lr</span>.<span style="color:#a6e22e">streamTagsCanonicals</span>[<span style="color:#a6e22e">i</span>])
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">day</span>, <span style="color:#a6e22e">lrPart</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">m</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">ptw</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">getPartitionForWriting</span>(<span style="color:#a6e22e">day</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">ptw</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">ptw</span>.<span style="color:#a6e22e">pt</span>.<span style="color:#a6e22e">mustAddRows</span>(<span style="color:#a6e22e">lrPart</span>)
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div>  </div>
+</details>
+<p>这里可以得知 <code>Storage</code> 的写入是分区(day)的，而分区具体的写入由 <code>partitionWrapper.partition</code> 控制。</p>
+<details open><summary>代码片段</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// lib/logstorage/partition.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">partition</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">s</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Storage</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// path 是分区的完整目录路径。例如 /data/logstorage/partitions/20230801
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 前面的 /data/logstorage 可以配置，后面则是 Victoria Logs 自己的目录结构
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">path</span> <span style="color:#66d9ef">string</span> 
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">name</span> <span style="color:#66d9ef">string</span> <span style="color:#75715e">// name 是分区的名称，是目录名。如：20230801
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">idb</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">indexdb</span> <span style="color:#75715e">// idb 是索引数据库，用于存储日志行的索引信息
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">ddb</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">datadb</span>  <span style="color:#75715e">// ddb 是数据数据库，用于存储日志行的原始数据
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// ....
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// lib/logstorage/partition.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// mustAddRows 也就是把数据写入到索引数据库和数据数据库中，只是其中为了提高性能过滤了已经存在的 Stream
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">pt</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">partition</span>) <span style="color:#a6e22e">mustAddRows</span>(<span style="color:#a6e22e">lr</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">LogRows</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 将 新增 的 Stream 注册到 indexdb 中
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">pt</span>.<span style="color:#a6e22e">idb</span>.<span style="color:#a6e22e">hasStreamID</span>(<span style="color:#a6e22e">streamID</span>) {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">streamTagsCanonical</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">streamTagsCanonicals</span>[<span style="color:#a6e22e">rowIdx</span>]
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">pt</span>.<span style="color:#a6e22e">idb</span>.<span style="color:#a6e22e">mustRegisterStream</span>(<span style="color:#a6e22e">streamID</span>, <span style="color:#a6e22e">streamTagsCanonical</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 最后把 LogRows 写入到 datadb 中
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">pt</span>.<span style="color:#a6e22e">ddb</span>.<span style="color:#a6e22e">mustAddRows</span>(<span style="color:#a6e22e">lr</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div>  </div>
+</details>
+<p>显然 Victoria Logs 的分区中主要由 索引数据库（indexdb）和 数据数据库（datadb）构成。下面就依次跟踪下 indexdb 和 datadb 的写入流程。</p>
+<h4 id="indexdb-写入">
+  indexdb 写入
+  <a class="anchor" href="#indexdb-%e5%86%99%e5%85%a5">#</a>
+</h4>
+<p>indexdb 用于存储 Stream 的索引信息，基于  MergeSet 实现。</p>
+<details open><summary>代码片段</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// lib/logstorage/indexdb.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">indexdb</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">path</span> <span style="color:#66d9ef">string</span>          <span style="color:#75715e">// path 是索引数据库的目录路径：如 path/to/partition/indexdb 目录
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">partitionName</span> <span style="color:#66d9ef">string</span> <span style="color:#75715e">// partitionName 是索引数据库所属的分区名称(天)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">tb</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">mergeset</span>.<span style="color:#a6e22e">Table</span>   <span style="color:#75715e">// tb 是索引数据库的存储，用于存储索引信息
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">s</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Storage</span> 	         <span style="color:#75715e">// s 是 indexdb 所属的 Storage
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div>  </div>
+</details>
+<ol>
+<li>索引条目准备</li>
+</ol>
+<p><code>mustRegisterStream</code> 会写入三类索引条目：</p>
+<ul>
+<li><code>tenantID:streamID</code>：streamID 到 streamTagsCanonical 的映射</li>
+<li><code>tenantID:streamID -&gt; streamTagsCanonical</code>：streamID 到 streamTagsCanonical 的映射</li>
+<li><code>tenantID:name:value -&gt; streamID</code>：tag 到 streamID 的映射</li>
+</ul>
+<details ><summary>代码片段</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// lib/logstorage/indexdb.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">idb</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">indexdb</span>) <span style="color:#a6e22e">mustRegisterStream</span>(<span style="color:#a6e22e">streamID</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">streamID</span>, <span style="color:#a6e22e">streamTagsCanonical</span> <span style="color:#66d9ef">string</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Register tenantID:streamID entry.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">bufLen</span> <span style="color:#f92672">:=</span> len(<span style="color:#a6e22e">buf</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">buf</span> = <span style="color:#a6e22e">marshalCommonPrefix</span>(<span style="color:#a6e22e">buf</span>, <span style="color:#a6e22e">nsPrefixStreamID</span>, <span style="color:#a6e22e">tenantID</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">buf</span> = <span style="color:#a6e22e">streamID</span>.<span style="color:#a6e22e">id</span>.<span style="color:#a6e22e">marshal</span>(<span style="color:#a6e22e">buf</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">items</span> = append(<span style="color:#a6e22e">items</span>, <span style="color:#a6e22e">buf</span>[<span style="color:#a6e22e">bufLen</span>:])
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Register tenantID:streamID -&gt; streamTagsCanonical entry.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">bufLen</span> = len(<span style="color:#a6e22e">buf</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">buf</span> = <span style="color:#a6e22e">marshalCommonPrefix</span>(<span style="color:#a6e22e">buf</span>, <span style="color:#a6e22e">nsPrefixStreamIDToStreamTags</span>, <span style="color:#a6e22e">tenantID</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">buf</span> = <span style="color:#a6e22e">streamID</span>.<span style="color:#a6e22e">id</span>.<span style="color:#a6e22e">marshal</span>(<span style="color:#a6e22e">buf</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">buf</span> = append(<span style="color:#a6e22e">buf</span>, <span style="color:#a6e22e">streamTagsCanonical</span><span style="color:#f92672">...</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">items</span> = append(<span style="color:#a6e22e">items</span>, <span style="color:#a6e22e">buf</span>[<span style="color:#a6e22e">bufLen</span>:])
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Register tenantID:name:value -&gt; streamIDs entries.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">tags</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">st</span>.<span style="color:#a6e22e">tags</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">i</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">tags</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">bufLen</span> = len(<span style="color:#a6e22e">buf</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">buf</span> = <span style="color:#a6e22e">marshalCommonPrefix</span>(<span style="color:#a6e22e">buf</span>, <span style="color:#a6e22e">nsPrefixTagToStreamIDs</span>, <span style="color:#a6e22e">tenantID</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">buf</span> = <span style="color:#a6e22e">tags</span>[<span style="color:#a6e22e">i</span>].<span style="color:#a6e22e">indexdbMarshal</span>(<span style="color:#a6e22e">buf</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">buf</span> = <span style="color:#a6e22e">streamID</span>.<span style="color:#a6e22e">id</span>.<span style="color:#a6e22e">marshal</span>(<span style="color:#a6e22e">buf</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">items</span> = append(<span style="color:#a6e22e">items</span>, <span style="color:#a6e22e">buf</span>[<span style="color:#a6e22e">bufLen</span>:])
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Add items to the storage
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">idb</span>.<span style="color:#a6e22e">tb</span>.<span style="color:#a6e22e">AddItems</span>(<span style="color:#a6e22e">items</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div>  </div>
+</details>
+<p>这里以一个具体的例子来说明：</p>
+<p>假设我们有一个 Stream <code>{&quot;tag1&quot;:&quot;value1&quot;, &quot;tag2&quot;:&quot;value2&quot;}</code>， 其 tenantID 为 <code>0</code>, streamID 为 <code>0x12345678(hi) 90abcdef(lo)</code>，那么会生成如下的索引条目：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>- 0x00<span style="color:#f92672">(</span>indexType<span style="color:#f92672">)</span> 0x00000000<span style="color:#f92672">(</span>tenantID<span style="color:#f92672">)</span> 0x12345678 0x90abcdef<span style="color:#f92672">(</span>streamID<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>- 0x01<span style="color:#f92672">(</span>indexType<span style="color:#f92672">)</span> 0x00000000<span style="color:#f92672">(</span>tenantID<span style="color:#f92672">)</span> 0x12345678 0x90abcdef<span style="color:#f92672">(</span>streamID<span style="color:#f92672">)</span> 0x02<span style="color:#f92672">(</span>tagCount<span style="color:#f92672">)</span> 0x04<span style="color:#f92672">(</span>tag1NameLen<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;tag1&#34;</span><span style="color:#f92672">(</span>tag1Name<span style="color:#f92672">)</span> 0x06<span style="color:#f92672">(</span>tag1ValueLen<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;value1&#34;</span> 0x04<span style="color:#f92672">(</span>tag2NameLen<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;tag2&#34;</span> 0x06 <span style="color:#e6db74">&#34;value2&#34;</span>
+</span></span><span style="display:flex;"><span>- 0x02<span style="color:#f92672">(</span>indexType<span style="color:#f92672">)</span> 0x00000000<span style="color:#f92672">(</span>tenantID<span style="color:#f92672">)</span> 0x04<span style="color:#f92672">(</span>tagNameLen<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;tag1&#34;</span><span style="color:#f92672">(</span>tagName<span style="color:#f92672">)</span> 0x06<span style="color:#f92672">(</span>tagValueLen<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;value1&#34;</span><span style="color:#f92672">(</span>tagValue<span style="color:#f92672">)</span> 0x12345678 0x90abcdef <span style="color:#f92672">(</span>streamID<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>- 0x02<span style="color:#f92672">(</span>indexType<span style="color:#f92672">)</span> 0x00000000<span style="color:#f92672">(</span>tenantID<span style="color:#f92672">)</span> 0x04<span style="color:#f92672">(</span>tagNameLen<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;tag2&#34;</span><span style="color:#f92672">(</span>tagName<span style="color:#f92672">)</span> 0x06<span style="color:#f92672">(</span>tagValueLen<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;value2&#34;</span><span style="color:#f92672">(</span>tagValue<span style="color:#f92672">)</span> 0x12345678 0x90abcdef <span style="color:#f92672">(</span>streamID<span style="color:#f92672">)</span>
+</span></span></code></pre></div><ol start="2">
+<li>写入内存块</li>
+</ol>
+<p>这些索引条目会加入到 indexdb 的 <code>mergeset.Table</code> 存储引擎中，此引擎负责将索引条目写入到内存块（inmemoryBlock）中，这里内存块采用了分片管理，分片数量 和 cpu 逻辑核数(<code>GOMAXPROCS</code>) 正相关<code>cpus * multiplier (multiplier = cpus, 最大 16)</code>。</p>
+<p>并在合适的时机触发合并操作。</p>
+<details ><summary>代码片段</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">rawItemsShard</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ibs</span> []<span style="color:#f92672">*</span><span style="color:#a6e22e">inmemoryBlock</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">inmemoryBlock</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">commonPrefix</span> []<span style="color:#66d9ef">byte</span> <span style="color:#75715e">// 公共前缀，减少重复存储
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">data</span>         []<span style="color:#66d9ef">byte</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">items</span>        []<span style="color:#a6e22e">Item</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// github.com/VictoriaMetrics/VictoriaMetrics/lib/mergeset/encoding.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">ib</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">inmemoryBlock</span>) <span style="color:#a6e22e">Add</span>(<span style="color:#a6e22e">x</span> []<span style="color:#66d9ef">byte</span>) <span style="color:#66d9ef">bool</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">data</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">ib</span>.<span style="color:#a6e22e">data</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 如果写入当前索引条目后，内存块大小超过了 maxInmemoryBlockSize(64KB)，
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 那么就不能写入当前索引条目，返回 false
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> len(<span style="color:#a6e22e">x</span>)<span style="color:#f92672">+</span>len(<span style="color:#a6e22e">data</span>) &gt; <span style="color:#a6e22e">maxInmemoryBlockSize</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">false</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">dataLen</span> <span style="color:#f92672">:=</span> len(<span style="color:#a6e22e">data</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">data</span> = append(<span style="color:#a6e22e">data</span>, <span style="color:#a6e22e">x</span><span style="color:#f92672">...</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ib</span>.<span style="color:#a6e22e">items</span> = append(<span style="color:#a6e22e">ib</span>.<span style="color:#a6e22e">items</span>, <span style="color:#a6e22e">Item</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Start</span>: uint32(<span style="color:#a6e22e">dataLen</span>),
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">End</span>:   uint32(len(<span style="color:#a6e22e">data</span>)),
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ib</span>.<span style="color:#a6e22e">data</span> = <span style="color:#a6e22e">data</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div>  </div>
+</details>
+<p><code>inmemoryBlock</code> 合并时，会将前面的索引条目加入 data 和 items 中，后面的索引条目会加入到下一个内存块中，比如：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>	data<span style="color:#f92672">([]</span>byte<span style="color:#f92672">)</span>: <span style="color:#f92672">[</span>
+</span></span><span style="display:flex;"><span>		0x00<span style="color:#f92672">(</span>indexType<span style="color:#f92672">)</span> 0x00000000<span style="color:#f92672">(</span>tenantID<span style="color:#f92672">)</span> 0x12345678 0x90abcdef<span style="color:#f92672">(</span>streamID<span style="color:#f92672">)</span> // 26B
+</span></span><span style="display:flex;"><span>		0x01<span style="color:#f92672">(</span>indexType<span style="color:#f92672">)</span> 0x00000000<span style="color:#f92672">(</span>tenantID<span style="color:#f92672">)</span> 0x12345678 0x90abcdef<span style="color:#f92672">(</span>streamID<span style="color:#f92672">)</span> 0x02<span style="color:#f92672">(</span>tagCount<span style="color:#f92672">)</span> 0x04<span style="color:#f92672">(</span>tag1NameLen<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;tag1&#34;</span><span style="color:#f92672">(</span>tag1Name<span style="color:#f92672">)</span> 0x06<span style="color:#f92672">(</span>tag1ValueLen<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;value1&#34;</span> 0x04<span style="color:#f92672">(</span>tag2NameLen<span style="color:#f92672">)</span> <span style="color:#e6db74">&#34;tag2&#34;</span> 0x06 <span style="color:#e6db74">&#34;value2&#34;</span> // 56B
+</span></span><span style="display:flex;"><span>	<span style="color:#f92672">]</span>,
+</span></span><span style="display:flex;"><span>	items: <span style="color:#f92672">[</span>
+</span></span><span style="display:flex;"><span>		Item<span style="color:#f92672">{</span>Start: 0, End: 26<span style="color:#f92672">}</span>,
+</span></span><span style="display:flex;"><span>		Item<span style="color:#f92672">{</span>Start: 26, End: 82<span style="color:#f92672">}</span>,
+</span></span><span style="display:flex;"><span>	<span style="color:#f92672">]</span>,
+</span></span><span style="display:flex;"><span><span style="color:#f92672">}</span>
+</span></span></code></pre></div><ol start="3">
+<li>内存块合并</li>
+</ol>
+<p><code>mergeset.Table</code> 会将 <code>inmemoryBlock</code> 合并成一个更大的内存块（inmemoryPart）, inmemoryPart 也会进一步合并并在合适的时机将其刷入到持久化磁盘中。</p>
+<p>当单个 Shard 中的内存块超过 <code>maxBlocksPerShard(256)</code> 时，分片管理器会将这些内存块加入到自身的 <code>ibsToFlush</code> 中，等待合并操作。</p>
+<details ><summary>代码片段</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// github.com/VictoriaMetrics/VictoriaMetrics/lib/mergeset/table.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">riss</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">rawItemsShards</span>) <span style="color:#a6e22e">addIbsToFlush</span>(<span style="color:#a6e22e">tb</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Table</span>, <span style="color:#a6e22e">ibsToFlush</span> []<span style="color:#f92672">*</span><span style="color:#a6e22e">inmemoryBlock</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> len(<span style="color:#a6e22e">ibsToFlush</span>) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">ibsToMerge</span> []<span style="color:#f92672">*</span><span style="color:#a6e22e">inmemoryBlock</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">riss</span>.<span style="color:#a6e22e">ibsToFlushLock</span>.<span style="color:#a6e22e">Lock</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> len(<span style="color:#a6e22e">riss</span>.<span style="color:#a6e22e">ibsToFlush</span>) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">riss</span>.<span style="color:#a6e22e">updateFlushDeadline</span>()
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 将当前分片的内存块加入到 ibsToFlush 中
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">riss</span>.<span style="color:#a6e22e">ibsToFlush</span> = append(<span style="color:#a6e22e">riss</span>.<span style="color:#a6e22e">ibsToFlush</span>, <span style="color:#a6e22e">ibsToFlush</span><span style="color:#f92672">...</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 如果待合并的内存块数量超过了 maxBlocksPerShard(256) * cpus 这一阈值，
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 那么就需要进行合并操作，将这些内存块合并成一个更大的内存块（inmemoryPart）
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> len(<span style="color:#a6e22e">riss</span>.<span style="color:#a6e22e">ibsToFlush</span>) <span style="color:#f92672">&gt;=</span> <span style="color:#a6e22e">maxBlocksPerShard</span><span style="color:#f92672">*</span><span style="color:#a6e22e">cgroup</span>.<span style="color:#a6e22e">AvailableCPUs</span>() {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">ibsToMerge</span> = <span style="color:#a6e22e">riss</span>.<span style="color:#a6e22e">ibsToFlush</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">riss</span>.<span style="color:#a6e22e">ibsToFlush</span> = <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">riss</span>.<span style="color:#a6e22e">ibsToFlushLock</span>.<span style="color:#a6e22e">Unlock</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 将内存块合并成一个更大的内存块（inmemoryPart）
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">tb</span>.<span style="color:#a6e22e">flushBlocksToInmemoryParts</span>(<span style="color:#a6e22e">ibsToMerge</span>, <span style="color:#66d9ef">false</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div>  </div>
+</details>
+<p>在 <code>flushBlocksToInmemoryParts</code> 中将 <code>ibsToMerge</code> 按最多 <code>defaultPartsToMerge(16)</code> 大小分成多个 chunk，再把这些 chunk 合并成一个更大的内存块（inmemoryPart）。注意单个 inmemoryPart 大小不能超过 <code>5%</code> 的可用系统内存。</p>
+<details ><summary>代码片段</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">tb</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Table</span>) <span style="color:#a6e22e">flushBlocksToInmemoryParts</span>(<span style="color:#a6e22e">ibs</span> []<span style="color:#f92672">*</span><span style="color:#a6e22e">inmemoryBlock</span>, <span style="color:#a6e22e">isFinal</span> <span style="color:#66d9ef">bool</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">pws</span> <span style="color:#f92672">:=</span> make([]<span style="color:#f92672">*</span><span style="color:#a6e22e">partWrapper</span>, <span style="color:#ae81ff">0</span>, (len(<span style="color:#a6e22e">ibs</span>)<span style="color:#f92672">+</span><span style="color:#a6e22e">defaultPartsToMerge</span><span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>)<span style="color:#f92672">/</span><span style="color:#a6e22e">defaultPartsToMerge</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 按最多 defaultPartsToMerge(16) 大小分成多个 chunk，
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 每个 chunk 合并成一个更大的内存块（inmemoryPart）
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">for</span> len(<span style="color:#a6e22e">ibs</span>) &gt; <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">n</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">defaultPartsToMerge</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">n</span> &gt; len(<span style="color:#a6e22e">ibs</span>) {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">n</span> = len(<span style="color:#a6e22e">ibs</span>)
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">go</span> <span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">ibsChunk</span> []<span style="color:#f92672">*</span><span style="color:#a6e22e">inmemoryBlock</span>) {
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">pw</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">tb</span>.<span style="color:#a6e22e">createInmemoryPart</span>(<span style="color:#a6e22e">ibsChunk</span>); <span style="color:#a6e22e">pw</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>				<span style="color:#a6e22e">pws</span> = append(<span style="color:#a6e22e">pws</span>, <span style="color:#a6e22e">pw</span>)
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>		}(<span style="color:#a6e22e">ibs</span>[:<span style="color:#a6e22e">n</span>])
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">ibs</span> = <span style="color:#a6e22e">ibs</span>[<span style="color:#a6e22e">n</span>:]
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 处理所有的 chunk (partWrapper), 将其合并成一个更大的内存块（inmemoryPart）
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 除非超过大小限制
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">maxPartSize</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">getMaxInmemoryPartSize</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> len(<span style="color:#a6e22e">pws</span>) &gt; <span style="color:#ae81ff">1</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// 合并 inmemoryPart
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">pws</span> = <span style="color:#a6e22e">tb</span>.<span style="color:#a6e22e">mustMergeInmemoryParts</span>(<span style="color:#a6e22e">pws</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">pwsRemaining</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">pws</span>[:<span style="color:#ae81ff">0</span>]
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">pw</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">pws</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#75715e">// 如果大小超过 maxPartSize，那么就直接加入到 inmemoryParts 中
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">pw</span>.<span style="color:#a6e22e">p</span>.<span style="color:#a6e22e">size</span> <span style="color:#f92672">&gt;=</span> <span style="color:#a6e22e">maxPartSize</span> {
+</span></span><span style="display:flex;"><span>				<span style="color:#a6e22e">tb</span>.<span style="color:#a6e22e">addToInmemoryParts</span>(<span style="color:#a6e22e">pw</span>, <span style="color:#a6e22e">isFinal</span>)
+</span></span><span style="display:flex;"><span>			} <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>				<span style="color:#a6e22e">pwsRemaining</span> = append(<span style="color:#a6e22e">pwsRemaining</span>, <span style="color:#a6e22e">pw</span>)
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">pws</span> = <span style="color:#a6e22e">pwsRemaining</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> len(<span style="color:#a6e22e">pws</span>) <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">tb</span>.<span style="color:#a6e22e">addToInmemoryParts</span>(<span style="color:#a6e22e">pws</span>[<span style="color:#ae81ff">0</span>], <span style="color:#a6e22e">isFinal</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div>  </div>
+</details>
+<blockquote>
+<p>默认的可用内存 = 系统内存 * 60% （可以通过 <code>memory.allowedPercent</code> 配置）</p>
+</blockquote>
+<p>合并不只是上面提到的部分，程序还会在后台对 inmemoryPart/filePart 进行合并。</p>
+<ol start="4">
+<li>持久化</li>
+</ol>
+<p>经过合并后的 inmemoryPart 会被写入到磁盘中，如果满足以下条件，则会被刷入到磁盘中：</p>
+<ul>
+<li>flushInterval 定时触发</li>
+<li>part(inmemoryPart / filePart) 合并时</li>
+</ul>
+<details ><summary>代码片段</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// github.com/VictoriaMetrics/VictoriaMetrics/lib/mergeset/table.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">tb</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Table</span>) <span style="color:#a6e22e">nextMergeIdx</span>() <span style="color:#66d9ef">uint64</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">tb</span>.<span style="color:#a6e22e">mergeIdx</span>.<span style="color:#a6e22e">Add</span>(<span style="color:#ae81ff">1</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// github.com/VictoriaMetrics/VictoriaMetrics/lib/mergeset/table.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">tb</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Table</span>) <span style="color:#a6e22e">mergeParts</span>(<span style="color:#a6e22e">pws</span> []<span style="color:#f92672">*</span><span style="color:#a6e22e">partWrapper</span>, <span style="color:#a6e22e">stopCh</span> <span style="color:#f92672">&lt;-</span><span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">struct</span>{}, <span style="color:#a6e22e">isFinal</span> <span style="color:#66d9ef">bool</span>) <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mergeIdx</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">tb</span>.<span style="color:#a6e22e">nextMergeIdx</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">dstPartPath</span> <span style="color:#f92672">:=</span> <span style="color:#e6db74">&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">dstPartType</span> <span style="color:#f92672">==</span> <span style="color:#a6e22e">partFile</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// 合并后的 inmemoryPart 会被写入到磁盘中，文件名格式为 %016X，如 18804EBAD6A80650
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">dstPartPath</span> = <span style="color:#a6e22e">filepath</span>.<span style="color:#a6e22e">Join</span>(<span style="color:#a6e22e">tb</span>.<span style="color:#a6e22e">path</span>, <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Sprintf</span>(<span style="color:#e6db74">&#34;%016X&#34;</span>, <span style="color:#a6e22e">mergeIdx</span>))
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 只有一个 inmemoryPart 时，直接将其写入到磁盘中
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">isFinal</span> <span style="color:#f92672">&amp;&amp;</span> len(<span style="color:#a6e22e">pws</span>) <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span> <span style="color:#f92672">&amp;&amp;</span> <span style="color:#a6e22e">pws</span>[<span style="color:#ae81ff">0</span>].<span style="color:#a6e22e">mp</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">mp</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">pws</span>[<span style="color:#ae81ff">0</span>].<span style="color:#a6e22e">mp</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">mp</span>.<span style="color:#a6e22e">MustStoreToDisk</span>(<span style="color:#a6e22e">dstPartPath</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// 打开新创建的 filePart
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">pwNew</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">tb</span>.<span style="color:#a6e22e">openCreatedPart</span>(<span style="color:#a6e22e">pws</span>, <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">dstPartPath</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// 将合并后的 inmemoryPart 加入到 inmemoryParts 中
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">tb</span>.<span style="color:#a6e22e">swapSrcWithDstParts</span>(<span style="color:#a6e22e">pws</span>, <span style="color:#a6e22e">pwNew</span>, <span style="color:#a6e22e">dstPartType</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div>  </div>
+</details>
+<p>可以看到，inmemoryPart 会被写入到磁盘目录，目录格式为 <code>%016X</code>（如 <code>18804EBAD6A80650</code>）。实际写入文件的逻辑在 <code>mp(*inmemoryPart).MustStoreToDisk</code> 方法中。</p>
+<details open><summary>代码片段</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// github.com/VictoriaMetrics/VictoriaMetrics/lib/mergeset/inmemory_part.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">mp</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">inmemoryPart</span>) <span style="color:#a6e22e">MustStoreToDisk</span>(<span style="color:#a6e22e">path</span> <span style="color:#66d9ef">string</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">fs</span>.<span style="color:#a6e22e">MustMkdirFailIfExist</span>(<span style="color:#a6e22e">path</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">metaindexPath</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">filepath</span>.<span style="color:#a6e22e">Join</span>(<span style="color:#a6e22e">path</span>, <span style="color:#a6e22e">metaindexFilename</span>)  <span style="color:#75715e">// metaindex.bin
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">indexPath</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">filepath</span>.<span style="color:#a6e22e">Join</span>(<span style="color:#a6e22e">path</span>, <span style="color:#a6e22e">indexFilename</span>)          <span style="color:#75715e">// index.bin
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">itemsPath</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">filepath</span>.<span style="color:#a6e22e">Join</span>(<span style="color:#a6e22e">path</span>, <span style="color:#a6e22e">itemsFilename</span>)          <span style="color:#75715e">// items.bin
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">lensPath</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">filepath</span>.<span style="color:#a6e22e">Join</span>(<span style="color:#a6e22e">path</span>, <span style="color:#a6e22e">lensFilename</span>)            <span style="color:#75715e">// lens.bin
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">psw</span> <span style="color:#a6e22e">filestream</span>.<span style="color:#a6e22e">ParallelStreamWriter</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">psw</span>.<span style="color:#a6e22e">Add</span>(<span style="color:#a6e22e">metaindexPath</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">mp</span>.<span style="color:#a6e22e">metaindexData</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">psw</span>.<span style="color:#a6e22e">Add</span>(<span style="color:#a6e22e">indexPath</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">mp</span>.<span style="color:#a6e22e">indexData</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">psw</span>.<span style="color:#a6e22e">Add</span>(<span style="color:#a6e22e">itemsPath</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">mp</span>.<span style="color:#a6e22e">itemsData</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">psw</span>.<span style="color:#a6e22e">Add</span>(<span style="color:#a6e22e">lensPath</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">mp</span>.<span style="color:#a6e22e">lensData</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 并发执行前面添加的刷写任务
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">psw</span>.<span style="color:#a6e22e">Run</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mp</span>.<span style="color:#a6e22e">ph</span>.<span style="color:#a6e22e">MustWriteMetadata</span>(<span style="color:#a6e22e">path</span>) <span style="color:#75715e">// 写入 parts.json 文件
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">fs</span>.<span style="color:#a6e22e">MustSyncPathAndParentDir</span>(<span style="color:#a6e22e">path</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div>  </div>
+</details>
+<p><em><strong>小结：</strong></em></p>
+<p>indexdb 用于存储 <code>Stream</code> 索引信息，位于 <code>path/to/partitions/indexdb</code>。索引包括：<code>tenantID → streamID</code>、<code>streamID → streamTagsCanonical</code>、以及标签（tag）到 <code>streamID</code> 的映射。</p>
+<p>indexdb 的存储按照 <code>part</code> 单位进行管理，每个 <code>part</code> 对应一个文件夹（<code>18804EBAD6A80650</code>），每个文件夹中包含如下的文件：</p>
+<table>
+  <thead>
+      <tr>
+          <th>文件名</th>
+          <th>描述</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>metadata.json</td>
+          <td>(Part) 索引元数据: <code>{索引数量,块数量, 第一个项的索引, 最后一个项的索引}</code></td>
+      </tr>
+      <tr>
+          <td>metaindex.bin</td>
+          <td>存储 <code>metaindexRow</code>（用来索引 indexBlock 或者 blockHeaders）</td>
+      </tr>
+      <tr>
+          <td>index.bin</td>
+          <td>存储 <code>blockHeader</code> (commonPrefix、items 数量、索引 items 偏移、索引 lens 偏移等)</td>
+      </tr>
+      <tr>
+          <td>items.bin</td>
+          <td>(Block) stream 索引 items 数据（会使用 commonPrefix 手段进行压缩）</td>
+      </tr>
+      <tr>
+          <td>lens.bin</td>
+          <td>(Block) lens 索引 items 长度信息（用于支持 commonPrefix 压缩）</td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="datadb-写入">
+  datadb 写入
+  <a class="anchor" href="#datadb-%e5%86%99%e5%85%a5">#</a>
+</h4>
+<p>datadb 用于存储实际的日志数据。</p>
+<p>继续跟踪 <code>pt.ddb.mustAddRows</code>，可以看到 <code>ddb(*datadb).mustFlushLogRows</code> 是实际写入 datadb 的方法。</p>
+<details open><summary>代码片段</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// lib/logstorage/datadb.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">ddb</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">datadb</span>) <span style="color:#a6e22e">mustFlushLogRows</span>(<span style="color:#a6e22e">lr</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">logRows</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mp</span>.<span style="color:#a6e22e">mustInitFromRows</span>(<span style="color:#a6e22e">lr</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">p</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">mustOpenInmemoryPart</span>(<span style="color:#a6e22e">ddb</span>.<span style="color:#a6e22e">pt</span>, <span style="color:#a6e22e">mp</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 将 inmemoryPart 加入到 datadb.inmemoryParts 中
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">ddb</span>.<span style="color:#a6e22e">inmemoryParts</span> = append(<span style="color:#a6e22e">ddb</span>.<span style="color:#a6e22e">inmemoryParts</span>, <span style="color:#a6e22e">pw</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 触发 inmemoryParts 合并
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">ddb</span>.<span style="color:#a6e22e">startInmemoryPartsMergerLocked</span>()
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div>  </div>
+</details>
+<p>其中 <code>mp.mustInitFromRows(lr)</code> 方法会将 <code>logRows</code> 转换为 <code>inmemoryPart</code>:</p>
+<details open><summary>代码片段</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// lib/logstorage/datadb.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">mp</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">inmemoryPart</span>) <span style="color:#a6e22e">mustInitFromRows</span>(<span style="color:#a6e22e">lr</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">logRows</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">sort</span>.<span style="color:#a6e22e">Sort</span>(<span style="color:#a6e22e">lr</span>)         <span style="color:#75715e">// 根据 streamID 排序，再按 timestamp 排序
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">lr</span>.<span style="color:#a6e22e">sortFieldsInRows</span>() <span style="color:#75715e">// 根据 field 的 Name 进行排序
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 将 inmemoryPart 的各种 buffer 赋值给 blockStreamWriter，
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 后续 bsw.Finalize 实际上也是将 bsw 的数据写入到 inmemoryPart 中
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">bsw</span>.<span style="color:#a6e22e">MustInitForInmemoryPart</span>(<span style="color:#a6e22e">mp</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">sidPrev</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">streamID</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">uncompressedBlockSizeBytes</span> <span style="color:#f92672">:=</span> uint64(<span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">timestamps</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">lr</span>.<span style="color:#a6e22e">timestamps</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">rows</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">lr</span>.<span style="color:#a6e22e">rows</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">streamIDs</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">lr</span>.<span style="color:#a6e22e">streamIDs</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">i</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">timestamps</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">streamID</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">streamIDs</span>[<span style="color:#a6e22e">i</span>]
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">sidPrev</span> <span style="color:#f92672">==</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">sidPrev</span> = <span style="color:#a6e22e">streamID</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// 注意：将相同流的日志写入同一个 block 中，如果超过 maxUncompressedBlockSize (2MB) 则会写入下一个 block
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#75715e">// 看 blockStreamWriter.MustWriteRows 方法
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">uncompressedBlockSizeBytes</span> <span style="color:#f92672">&gt;=</span> <span style="color:#a6e22e">maxUncompressedBlockSize</span> <span style="color:#f92672">||</span> !<span style="color:#a6e22e">streamID</span>.<span style="color:#a6e22e">equal</span>(<span style="color:#a6e22e">sidPrev</span>) {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">bsw</span>.<span style="color:#a6e22e">MustWriteRows</span>(<span style="color:#a6e22e">sidPrev</span>, <span style="color:#a6e22e">trs</span>.<span style="color:#a6e22e">timestamps</span>, <span style="color:#a6e22e">trs</span>.<span style="color:#a6e22e">rows</span>)
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">trs</span>.<span style="color:#a6e22e">reset</span>()
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">sidPrev</span> = <span style="color:#a6e22e">streamID</span>
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">uncompressedBlockSizeBytes</span> = <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">fields</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">rows</span>[<span style="color:#a6e22e">i</span>]
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">trs</span>.<span style="color:#a6e22e">timestamps</span> = append(<span style="color:#a6e22e">trs</span>.<span style="color:#a6e22e">timestamps</span>, <span style="color:#a6e22e">timestamps</span>[<span style="color:#a6e22e">i</span>])
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">trs</span>.<span style="color:#a6e22e">rows</span> = append(<span style="color:#a6e22e">trs</span>.<span style="color:#a6e22e">rows</span>, <span style="color:#a6e22e">fields</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">uncompressedBlockSizeBytes</span> <span style="color:#f92672">+=</span> uint64(<span style="color:#a6e22e">EstimatedJSONRowLen</span>(<span style="color:#a6e22e">fields</span>))
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">bsw</span>.<span style="color:#a6e22e">MustWriteRows</span>(<span style="color:#a6e22e">sidPrev</span>, <span style="color:#a6e22e">trs</span>.<span style="color:#a6e22e">timestamps</span>, <span style="color:#a6e22e">trs</span>.<span style="color:#a6e22e">rows</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 将 bsw 中的数据更新到 inmemoryPart
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">bsw</span>.<span style="color:#a6e22e">Finalize</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">mp</span>.<span style="color:#a6e22e">ph</span>)	
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// lib/logstorage/block_stream_writer.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">bsw</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">blockStreamWriter</span>) <span style="color:#a6e22e">MustWriteRows</span>(<span style="color:#a6e22e">sid</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">streamID</span>, <span style="color:#a6e22e">timestamps</span> []<span style="color:#66d9ef">int64</span>, <span style="color:#a6e22e">rows</span> [][]<span style="color:#a6e22e">Field</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> len(<span style="color:#a6e22e">timestamps</span>) <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">b</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">getBlock</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// !!! 这里把原始日志的字段写入到 block 中
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">b</span>.<span style="color:#a6e22e">MustInitFromRows</span>(<span style="color:#a6e22e">timestamps</span>, <span style="color:#a6e22e">rows</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">bsw</span>.<span style="color:#a6e22e">MustWriteBlock</span>(<span style="color:#a6e22e">sid</span>, <span style="color:#a6e22e">b</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">putBlock</span>(<span style="color:#a6e22e">b</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">block</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">timestamps</span> []<span style="color:#66d9ef">int64</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">columns</span> []<span style="color:#a6e22e">column</span>     <span style="color:#75715e">// 所有 row 会根据按列进行存储
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">constColumns</span> []<span style="color:#a6e22e">Field</span> <span style="color:#75715e">// 所有 row 这一列的值相同就可以存储在 constColumns 中，但值不能超过 256 字节
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div>  </div>
+</details>
+<p><em><strong>小结：</strong></em></p>
+<p>在这个环节，日志数据从行格式（<code>logRows</code>）转换为列格式（<code>inmemoryPart</code>），主要经历以下步骤：</p>
+<ol>
+<li>对 <code>logRows</code> 排序：同一 <code>stream</code> 的数据相邻并按时间排序，同时对 <code>Fields</code> 依据 <code>Field.Name</code> 进行排序，便于生成 <code>block</code>；</li>
+<li>将排序后的 <code>logRows</code> 中相同 <code>stream</code> 的数据写入一个或多个 <code>block</code>（每个 <code>block</code> 最大 <code>maxUncompressedBlockSize(2MB)</code>）；</li>
+<li><code>block</code> 包含常量列（所有行该字段值相同）与普通列（各行值不完全相同）；普通列保存所有行的该字段值（缺失则为空）；</li>
+<li>将 <code>block</code> 写入 <code>inmemoryPart</code>，合并后刷入磁盘。</li>
+</ol>
+<p>每个 part 包含下面几种文件：</p>
+<table>
+  <thead>
+      <tr>
+          <th>文件名</th>
+          <th>存储内容</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>metadata.json</td>
+          <td>(Part) part 元信息：记录数、格式版本、时间范围等</td>
+      </tr>
+      <tr>
+          <td>metaindex.bin</td>
+          <td>(Part) 索引 indexBlockHeader  (一组 block)</td>
+      </tr>
+      <tr>
+          <td>index.bin</td>
+          <td>(Part) 索引 blockHeader</td>
+      </tr>
+      <tr>
+          <td>column_names.bin</td>
+          <td>(Part) 中所有的列和列ID</td>
+      </tr>
+      <tr>
+          <td>column_idxs.bin</td>
+          <td>(Block) column 的 bloom/values 存在的 shardID</td>
+      </tr>
+      <tr>
+          <td>columns_header_index.bin</td>
+          <td>(Block) 索引 columnID 到 columnHeader 的偏移量</td>
+      </tr>
+      <tr>
+          <td>columns_header.bin</td>
+          <td>(Block) <code>columnHeader</code> 数据</td>
+      </tr>
+      <tr>
+          <td>timestamps.bin</td>
+          <td>(Block) 时间戳数据</td>
+      </tr>
+      <tr>
+          <td>message_bloom.bin</td>
+          <td>(Block) 消息的布隆过滤器</td>
+      </tr>
+      <tr>
+          <td>message_values.bin</td>
+          <td>(Block) 实际的日志消息</td>
+      </tr>
+      <tr>
+          <td>bloom.bin{shard}</td>
+          <td>(Block) 普通列的布隆过滤器，用于快速判断是否包含某个消息</td>
+      </tr>
+      <tr>
+          <td>values.bin{shard}</td>
+          <td>(Block) 普通列的实际值</td>
+      </tr>
+  </tbody>
+</table>
+<p>其中 <code>{shardIdx}</code> 是分片索引，从 0 开始，代表了 bloom 和 values 在这个 part 中的分片数量。</p>
+<p>Log 中的列名会存储在 <code>column_names.bin</code> 中，每个列名会有一个唯一的 ID，这个 ID 会在 <code>column_idxs.bin</code> 中存储。</p>
+<h3 id="读取流程">
+  读取流程
+  <a class="anchor" href="#%e8%af%bb%e5%8f%96%e6%b5%81%e7%a8%8b">#</a>
+</h3>
+<p>经过对写入流程的梳理，我们再回头来看读取流程。从 <code>RunQuery</code> 开始追踪：</p>
+<h4 id="block-过滤">
+  Block 过滤
+  <a class="anchor" href="#block-%e8%bf%87%e6%bb%a4">#</a>
+</h4>
+<details open><summary>代码片段</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// lib/logstorage/storage_search.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">s</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Storage</span>) <span style="color:#a6e22e">runQuery</span>(<span style="color:#a6e22e">qctx</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">QueryContext</span>, <span style="color:#a6e22e">writeBlock</span> <span style="color:#a6e22e">writeBlockResultFunc</span>) <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 从查询条件中解析出查询需要的参数：
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// type storageSearchOptions struct {
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 	tenantIDs          []TenantID
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 	streamIDs          []streamID
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 	minTimestamp       int64
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 	maxTimestamp       int64
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 	streamFilter       *StreamFilter
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 	filter             filter
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 	fieldsFilter       *prefixfilter.Filter
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 	hiddenFieldsFilter *prefixfilter.Filter
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 	timeOffset         int64
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// }
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">sso</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">getSearchOptions</span>(<span style="color:#a6e22e">qctx</span>.<span style="color:#a6e22e">TenantIDs</span>, <span style="color:#a6e22e">q</span>, <span style="color:#a6e22e">qctx</span>.<span style="color:#a6e22e">HiddenFieldsFilters</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">searchParallel</span>(<span style="color:#a6e22e">workersCount</span>, <span style="color:#a6e22e">sso</span>, <span style="color:#a6e22e">qctx</span>.<span style="color:#a6e22e">QueryStats</span>, <span style="color:#a6e22e">stopCh</span>, <span style="color:#a6e22e">writeBlockToPipes</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// lib/logstorage/storage_search.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">s</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Storage</span>) <span style="color:#a6e22e">searchParallel</span>(<span style="color:#a6e22e">workersCount</span> <span style="color:#66d9ef">int</span>, <span style="color:#a6e22e">sso</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">storageSearchOptions</span>, <span style="color:#a6e22e">qs</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">QueryStats</span>, <span style="color:#a6e22e">stopCh</span> <span style="color:#f92672">&lt;-</span><span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">struct</span>{}, <span style="color:#a6e22e">writeBlock</span> <span style="color:#a6e22e">writeBlockResultFunc</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 启动多个 blockSearch 协程，每个协程从 workCh 中取出一个 blockSearchWorkBatch 进行搜索
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">workCh</span> <span style="color:#f92672">:=</span> make(<span style="color:#66d9ef">chan</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">blockSearchWorkBatch</span>, <span style="color:#a6e22e">workersCount</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">workerID</span> <span style="color:#f92672">:=</span> <span style="color:#ae81ff">0</span>; <span style="color:#a6e22e">workerID</span> &lt; <span style="color:#a6e22e">workersCount</span>; <span style="color:#a6e22e">workerID</span><span style="color:#f92672">++</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">go</span> <span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">workerID</span> <span style="color:#66d9ef">uint</span>) {
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">bswb</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">workCh</span> {
+</span></span><span style="display:flex;"><span>				<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">i</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">bsws</span> {
+</span></span><span style="display:flex;"><span>					<span style="color:#75715e">// bs blockSearch 代表对一个 block 进行搜索
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>					<span style="color:#a6e22e">bs</span>.<span style="color:#a6e22e">search</span>(<span style="color:#a6e22e">qsLocal</span>, <span style="color:#a6e22e">bsw</span>, <span style="color:#a6e22e">bm</span>)
+</span></span><span style="display:flex;"><span>					<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">bs</span>.<span style="color:#a6e22e">br</span>.<span style="color:#a6e22e">rowsLen</span> &gt; <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>						<span style="color:#a6e22e">writeBlock</span>(<span style="color:#a6e22e">workerID</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">bs</span>.<span style="color:#a6e22e">br</span>)
+</span></span><span style="display:flex;"><span>					}	
+</span></span><span style="display:flex;"><span>				}
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>		}(uint(<span style="color:#a6e22e">workerID</span>))
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 根据时间范围确定需要查询的 Partition
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">ptws</span>, <span style="color:#a6e22e">ptwsDecRef</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">getPartitionsForTimeRange</span>(<span style="color:#a6e22e">sso</span>.<span style="color:#a6e22e">minTimestamp</span>, <span style="color:#a6e22e">sso</span>.<span style="color:#a6e22e">maxTimestamp</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">ptwsDecRef</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 并发查询每个 Partition
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">i</span>, <span style="color:#a6e22e">ptw</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">ptws</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">go</span> <span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">idx</span> <span style="color:#66d9ef">int</span>, <span style="color:#a6e22e">pt</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">partition</span>) {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">psfs</span>[<span style="color:#a6e22e">idx</span>] = <span style="color:#a6e22e">pt</span>.<span style="color:#a6e22e">search</span>(<span style="color:#a6e22e">sso</span>, <span style="color:#a6e22e">qsLocal</span>, <span style="color:#a6e22e">workCh</span>, <span style="color:#a6e22e">stopCh</span>)
+</span></span><span style="display:flex;"><span>		}(<span style="color:#a6e22e">i</span>, <span style="color:#a6e22e">ptw</span>.<span style="color:#a6e22e">pt</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// lib/logstorage/storage_search.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">pt</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">partition</span>) <span style="color:#a6e22e">search</span>(<span style="color:#a6e22e">sso</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">storageSearchOptions</span>, <span style="color:#a6e22e">qs</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">QueryStats</span>, <span style="color:#a6e22e">workCh</span> <span style="color:#66d9ef">chan</span><span style="color:#f92672">&lt;-</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">blockSearchWorkBatch</span>, <span style="color:#a6e22e">stopCh</span> <span style="color:#f92672">&lt;-</span><span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">struct</span>{}) <span style="color:#a6e22e">partitionSearchFinalizer</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 如果查询条件中包含了 _streamFilter 那么从 indexdb 中获取到对应的 streamID
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">pso</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">pt</span>.<span style="color:#a6e22e">getSearchOptions</span>(<span style="color:#a6e22e">sso</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 在 datadb 中执行查询
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">pt</span>.<span style="color:#a6e22e">ddb</span>.<span style="color:#a6e22e">search</span>(<span style="color:#a6e22e">pso</span>, <span style="color:#a6e22e">qs</span>, <span style="color:#a6e22e">workCh</span>, <span style="color:#a6e22e">stopCh</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// lib/logstorage/datadb_search.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">ddb</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">datadb</span>) <span style="color:#a6e22e">search</span>(<span style="color:#a6e22e">pso</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">partitionSearchOptions</span>, <span style="color:#a6e22e">qs</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">QueryStats</span>, <span style="color:#a6e22e">workCh</span> <span style="color:#66d9ef">chan</span><span style="color:#f92672">&lt;-</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">blockSearchWorkBatch</span>, <span style="color:#a6e22e">stopCh</span> <span style="color:#f92672">&lt;-</span><span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">struct</span>{}) <span style="color:#a6e22e">partitionSearchFinalizer</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 按照时间范围确定需要查询的 Part
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">pws</span>, <span style="color:#a6e22e">pwsDecRef</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">ddb</span>.<span style="color:#a6e22e">getPartsForTimeRange</span>(<span style="color:#a6e22e">pso</span>.<span style="color:#a6e22e">minTimestamp</span>, <span style="color:#a6e22e">pso</span>.<span style="color:#a6e22e">maxTimestamp</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Apply search to matching parts
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">pw</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">pws</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">pw</span>.<span style="color:#a6e22e">p</span>.<span style="color:#a6e22e">search</span>(<span style="color:#a6e22e">pso</span>, <span style="color:#a6e22e">qs</span>, <span style="color:#a6e22e">workCh</span>, <span style="color:#a6e22e">stopCh</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">pwsDecRef</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// lib/logstorage/storage_search.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">p</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">part</span>) <span style="color:#a6e22e">search</span>(<span style="color:#a6e22e">pso</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">partitionSearchOptions</span>, <span style="color:#a6e22e">qs</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">QueryStats</span>, <span style="color:#a6e22e">workCh</span> <span style="color:#66d9ef">chan</span><span style="color:#f92672">&lt;-</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">blockSearchWorkBatch</span>, <span style="color:#a6e22e">stopCh</span> <span style="color:#f92672">&lt;-</span><span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">struct</span>{}) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">bhss</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">getBlockHeaders</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> len(<span style="color:#a6e22e">pso</span>.<span style="color:#a6e22e">tenantIDs</span>) &gt; <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">p</span>.<span style="color:#a6e22e">searchByTenantIDs</span>(<span style="color:#a6e22e">pso</span>, <span style="color:#a6e22e">qs</span>, <span style="color:#a6e22e">bhss</span>, <span style="color:#a6e22e">workCh</span>, <span style="color:#a6e22e">stopCh</span>)
+</span></span><span style="display:flex;"><span>	} <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// 这个方法是对 part 中的 index
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">p</span>.<span style="color:#a6e22e">searchByStreamIDs</span>(<span style="color:#a6e22e">pso</span>, <span style="color:#a6e22e">qs</span>, <span style="color:#a6e22e">bhss</span>, <span style="color:#a6e22e">workCh</span>, <span style="color:#a6e22e">stopCh</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">putBlockHeaders</span>(<span style="color:#a6e22e">bhss</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div>  </div>
+</details>
+<p>从上述代码可以清晰看出，Victoria Logs 的前三层结构在逐层缩小查询范围以提高效率，并发查询每个 partition 和 part 以加速检索。</p>
+<p>其中 <code>part.searchByStreamIDs</code> 的作用是基于 <code>streamIDs</code> 过滤出符合条件的 <code>block</code>（<code>blockHeader</code>）：要求 <code>streamID</code> 落在目标集合内且时间范围命中目标区间，并将其加入 <code>workCh</code>。</p>
+<p>根据 <code>streamFilter</code> 获取 <code>streamIDs</code> 的代码片段如下。以 <code>_stream: {service=&quot;test-app&quot;}</code> 为例，对应的等值查询方法为 <code>getStreamIDsForNonEmptyTagValue</code>：</p>
+<details ><summary>代码片段</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">is</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">indexSearch</span>) <span style="color:#a6e22e">getStreamIDsForNonEmptyTagValue</span>(<span style="color:#a6e22e">tenantID</span> <span style="color:#a6e22e">TenantID</span>, <span style="color:#a6e22e">tagName</span>, <span style="color:#a6e22e">tagValue</span> <span style="color:#66d9ef">string</span>) <span style="color:#66d9ef">map</span>[<span style="color:#a6e22e">u128</span>]<span style="color:#66d9ef">struct</span>{} {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ids</span> <span style="color:#f92672">:=</span> make(<span style="color:#66d9ef">map</span>[<span style="color:#a6e22e">u128</span>]<span style="color:#66d9ef">struct</span>{})
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ts</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">is</span>.<span style="color:#a6e22e">ts</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">kb</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">is</span>.<span style="color:#a6e22e">kb</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 构建查询前缀：nsPrefixTagToStreamIDs + tenantID + tagName + tagValue
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">kb</span>.<span style="color:#a6e22e">B</span> = <span style="color:#a6e22e">marshalCommonPrefix</span>(<span style="color:#a6e22e">kb</span>.<span style="color:#a6e22e">B</span>[:<span style="color:#ae81ff">0</span>], <span style="color:#a6e22e">nsPrefixTagToStreamIDs</span>, <span style="color:#a6e22e">tenantID</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">kb</span>.<span style="color:#a6e22e">B</span> = <span style="color:#a6e22e">marshalTagValue</span>(<span style="color:#a6e22e">kb</span>.<span style="color:#a6e22e">B</span>, <span style="color:#a6e22e">bytesutil</span>.<span style="color:#a6e22e">ToUnsafeBytes</span>(<span style="color:#a6e22e">tagName</span>))
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">kb</span>.<span style="color:#a6e22e">B</span> = <span style="color:#a6e22e">marshalTagValue</span>(<span style="color:#a6e22e">kb</span>.<span style="color:#a6e22e">B</span>, <span style="color:#a6e22e">bytesutil</span>.<span style="color:#a6e22e">ToUnsafeBytes</span>(<span style="color:#a6e22e">tagValue</span>))
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">prefix</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">kb</span>.<span style="color:#a6e22e">B</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 找到第一条以 prefix 开头的记录
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">ts</span>.<span style="color:#a6e22e">Seek</span>(<span style="color:#a6e22e">prefix</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">ts</span>.<span style="color:#a6e22e">NextItem</span>() {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">bytes</span>.<span style="color:#a6e22e">HasPrefix</span>(<span style="color:#a6e22e">item</span>, <span style="color:#a6e22e">prefix</span>) {
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">break</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// 解析 streamID 并更新结果
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">tail</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">item</span>[len(<span style="color:#a6e22e">prefix</span>):]
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">sp</span>.<span style="color:#a6e22e">UpdateStreamIDs</span>(<span style="color:#a6e22e">ids</span>, <span style="color:#a6e22e">tail</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">ids</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div>  </div>
+</details>
+<p>这里的细节：</p>
+<ol>
+<li><code>indexBlockHeader(s)</code> 从 <code>metaindex.bin</code> 加载；</li>
+<li>第一次过滤：通过 <code>indexBlockHeader</code> 排除不包含目标 <code>streamID</code> 和时间范围的索引块；</li>
+<li>加载 <code>blockHeader</code>：从 <code>index.bin</code> 读取匹配索引块中的所有 <code>blockHeader</code>；</li>
+<li>第二次过滤：依据 <code>blockHeader</code> 再次排除不包含目标 <code>streamID</code> 和时间范围的块。</li>
+</ol>
+<details open><summary>代码片段</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// indexBlockHeader 包含索引是覆盖了多个 block
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">indexBlockHeader</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">streamID</span> <span style="color:#a6e22e">streamID</span>       <span style="color:#75715e">// 代表的是覆盖的 block 中最小的 streamID
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">minTimestamp</span> <span style="color:#66d9ef">int64</span>      <span style="color:#75715e">// 代表的是覆盖的 block 中最小的 timestamp
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">maxTimestamp</span> <span style="color:#66d9ef">int64</span>      <span style="color:#75715e">// 代表的是覆盖的 block 中最大的 timestamp
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">indexBlockOffset</span> <span style="color:#66d9ef">uint64</span> <span style="color:#75715e">// 代表的是在 indexFilename（index.bin) 中的指向存储数据位置的偏移量
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">indexBlockSize</span> <span style="color:#66d9ef">uint64</span>   <span style="color:#75715e">// 代表的是在 indexFilename（index.bin) 中存储数据的大小
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// blockHeader 包含了单个 block 的元数据信息
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">blockHeader</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">streamID</span> <span style="color:#a6e22e">streamID</span>       <span style="color:#75715e">// 代表的是 block 中存储的日志条目的 streamID
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">uncompressedSizeBytes</span> <span style="color:#66d9ef">uint64</span> <span style="color:#75715e">// 代表的是 block 中存储的日志条目的原始（未压缩）大小
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">rowsCount</span> <span style="color:#66d9ef">uint64</span> <span style="color:#75715e">// 代表的是 block 中存储的日志条目的数量
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">timestampsHeader</span> <span style="color:#a6e22e">timestampsHeader</span> <span style="color:#75715e">// timestampsHeader 包含了 block 中存储的日志条目的时间戳信息
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">columnsHeaderIndexOffset</span> <span style="color:#66d9ef">uint64</span> <span style="color:#75715e">// 代表的是 columnsHeader 在 columnsHeaderIndexFilename(columns_header_index.bin) 中的偏移量
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">columnsHeaderIndexSize</span> <span style="color:#66d9ef">uint64</span> <span style="color:#75715e">// 代表的是 columnsHeader 在 columnsHeaderIndexFilename(columns_header_index.bin) 中的大小
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">columnsHeaderOffset</span> <span style="color:#66d9ef">uint64</span> <span style="color:#75715e">// 代表的是 columnsHeader 在 columnsHeaderFilename(columns_header.bin) 中的偏移量
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">columnsHeaderSize</span> <span style="color:#66d9ef">uint64</span> <span style="color:#75715e">// 代表的是 columnsHeader 在 columnsHeaderFilename(columns_header.bin) 中的大小
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">timestampsHeader</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">blockOffset</span> <span style="color:#66d9ef">uint64</span> <span style="color:#75715e">// 代表的是 block 在 timestampsFilename(timestamps.bin) 中的偏移量
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">blockSize</span> <span style="color:#66d9ef">uint64</span> <span style="color:#75715e">// 代表的是 block 在 timestampsFilename(timestamps.bin) 中的大小
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">minTimestamp</span> <span style="color:#66d9ef">int64</span> <span style="color:#75715e">// 代表的是 block 中存储的日志条目的最小时间戳
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">maxTimestamp</span> <span style="color:#66d9ef">int64</span> <span style="color:#75715e">// 代表的是 block 中存储的日志条目的最大时间戳
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">marshalType</span> <span style="color:#a6e22e">encoding</span>.<span style="color:#a6e22e">MarshalType</span> <span style="color:#75715e">// 代表的是 block 中存储的日志条目的时间戳信息的编码类型
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div>  </div>
+</details>
+<p>经过上面的层层过滤 (按照 时间范围 + streamID 列表)，确定了哪些分区的哪些 part，以及 part 中需要进一步筛选的 Block(blockHeader) 列表。这些还需要查找过滤的 Block(blockHeader) 会被打包成 blockSearchWorkBatch 任务，发送到 workCh 中, 让 blockSearch 执行具体的查询。</p>
+<blockquote>
+<p>我们也能得出这样的结论：VictoriaLogs 在存储时，在每一层都为时间 和 streamID 过滤在索引中做了设计，进而在查询时带上适当时间范围 和 streamFilter 可以极大的缩小查询范围，从而提高查询效率。</p>
+</blockquote>
+<h4 id="block-匹配">
+  Block 匹配
+  <a class="anchor" href="#block-%e5%8c%b9%e9%85%8d">#</a>
+</h4>
+<p><code>blockSearch</code> 是在 <code>Storage.searchParallel</code> 启动的工作协程中运行，依次从 workCh 中获取 blockSearchWorkBatch，然后进行进行查询。</p>
+<details open><summary>代码片段</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// lib/logstorage/storage_search.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">bs</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">blockSearch</span>) <span style="color:#a6e22e">search</span>(<span style="color:#a6e22e">qs</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">QueryStats</span>, <span style="color:#a6e22e">bsw</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">blockSearchWork</span>, <span style="color:#a6e22e">bm</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">bitmap</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">bs</span>.<span style="color:#a6e22e">reset</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">bs</span>.<span style="color:#a6e22e">qs</span> = <span style="color:#a6e22e">qs</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">bs</span>.<span style="color:#a6e22e">bsw</span> = <span style="color:#a6e22e">bsw</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// bitmap 用来存储 block 中命中的 log entry 的‘索引’
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">bm</span>.<span style="color:#a6e22e">init</span>(int(<span style="color:#a6e22e">bsw</span>.<span style="color:#a6e22e">bh</span>.<span style="color:#a6e22e">rowsCount</span>))
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 将所有的位标记为 1（初始状态，代表所有行都需要检测）
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">bm</span>.<span style="color:#a6e22e">setBits</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// filter 是一个接口，用来实现 log entries 的过滤
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 不仅有 = (filterExact) 这种简单的过滤，还支持逻辑表达: 且（filterAnd) 这样可以组织成一个复杂的逻辑 filter 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">bs</span>.<span style="color:#a6e22e">bsw</span>.<span style="color:#a6e22e">pso</span>.<span style="color:#a6e22e">filter</span>.<span style="color:#a6e22e">applyToBlockSearch</span>(<span style="color:#a6e22e">bs</span>, <span style="color:#a6e22e">bm</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 如果没有命中任何 log entry，直接返回
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">bm</span>.<span style="color:#a6e22e">isZero</span>() {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 将 block 中的
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">bs</span>.<span style="color:#a6e22e">br</span>.<span style="color:#a6e22e">mustInit</span>(<span style="color:#a6e22e">bs</span>, <span style="color:#a6e22e">bm</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 获取需要的列，通过 “ | fields level, streamID, timestamp, message” 这种方式来指定
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">bs</span>.<span style="color:#a6e22e">br</span>.<span style="color:#a6e22e">initColumns</span>(<span style="color:#a6e22e">bsw</span>.<span style="color:#a6e22e">pso</span>.<span style="color:#a6e22e">fieldsFilter</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">filter</span> <span style="color:#66d9ef">interface</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">String</span>() <span style="color:#66d9ef">string</span> <span style="color:#75715e">// 返回 filter 的字符串表示
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">updateNeededFields</span>(<span style="color:#a6e22e">pf</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">prefixfilter</span>.<span style="color:#a6e22e">Filter</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">matchRow</span>(<span style="color:#a6e22e">fields</span> []<span style="color:#a6e22e">Field</span>) <span style="color:#66d9ef">bool</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 即根据 filter 过滤出 bs 中命中的 log entry 的‘索引’，并更新到 bm 中 (标记或者取消标记)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">applyToBlockSearch</span>(<span style="color:#a6e22e">bs</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">blockSearch</span>, <span style="color:#a6e22e">bm</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">bitmap</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 即根据 filter 过滤出 br 中命中的 log entry 的‘索引’，并更新到 bm 中(标记或者取消标记)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">applyToBlockResult</span>(<span style="color:#a6e22e">br</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">blockResult</span>, <span style="color:#a6e22e">bm</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">bitmap</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div>  </div>
+</details>
+<p>这里再进一步深入就是各种 filter 的实现了，因此不再展开，这里只关注下 Block 内是怎么对 <strong>列式存储结构</strong> 进行检索的？</p>
+<p>这里以 <code>filterExact</code> 为例，来展示下 Block 是怎么对 列式存储结构 进行检索比较的。</p>
+<details open><summary>举例：filterExact 匹配</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// filterExact 匹配指定字段的精确值
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// Example LogsQL: `fieldName:exact(&#34;foo bar&#34;)` of `fieldName:=&#34;foo bar&#34;`
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">filterExact</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">fieldName</span> <span style="color:#66d9ef">string</span> <span style="color:#75715e">// 代表的是需要匹配的字段名
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">value</span>     <span style="color:#66d9ef">string</span> <span style="color:#75715e">// 代表的是需要匹配的字段值
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">tokens</span>       []<span style="color:#66d9ef">string</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">tokensHashes</span> []<span style="color:#66d9ef">uint64</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// lib/logstorage/filter_exact.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">fe</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">filterExact</span>) <span style="color:#a6e22e">applyToBlockSearch</span>(<span style="color:#a6e22e">bs</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">blockSearch</span>, <span style="color:#a6e22e">bm</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">bitmap</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">fieldName</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">fe</span>.<span style="color:#a6e22e">fieldName</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">value</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">fe</span>.<span style="color:#a6e22e">value</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 先判断是否是 const 列 (所有行这一列的值都是相同的)。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 如果是，可以直接比较 value 是否相等，且只需要比较一次就能确定是否命中
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">v</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">bs</span>.<span style="color:#a6e22e">getConstColumnValue</span>(<span style="color:#a6e22e">fieldName</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">v</span> <span style="color:#f92672">!=</span> <span style="color:#e6db74">&#34;&#34;</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">value</span> <span style="color:#f92672">!=</span> <span style="color:#a6e22e">v</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">bm</span>.<span style="color:#a6e22e">resetBits</span>()
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 如果不是 const 列，检查列是否存在，并获取到 column header：
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 1. `column_names.bin` 提供 column_name 和 column_id 的映射
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 2. `columns_header_index.bin` 提供 column_id 到 column header 的偏移量映射
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 3. `column_idxs.bin` 提供 column_name 到 bloom/values shardId 的映射
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">ch</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">bs</span>.<span style="color:#a6e22e">getColumnHeader</span>(<span style="color:#a6e22e">fieldName</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">ch</span> <span style="color:#f92672">==</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// 列不存在的情况下，如果查询值不是空，那么需要重置 bitmap
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">value</span> <span style="color:#f92672">!=</span> <span style="color:#e6db74">&#34;&#34;</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">bm</span>.<span style="color:#a6e22e">resetBits</span>()
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">tokens</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">fe</span>.<span style="color:#a6e22e">getTokensHashes</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">switch</span> <span style="color:#a6e22e">ch</span>.<span style="color:#a6e22e">valueType</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">valueTypeString</span>:
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">matchStringByExactValue</span>(<span style="color:#a6e22e">bs</span>, <span style="color:#a6e22e">ch</span>, <span style="color:#a6e22e">bm</span>, <span style="color:#a6e22e">value</span>, <span style="color:#a6e22e">tokens</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">valueTypeDict</span>:
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">matchValuesDictByExactValue</span>(<span style="color:#a6e22e">bs</span>, <span style="color:#a6e22e">ch</span>, <span style="color:#a6e22e">bm</span>, <span style="color:#a6e22e">value</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">valueTypeUint8</span>:
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">matchUint8ByExactValue</span>(<span style="color:#a6e22e">bs</span>, <span style="color:#a6e22e">ch</span>, <span style="color:#a6e22e">bm</span>, <span style="color:#a6e22e">value</span>, <span style="color:#a6e22e">tokens</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// ... 省略其他数值类型
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">valueTypeIPv4</span>:
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">matchIPv4ByExactValue</span>(<span style="color:#a6e22e">bs</span>, <span style="color:#a6e22e">ch</span>, <span style="color:#a6e22e">bm</span>, <span style="color:#a6e22e">value</span>, <span style="color:#a6e22e">tokens</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">valueTypeTimestampISO8601</span>:
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">matchTimestampISO8601ByExactValue</span>(<span style="color:#a6e22e">bs</span>, <span style="color:#a6e22e">ch</span>, <span style="color:#a6e22e">bm</span>, <span style="color:#a6e22e">value</span>, <span style="color:#a6e22e">tokens</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">default</span>:
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">Panicf</span>(<span style="color:#e6db74">&#34;FATAL: %s: unknown valueType=%d&#34;</span>, <span style="color:#a6e22e">bs</span>.<span style="color:#a6e22e">partPath</span>(), <span style="color:#a6e22e">ch</span>.<span style="color:#a6e22e">valueType</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// columnHeader 代表列的元数据信息, 它一定只对应一个 Block 中的一列
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// 注意如果 name 为空，那么它代表的 message(_msg) 列
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">columnHeader</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">name</span> <span style="color:#66d9ef">string</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">valueType</span> <span style="color:#a6e22e">valueType</span> <span style="color:#75715e">// 列中存储的值的类型
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">minValue</span> <span style="color:#66d9ef">uint64</span> <span style="color:#75715e">// 列中存储的最小值, 用于快速判断是否在给定的范围内。适用于 uint*, ipv4, timestamp 和 float64 类型
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">maxValue</span> <span style="color:#66d9ef">uint64</span> <span style="color:#75715e">// 列中存储的最大值, 用于快速判断是否在给定的范围内。适用于 uint*, ipv4, timestamp 和 float64 类型
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">valuesDict</span> <span style="color:#a6e22e">valuesDict</span> <span style="color:#75715e">// 列中存储的唯一值字典, 适用于 valueType = valueTypeDict 类型
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">valuesOffset</span> <span style="color:#66d9ef">uint64</span> <span style="color:#75715e">// 列中存储的 values 的偏移量, 用于快速定位到 values.bin 中的对应位置
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">valuesSize</span> <span style="color:#66d9ef">uint64</span>   <span style="color:#75715e">// 列中存储的 values 的大小, 用于快速定位到 values.bin 中的对应位置
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">bloomFilterOffset</span> <span style="color:#66d9ef">uint64</span> <span style="color:#75715e">// 列中存储的 bloom filter 的偏移量, 用于快速定位到 bloom.bin 中的对应位置
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">bloomFilterSize</span> <span style="color:#66d9ef">uint64</span>   <span style="color:#75715e">// 列中存储的 bloom filter 的大小, 用于快速定位到 bloom.bin 中的对应位置
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div>  </div>
+</details>
+<p>到这里也只是完成了查询 column header 的过程，接下来需要根据 column header 判断具体命中了哪些行：</p>
+<details ><summary>values 匹配</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// lib/logstore/filter_exact.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">matchStringByExactValue</span>(<span style="color:#a6e22e">bs</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">blockSearch</span>, <span style="color:#a6e22e">ch</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">columnHeader</span>, <span style="color:#a6e22e">bm</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">bitmap</span>, <span style="color:#a6e22e">value</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">tokens</span> []<span style="color:#66d9ef">uint64</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 先判断 bloom filter 是否命中, 如果 bloom filter 不命中, 那么直接返回
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">matchBloomFilterAllTokens</span>(<span style="color:#a6e22e">bs</span>, <span style="color:#a6e22e">ch</span>, <span style="color:#a6e22e">tokens</span>) {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">bm</span>.<span style="color:#a6e22e">resetBits</span>()
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">visitValues</span>(<span style="color:#a6e22e">bs</span>, <span style="color:#a6e22e">ch</span>, <span style="color:#a6e22e">bm</span>, <span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">v</span> <span style="color:#66d9ef">string</span>) <span style="color:#66d9ef">bool</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">v</span> <span style="color:#f92672">==</span> <span style="color:#a6e22e">value</span>
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// lib/logstore/filter_phrase.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">visitValues</span>(<span style="color:#a6e22e">bs</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">blockSearch</span>, <span style="color:#a6e22e">ch</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">columnHeader</span>, <span style="color:#a6e22e">bm</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">bitmap</span>, <span style="color:#a6e22e">f</span> <span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">value</span> <span style="color:#66d9ef">string</span>) <span style="color:#66d9ef">bool</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">bm</span>.<span style="color:#a6e22e">isZero</span>() {
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// Fast path - nothing to visit
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 根据 列头 来获取 values
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 1. 列名 确定 再 values.bin 的哪一个分片
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 2. 再根据 columnHeader 存储的 valuesOffset 和 valuesSize 来读取 values
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">values</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">bs</span>.<span style="color:#a6e22e">getValuesForColumn</span>(<span style="color:#a6e22e">ch</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">bm</span>.<span style="color:#a6e22e">forEachSetBit</span>(<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">idx</span> <span style="color:#66d9ef">int</span>) <span style="color:#66d9ef">bool</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">f</span>(<span style="color:#a6e22e">values</span>[<span style="color:#a6e22e">idx</span>])
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div>  </div>
+</details>
+<p>到这里整个查询过程也差不多完成了，剩下的部分就是根据命中的行索引来获取需要返回的 fields 的值了。这里限于篇幅，就不展开了。</p>
+<p><em><strong>小结：</strong></em></p>
+<p>总结一下查询过程：</p>
+<ol>
+<li>根据查询条件，确定需要查询的分区和 part；</li>
+<li>并发查询每个分区的每个 part，查询时根据 indexBlockHeader 过滤出可能命中的 block；</li>
+<li>对每个命中的 block：
+<ul>
+<li>先检查匹配的字段是不是常量列，如果是，那么判断一次即可；</li>
+<li>如果是普通列，那么先获取列头，检查列是否存在，如果不存在，那么也可以直接返回；</li>
+<li>如果列存在，也不直接加载 values，而是先判断 bloom filter 是否未命中，如果未命中，那么代表该 block 中一定不存在该值，直接返回；</li>
+<li>最后遍历这一列所有的 values，这里也不会遍历所有的 values，而是只遍历 bitmap 中设置为 1 的位置（这些位置可能是前置 filter 已经标记为命中的位置）；</li>
+</ul>
+</li>
+</ol>
+<h3 id="存储模型">
+  存储模型
+  <a class="anchor" href="#%e5%ad%98%e5%82%a8%e6%a8%a1%e5%9e%8b">#</a>
+</h3>
+<p>自己本地启动一个 Victoria Logs，再写入数据，可以直观的看到存储引擎的目录结构如下：</p>
+<details ><summary>代码片段</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>/storage/
+</span></span><span style="display:flex;"><span> ├── partitions/
+</span></span><span style="display:flex;"><span> │   ├── 20251210/
+</span></span><span style="display:flex;"><span> │   │   ├── indexdb
+</span></span><span style="display:flex;"><span> │   │   │   ├── 18804EBAD6A6ECA1
+</span></span><span style="display:flex;"><span> │   │   │   │    ├── index.bin
+</span></span><span style="display:flex;"><span> │   │   │   │    ├── items.bin
+</span></span><span style="display:flex;"><span> │   │   │   │    ├── lens.bin
+</span></span><span style="display:flex;"><span> │   │   │   │    ├── metadata.json
+</span></span><span style="display:flex;"><span> │   │   │   │    └── metaindex.bin
+</span></span><span style="display:flex;"><span> │   │   │   ├── 18804EBAD6A6ECB9
+</span></span><span style="display:flex;"><span> │   │   │   ├── ...
+</span></span><span style="display:flex;"><span> │   │   │   ├── 18804EBAD6A6ECB8
+</span></span><span style="display:flex;"><span> │   │   │   └── parts.json
+</span></span><span style="display:flex;"><span> │   │   │
+</span></span><span style="display:flex;"><span> │   │   └── datadb/
+</span></span><span style="display:flex;"><span> │   │       ├── 18804EBAD6A80650
+</span></span><span style="display:flex;"><span> │   │       │    ├── bloom.bin0
+</span></span><span style="display:flex;"><span> │   │       │    ├── bloom.bin1
+</span></span><span style="display:flex;"><span> │   │       │    ├── bloom.bin2
+</span></span><span style="display:flex;"><span> │   │       │    ├── bloom.bin3
+</span></span><span style="display:flex;"><span> │   │       │    ├── bloom.bin4
+</span></span><span style="display:flex;"><span> │   │       │    ├── column_idxs.bin
+</span></span><span style="display:flex;"><span> │   │       │    ├── column_names.bin
+</span></span><span style="display:flex;"><span> │   │       │    ├── columns_header.bin
+</span></span><span style="display:flex;"><span> │   │       │    ├── columns_header_index.bin
+</span></span><span style="display:flex;"><span> │   │       │    ├── index.bin
+</span></span><span style="display:flex;"><span> │   │       │    ├── message_bloom.bin
+</span></span><span style="display:flex;"><span> │   │       │    ├── message_values.bin
+</span></span><span style="display:flex;"><span> │   │       │    ├── metadata.json
+</span></span><span style="display:flex;"><span> │   │       │    ├── metaindex.bin
+</span></span><span style="display:flex;"><span> │   │       │    ├── timestamps.bin
+</span></span><span style="display:flex;"><span> │   │       │    ├── values.bin0
+</span></span><span style="display:flex;"><span> │   │       │    ├── values.bin1
+</span></span><span style="display:flex;"><span> │   │       │    ├── values.bin2
+</span></span><span style="display:flex;"><span> │   │       │    ├── values.bin3
+</span></span><span style="display:flex;"><span> │   │       │    └── values.bin4
+</span></span><span style="display:flex;"><span> │   │       │
+</span></span><span style="display:flex;"><span> │   │       ├── 18804EBAD6A80FF6
+</span></span><span style="display:flex;"><span> │   │       ├── ...
+</span></span><span style="display:flex;"><span> │   │       ├── 18804EBAD6A81004
+</span></span><span style="display:flex;"><span> │   │       └── parts.json
+</span></span><span style="display:flex;"><span> │   │
+</span></span><span style="display:flex;"><span> │   │── 20251211/
+</span></span><span style="display:flex;"><span> │   │── ...
+</span></span><span style="display:flex;"><span> │   └── 20251213/
+</span></span><span style="display:flex;"><span>│
+</span></span><span style="display:flex;"><span>└── flock.lock
+</span></span></code></pre></div>  </div>
+</details>
+<p>其实从上面的文件目录结构可以看出来，VictoriaLogs 存储上分成了三层：</p>
+<ul>
+<li><code>Storage</code> 这是存储引擎的最顶层，所有数据都存储在这个目录下。</li>
+<li><code>Partition</code> 这是存储引擎的第二层，每个 Partition 对应一个日期，这个时间范围内的数据按照 Part 进行存储。</li>
+<li><code>Part</code> 这是存储引擎的第三层，每个 Part 代表的是合并压缩后的数据，其中存储了具体的数据和索引信息。</li>
+<li><code>Block</code> 可以认为是第四层，每个 Block 代表的是同一一个 Stream 的数据（物理上相邻）。多个 Block 组成了一个 Part。</li>
+</ul>
+<p>每个 <code>Partition</code> 都包含了 indexdb 和 datadb:</p>
+<ul>
+<li>indexdb 保存 <code>stream</code> 的索引信息，包括：标签、tenantID、streamID 之间的映射关系。</li>
+<li>datadb 日志数据，每个 <code>stream</code> 会有一个唯一的 ID，同一个 stream 的数据在物理上相近保存；datadb 存储的数据是列格式的，分为 message, timestamp，columns 三种类型分开存储；使用了 bloom 过滤器来快速判断是否存在某个字段值。</li>
+</ul>
+<p>对应的存储模型如下图所示：</p>
+<figure>
+	<img src="/images/victorialogs/vl-storage-model.svg" alt="VictoriaLogs 存储模型" />
+	<figcaption>VictoriaLogs 存储模型</figcaption>
+</figure>
+<h2 id="总结">
+  总结
+  <a class="anchor" href="#%e6%80%bb%e7%bb%93">#</a>
+</h2>
+<p>通过深入 VictoriaLogs 的写入和查询过程，可以发现它的存储引擎做了针对 <em><strong>日志场景</strong></em> 做了很多优化来提高查询效率和节省存储开销：</p>
+<ul>
+<li>按照日期设计分区，如果查询特定时间范围内，可以只查询涉及到的分区；</li>
+<li>分区按照 part 进行划分，part 上设计了 最小 streamID 和 覆盖的时间的范围，用于帮助过滤；</li>
+<li>分区内提供了 <code>indexBlockHeader</code>（代表多个 blockHeader）和 <code>blockHeader</code> 进一步帮助过滤，减小扫描范围；</li>
+<li>Block 中将列分成了 const column 和 普通 column，const column 存储时只需要存储一个值，比较时也只需要比较一次就能确定 block 是否命中；</li>
+<li>将同一个 Stream 数据相邻存储；</li>
+<li>普通列的值存储在一起，读取时顺序读取，速度更快；</li>
+<li>使用 bitmap 在 filter 中传递，避免重复检测已经确定未命中的行；</li>
+<li>使用 bloom filter 来快速判断未命中，减少不必要的读取 values；</li>
+<li>查询时分区 和 part 都是并发查询的；</li>
+<li>采用 ZSTD 压缩存储;</li>
+</ul>
+<p>除了设计上的优化，还有很多 golang 实现上的优化：</p>
+<ul>
+<li>随处可见的 sync.Pool 用来复用对象，避免频繁分配和释放内存；</li>
+<li>slice 同样也被复用；</li>
+<li>充分利用 goroutine 并发查询，提高查询效率；</li>
+</ul>
+<blockquote>
+<p>水平有限，如有错误，欢迎勘误指正 🙏</p>
+</blockquote>
+<h2 id="参考">
+  参考
+  <a class="anchor" href="#%e5%8f%82%e8%80%83">#</a>
+</h2>
+<ul>
+<li><a href="https://github.com/VictoriaMetrics/VictoriaLogs">Github - VictoriaLogs</a></li>
+<li><a href="https://github.com/VictoriaMetrics/VictoriaMetrics">Github - VictoriaMetrics</a></li>
+<li><a href="https://docs.victoriametrics.com/victorialogs/">VictoriaLogs Docs</a></li>
+<li><a href="https://deepwiki.com/VictoriaMetrics/VictoriaLogs">DeepWiki - VictoriaLogs</a></li>
+</ul>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#架构概览">架构概览</a>
+      <ul>
+        <li><a href="#vlagent">vlagent</a></li>
+        <li><a href="#vlinsert">vlinsert</a></li>
+        <li><a href="#vlselect">vlselect</a></li>
+        <li><a href="#vlstorage">vlstorage</a></li>
+      </ul>
+    </li>
+    <li><a href="#存储原理">存储原理</a>
+      <ul>
+        <li><a href="#写入流程">写入流程</a></li>
+        <li><a href="#读取流程">读取流程</a></li>
+        <li><a href="#存储模型">存储模型</a></li>
+      </ul>
+    </li>
+    <li><a href="#总结">总结</a></li>
+    <li><a href="#参考">参考</a></li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

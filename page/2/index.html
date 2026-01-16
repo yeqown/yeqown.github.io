@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+	<meta name="generator" content="Hugo 0.140.0">
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="Yeqown">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="website">
+<title>Yeqown | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><link rel="alternate" type="application/rss+xml" href="https://www.yeqown.xyz/index.xml" title="Yeqown" />
+<!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>Yeqown</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+
+
+<article class="markdown book-post">
+    <h2>
+        <a href="/2025/01/03/%E9%80%9A%E8%BF%87%E4%B8%80%E6%AC%A1%E6%8A%93%E5%8C%85%E6%9D%A5%E6%8E%8C%E6%8F%A1memcached/">通过一次抓包来掌握memcached</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>January 3, 2025</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>, 
+      <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F/">分布式</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/memcached/">Memcached</a>, 
+      <a href="/tags/tcpdump/">Tcpdump</a>, 
+      <a href="/tags/wireshark/">Wireshark</a>, 
+      <a href="/tags/Rendezvous-Hashing/">Rendezvous Hashing</a>
+  </div>
+  
+
+
+    <div class="book-post-content">
+        
+        <p>虽然现在 memcached 不是当下最流行的缓存系统，但是胜在简单。了解其协议设计和使用场景，对于架构设计也会有一些帮助。本文通过抓包的方式来分析 memcached 的协议交互过程，再结合一部分源码来分析下 memcached 是怎么支持“分布式”场景的。</p>
+        
+        
+        <a href="/2025/01/03/%E9%80%9A%E8%BF%87%E4%B8%80%E6%AC%A1%E6%8A%93%E5%8C%85%E6%9D%A5%E6%8E%8C%E6%8F%A1memcached/"> 🐕‍🦺 Expand More 🚀 </a>
+        
+    </div>
+</article>
+
+
+
+<article class="markdown book-post">
+    <h2>
+        <a href="/2024/12/17/%E8%BF%91%E6%9C%9F%E7%9A%84%E4%B8%80%E4%BA%9B%E7%BB%8F%E9%AA%8C%E6%80%BB%E7%BB%93/">近期的一些经验总结</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>December 17, 2024</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/CDC/">CDC</a>, 
+      <a href="/tags/DMS/">DMS</a>, 
+      <a href="/tags/Istio/">Istio</a>, 
+      <a href="/tags/APISIX/">APISIX</a>, 
+      <a href="/tags/ShardingSphere-Proxy/">ShardingSphere Proxy</a>, 
+      <a href="/tags/Kafka/">Kafka</a>, 
+      <a href="/tags/Kafka-Connect/">Kafka Connect</a>, 
+      <a href="/tags/Doris/">Doris</a>, 
+      <a href="/tags/Pyroscope/">Pyroscope</a>
+  </div>
+  
+
+
+    <div class="book-post-content">
+        
+        <p>总结近期遇到的一些实际问题、排查思路和解决方案，涉及到 CDC 、DMS/DTS、Istio、APISIX, ShardingSphere Proxy 等软件的使用经验。</p>
+        
+        
+        <a href="/2024/12/17/%E8%BF%91%E6%9C%9F%E7%9A%84%E4%B8%80%E4%BA%9B%E7%BB%8F%E9%AA%8C%E6%80%BB%E7%BB%93/"> 🐕‍🦺 Expand More 🚀 </a>
+        
+    </div>
+</article>
+
+
+
+<article class="markdown book-post">
+    <h2>
+        <a href="/2024/08/18/shardingsphere-proxy%E9%97%AE%E9%A2%98%E5%87%A0%E5%88%99/">ShardingSphere-Proxy问题几则</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>August 18, 2024</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F/">分布式</a>, 
+      <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>, 
+      <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/">数据库</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/shardingsphere/">Shardingsphere</a>, 
+      <a href="/tags/%E5%88%86%E5%BA%93%E5%88%86%E8%A1%A8/">分库分表</a>, 
+      <a href="/tags/MySQL/">Mysql</a>, 
+      <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F/">分布式</a>
+  </div>
+  
+
+
+    <div class="book-post-content">
+        
+        <p>记录在使用 ShardingSphere Proxy过程中遇到的使用笔记、思考、问题或解决方案</p>
+        
+        
+        <a href="/2024/08/18/shardingsphere-proxy%E9%97%AE%E9%A2%98%E5%87%A0%E5%88%99/"> 🐕‍🦺 Expand More 🚀 </a>
+        
+    </div>
+</article>
+
+
+
+<article class="markdown book-post">
+    <h2>
+        <a href="/2024/03/25/istio-idle-timeout%E9%97%AE%E9%A2%98%E5%A4%8D%E7%8E%B0%E5%92%8C%E8%A7%A3%E5%86%B3/">Istio Idle Timeout问题复现和解决</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>March 25, 2024</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Kubernetes/">Kubernetes</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Istio/">Istio</a>, 
+      <a href="/tags/sidecar/">Sidecar</a>, 
+      <a href="/tags/Envoy/">Envoy</a>, 
+      <a href="/tags/kubenertes/">Kubenertes</a>, 
+      <a href="/tags/service-mesh/">Service Mesh</a>
+  </div>
+  
+
+
+    <div class="book-post-content">
+        
+        <p>在使用 istio 时，有时候会遇到连接超时的问题，这个问题可能是由于 envoy 的 tcp_idle_timeout 导致的，本文将介绍如何复现和解决这个问题。</p>
+        
+        
+        <a href="/2024/03/25/istio-idle-timeout%E9%97%AE%E9%A2%98%E5%A4%8D%E7%8E%B0%E5%92%8C%E8%A7%A3%E5%86%B3/"> 🐕‍🦺 Expand More 🚀 </a>
+        
+    </div>
+</article>
+
+
+
+<article class="markdown book-post">
+    <h2>
+        <a href="/2024/02/26/nats%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%AE%9E%E7%8E%B0/">Nats设计与实现</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>February 26, 2024</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F/">分布式</a>, 
+      <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/nats/">Nats</a>, 
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/MQ/">MQ</a>, 
+      <a href="/tags/raft/">Raft</a>, 
+      <a href="/tags/multi-raft/">Multi-Raft</a>
+  </div>
+  
+
+
+    <div class="book-post-content">
+        
+        <p>分析 nats 的设计和实现，理解其中的关键流程，并记录阅读 nats 源码中的关键函数。</p>
+        
+        
+        <a href="/2024/02/26/nats%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%AE%9E%E7%8E%B0/"> 🐕‍🦺 Expand More 🚀 </a>
+        
+    </div>
+</article>
+
+
+
+<article class="markdown book-post">
+    <h2>
+        <a href="/2023/11/17/%E5%9C%A8istio%E6%9C%8D%E5%8A%A1%E7%BD%91%E6%A0%BC%E4%B8%AD%E6%89%A9%E5%B1%95%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8A%9F%E8%83%BD/">在istio服务网格中扩展自定义功能</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>November 17, 2023</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Service-Mesh/">Service Mesh</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Istio/">Istio</a>, 
+      <a href="/tags/service-mesh/">Service Mesh</a>, 
+      <a href="/tags/Envoy/">Envoy</a>, 
+      <a href="/tags/Kubernetes/">Kubernetes</a>
+  </div>
+  
+
+
+    <div class="book-post-content">
+        
+        <p>istio 作为当下火热的服务网格框架，其提供了丰富的功能，但是在实际的使用中，我们还是会遇到一些特殊的场景，需要我们自己基于自己的业务场景去扩展一些功能。本文就简单尝试下如何在 istio 中扩展自定义功能。</p>
+        
+        
+        <a href="/2023/11/17/%E5%9C%A8istio%E6%9C%8D%E5%8A%A1%E7%BD%91%E6%A0%BC%E4%B8%AD%E6%89%A9%E5%B1%95%E8%87%AA%E5%AE%9A%E4%B9%89%E5%8A%9F%E8%83%BD/"> 🐕‍🦺 Expand More 🚀 </a>
+        
+    </div>
+</article>
+
+
+
+<article class="markdown book-post">
+    <h2>
+        <a href="/2023/10/10/fsnotify%E5%8E%9F%E7%90%86%E6%8E%A2%E7%A9%B6/">fsnotify原理探究</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>October 10, 2023</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/linux/">Linux</a>, 
+      <a href="/tags/fsnotify/">Fsnotify</a>, 
+      <a href="/tags/inotify/">Inotify</a>
+  </div>
+  
+
+
+    <div class="book-post-content">
+        
+        <p>从 kratos 群里看到有人问软链接的配置文件无法热更新的问题。突然发现自己对于文件监控的底层实现和原理并不清楚，因此有了这边文章，从上层应用一直深入到linux内部实现，弄清楚文件监控怎么用，怎么实现。</p>
+        
+        
+        <a href="/2023/10/10/fsnotify%E5%8E%9F%E7%90%86%E6%8E%A2%E7%A9%B6/"> 🐕‍🦺 Expand More 🚀 </a>
+        
+    </div>
+</article>
+
+
+
+<article class="markdown book-post">
+    <h2>
+        <a href="/2023/08/22/c%E5%92%8Clua%E4%BA%92%E6%93%8D%E4%BD%9C%E5%AE%9E%E8%B7%B5/">C和lua互操作实践</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>August 22, 2023</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/lua/">Lua</a>, 
+      <a href="/tags/c/">C</a>, 
+      <a href="/tags/redis/">Redis</a>
+  </div>
+  
+
+
+    <div class="book-post-content">
+        
+        <p>lua底层采用C语言实现，在设计时就考虑到了C和lua的互操作性，在某些场景下可以使用lua来提高c程序的灵活性，在使用lua的时候也可以用过c来提高性能。</p>
+        
+        
+        <a href="/2023/08/22/c%E5%92%8Clua%E4%BA%92%E6%93%8D%E4%BD%9C%E5%AE%9E%E8%B7%B5/"> 🐕‍🦺 Expand More 🚀 </a>
+        
+    </div>
+</article>
+
+
+
+<article class="markdown book-post">
+    <h2>
+        <a href="/2023/08/17/tcp-%E9%95%BF%E8%BF%9E%E6%8E%A5%E6%9C%8D%E5%8A%A1%E4%BC%98%E9%9B%85%E9%87%8D%E5%90%AF%E7%9A%84%E7%A7%98%E5%AF%86/">Tcp 长连接服务优雅重启的秘密</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>August 17, 2023</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/linux/">Linux</a>, 
+      <a href="/tags/Graceful-Restart/">Graceful Restart</a>, 
+      <a href="/tags/fork/">Fork</a>, 
+      <a href="/tags/exec/">Exec</a>, 
+      <a href="/tags/tcp/">TCP</a>
+  </div>
+  
+
+
+    <div class="book-post-content">
+        
+        <p>探究一下如何实现长连接服务的优雅启停/升级，以及背后的原理。同时分析一下 cloudflare/tableflip 的源码设计。知其然更知其所以然，才能更好的使用。</p>
+        
+        
+        <a href="/2023/08/17/tcp-%E9%95%BF%E8%BF%9E%E6%8E%A5%E6%9C%8D%E5%8A%A1%E4%BC%98%E9%9B%85%E9%87%8D%E5%90%AF%E7%9A%84%E7%A7%98%E5%AF%86/"> 🐕‍🦺 Expand More 🚀 </a>
+        
+    </div>
+</article>
+
+
+
+<article class="markdown book-post">
+    <h2>
+        <a href="/2023/08/15/cloudflare-tunnel-%E4%BD%BF%E7%94%A8%E7%AC%94%E8%AE%B0/">Cloudflare Tunnel 使用笔记</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>August 15, 2023</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Cloudflare/">Cloudflare</a>, 
+      <a href="/tags/Tunnel/">Tunnel</a>, 
+      <a href="/tags/SSH/">SSH</a>
+  </div>
+  
+
+
+    <div class="book-post-content">
+        
+        <p>记录下 Cloudflare Tunnel 的一些小东西，关于 cloudflared 的用法。</p>
+        
+        
+        <a href="/2023/08/15/cloudflare-tunnel-%E4%BD%BF%E7%94%A8%E7%AC%94%E8%AE%B0/"> 🐕‍🦺 Expand More 🚀 </a>
+        
+    </div>
+</article>
+
+
+
+
+    <ul class="pagination pagination-default">
+      <li class="page-item">
+        <a href="/" aria-label="First" class="page-link" role="button"><span aria-hidden="true">&laquo;&laquo;</span></a>
+      </li>
+      <li class="page-item">
+        <a href="/" aria-label="Previous" class="page-link" role="button"><span aria-hidden="true">&laquo;</span></a>
+      </li>
+      <li class="page-item">
+        <a href="/" aria-label="Page 1" class="page-link" role="button">1</a>
+      </li>
+      <li class="page-item active">
+        <a aria-current="page" aria-label="Page 2" class="page-link" role="button">2</a>
+      </li>
+      <li class="page-item">
+        <a href="/page/3/" aria-label="Page 3" class="page-link" role="button">3</a>
+      </li>
+      <li class="page-item">
+        <a href="/page/4/" aria-label="Page 4" class="page-link" role="button">4</a>
+      </li>
+      <li class="page-item">
+        <a href="/page/5/" aria-label="Page 5" class="page-link" role="button">5</a>
+      </li>
+      <li class="page-item">
+        <a href="/page/3/" aria-label="Next" class="page-link" role="button"><span aria-hidden="true">&raquo;</span></a>
+      </li>
+      <li class="page-item">
+        <a href="/page/8/" aria-label="Last" class="page-link" role="button"><span aria-hidden="true">&raquo;&raquo;</span></a>
+      </li>
+    </ul>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

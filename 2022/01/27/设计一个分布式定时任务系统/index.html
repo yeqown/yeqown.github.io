@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="尝试设计一个 &#34;分布式&#34; 定时任务系统，&#34;功能设计&#34; 和 &#34;分布式设计&#34; 作为切入点。不含任何的代码，只是一个设计思路。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2022/01/27/%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%88%86%E5%B8%83%E5%BC%8F%E5%AE%9A%E6%97%B6%E4%BB%BB%E5%8A%A1%E7%B3%BB%E7%BB%9F/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="设计一个分布式定时任务系统">
+  <meta property="og:description" content="尝试设计一个 &#34;分布式&#34; 定时任务系统，&#34;功能设计&#34; 和 &#34;分布式设计&#34; 作为切入点。不含任何的代码，只是一个设计思路。">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2022-01-27T16:52:24+08:00">
+    <meta property="article:modified_time" content="2022-01-27T16:52:24+08:00">
+    <meta property="article:tag" content="Distributed">
+    <meta property="article:tag" content="CronJob">
+    <meta property="article:tag" content="K8s">
+    <meta property="article:tag" content="Raft">
+    <meta property="article:tag" content="Golang">
+<title>设计一个分布式定时任务系统 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2022/01/27/%E8%AE%BE%E8%AE%A1%E4%B8%80%E4%B8%AA%E5%88%86%E5%B8%83%E5%BC%8F%E5%AE%9A%E6%97%B6%E4%BB%BB%E5%8A%A1%E7%B3%BB%E7%BB%9F/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>设计一个分布式定时任务系统</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#需求和背景分析">需求和背景分析</a></li>
+        <li><a href="#向分布式演进">向分布式演进</a></li>
+        <li><a href="#定时任务的调度器">定时任务的调度器</a></li>
+        <li><a href="#定时任务运行时">定时任务运行时</a></li>
+        <li><a href="#kubernetes-cronjob">Kubernetes CronJob</a></li>
+        <li><a href="#总结">总结</a></li>
+        <li><a href="#参考文献">参考文献</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    设计一个分布式定时任务系统
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>January 27, 2022</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/design/">Design</a>, 
+      <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F/">分布式</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Distributed/">Distributed</a>, 
+      <a href="/tags/CronJob/">CronJob</a>, 
+      <a href="/tags/k8s/">K8s</a>, 
+      <a href="/tags/raft/">Raft</a>, 
+      <a href="/tags/Golang/">Golang</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><h3 id="需求和背景分析">
+  需求和背景分析
+  <a class="anchor" href="#%e9%9c%80%e6%b1%82%e5%92%8c%e8%83%8c%e6%99%af%e5%88%86%e6%9e%90">#</a>
+</h3>
+<p>一提到定时任务的使用场景，我们肯定能想到很多场景，比如：</p>
+<ul>
+<li>每天晚上12点执行一次清理数据的任务</li>
+<li>每天凌晨1点给符合条件的用户发送推广邮件</li>
+<li>每个月10号结算工资</li>
+<li>每隔5分钟检查一次服务器的状态</li>
+<li>每天根据用户的配置，给用户发送站内消息提醒</li>
+<li>&hellip;</li>
+</ul>
+<p>从常见的场景中，我们可以提炼出一些定时任务的特点：</p>
+<table>
+  <thead>
+      <tr>
+          <th>序号</th>
+          <th>特点</th>
+          <th>说明</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>1</td>
+          <td>定时</td>
+          <td>执行时间有规则</td>
+      </tr>
+      <tr>
+          <td>2</td>
+          <td>可靠</td>
+          <td>可以延迟执行，但不能不执行；可以不执行，但是不能多执行</td>
+      </tr>
+      <tr>
+          <td>3</td>
+          <td>并发（可能）</td>
+          <td>某些场景下，可以运行多个 cron 进程来提高执行效率</td>
+      </tr>
+      <tr>
+          <td>4</td>
+          <td>可执行</td>
+          <td>这个有点废话了，但是这个关系到 cronjob 的设计，因此在这里还是提出来</td>
+      </tr>
+  </tbody>
+</table>
+<p>但是作为一个系统来说，我们需要更多的功能来提升用户体验，保证平台的可靠和稳定。我们设想下以下的场景：</p>
+<ul>
+<li>定时任务已经触发了，但是有没有执行，执行结果是什么？</li>
+<li>如果一个定时任务长时间运行，那么它正常吗？</li>
+<li>一个定时任务还在运行，但是下一个触发时机又到来了，该怎么办？</li>
+<li>如果服务器资源已经处于高位，那么要被触发的任务还触发吗？</li>
+<li>&hellip;</li>
+</ul>
+<p>最后，基本的访问控制，权限分配和API设计，这些都是系统功能的一部分，但不作为本文的重点考虑对象。</p>
+<h4 id="一些概念">
+  一些概念
+  <a class="anchor" href="#%e4%b8%80%e4%ba%9b%e6%a6%82%e5%bf%b5">#</a>
+</h4>
+<p>到这里我们可以提取一些概念，来帮助我们设计一个系统：</p>
+<table>
+  <thead>
+      <tr>
+          <th>序号</th>
+          <th>名词</th>
+          <th>解释</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>1</td>
+          <td>CronJob</td>
+          <td>定时任务实例，描述定时任务资源的一个实体</td>
+      </tr>
+      <tr>
+          <td>2</td>
+          <td>Job</td>
+          <td>执行中的定时任务</td>
+      </tr>
+      <tr>
+          <td>3</td>
+          <td>Scheduler</td>
+          <td>调度器，负责触发 CronJob 执行和监控 Job 的执行状态；或许还会存储一些 CronJob 的状态</td>
+      </tr>
+      <tr>
+          <td>4</td>
+          <td>JobRuntime</td>
+          <td>job 运行时，准备 Job 运行时需要的资源; 可以参考 k8s CRI</td>
+      </tr>
+  </tbody>
+</table>
+<blockquote>
+<p>这里 JobRuntime 是抽象化的概念，因为 Job 可以是k8s上的POD，也可以是物理机的进程，还可以是一个进程中的coroutine。</p>
+</blockquote>
+<p>这几个概念的关联关系如图：</p>
+<img src="/images/cronjob_concepts1.svg" width="100%">
+<p><strong><em>总结</em></strong>: 把定时任务平台分为了运行前和运行中两个阶段，通过调度器居中协调，达到两个目的：</p>
+<ol>
+<li>Scheduler 不负责 CronJob 的运行，减轻 Scheduler 的职责。</li>
+<li>JobRuntime 抽象化并独立设计，方便扩展。</li>
+</ol>
+<h4 id="关键点">
+  关键点
+  <a class="anchor" href="#%e5%85%b3%e9%94%ae%e7%82%b9">#</a>
+</h4>
+<p>再总结一下设计过程中的关键点，如下图。</p>
+<blockquote>
+<p>可以先忽略分布式相关的要点（large scale, reliable），先重点看下功能性的要点。</p>
+</blockquote>
+<img src="/images/cronjob_core_points.png" width="100%">
+<ol>
+<li>
+<p><strong><em>CronJob Track「定时任务跟踪」</em></strong></p>
+<p>感知 CronJob 的状态，并记录状态变化的历史记录，用于辅助 <em>scheduler</em> 实现一些策略调度。同时也能提供一些 CronJob 的运行数据，帮助用户调试和了解 CronJob 的健康状况。</p>
+</li>
+<li>
+<p><strong><em>Idempotent「幂等保证」</em></strong></p>
+<p>某些定时任务对执行次数是有要求的，作为提供服务的平台来说，需要尽最大努力保证任务执行。因此提出一些 “幂等级别” 供不同的定时任务使用。</p>
+<ul>
+<li>只执行一次。一个 &ldquo;CronJob&rdquo; 一定会触发一次，但是这个比较难保证。</li>
+<li>最多一次。可以不触发，但是不能触发多次。</li>
+<li>可以重复执行。可以触发多次。</li>
+</ul>
+</li>
+<li>
+<p><strong><em>Realtime「实时性」</em></strong></p>
+<p>CronJob 对于执行的时机也有要求，如果 CronJob 要求1分钟内执行完毕，如果1分钟后再运行会导致时效性的问题，那么平台也应该考虑相关的设计。</p>
+</li>
+<li>
+<p><strong><em>Fault Tolerance「容错设计」</em></strong></p>
+<p>CronJob 可能会因为一些外部因素 “执行失败” 或者 “超时”，这时候需要提供一些容错机制，比如：失败重试，超时关闭。</p>
+</li>
+<li>
+<p><strong><em>Cocurrency「并发控制」</em></strong></p>
+<p>好比于，k8s 中 Deployment 作为一个无状态服务，可以运行多个副本以提高效率；但是相对的，Statefule Set 作为有状态的应用，POD不能随意的扩容，所以需要提供一些并发控制机制，严格的限制 CronJob 的并发数量。</p>
+</li>
+<li>
+<p><strong><em>Pre-Allocated「预分配」</em></strong></p>
+<p>同样的，某些 CronJob 的优先级比较高，要保证这些任务一直稳定运行。那么需要提供一些预分配机制，可以避免再系统资源处于高位的时候，这些 CronJob 还能继续被调度运行。</p>
+</li>
+</ol>
+<p><strong><em>总结：</em></strong> 这些要点体现在设计上就是，Schuduler 对 CronJob 的调度控制，来自于 CronJob 的配置和运行状态。<em>CronJob Configuration</em> 包含一些辅助调度控制的配置，如：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#f92672">&#34;concurrency&#34;</span>: <span style="color:#ae81ff">1</span>, <span style="color:#75715e">// 1 表示这个 CronJob 只能有一个运行中的 Job 实例。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#f92672">&#34;preAllocated&#34;</span>: <span style="color:#66d9ef">true</span>, <span style="color:#75715e">// true 表示这个 CronJob 可以被预分配，这样可以避免系统资源被占满，导致这个 CronJob 无法调度。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#f92672">&#34;idempotent&#34;</span>: <span style="color:#e6db74">&#34;onceMost&#34;</span>, <span style="color:#75715e">// [onceOnly, onceMost, unlimit]
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#f92672">&#34;faultTolerance&#34;</span>: {
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&#34;maxStartupRetries&#34;</span>: <span style="color:#ae81ff">3</span>, <span style="color:#75715e">// 最大启动失败重试次数
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#f92672">&#34;maxFailureRetries&#34;</span>: <span style="color:#ae81ff">3</span>, <span style="color:#75715e">// 最大执行失败重试次数
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#f92672">&#34;maxFailureRetriesSeconds&#34;</span>: <span style="color:#e6db74">&#34;60s&#34;</span>, <span style="color:#75715e">// 最大执行失败重试间隔
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#f92672">&#34;activeDeadlineSeconds&#34;</span>: <span style="color:#e6db74">&#34;120s&#34;</span>, <span style="color:#75715e">// 最大执行时间，超过这个时间就会被认为是失败
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    }, <span style="color:#75715e">// 容错配置
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// ... 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#f92672">&#34;resourceLimit&#34;</span>: {
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&#34;cpu&#34;</span>: <span style="color:#e6db74">&#34;0.1&#34;</span>, <span style="color:#75715e">// CPU 限制
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#f92672">&#34;memory&#34;</span>: <span style="color:#e6db74">&#34;128Mi&#34;</span>, <span style="color:#75715e">// 内存限制
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    }, <span style="color:#75715e">// 资源限制
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div><img src="/images/cronjob_scheduler_strategy.svg" width="100%"> 
+<h3 id="向分布式演进">
+  向分布式演进
+  <a class="anchor" href="#%e5%90%91%e5%88%86%e5%b8%83%e5%bc%8f%e6%bc%94%e8%bf%9b">#</a>
+</h3>
+<p>到目前为止，这个定时任务系统的功能已经差不多了，那么是不是意味着这样的设计已经满足需求了？当然没有，比如：</p>
+<ul>
+<li>单个服务器要承担 <strong>交互</strong> 、<strong>调度</strong> 、<strong>执行</strong> 的压力，那么它能承载的定时任务数量势必会被限制。</li>
+<li>同样，如果这一台机器出现问题，那么不是就导致所有的定时任务都无法正常运行，影响整个系统的运行。</li>
+<li>同样，如果我们需求的是一个 <strong>PasS</strong> 平台，单机不可能 <strong>邻近</strong> 所有的用户，那么用户请求就很可能经过一些低俗和拥堵的网络链路。</li>
+<li>&hellip;</li>
+</ul>
+<p>简单的说就是单点问题～，因此我们需要 <strong>分布式</strong> 设计。</p>
+<blockquote>
+<p>那么怎么把它演进成一个分布式系统呢？</p>
+</blockquote>
+<p>首先应用 CAP 理论，我们可以先确认这个系统应该是 CP 还是 AP 系统呢？对于定时任务系统，高可用不是最重要的，反而是可靠性非常重要。那么可靠性是怎么体现的呢？</p>
+<ul>
+<li>定时任务不会因为某些节点宕机而不执行</li>
+<li>强调了最多运行一次，也不会被反复调度执行</li>
+<li>因为系统异常而未被执行，可以被重新调度执行</li>
+<li>&hellip;</li>
+</ul>
+<p>因此，我们不需要这个系统有非常高的可用性，偶尔不可用是可以接受的（这是由定时任务的性质决定的）。</p>
+<h4 id="对一致性的思考">
+  对一致性的思考
+  <a class="anchor" href="#%e5%af%b9%e4%b8%80%e8%87%b4%e6%80%a7%e7%9a%84%e6%80%9d%e8%80%83">#</a>
+</h4>
+<blockquote>
+<p>思考下，这里是否需要一致性？如果需要，那么是强一致还是最终一致呢？
+按照我目前的理解，分布式分为两种（无状态和有状态），针对有状态的服务，可能需要强一致性，也可能最终一致就能满足服务正常运行的需求了。</p>
+</blockquote>
+<p>这里我们分为几个问题来一步步理解：</p>
+<ol>
+<li>分布式设计之后，对定时任务系统带来的问题是什么？
+<ul>
+<li>按照我们上面的抽象，怎么确定由哪个节点来承担 scheduler 的职责？&ndash; <em><strong>选主算法</strong></em></li>
+<li>如果 scheduler 宕机，应该由谁来接替它的工作？&ndash; <em><strong>选主算法</strong></em></li>
+<li>接替者如何“正确的继续”（崩溃时，被调度未结束的和调度中的任务如何处理）？&ndash; <em><strong>集群状态</strong></em></li>
+<li>如果集群整体崩溃，那么下次集群重启时，如何弥补宕机期间的任务执行？&ndash; <em><strong>集群状态</strong></em></li>
+</ul>
+</li>
+<li>分布式集群有哪些 <strong><em>状态</em></strong> ？
+<ul>
+<li>任务队列（调度器）</li>
+<li>调度中/执行中的任务（调度器）</li>
+<li>集群中节点清单和节点状态</li>
+<li>集群时间/上一次调度时间戳（调度器）</li>
+<li>&hellip; 等等跟运行相关的数据</li>
+</ul>
+</li>
+</ol>
+<p>通过上面的QA，再来思考下分布式定时任务平台对于一致性的要求。如果你把整个系统的状态或者日志，放在外部的存储系统中，那么对于定时任务平台也没有特别的一致性要求，因为已经由外部存储系统来维护了。但是如果是保持在系统内部，那么就有要求了，如果说系统中各个节点对于集群的状态存储不一致，那么一旦执行调度任务的节点宕机，其他节点执行调度时上，这样就会导致定时任务的调度出现不一致，这就是一致性的问题。</p>
+<p>按照我们的分析，设计的分布式定时任务系统算是一个 CP 系统。因此在设计的时候（暂定为集群内部维护状态），我们通过引入一致性协议来解决一致性问题。如果你学习过分布式理论，亦或者学习过一些分布式软件，如 k8s / etcd / consul 等等，就应该知道 <strong><em>Raft</em></strong> 和 <strong><em>Paxos</em></strong> 这两个一致性协议。</p>
+<p>Raft 或者 Paxos 是通过 Leader-Follower 的方式来实现强一致性，那么我们引入 Raft 之后就有如下的架构：</p>
+<img src="/images/cronjob_architecture.svg" width="100%"> 
+<p>至此，整个分布式定时任务的框架已经成型，我们可以开始设计定时任务的调度器了。</p>
+<h3 id="定时任务的调度器">
+  定时任务的调度器
+  <a class="anchor" href="#%e5%ae%9a%e6%97%b6%e4%bb%bb%e5%8a%a1%e7%9a%84%e8%b0%83%e5%ba%a6%e5%99%a8">#</a>
+</h3>
+<blockquote>
+<p>思考下，调度器的职责是什么？</p>
+</blockquote>
+<p>调度器的职责说简单点就是，在确定在什么时间在哪个节点上运行某个定时任务。时间根据cron规则和cron任务配置的策略来确定，而节点是由调度器根据每个节点的资源负载同时配合cron任务配置的策略来确定。</p>
+<p>但是，只是这样而已吗？别忘了现在已经是个分布式集群了，调度器是由leader节点来运行的。如果leadership发生变化，那么接替者还应该检查上一任正在处理的事情，并且把它接着做。举个例子：</p>
+<p>A、B、C 三个节点，A作为第一任leader，A正在处理任务1且尚未分配到具体节点执行。这时A宕机了，B作为接替者，那么B成为leader后运行调度器，首先要做的是就是重建调度状态也就是集群状态，并根据集群状态来继续调度。那么怎么重建？</p>
+<ul>
+<li>加载所有的定时任务，重建时间轮或者定时器。</li>
+<li>检查 “运行中队列”</li>
+<li>检查 “待调度队列”</li>
+<li>检查 “重试队列”</li>
+<li>其他数据加载（调度时间）</li>
+</ul>
+<blockquote>
+<p>队列为空，当然是最简单的状况，复杂的就是队列不为空情况下怎么处理？运行中不为空，那么恢复结果同步协程；待调度不为空，那么根据调度算法和任务配置的策略来调度；重试队列不为空，那么根据调度算法和任务配置的策略来调度。</p>
+</blockquote>
+<blockquote>
+<p>任务配置的策略，如不能并发；可以重试；最晚调度时间等等，都会参与调度算法。</p>
+</blockquote>
+<img src="/images/cronjob_scheduler_queue.svg" width="100%" />
+<p>用代码来描述的话，就是：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">schedule</span>(self):
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> leadership_changed:
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># cluster first run or leadership changed</span>
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>start_cron_timer()
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>rebuild_wait_scheduled_queue()
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>rebuild_retry_queue()
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>rebuild_running_queue()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> <span style="color:#66d9ef">True</span>:
+</span></span><span style="display:flex;"><span>        job <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>get_from_wait_schduled_or_retry_queue()
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> job <span style="color:#f92672">is</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>            backoff_delay()
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">continue</span>
+</span></span><span style="display:flex;"><span>        node_id <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>match_node(job)
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># build cronjob&#39;s RunContext, put it into running queue and </span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># start a coroutine to synchroize the cronjob&#39;s running result.</span>
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>schedule_to_node(node_id, job)
+</span></span></code></pre></div><h3 id="定时任务运行时">
+  定时任务运行时
+  <a class="anchor" href="#%e5%ae%9a%e6%97%b6%e4%bb%bb%e5%8a%a1%e8%bf%90%e8%a1%8c%e6%97%b6">#</a>
+</h3>
+<p>任务运行时是为了方便抽象和扩展而来的一个概念，它的职责是接受Leader任务调度请求，运行定时任务并且同步运行结果。但运行时不一定是要集群内的服务器来担任，也可以是外部的系统，如：k8s, containerd, docker, etc，内部只需要把外部系统包装成符合运行时要求的资源即可。</p>
+<p>这里，我们假定定时任务的资源类型为容器镜像，运行环境自然就是容器运行时。那么定时任务的运行时，就只需要包装一下k8s的API或者定义CRD即可。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">JobRuntime</span> <span style="color:#66d9ef">interface</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// running job
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">RunJobAsync</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">job</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Job</span>, <span style="color:#a6e22e">resultCh</span> <span style="color:#66d9ef">chan</span><span style="color:#f92672">&lt;-</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">JobResult</span>) (<span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// cancel job (timeout, etc)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">CancelJob</span>(<span style="color:#a6e22e">job</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Job</span>, <span style="color:#a6e22e">reason</span> <span style="color:#a6e22e">Reason</span>) (<span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// query job&#39;s status (running, success, failed, etc)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">QueryJobResult</span>(<span style="color:#a6e22e">job</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Job</span>) (<span style="color:#a6e22e">result</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">JobResult</span>, <span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><blockquote>
+<p>因为运行时也算一个无状态节点，所以也没有太多的设计要素。</p>
+</blockquote>
+<h3 id="kubernetes-cronjob">
+  Kubernetes CronJob
+  <a class="anchor" href="#kubernetes-cronjob">#</a>
+</h3>
+<p>如果对k8s稍微了解一点，肯定会好奇，为啥不直接使用k8s的cronjob来满足定时任务系统的使用场景呢？当然是可以的，只是这里的主要目的是从头梳理一个（分布式）定时任务系统的功能和设计。在一般场景下 k8s cronjob 已经能够满足使用了，只有个别场景不能直接支持：</p>
+<ul>
+<li>预分配（优先保证重要的定时任务资源）</li>
+<li>幂等保证（并发/幂等精细控制）</li>
+<li><del>实时性（超时退出，过时不启动）</del> <code>spec.startingDeadlineSeconds</code></li>
+<li>异常告警</li>
+</ul>
+<p>另外就是在使用上没有那么“方便”（运维可不一定会让开发直接接触k8s~）。</p>
+<p>关于 CronJob 的详细控制可以参见 <a href="https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/cron-job-v1/#CronJobSpec">https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/cron-job-v1/#CronJobSpec</a></p>
+<blockquote>
+<p>个人以为，中小型公司没必要花费大精力去开发分分布式定时任务系统，只需要在k8s的 <code>CronJob/Job</code> 的基础上稍微包装一下自己的控制模块就能满足要求。</p>
+</blockquote>
+<h3 id="总结">
+  总结
+  <a class="anchor" href="#%e6%80%bb%e7%bb%93">#</a>
+</h3>
+<p>定时任务系统是最常用的服务之一，实现方式可大可小，也可以使用linux crontab 服务。本文在不依赖任何服务的前提下，来设计一个分布式定时任务系统，从功能到架构一一梳理。当然，文中提到的功能清单不一定全，只是站在我的角度看到的必要提及的通用功能。架构也不是一成不变的，可以根据自己的场景和目的来设计，只要达到目的即可。</p>
+<blockquote>
+<p>水平有限，如有错误，欢迎勘误指正。</p>
+</blockquote>
+<h3 id="参考文献">
+  参考文献
+  <a class="anchor" href="#%e5%8f%82%e8%80%83%e6%96%87%e7%8c%ae">#</a>
+</h3>
+<ul>
+<li><a href="https://xargin.com/google-cron-design/">https://xargin.com/google-cron-design/</a></li>
+<li><a href="https://queue.acm.org/detail.cfm?id=2745840">https://queue.acm.org/detail.cfm?id=2745840</a></li>
+<li><a href="https://kubernetes.io/zh/docs/concepts/workloads/controllers/cron-jobs/">https://kubernetes.io/zh/docs/concepts/workloads/controllers/cron-jobs/</a></li>
+</ul>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#需求和背景分析">需求和背景分析</a></li>
+        <li><a href="#向分布式演进">向分布式演进</a></li>
+        <li><a href="#定时任务的调度器">定时任务的调度器</a></li>
+        <li><a href="#定时任务运行时">定时任务运行时</a></li>
+        <li><a href="#kubernetes-cronjob">Kubernetes CronJob</a></li>
+        <li><a href="#总结">总结</a></li>
+        <li><a href="#参考文献">参考文献</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

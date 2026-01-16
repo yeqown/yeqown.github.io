@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Levenshtein Distance on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/Levenshtein-Distance/</link>
+    <description>Recent content in Levenshtein Distance on Yeqown</description>
+    <generator>Hugo</generator>
+    <language>en</language>
+    <lastBuildDate>Sun, 11 Feb 2018 09:57:18 +0000</lastBuildDate>
+    <atom:link href="https://www.yeqown.xyz/tags/Levenshtein-Distance/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>动态规划之字符串编辑距离</title>
+      <link>https://www.yeqown.xyz/2018/02/11/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B9%8B%E5%AD%97%E7%AC%A6%E4%B8%B2%E7%BC%96%E8%BE%91%E8%B7%9D%E7%A6%BB%E9%97%AE%E9%A2%98-LD/</link>
+      <pubDate>Sun, 11 Feb 2018 09:57:18 +0000</pubDate>
+      <guid>https://www.yeqown.xyz/2018/02/11/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92%E4%B9%8B%E5%AD%97%E7%AC%A6%E4%B8%B2%E7%BC%96%E8%BE%91%E8%B7%9D%E7%A6%BB%E9%97%AE%E9%A2%98-LD/</guid>
+      <description>&lt;h3 id=&#34;问题描述&#34;&gt;&#xA;  问题描述&#xA;  &lt;a class=&#34;anchor&#34; href=&#34;#%e9%97%ae%e9%a2%98%e6%8f%8f%e8%bf%b0&#34;&gt;#&lt;/a&gt;&#xA;&lt;/h3&gt;&#xA;&lt;p&gt;给定 2 个字符串 a, b. 编辑距离是将 a 转换为 b 的最少操作次数，操作只允许如下 3 种：&#xA;插入一个字符，例如：fj -&amp;gt; fxj&#xA;删除一个字符，例如：fxj -&amp;gt; fj&#xA;替换一个字符，例如：jyj -&amp;gt; fyj&lt;/p&gt;&#xA;&lt;p&gt;函数原型：&lt;/p&gt;&#xA;&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;func&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;LevenshteinDis&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;str1&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;str2&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;string&lt;/span&gt;) &lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt; {&#xA;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#f92672&#34;&gt;...&lt;/span&gt;&#xA;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;}&#xA;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;!-- more --&gt;&#xA;&lt;h3 id=&#34;算法适用场景&#34;&gt;&#xA;  算法适用场景&#xA;  &lt;a class=&#34;anchor&#34; href=&#34;#%e7%ae%97%e6%b3%95%e9%80%82%e7%94%a8%e5%9c%ba%e6%99%af&#34;&gt;#&lt;/a&gt;&#xA;&lt;/h3&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;拼写检查&lt;/li&gt;&#xA;&lt;li&gt;输入联想&lt;/li&gt;&#xA;&lt;li&gt;语音识别&lt;/li&gt;&#xA;&lt;li&gt;论文检查&lt;/li&gt;&#xA;&lt;li&gt;DNA分析&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;h3 id=&#34;问题分析&#34;&gt;&#xA;  问题分析&#xA;  &lt;a class=&#34;anchor&#34; href=&#34;#%e9%97%ae%e9%a2%98%e5%88%86%e6%9e%90&#34;&gt;#&lt;/a&gt;&#xA;&lt;/h3&gt;&#xA;&lt;!-- Q：为什么要用动态规划呢，其他算法不能解决这个问题嘛？&#xA;A：可以参考参考资料里面的分析，有别的算法（如分治）可以解决这个问题，但是介于时间和空间的耗费，动态规划更优。 --&gt;&#xA;&lt;p&gt;假定函数edit_dis(stra, strb)表示，stra到strb的编辑距离。算法问题可以分为四种情况：&lt;/p&gt;&#xA;&lt;ol&gt;&#xA;&lt;li&gt;edit_dis(0, 0) = 0&lt;/li&gt;&#xA;&lt;li&gt;edit_dis(0, strb) = len(strb)&lt;/li&gt;&#xA;&lt;li&gt;edit_dis(stra, strb) = len(stra)&lt;/li&gt;&#xA;&lt;li&gt;edit_dis(stra, strb) = ?&lt;/li&gt;&#xA;&lt;/ol&gt;&#xA;&lt;p&gt;对于4th一般情况，没有办法直接给出求解方式，我们来分析edit_dis(stra+chara, strb+charb)可能的情况：&lt;/p&gt;&#xA;&lt;ol&gt;&#xA;&lt;li&gt;stra能转成strb，那么只需要判断chara是不是等于charb (cur_cost = 0 if chara == charb else 1)&lt;/li&gt;&#xA;&lt;li&gt;stra+chara能转成strb, 那么要让stra + chara 转成strb+ charb, 只需要插入charb就行了&lt;/li&gt;&#xA;&lt;li&gt;如果stra 可以直接转成strb+charb，那么删除chara就可以转换成功了&lt;/li&gt;&#xA;&lt;/ol&gt;&#xA;&lt;p&gt;综上的分析，可以得到如下DP公式：&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

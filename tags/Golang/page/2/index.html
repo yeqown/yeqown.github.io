@@ -1,0 +1,2828 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/tags/Golang/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="Golang">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="website">
+<title>Golang | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/tags/Golang/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><link rel="alternate" type="application/rss+xml" href="https://www.yeqown.xyz/tags/Golang/index.xml" title="Yeqown" />
+<!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>Golang</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  <nav>
+  <ul>
+  
+    
+    <li class="book-section-flat">
+      <strong>Categories</strong>
+      <ul>
+      
+        <li class="flex justify-between">
+          <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>
+          <span>33</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/%E6%9E%B6%E6%9E%84/">架构</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Golang/">Golang</a>
+          <span>12</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Kubernetes/">Kubernetes</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F/">分布式</a>
+          <span>6</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/">数据库</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Service-Mesh/">Service Mesh</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/design/">Design</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Tracing/">Tracing</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Algorithm/">Algorithm</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/DevOps/">DevOps</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Test/">Test</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4/">常用命令</a>
+          <span>1</span>
+        </li>
+      
+      </ul>
+    </li>
+    
+  
+    
+    <li class="book-section-flat">
+      <strong>Tags</strong>
+      <ul>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Victoria-Logs/">Victoria Logs</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%88%97%E5%BC%8F%E5%AD%98%E5%82%A8/">列式存储</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%AD%98%E5%82%A8/">存储</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E6%97%A5%E5%BF%97/">日志</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/GC/">GC</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Golang/">Golang</a>
+          <span>30</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Green-Tea/">Green Tea</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Debezium/">Debezium</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Incremental-Snapshot/">Incremental Snapshot</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Kafka-Connect/">Kafka Connect</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Mongodb/">Mongodb</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Source-Connector/">Source Connector</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Apache-Doris/">Apache Doris</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/MySQL/">Mysql</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Prepared-Statements/">Prepared Statements</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Kafka/">Kafka</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/MirrorMaker2/">MirrorMaker2</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Replication/">Replication</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Javascript/">Javascript</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/python/">Python</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Rust/">Rust</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/WASM/">WASM</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/WebAssembly/">WebAssembly</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/gRPC/">GRPC</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/grpcreplay/">Grpcreplay</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Istio/">Istio</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Kubernetes/">Kubernetes</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/sidecar/">Sidecar</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/traffic-mirror/">Traffic Mirror</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%8D%8F%E8%AE%AE/">协议</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Doris/">Doris</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/FoundationDB/">FoundationDB</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%AD%98%E7%AE%97%E5%88%86%E7%A6%BB/">存算分离</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/memcached/">Memcached</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Rendezvous-Hashing/">Rendezvous Hashing</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/tcpdump/">Tcpdump</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/wireshark/">Wireshark</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/APISIX/">APISIX</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/CDC/">CDC</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/DMS/">DMS</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Pyroscope/">Pyroscope</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/ShardingSphere-Proxy/">ShardingSphere Proxy</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/shardingsphere/">Shardingsphere</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F/">分布式</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%88%86%E5%BA%93%E5%88%86%E8%A1%A8/">分库分表</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Envoy/">Envoy</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/kubenertes/">Kubenertes</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/service-mesh/">Service Mesh</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/MQ/">MQ</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/multi-raft/">Multi-Raft</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/nats/">Nats</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/raft/">Raft</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/fsnotify/">Fsnotify</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/inotify/">Inotify</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/linux/">Linux</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/c/">C</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/lua/">Lua</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/redis/">Redis</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/exec/">Exec</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/fork/">Fork</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Graceful-Restart/">Graceful Restart</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/tcp/">TCP</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Cloudflare/">Cloudflare</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/SSH/">SSH</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Tunnel/">Tunnel</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/CGO/">CGO</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/POSIX/">POSIX</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/CronJob/">CronJob</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Distributed/">Distributed</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/k8s/">K8s</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Fieldmask/">Fieldmask</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/protocol-buffers/">Protocol-Buffers</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/OpenTelemetry/">OpenTelemetry</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Sentry/">Sentry</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Tools/">Tools</a>
+          <span>6</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Load-Balancing/">Load Balancing</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/docker/">Docker</a>
+          <span>6</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E9%95%9C%E5%83%8F/">镜像</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Jaeger/">Jaeger</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Opentracing/">Opentracing</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Tracing/">Tracing</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Channel/">Channel</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/goim/">Goim</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Gin/">Gin</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/memory-leak/">Memory Leak</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/pprof/">Pprof</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/hashtable/">Hashtable</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/im/">Im</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/socket.io/">Socket.io</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/cache/">Cache</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/repository/">Repository</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/AMQP/">AMQP</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Network/">Network</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Ring-Buffer/">Ring Buffer</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Algorithm/">Algorithm</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Caching/">Caching</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/LRU/">LRU</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/LRU-K/">LRU-K</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Crypto/">Crypto</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/RC4/">RC4</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/snowflake/">Snowflake</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/hot-reload/">Hot-Reload</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Swagger/">Swagger</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/QR-Code/">QR Code</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/etcd/">Etcd</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/microservice/">Microservice</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E6%9C%8D%E5%8A%A1%E6%B3%A8%E5%86%8C%E5%8F%91%E7%8E%B0/">服务注册发现</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/DTO/">DTO</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/HTTP/">HTTP</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Note/">Note</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/api-gateway/">Api-Gateway</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/round-robin/">Round-Robin</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/weighted-round-robin/">Weighted-Round-Robin</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/JSON-RPC2.0/">JSON-RPC2.0</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/RPC/">RPC</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/App/">App</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/RN/">RN</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Spider/">Spider</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/CD/">CD</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/CI/">CI</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Jenkins/">Jenkins</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Distributed-Architecture/">Distributed Architecture</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/aliyun/">Aliyun</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/rds/">Rds</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Trie/">Trie</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Dynamic-Programming/">Dynamic Programming</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Levenshtein-Distance/">Levenshtein Distance</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/ShortURL/">ShortURL</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/drone/">Drone</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/docker-compose/">Docker Compose</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/selenium/">Selenium</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Test/">Test</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Pytest/">Pytest</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Git/">Git</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/database/">Database</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/index/">Index</a>
+          <span>1</span>
+        </li>
+      
+      </ul>
+    </li>
+    
+  
+  </ul>
+</nav>
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+  
+  <article class="markdown book-post">
+    <h2>
+      <a href="/2020/04/13/channel-in-Go%E5%B0%8F%E7%BB%93/">Channel in Go小结</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>April 13, 2020</span>
+  </div>
+
+
+
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/Channel/">Channel</a>
+  </div>
+  
+
+
+    <p><p>在其他编程语言中，如果想要在线程中通信，最常用的手段是共享内存。然而考虑到线程冲突问题，不得不考虑加锁，以保证并发安全，加锁也一定会带来额外的开销，对性能产生影响。</p>
+<h3 id="csp模型">
+  CSP模型
+  <a class="anchor" href="#csp%e6%a8%a1%e5%9e%8b">#</a>
+</h3>
+<blockquote>
+<p>在 Go 语言中也能使用共享内存加互斥锁进行通信，但是 Go 语言提供了一种不同的并发模型，也就是通信顺序进程（Communicating sequential processes，CSP）1。Goroutine 和 Channel 分别对应 CSP 中的实体和传递信息的媒介，Go 语言中的 Goroutine 会通过 Channel 传递数据。</p>
+</blockquote>
+<h3 id="使用示例">
+  使用示例
+  <a class="anchor" href="#%e4%bd%bf%e7%94%a8%e7%a4%ba%e4%be%8b">#</a>
+</h3>
+<p>在使用之前，需要对channel有个整体的印象：</p>
+<ul>
+<li>FIFO (First In First Out)</li>
+<li>分为有缓冲和无缓冲两种</li>
+<li>在使用过程中会阻塞（无缓冲时，只操作读或写；有缓冲已满时，只操作读或者写）</li>
+<li>接受者和发送者都是goroutine</li>
+</ul>
+<p>参考下图：</p>
+<image src="/images/channel-overview.svg"/>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// Q: 有缓冲和无缓冲在使用上有什么区别？
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// ch := make(chan int) // 无缓冲
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">ch</span> <span style="color:#f92672">:=</span> make(<span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">int</span>, <span style="color:#ae81ff">1</span>) <span style="color:#75715e">// 有缓冲，大小为1
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 发送
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">ch</span> <span style="color:#f92672">&lt;-</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">ch</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h4 id="注意事项">
+  注意事项
+  <a class="anchor" href="#%e6%b3%a8%e6%84%8f%e4%ba%8b%e9%a1%b9">#</a>
+</h4>
+<p>在使用channel时，需要注意一下事项：</p>
+<table>
+  <thead>
+      <tr>
+          <th>操作\CH状态</th>
+          <th>ch为空</th>
+          <th>ch已关闭</th>
+          <th>ch正常</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>发送 ch &lt;-</td>
+          <td>死锁</td>
+          <td>panic</td>
+          <td>成功或阻塞</td>
+      </tr>
+      <tr>
+          <td>接收 &lt;-ch</td>
+          <td>死锁</td>
+          <td>成功或空值</td>
+          <td>成功或阻塞</td>
+      </tr>
+      <tr>
+          <td>关闭 close(ch)</td>
+          <td>panic</td>
+          <td>panic</td>
+          <td>成功</td>
+      </tr>
+  </tbody>
+</table>
+<p>Q: 这里考虑下如何优雅的关闭channel (避免panic)?</p>
+        <a href="/2020/04/13/channel-in-Go%E5%B0%8F%E7%BB%93/">...</a>
+      
+    </p>
+  </article>
+  
+  <article class="markdown book-post">
+    <h2>
+      <a href="/2020/01/21/gin%E6%BA%90%E7%A0%81%E7%AE%80%E8%A6%81%E5%88%86%E6%9E%90/">Gin源码简要分析</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>January 21, 2020</span>
+  </div>
+
+
+
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Gin/">Gin</a>, 
+      <a href="/tags/Golang/">Golang</a>
+  </div>
+  
+
+
+    <p><h3 id="概述">
+  概述
+  <a class="anchor" href="#%e6%a6%82%e8%bf%b0">#</a>
+</h3>
+<p>通过日常对gin场景出发，深入源码，总结介绍gin的核心设计。包含：Engine / HandlerFunc / RouterGroup(Router) / Context。在日常使用中常见的就以上概念，汇总如下：</p>
+<table>
+  <thead>
+      <tr>
+          <th>概念</th>
+          <th>解释</th>
+          <th>应用意义</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Engine</td>
+          <td>引擎</td>
+          <td>web server的基础支持，也是服务的入口 和 根级数据结构</td>
+      </tr>
+      <tr>
+          <td>RouterGroup(Router)</td>
+          <td>路由</td>
+          <td>用于支持gin,REST路由绑定和路由匹配的基础，源于radix-tree数据结构支持</td>
+      </tr>
+      <tr>
+          <td>HandlerFunc</td>
+          <td>处理函数</td>
+          <td>逻辑处理器和中间件实现的函数签名</td>
+      </tr>
+      <tr>
+          <td>Context</td>
+          <td>上下文</td>
+          <td>封装了请求和响应的操作，为HandlerFunc的定义和中间件模式提供支持</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="从demo开始">
+  从DEMO开始
+  <a class="anchor" href="#%e4%bb%8edemo%e5%bc%80%e5%a7%8b">#</a>
+</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">barForm</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Foo</span> <span style="color:#66d9ef">string</span>  <span style="color:#e6db74">`form:&#34;foo&#34; binding:&#34;required&#34;`</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Bar</span> <span style="color:#66d9ef">int</span>     <span style="color:#e6db74">`form:&#34;bar&#34; binding:&#34;required&#34;`</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">fooHdl</span> <span style="color:#a6e22e">FooHdl</span>) <span style="color:#a6e22e">Bar</span>(<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">gin</span>.<span style="color:#a6e22e">Context</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">var</span> <span style="color:#a6e22e">bform</span> = new(<span style="color:#a6e22e">barForm</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">ShouldBind</span>(<span style="color:#a6e22e">bform</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// true: parse form error
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// handle biz logic and generate response structure
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// c (gin.Context) methods could called to support process-controling
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">JSON</span>(<span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">StatusOK</span>, <span style="color:#a6e22e">resp</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// c.String() alse repsonse to client
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// mountRouters .
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">mountRouters</span>(<span style="color:#a6e22e">engi</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">gin</span>.<span style="color:#a6e22e">Engine</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// use middlewares
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">engi</span>.<span style="color:#a6e22e">Use</span>(<span style="color:#a6e22e">gin</span>.<span style="color:#a6e22e">Logger</span>())
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">engi</span>.<span style="color:#a6e22e">Use</span>(<span style="color:#a6e22e">gin</span>.<span style="color:#a6e22e">Recovery</span>())
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// mount routers
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">group</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">engi</span>.<span style="color:#a6e22e">Group</span>(<span style="color:#e6db74">&#34;/v1&#34;</span>)
+</span></span><span style="display:flex;"><span>    {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">fooHdl</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">demohtp</span>.<span style="color:#a6e22e">New</span>()
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">group</span>.<span style="color:#a6e22e">GET</span>(<span style="color:#e6db74">&#34;/foo&#34;</span>, <span style="color:#a6e22e">fooHdl</span>.<span style="color:#a6e22e">Bar</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">group</span>.<span style="color:#a6e22e">GET</span>(<span style="color:#e6db74">&#34;/echo&#34;</span>, <span style="color:#a6e22e">fooHdl</span>.<span style="color:#a6e22e">Echo</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// subGroup := group.Group(&#34;/subg&#34;)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#75715e">// subGroup.GET(&#34;/hdl1&#34;, fooHdl.SubGroupHdl1) // 最终路由：&#34;targetURI = /v1/subg/hdl1&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">engi</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">gin</span>.<span style="color:#a6e22e">New</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mountRouters</span>(<span style="color:#a6e22e">engi</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">engi</span>.<span style="color:#a6e22e">Run</span>(<span style="color:#e6db74">&#34;:8080&#34;</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatalf</span>(<span style="color:#e6db74">&#34;engi exit with err=%v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>通过上述的代码就简单开启了一个gin server，其中就包括了常见的：路由注册，中间件注册，路由分组，服务启动。核心概念也就是刚刚在上文提到的那四个概念。概览流程如下图：</p>
+        <a href="/2020/01/21/gin%E6%BA%90%E7%A0%81%E7%AE%80%E8%A6%81%E5%88%86%E6%9E%90/">...</a>
+      
+    </p>
+  </article>
+  
+  <article class="markdown book-post">
+    <h2>
+      <a href="/2020/01/17/%E8%AE%B0%E4%B8%80%E6%AC%A1%E6%8E%92%E6%9F%A5gRPC%E4%BD%BF%E7%94%A8%E4%B8%8D%E5%BD%93%E5%AF%BC%E8%87%B4%E7%9A%84goroutine%E6%B3%84%E6%BC%8F/">一次gRPC使用不当导致goroutine泄漏排查记录</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>January 17, 2020</span>
+  </div>
+
+
+
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/gRPC/">GRPC</a>, 
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/pprof/">Pprof</a>, 
+      <a href="/tags/memory-leak/">Memory Leak</a>
+  </div>
+  
+
+
+    <p><blockquote>
+<p>由于保留必要的“罪证”，因此某些异常只能通过文字来描述了～</p>
+</blockquote>
+<h3 id="背景">
+  背景
+  <a class="anchor" href="#%e8%83%8c%e6%99%af">#</a>
+</h3>
+<p>昨晚上10点左右，前端童鞋反映开发环境接口响应超时，但过了几分钟后又恢复了，于是有了这一篇文章。</p>
+<blockquote>
+<p>其实很久以前就出现了内存占用异常的情况～，只是占用并不高也就是50MB左右，加上当时还忙着写业务需求就没有急着加上pprof来检查。</p>
+</blockquote>
+<p>首先通过<code>运维平台(k8s based)</code>直观发现了该pod数量从1变成了2, 再结合新增pod的启动时间，我发现该时间正好是前端童鞋反映状况的时间节点，稍后我检查了下该服务的资源限制如下图：</p>
+<img src="/images/pprof-goroutine-leak-1.png"/>
+<p>那么前端童鞋反映的问题就很明显了，由于某种原因导致了pod内存超限，触发了运维平台对于内存超限的“容忍机制”。表现为: 新增一个pod用于缓解服务压力，老服务由于无法申请更多内存会导致崩溃或其他异常（无法响应客户端请求），这与反映的情况一致。</p>
+<img src="/images/pprof-goroutine-leak-3.png"/>
+<h3 id="pprof排查">
+  pprof排查
+  <a class="anchor" href="#pprof%e6%8e%92%e6%9f%a5">#</a>
+</h3>
+<p>知道了服务内存异常，想要具体定位的话，这时候就需要pprof上场了。</p>
+<blockquote>
+<p>如果你需要重启服务才能开启pprof的话，那么只能等待复现了。这里我在开发环境和测试环境一直开启了pprof，因此可以直接检查。个人觉得，这样还可以帮助开发和测试，完成最初的性能分析😼。</p>
+</blockquote>
+<h4 id="内存检查">
+  内存检查
+  <a class="anchor" href="#%e5%86%85%e5%ad%98%e6%a3%80%e6%9f%a5">#</a>
+</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>go tool pprof --http<span style="color:#f92672">=</span>:8080 https://service.host.com/debug/pprof/heap
+</span></span></code></pre></div><p>这个命令是在本地打开一个web服务，直接可视化该服务的内存占用情况。也可以使用:</p>
+<p><code>go tool pprof https://service.host.com/debug/pprof/heap</code> 使用交互模式来分析。通过这个步骤定位到了 grpc相关的包内存占用异常分为两个部分：</p>
+<pre tabindex="0"><code>50MB+ google.golang.org/grpc/internal/transport.newBufWriter
+50MB+ bufio.NewReaderSize
+http2 相关库的占用也比较多
+</code></pre><p>这一切都指向了我们使用的gRPC，可是为啥使用gRPC会用到这么“多”内存呢？接着分析</p>
+<h4 id="goroutine检查">
+  goroutine检查
+  <a class="anchor" href="#goroutine%e6%a3%80%e6%9f%a5">#</a>
+</h4>
+<p>打开一看 <strong><a href="https://service.host.com/debug/pprof/">https://service.host.com/debug/pprof/</a><strong>一看，goroutine和heap居“高”(4000+)不下，虽然对于动辄10W+的别人家的服务来说，这点根本不算事，但在我们这种小作坊里可就算异常了。点开看goroutine查看详情，有四个部分的goroutine分别有900个左右，这里就算初步定位了</strong>“gRPC客户端使用了较多的goroutine，但是却没有正确的结束掉”</strong>，如下图（这是解决后的截的图）：</p>
+<img src="/images/pprof-goroutine-leak-2.jpg"/>
+<h4 id="pprof总结">
+  pprof总结
+  <a class="anchor" href="#pprof%e6%80%bb%e7%bb%93">#</a>
+</h4>
+<p>服务中使用的gRPC客户端出了某些故障，导致了goroutine泄漏，引发了OOM（Out Of Memory）。如下图：</p>
+<img src="/images/pprof-goroutine-leak-3.png"/>
+<h3 id="代码排查">
+  代码排查
+  <a class="anchor" href="#%e4%bb%a3%e7%a0%81%e6%8e%92%e6%9f%a5">#</a>
+</h3>
+<p>上一步已经定位到是gRPC客户端的问题，那么就可以直接从代码上手了。我心里已经有一个“嫌疑犯”了，如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">var</span> (
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">defaultHandler</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">handler</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">timeout</span>        = <span style="color:#ae81ff">5</span> <span style="color:#f92672">*</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Second</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// _              pb.UserServiceClient = &amp;handler{}
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// Init of usersvc.handler
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">Init</span>(<span style="color:#a6e22e">rpcAddr</span> <span style="color:#66d9ef">string</span>) <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ... 略去不表
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">handler</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// rpc configs
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">rpcAddr</span>          <span style="color:#66d9ef">string</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">client</span>           <span style="color:#a6e22e">pb</span>.<span style="color:#a6e22e">UserServiceClient</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">lastGrpcReqError</span> <span style="color:#66d9ef">error</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">h</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">handler</span>) <span style="color:#a6e22e">connectRPC</span>() {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">h</span>.<span style="color:#a6e22e">client</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> <span style="color:#f92672">&amp;&amp;</span> <span style="color:#a6e22e">h</span>.<span style="color:#a6e22e">lastGrpcReqError</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 这里判断的本意是：如果客户端初始化失败，
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#75715e">// 或者期间因为异常情况，导致客户端与服务端连接中断的情况下尝试重连。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#75715e">// 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#75715e">// 但是忽略了gRPC实现中，对于客户端的处理：
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#75715e">// 1. grpc.Dail 是异步的
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#75715e">// 2. grpc 有自己的重连机制
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#75715e">// 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#75715e">// 这一部分我还没有看完，就不乱发表看法了。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">conn</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">Dial</span>(<span style="color:#a6e22e">h</span>.<span style="color:#a6e22e">rpcAddr</span>, <span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">WithInsecure</span>())
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">Std</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;could not dial: %s with err: %v&#34;</span>, <span style="color:#a6e22e">h</span>.<span style="color:#a6e22e">rpcAddr</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">Std</span>.<span style="color:#a6e22e">Infof</span>(<span style="color:#e6db74">&#34;usersvc.client.connectRPC called&#34;</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">h</span>.<span style="color:#a6e22e">client</span> = <span style="color:#a6e22e">pb</span>.<span style="color:#a6e22e">NewUserServiceClient</span>(<span style="color:#a6e22e">conn</span>)
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// QueryBasicInfoByID based default Handler .
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">QueryBasicInfoByID</span>(<span style="color:#a6e22e">in</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">pb</span>.<span style="color:#a6e22e">ByIDForm</span>) (<span style="color:#f92672">*</span><span style="color:#a6e22e">pb</span>.<span style="color:#a6e22e">BasicInfoResponse</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">defaultHandler</span>.<span style="color:#a6e22e">connectRPC</span>()
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">cancel</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">WithTimeout</span>(<span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Background</span>(), <span style="color:#a6e22e">timeout</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">cancel</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">resp</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">defaultHandler</span>.<span style="color:#a6e22e">client</span>.<span style="color:#a6e22e">QueryBasicInfoByID</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">in</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">defaultHandler</span>.<span style="color:#a6e22e">lastGrpcReqError</span> = <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">resp</span>, <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>抛开本意不谈，这样的写法也是不OK的。。。因为</p>
+        <a href="/2020/01/17/%E8%AE%B0%E4%B8%80%E6%AC%A1%E6%8E%92%E6%9F%A5gRPC%E4%BD%BF%E7%94%A8%E4%B8%8D%E5%BD%93%E5%AF%BC%E8%87%B4%E7%9A%84goroutine%E6%B3%84%E6%BC%8F/">...</a>
+      
+    </p>
+  </article>
+  
+  <article class="markdown book-post">
+    <h2>
+      <a href="/2019/04/05/%E4%BB%8B%E7%BB%8D%E4%B8%80%E4%B8%8Bsnowflake%E5%92%8Crc4/">介绍一下snowflake和rc4</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>April 5, 2019</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Algorithm/">Algorithm</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/Tools/">Tools</a>, 
+      <a href="/tags/Crypto/">Crypto</a>, 
+      <a href="/tags/RC4/">RC4</a>, 
+      <a href="/tags/snowflake/">Snowflake</a>
+  </div>
+  
+
+
+    <p><p><code>snowflake</code>是twitter公司开源的生成唯一ID的网络服务，具有很强的伸缩性，这里只取用生成唯一ID的算法部分。
+<code>rc4</code>（Rivest Cipher 4）是一种流加密算法，密钥长度可变，它的加解密使用相同的密钥，因此也属于对称加密算法。</p>
+<!-- more -->
+<h3 id="为啥要介绍这两种算法">
+  为啥要介绍这两种算法？
+  <a class="anchor" href="#%e4%b8%ba%e5%95%a5%e8%a6%81%e4%bb%8b%e7%bb%8d%e8%bf%99%e4%b8%a4%e7%a7%8d%e7%ae%97%e6%b3%95">#</a>
+</h3>
+<p>其一，<code>snowflake</code>可以生成唯一ID，而相比与<code>UUID</code>，<code>snowflake</code>生成的ID更加“好用”，这个放在后面解释。
+其二，<code>UUID</code>和<code>snowflake</code>虽然可以生成唯一ID，但是无法适用于所有场景，譬如说“生成推广码”。生成推广码的时候，希望尽可能短而精，很明显唯一ID都不太短。</p>
+<h3 id="snowflake">
+  snowflake
+  <a class="anchor" href="#snowflake">#</a>
+</h3>
+<p>snowflake的唯一ID是一个64bit的int型数据，相较于UUID来说耗费空间更小，可以更方便的作为数据库主键来索引和排序。</p>
+<p><img src="/images/snowflake.png" alt="snowflake" /></p>
+<h6 id="生成过程">
+  生成过程：
+  <a class="anchor" href="#%e7%94%9f%e6%88%90%e8%bf%87%e7%a8%8b">#</a>
+</h6>
+<ul>
+<li>置0不用</li>
+<li>timestamp（41bits）精确到ms。</li>
+<li>machine-id（10bits）该部分其实由datacenterId和workerId两部分组成，这两部分是在配置文件中指明的。datacenterId（5bits）方便搭建多个生成uid的service，并保证uid不重复。workerId（5bits）是实际server机器的代号，最大到32，同一个datacenter下的workerId是不能重复的。</li>
+<li>sequence-id(12bits)，该id可以表示4096个数字，它是在time相同的情况下，递增该值直到为0，即一个循环结束，此时便只能等到下一个ms到来，一般情况下4096/ms的请求是不太可能出现的，所以足够使用了。</li>
+</ul>
+<h6 id="优势和缺陷">
+  优势和缺陷：
+  <a class="anchor" href="#%e4%bc%98%e5%8a%bf%e5%92%8c%e7%bc%ba%e9%99%b7">#</a>
+</h6>
+<ul>
+<li>速度快，无依赖，原理和实现简单，也可以根据自己的需求做算法调整</li>
+<li>依赖机器时间，如果时间回拨可能导致重复的ID</li>
+</ul>
+<h3 id="rc4">
+  rc4
+  <a class="anchor" href="#rc4">#</a>
+</h3>
+<blockquote>
+<p>RC4加密算法也是一种基于密钥流的加密算法。</p>
+</blockquote>
+<p>首先，rc4根据明文和密钥生成的密钥流，其长度和明文的长度是相等的，也就是说明文的长度是500字节，那么密钥流也是500字节，这也是我们用来生成<code>推广码</code>的原因之一了；其次，rc4是是对称加密完全可以通过密文得到明文，也就是说在生成码的时候把必要信息放在明文中，在使用密文的时候可以不用查库也能得到相关的信息，譬如用户ID，这是原因之二。</p>
+<h6 id="使用场景">
+  使用场景
+  <a class="anchor" href="#%e4%bd%bf%e7%94%a8%e5%9c%ba%e6%99%af">#</a>
+</h6>
+<blockquote>
+<p>现在需要生成一种码，短小易记，且唯一，但并不需要大量。</p>
+</blockquote>
+<p>上述的snowflake和UUID都很容易实现唯一，但是短小就不符合要求了。因为并不需要大量生成这种码，因此我们考虑用<code>自增ID + RC4</code>来实现：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> (
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;crypto/rc4&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;encoding/hex&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;fmt&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;log&#34;</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">cipher</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">rc4</span>.<span style="color:#a6e22e">NewCipher</span>([]byte(<span style="color:#e6db74">&#34;thisiskey&#34;</span>))
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatalf</span>(<span style="color:#e6db74">&#34;wrong with NewCipher: %v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">c</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#66d9ef">bool</span>{}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">i</span> <span style="color:#f92672">:=</span> <span style="color:#ae81ff">0</span>; <span style="color:#a6e22e">i</span> &lt; <span style="color:#ae81ff">1000</span>; <span style="color:#a6e22e">i</span><span style="color:#f92672">++</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">src</span> <span style="color:#f92672">:=</span> []byte(<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Sprintf</span>(<span style="color:#e6db74">&#34;%7d&#34;</span>, <span style="color:#a6e22e">i</span>))
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">dst</span> <span style="color:#f92672">:=</span> make([]<span style="color:#66d9ef">byte</span>, len(<span style="color:#a6e22e">src</span>))
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">cipher</span>.<span style="color:#a6e22e">XORKeyStream</span>(<span style="color:#a6e22e">dst</span>, <span style="color:#a6e22e">src</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">s</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">toString</span>(<span style="color:#a6e22e">dst</span>) <span style="color:#75715e">// 密文是不可读的字节流，这里采用hex编码
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		println(<span style="color:#a6e22e">s</span>)         <span style="color:#75715e">// 形如：a09def6b6e4797
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">c</span>[<span style="color:#a6e22e">s</span>] = <span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	println(len(<span style="color:#a6e22e">c</span>)) <span style="color:#960050;background-color:#1e0010">#</span> <span style="color:#ae81ff">1000</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">toString</span>(<span style="color:#a6e22e">src</span> []<span style="color:#66d9ef">byte</span>) <span style="color:#66d9ef">string</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">hex</span>.<span style="color:#a6e22e">EncodeToString</span>(<span style="color:#a6e22e">src</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="参考">
+  参考
+  <a class="anchor" href="#%e5%8f%82%e8%80%83">#</a>
+</h3>
+<ul>
+<li><a href="https://github.com/twitter-archive/snowflake">twitter-snowflake</a></li>
+<li><a href="https://github.com/bwmarrin/snowflake">bwmarrin/snowflake</a></li>
+<li><a href="https://github.com/yeqown/snowflake">yeqown/snowflake</a></li>
+<li><a href="https://juejin.im/entry/59b5ef585188257e8901487d">关于snowflake的分析</a></li>
+<li><a href="https://www.kancloud.cn/db-design/mysql-dba/596722">为什么推荐InnoDB引擎使用自增主键?</a></li>
+</ul>
+    </p>
+  </article>
+  
+  <article class="markdown book-post">
+    <h2>
+      <a href="/2019/04/01/go-watcher-%E7%83%AD%E9%87%8D%E8%BD%BD%E8%BD%AE%E5%AD%90/">go-watcher-热重载轮子</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>April 1, 2019</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/Tools/">Tools</a>, 
+      <a href="/tags/hot-reload/">Hot-Reload</a>
+  </div>
+  
+
+
+    <p><p>Golang编写的热重载工具，自定义命令，支持监视文件及路径配置，环境变量配置。这是一个重复的轮子～</p>
+<!-- more -->
+<h3 id="安装使用">
+  安装使用
+  <a class="anchor" href="#%e5%ae%89%e8%a3%85%e4%bd%bf%e7%94%a8">#</a>
+</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">go</span> <span style="color:#a6e22e">install</span> <span style="color:#a6e22e">github</span>.<span style="color:#a6e22e">com</span><span style="color:#f92672">/</span><span style="color:#a6e22e">yeqown</span><span style="color:#f92672">/</span><span style="color:#66d9ef">go</span><span style="color:#f92672">-</span><span style="color:#a6e22e">watcher</span><span style="color:#f92672">/</span><span style="color:#a6e22e">cmd</span><span style="color:#f92672">/</span><span style="color:#66d9ef">go</span><span style="color:#f92672">-</span><span style="color:#a6e22e">watcher</span>
+</span></span></code></pre></div><h3 id="命令行">
+  命令行
+  <a class="anchor" href="#%e5%91%bd%e4%bb%a4%e8%a1%8c">#</a>
+</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>➜  go-watcher git:<span style="color:#f92672">(</span>master<span style="color:#f92672">)</span> ✗ ./go-watcher -h   
+</span></span><span style="display:flex;"><span>NAME:
+</span></span><span style="display:flex;"><span>   go-watcher - A new cli application
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>USAGE:
+</span></span><span style="display:flex;"><span>   go-watcher <span style="color:#f92672">[</span>global options<span style="color:#f92672">]</span> command <span style="color:#f92672">[</span>command options<span style="color:#f92672">]</span> <span style="color:#f92672">[</span>arguments...<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>VERSION:
+</span></span><span style="display:flex;"><span>   2.0.0
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>AUTHOR:
+</span></span><span style="display:flex;"><span>   yeqown@gmail.com
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>COMMANDS:
+</span></span><span style="display:flex;"><span>     init     generate a config file to specified postion
+</span></span><span style="display:flex;"><span>     run      execute a command, and watch the files, <span style="color:#66d9ef">if</span> any change to these files, the command will reload
+</span></span><span style="display:flex;"><span>     help, h  Shows a list of commands or help <span style="color:#66d9ef">for</span> one command
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>GLOBAL OPTIONS:
+</span></span><span style="display:flex;"><span>   --help, -h     show help
+</span></span><span style="display:flex;"><span>   --version, -v  print the version
+</span></span></code></pre></div><h3 id="配置文件">
+  配置文件
+  <a class="anchor" href="#%e9%85%8d%e7%bd%ae%e6%96%87%e4%bb%b6">#</a>
+</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yml" data-lang="yml"><span style="display:flex;"><span><span style="color:#f92672">watcher</span>:                   <span style="color:#75715e"># 监视器配置</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">duration</span>: <span style="color:#ae81ff">2000</span>           <span style="color:#75715e"># 文件修改时间间隔，只有高于这个间隔才回触发重载</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">included_filetypes</span>:      <span style="color:#75715e"># 监视的文件扩展类型</span>
+</span></span><span style="display:flex;"><span>  - <span style="color:#ae81ff">.go                   </span> <span style="color:#75715e"># </span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">excluded_regexps</span>:        <span style="color:#75715e"># 不被监视更改的文件正则表达式</span>
+</span></span><span style="display:flex;"><span>  - <span style="color:#ae81ff">^.gitignore$</span>
+</span></span><span style="display:flex;"><span>  - <span style="color:#e6db74">&#39;*.yml$&#39;</span>
+</span></span><span style="display:flex;"><span>  - <span style="color:#e6db74">&#39;*.txt$&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">additional_paths</span>: []       <span style="color:#75715e"># 除了当前文件夹需要额外监视的文件夹</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">excluded_paths</span>:            <span style="color:#75715e"># 不需要监视的文件名，若为相对路径，只能对于当前路径生效</span>
+</span></span><span style="display:flex;"><span>- <span style="color:#ae81ff">vendor</span>
+</span></span><span style="display:flex;"><span>- <span style="color:#ae81ff">.git</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">envs</span>:                      <span style="color:#75715e"># 额外的环境变量</span>
+</span></span><span style="display:flex;"><span>- <span style="color:#ae81ff">GOROOT=/path/to/your/goroot</span>
+</span></span><span style="display:flex;"><span>- <span style="color:#ae81ff">GOPATH=/path/to/your/gopath</span>
+</span></span></code></pre></div><h3 id="使用范例日志">
+  使用范例日志
+  <a class="anchor" href="#%e4%bd%bf%e7%94%a8%e8%8c%83%e4%be%8b%e6%97%a5%e5%bf%97">#</a>
+</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>➜  go-watcher git:<span style="color:#f92672">(</span>master<span style="color:#f92672">)</span> ✗ ./package/osx/go-watcher run -e <span style="color:#e6db74">&#34;make&#34;</span> -c ./config.yml
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> directory <span style="color:#f92672">(</span>/Users/yeqown/Projects/opensource/go-watcher<span style="color:#f92672">)</span> is under watching
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> directory <span style="color:#f92672">(</span>/Users/yeqown/Projects/opensource/go-watcher/cmd<span style="color:#f92672">)</span> is under watching
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> directory <span style="color:#f92672">(</span>/Users/yeqown/Projects/opensource/go-watcher/cmd/go-watcher<span style="color:#f92672">)</span> is under watching
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> directory <span style="color:#f92672">(</span>/Users/yeqown/Projects/opensource/go-watcher/internal<span style="color:#f92672">)</span> is under watching
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> directory <span style="color:#f92672">(</span>/Users/yeqown/Projects/opensource/go-watcher/internal/command<span style="color:#f92672">)</span> is under watching
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> directory <span style="color:#f92672">(</span>/Users/yeqown/Projects/opensource/go-watcher/internal/log<span style="color:#f92672">)</span> is under watching
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> directory <span style="color:#f92672">(</span>/Users/yeqown/Projects/opensource/go-watcher/internal/testdata<span style="color:#f92672">)</span> is under watching
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> directory <span style="color:#f92672">(</span>/Users/yeqown/Projects/opensource/go-watcher/internal/testdata/exclude<span style="color:#f92672">)</span> is under watching
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> directory <span style="color:#f92672">(</span>/Users/yeqown/Projects/opensource/go-watcher/internal/testdata/testdata_inner<span style="color:#f92672">)</span> is under watching
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> directory <span style="color:#f92672">(</span>/Users/yeqown/Projects/opensource/go-watcher/package<span style="color:#f92672">)</span> is under watching
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> directory <span style="color:#f92672">(</span>/Users/yeqown/Projects/opensource/go-watcher/package/archived<span style="color:#f92672">)</span> is under watching
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> directory <span style="color:#f92672">(</span>/Users/yeqown/Projects/opensource/go-watcher/package/linux<span style="color:#f92672">)</span> is under watching
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> directory <span style="color:#f92672">(</span>/Users/yeqown/Projects/opensource/go-watcher/package/osx<span style="color:#f92672">)</span> is under watching
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> directory <span style="color:#f92672">(</span>/Users/yeqown/Projects/opensource/go-watcher/resources<span style="color:#f92672">)</span> is under watching
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> directory <span style="color:#f92672">(</span>/Users/yeqown/Projects/opensource/go-watcher/utils<span style="color:#f92672">)</span> is under watching
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> directory <span style="color:#f92672">(</span>/Users/yeqown/Projects/opensource/go-watcher/utils/testdata<span style="color:#f92672">)</span> is under watching
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> directory <span style="color:#f92672">(</span>/Users/yeqown/Projects/opensource/go-watcher/utils/testdata/testdata_inner<span style="color:#f92672">)</span> is under watching
+</span></span><span style="display:flex;"><span>rm -fr package
+</span></span><span style="display:flex;"><span>go build -o package/osx/go-watcher cmd/go-watcher/main.go
+</span></span><span style="display:flex;"><span>GOOS<span style="color:#f92672">=</span>linux GOARCH<span style="color:#f92672">=</span>amd64 go build -o package/linux/go-watcher cmd/go-watcher/main.go
+</span></span><span style="display:flex;"><span>mkdir -p package/archived
+</span></span><span style="display:flex;"><span>tar -zcvf package/archived/go-watcher.osx.tar.gz package/osx
+</span></span><span style="display:flex;"><span>a package/osx
+</span></span><span style="display:flex;"><span>a package/osx/go-watcher
+</span></span><span style="display:flex;"><span>tar -zcvf package/archived/go-watcher.linux.tar.gz package/linux
+</span></span><span style="display:flex;"><span>a package/linux
+</span></span><span style="display:flex;"><span>a package/linux/go-watcher
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> command executed <span style="color:#66d9ef">done</span>!
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> <span style="color:#f92672">(</span>/Users/yeqown/Projects/opensource/go-watcher/package/osx/go-watcher<span style="color:#f92672">)</span> is skipped, not target filetype
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> <span style="color:#f92672">(</span>/Users/yeqown/Projects/opensource/go-watcher/package/osx<span style="color:#f92672">)</span> is skipped, not target filetype
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> <span style="color:#f92672">(</span>/Users/yeqown/Projects/opensource/go-watcher/package<span style="color:#f92672">)</span> is skipped, not target filetype
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> <span style="color:#f92672">(</span>/Users/yeqown/Projects/opensource/go-watcher/package/linux/go-watcher<span style="color:#f92672">)</span> is skipped, not target filetype
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> <span style="color:#f92672">(</span>/Users/yeqown/Projects/opensource/go-watcher/package/linux<span style="color:#f92672">)</span> is skipped, not target filetype
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> <span style="color:#f92672">(</span>/Users/yeqown/Projects/opensource/go-watcher/package/archived/go-watcher.linux.tar.gz<span style="color:#f92672">)</span> is skipped, not target filetype
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> <span style="color:#f92672">(</span>/Users/yeqown/Projects/opensource/go-watcher/package/archived<span style="color:#f92672">)</span> is skipped, not target filetype
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> <span style="color:#f92672">(</span>/Users/yeqown/Projects/opensource/go-watcher/VERSION<span style="color:#f92672">)</span> is skipped, not target filetype
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> <span style="color:#f92672">[</span>/Users/yeqown/Projects/opensource/go-watcher/cmd/go-watcher/main.go<span style="color:#f92672">]</span> changed
+</span></span><span style="display:flex;"><span>rm -fr package
+</span></span><span style="display:flex;"><span>mkdir -p package/osx
+</span></span><span style="display:flex;"><span>mkdir -p package/linux
+</span></span><span style="display:flex;"><span>echo <span style="color:#e6db74">&#34;2.0.0&#34;</span> &gt; VERSION
+</span></span><span style="display:flex;"><span>cp VERSION package/osx
+</span></span><span style="display:flex;"><span>cp VERSION package/linux
+</span></span><span style="display:flex;"><span>go build -o package/osx/go-watcher cmd/go-watcher/main.go
+</span></span><span style="display:flex;"><span>GOOS<span style="color:#f92672">=</span>linux GOARCH<span style="color:#f92672">=</span>amd64 go build -o package/linux/go-watcher cmd/go-watcher/main.go
+</span></span><span style="display:flex;"><span>mkdir -p package/archived
+</span></span><span style="display:flex;"><span>tar -zcvf package/archived/go-watcher.osx.tar.gz package/osx
+</span></span><span style="display:flex;"><span>a package/osx
+</span></span><span style="display:flex;"><span>a package/osx/go-watcher
+</span></span><span style="display:flex;"><span>a package/osx/VERSION
+</span></span><span style="display:flex;"><span>tar -zcvf package/archived/go-watcher.linux.tar.gz package/linux
+</span></span><span style="display:flex;"><span>a package/linux
+</span></span><span style="display:flex;"><span>a package/linux/go-watcher<span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> <span style="color:#f92672">(</span>/Users/yeqown/Projects/opensource/go-watcher/package/osx<span style="color:#f92672">)</span> is skipped, not target filetype
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> <span style="color:#f92672">(</span>/Users/yeqown/Projects/opensource/go-watcher/package/linux<span style="color:#f92672">)</span> is skipped, not target filetype
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>a package/linux/VERSION
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> command executed <span style="color:#66d9ef">done</span>!
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> <span style="color:#f92672">(</span>/Users/yeqown/Projects/opensource/go-watcher/package/osx<span style="color:#f92672">)</span> is skipped, not target filetype
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> <span style="color:#f92672">(</span>/Users/yeqown/Projects/opensource/go-watcher/package/archived<span style="color:#f92672">)</span> is skipped, not target filetype
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> <span style="color:#f92672">(</span>/Users/yeqown/Projects/opensource/go-watcher/package<span style="color:#f92672">)</span> is skipped, not target filetype
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> <span style="color:#f92672">(</span>/Users/yeqown/Projects/opensource/go-watcher/VERSION<span style="color:#f92672">)</span> is skipped, not target filetype
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> <span style="color:#f92672">(</span>/Users/yeqown/Projects/opensource/go-watcher/package<span style="color:#f92672">)</span> is skipped, not target filetype
+</span></span><span style="display:flex;"><span>^C<span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> quit signal captured!
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>INFO<span style="color:#f92672">]</span> go-watcher exited
+</span></span><span style="display:flex;"><span>➜  go-watcher git:<span style="color:#f92672">(</span>master<span style="color:#f92672">)</span> ✗ 
+</span></span></code></pre></div>
+    </p>
+  </article>
+  
+  <article class="markdown book-post">
+    <h2>
+      <a href="/2019/03/30/goswagger%E5%85%A5%E9%97%A8%E6%89%8B%E5%86%8C/">goswagger入门手册</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>March 30, 2019</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Golang/">Golang</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/Swagger/">Swagger</a>
+  </div>
+  
+
+
+    <p><blockquote>
+<p>本文旨在记录使用goswagger过程中遇到的一些问题（只在生成文档方面，不涉及其他功能）：</p>
+</blockquote>
+<ul>
+<li>如何在go1.11+以上（支持Go Module）版本中的应用swagger</li>
+<li>一些注解上的注意事项</li>
+<li>如何在团队中管理API文档（主要涵盖了：swagger-ui的部署和使用）</li>
+</ul>
+<h3 id="关于swaggerhttpsswaggerio">
+  关于<a href="https://swagger.io">swagger</a>
+  <a class="anchor" href="#%e5%85%b3%e4%ba%8eswaggerhttpsswaggerio">#</a>
+</h3>
+<p>swagger涵盖WebAPI的一整套工具：API设计，API实现（代码生成），API文档，API测试及API规范。更多信息请参见官网</p>
+<!-- more -->
+<h3 id="准备工作">
+  准备工作
+  <a class="anchor" href="#%e5%87%86%e5%a4%87%e5%b7%a5%e4%bd%9c">#</a>
+</h3>
+<ul>
+<li>一个Golang web项目，并软连接到<code>GOPATH/src</code>下。【毕竟是支持Gomodule的项目，还放在GOPATH下就不科学了😄】</li>
+<li>安装swagger工具. 参见<a href="https://goswagger.io/install.html">安装</a></li>
+<li>环境：
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>➜  swagger-demo git:<span style="color:#f92672">(</span>master<span style="color:#f92672">)</span> ✗ go version
+</span></span><span style="display:flex;"><span>go version go1.11.5 darwin/amd64
+</span></span><span style="display:flex;"><span>➜  swagger-demo git:<span style="color:#f92672">(</span>master<span style="color:#f92672">)</span> ✗ swagger version
+</span></span><span style="display:flex;"><span>version: v0.18.0
+</span></span><span style="display:flex;"><span>commit: 6b23bb61413826ce42c3b14a37bf5870caf91e0b
+</span></span></code></pre></div></li>
+</ul>
+<h3 id="编写注释">
+  编写注释
+  <a class="anchor" href="#%e7%bc%96%e5%86%99%e6%b3%a8%e9%87%8a">#</a>
+</h3>
+<blockquote>
+<p>元信息包含了这个应用的基本信息。一般新建一个doc.go放在你的API根目录下；还有一定要注意这句话：</p>
+</blockquote>
+<blockquote>
+<p>You give it a main file and it will parse all the files that are reachable by that main package to produce a swagger specification.To use you can add a go:generate comment to your main file。</p>
+        <a href="/2019/03/30/goswagger%E5%85%A5%E9%97%A8%E6%89%8B%E5%86%8C/">...</a>
+      
+    </p>
+  </article>
+  
+  <article class="markdown book-post">
+    <h2>
+      <a href="/2018/11/26/QR-Code%E7%94%9F%E6%88%90%E5%99%A8forgolang/">Go 语言实现 QR Code 生成器：从原理到实践</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>November 26, 2018</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Golang/">Golang</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/QR-Code/">QR Code</a>
+  </div>
+  
+
+
+    <p><blockquote>
+<p>项目地址：<a href="https://github.com/yeqown/go-qrcode">yeqown/go-qrcode</a></p>
+<p>在造轮子的过程中，参考了同类项目 <a href="https://github.com/skip2/go-qrcode">skip2/go-qrcode</a> 的实现，特别是复用了其纠错算法和 BitSet 的部分逻辑。但为了更深入理解 QR Code 的生成机制，我决定完整地梳理一遍流程并重构实现。</p>
+</blockquote>
+<h2 id="背景">
+  背景
+  <a class="anchor" href="#%e8%83%8c%e6%99%af">#</a>
+</h2>
+<p>二维码（QR Code）看似只是一堆杂乱无章的黑白像素点，实则包含了一套严密的数据编码、纠错和掩码机制。作为一名 Gopher，在日常开发中调用现成的库生成二维码非常简单，但如果想探究其“黑盒”内部的秘密，最好的方式莫过于亲手实现一个。</p>
+<h2 id="快速上手">
+  快速上手
+  <a class="anchor" href="#%e5%bf%ab%e9%80%9f%e4%b8%8a%e6%89%8b">#</a>
+</h2>
+<p>在深入原理之前，我们先来看看如何使用 <code>go-qrcode</code> 库在几行代码内生成一张二维码图片。</p>
+<h3 id="示例代码">
+  示例代码
+  <a class="anchor" href="#%e7%a4%ba%e4%be%8b%e4%bb%a3%e7%a0%81">#</a>
+</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> (
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;fmt&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;log&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;github.com/yeqown/go-qrcode/v2&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;github.com/yeqown/go-qrcode/writer/standard&#34;</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 1. 初始化 QRCode 对象，输入文本内容
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">qrc</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">qrcode</span>.<span style="color:#a6e22e">New</span>(<span style="color:#e6db74">&#34;https://github.com/yeqown/go-qrcode&#34;</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatalf</span>(<span style="color:#e6db74">&#34;could not generate QRCode: %v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 2. 初始化标准 Writer，指定输出文件名
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">w</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">standard</span>.<span style="color:#a6e22e">New</span>(<span style="color:#e6db74">&#34;../testdata/repo-qrcode.jpeg&#34;</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatalf</span>(<span style="color:#e6db74">&#34;standard.New failed: %v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 3. 保存
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">qrc</span>.<span style="color:#a6e22e">Save</span>(<span style="color:#a6e22e">w</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatalf</span>(<span style="color:#e6db74">&#34;could not save image: %v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;QR Code generate successfully!&#34;</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>生成结果示意如下：</p>
+        <a href="/2018/11/26/QR-Code%E7%94%9F%E6%88%90%E5%99%A8forgolang/">...</a>
+      
+    </p>
+  </article>
+  
+  <article class="markdown book-post">
+    <h2>
+      <a href="/2018/11/19/go-get%E9%81%87%E5%88%B0%E5%A2%99%E7%9A%84%E8%A7%A3%E5%86%B3%E6%96%B9%E6%B3%95/">go-get遇到🧱的解决方法</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>November 19, 2018</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Golang/">Golang</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>
+  </div>
+  
+
+
+    <p><p>解决方法有两种，在网上也很好找到：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>1. 最简单的，从¥“github.com/golang”找到对应的包并下载到 $GOPATH/src/golang.org/x/ 下
+</span></span><span style="display:flex;"><span>2. 第二种，就是翻过🧱了。
+</span></span></code></pre></div><h3 id="1-问题翻了还是没办法直接使用go-get来下载呢">
+  1 问题：翻了🧱，还是没办法直接使用go get来下载呢？
+  <a class="anchor" href="#1-%e9%97%ae%e9%a2%98%e7%bf%bb%e4%ba%86%e8%bf%98%e6%98%af%e6%b2%a1%e5%8a%9e%e6%b3%95%e7%9b%b4%e6%8e%a5%e4%bd%bf%e7%94%a8go-get%e6%9d%a5%e4%b8%8b%e8%bd%bd%e5%91%a2">#</a>
+</h3>
+<p>先说原因，因为go get并没有走你的代理啊！！！！那么如何设置代理呢？</p>
+<!-- more -->
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>export http_proxy<span style="color:#f92672">=</span>http://ip:port
+</span></span><span style="display:flex;"><span>go get golang.org/xxx
+</span></span></code></pre></div><p>其他设置代理的方式，自行参见 <a href="##%e5%8f%82%e8%80%83">参考</a></p>
+<h3 id="2-如果你的代理不支持http--https协议可咋整">
+  2 如果你的代理不支持http || https协议，可咋整？
+  <a class="anchor" href="#2-%e5%a6%82%e6%9e%9c%e4%bd%a0%e7%9a%84%e4%bb%a3%e7%90%86%e4%b8%8d%e6%94%af%e6%8c%81http--https%e5%8d%8f%e8%ae%ae%e5%8f%af%e5%92%8b%e6%95%b4">#</a>
+</h3>
+<p>那么想办法支持http或者把http再代理到你可以使用的协议（socks5~），那么可以使用<a href="https://github.com/cyfdecyf/cow">cow</a>。</p>
+<p>cow 推荐使用方式：</p>
+<p>go get 下载安装（因为刚开始图简单，使用程序的时候运行报错了，go get 安装方式并不会有这样的困扰）。
+配置的时候也很简单，编辑配置文件 ～/.cow/rc，配置http socks5代理服务和监听代理端口。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>listen <span style="color:#f92672">=</span> http://127.0.0.1:7777
+</span></span><span style="display:flex;"><span>proxy <span style="color:#f92672">=</span> socks5://127.0.0.1:1080
+</span></span></code></pre></div><h3 id="3-运行">
+  3 运行
+  <a class="anchor" href="#3-%e8%bf%90%e8%a1%8c">#</a>
+</h3>
+<p>配置完成之后就可以直接运行了</p>
+<pre tabindex="0"><code>    ./cow
+    # 另开一个Terminal
+    export http_proxy=http://ip:port
+    go get golang.org/xxx
+</code></pre><h3 id="写在后面">
+  写在后面
+  <a class="anchor" href="#%e5%86%99%e5%9c%a8%e5%90%8e%e9%9d%a2">#</a>
+</h3>
+<p>知道了go get无法翻🧱的原因之后，就可以发挥自己的想象力来解决问题了，这样解决还是挺繁琐的。虽然cow可以配置开机启动，但对于一个懒癌晚期）的人来说（如果不是因为升级Go到了1.11，go-module机制让我无法开心的玩耍，我也不会去考虑为啥翻🧱了go get还是不能用，明明有代理却还有使用另外一个代理～。</p>
+<p>友情提示：vscode-go 也可以设置proxy哦</p>
+<h3 id="参考">
+  参考：
+  <a class="anchor" href="#%e5%8f%82%e8%80%83">#</a>
+</h3>
+<ul>
+<li><a href="https://blog.csdn.net/zhyhang/article/details/78444974">go get 使用代理</a></li>
+<li><a href="https://github.com/cyfdecyf/cow">cow</a></li>
+<li><a href="https://github.com/cyfdecyf/cow/blob/master/doc/sample-config/rc">cow配置文件说明</a></li>
+<li><a href="https://blog.csdn.net/easy_mind/article/details/78214696">vscode-go设置proxy</a></li>
+</ul>
+    </p>
+  </article>
+  
+  <article class="markdown book-post">
+    <h2>
+      <a href="/2018/10/23/etcd-service-registration-discovery/">etcd与service-registration-discovery</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>October 23, 2018</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F/">分布式</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/etcd/">Etcd</a>, 
+      <a href="/tags/microservice/">Microservice</a>, 
+      <a href="/tags/%E6%9C%8D%E5%8A%A1%E6%B3%A8%E5%86%8C%E5%8F%91%E7%8E%B0/">服务注册发现</a>
+  </div>
+  
+
+
+    <p><blockquote>
+<p>声明：本文对etcd的原理，实现细节，性能等均不考虑，仅将etcd作为一个分布式的K-V存储组件。本文提价代码均在： <a href="https://github.com/yeqown/server-common/tree/master/framework/etcd">github.com/yeqown/server-common/tree/master/framework/etcd</a></p>
+</blockquote>
+<h3 id="一个核心">
+  一个核心
+  <a class="anchor" href="#%e4%b8%80%e4%b8%aa%e6%a0%b8%e5%bf%83">#</a>
+</h3>
+<p>etcd, 分布式Key-Value存储工具。详细资料<a href="https://github.com/etcd-io/etcd/blob/master/Documentation/docs.md">由此去</a></p>
+<ul>
+<li><a href="https://github.com/etcd-io/etcd/releases">etcd下载安装</a></li>
+</ul>
+<h3 id="两个对象">
+  两个对象
+  <a class="anchor" href="#%e4%b8%a4%e4%b8%aa%e5%af%b9%e8%b1%a1">#</a>
+</h3>
+<ul>
+<li>服务提供者（在测试环境中，我定义为单独的服务实例），也就是服务的提供者，需要向其他服务暴露自己的ip和端口，方便调用。</li>
+<li>服务调用者（同样地，在测试环境中我定义为反向代理网关程序），也就是服务的调用者，需要获取到 <em><strong>可使用</strong></em> 地服务地址并调用。</li>
+</ul>
+<!-- more -->
+<h3 id="关于服务注册与发现">
+  关于服务注册与发现
+  <a class="anchor" href="#%e5%85%b3%e4%ba%8e%e6%9c%8d%e5%8a%a1%e6%b3%a8%e5%86%8c%e4%b8%8e%e5%8f%91%e7%8e%b0">#</a>
+</h3>
+<p>就具体场景而言：我们的生产环境中使用了一个代理网关服务器，用于转发移动端和PC端的API请求，并完成其他功能。所有的服务实例配置都是硬编码在网关程序中，顶多就是抽离出来成了一个配置文件。这样做的缺点很明显：“非动态”。也就意味着，一旦有服务Down掉，那么用户访问则可能异常，甚至导致整个服务的崩溃；其次，需要对服务进行扩容的情况下，则需要先进行服务部署再更新网关程序，步骤繁琐且容易出错。</p>
+<p>那么如果我们设计成为如下图的样子：
+<img src="/images/etcd-service-regisration-discovery.png" alt="etcd-service-regisration-discovery" />
+对于新添加的服务实例，只需要启动新的服务，并注册到etcd相应的路径下就行了。</p>
+<blockquote>
+<p>注册：对于同一组服务，配置一个统一的前缀（如图上的&quot;/specServer&quot;），不同实例使用ID加以区分。</p>
+</blockquote>
+<h3 id="将现行服务改造成为上述模式需要解决的问题">
+  将现行服务改造成为上述模式需要解决的问题：
+  <a class="anchor" href="#%e5%b0%86%e7%8e%b0%e8%a1%8c%e6%9c%8d%e5%8a%a1%e6%94%b9%e9%80%a0%e6%88%90%e4%b8%ba%e4%b8%8a%e8%bf%b0%e6%a8%a1%e5%bc%8f%e9%9c%80%e8%a6%81%e8%a7%a3%e5%86%b3%e7%9a%84%e9%97%ae%e9%a2%98">#</a>
+</h3>
+<ul>
+<li>etcd 配置安装</li>
+<li>网关程序改造（监听etcd的节点夹子/prefix;适配动态的服务实例调用）</li>
+<li>服务实例改造（注册服务实例到etcd;心跳更新;其他配套设施，异常退出删除注册信息）</li>
+</ul>
+<p>etcd安装配置在github.com已经非常详细了。在这里贴一下我在本地测试时候启动的脚本（这部分是从etcd-demo获取到的，做了针对端口的改动）：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#75715e">#!/bin/bash
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># For each machine</span>
+</span></span><span style="display:flex;"><span>TOKEN<span style="color:#f92672">=</span>token-01
+</span></span><span style="display:flex;"><span>CLUSTER_STATE<span style="color:#f92672">=</span>new
+</span></span><span style="display:flex;"><span>NAME_1<span style="color:#f92672">=</span>machine1
+</span></span><span style="display:flex;"><span>NAME_2<span style="color:#f92672">=</span>machine2
+</span></span><span style="display:flex;"><span>NAME_3<span style="color:#f92672">=</span>machine3
+</span></span><span style="display:flex;"><span>HOST_1<span style="color:#f92672">=</span>127.0.0.1
+</span></span><span style="display:flex;"><span>HOST_2<span style="color:#f92672">=</span>127.0.0.1
+</span></span><span style="display:flex;"><span>HOST_3<span style="color:#f92672">=</span>127.0.0.1
+</span></span><span style="display:flex;"><span>CLUSTER<span style="color:#f92672">=</span><span style="color:#e6db74">${</span>NAME_1<span style="color:#e6db74">}</span><span style="color:#f92672">=</span>http://<span style="color:#e6db74">${</span>HOST_1<span style="color:#e6db74">}</span>:2380,<span style="color:#e6db74">${</span>NAME_2<span style="color:#e6db74">}</span><span style="color:#f92672">=</span>http://<span style="color:#e6db74">${</span>HOST_2<span style="color:#e6db74">}</span>:2381,<span style="color:#e6db74">${</span>NAME_3<span style="color:#e6db74">}</span><span style="color:#f92672">=</span>http://<span style="color:#e6db74">${</span>HOST_3<span style="color:#e6db74">}</span>:2382
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># For machine 1</span>
+</span></span><span style="display:flex;"><span>THIS_NAME<span style="color:#f92672">=</span><span style="color:#e6db74">${</span>NAME_1<span style="color:#e6db74">}</span>
+</span></span><span style="display:flex;"><span>THIS_IP<span style="color:#f92672">=</span><span style="color:#e6db74">${</span>HOST_1<span style="color:#e6db74">}</span>
+</span></span><span style="display:flex;"><span>etcd --data-dir<span style="color:#f92672">=</span>machine1.etcd --name <span style="color:#e6db74">${</span>THIS_NAME<span style="color:#e6db74">}</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>	--initial-advertise-peer-urls http://<span style="color:#e6db74">${</span>THIS_IP<span style="color:#e6db74">}</span>:2380 --listen-peer-urls http://<span style="color:#e6db74">${</span>THIS_IP<span style="color:#e6db74">}</span>:2380 <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>	--advertise-client-urls http://<span style="color:#e6db74">${</span>THIS_IP<span style="color:#e6db74">}</span>:2377 --listen-client-urls http://<span style="color:#e6db74">${</span>THIS_IP<span style="color:#e6db74">}</span>:2377 <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>	--initial-cluster <span style="color:#e6db74">${</span>CLUSTER<span style="color:#e6db74">}</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>	--initial-cluster-state <span style="color:#e6db74">${</span>CLUSTER_STATE<span style="color:#e6db74">}</span> --initial-cluster-token <span style="color:#e6db74">${</span>TOKEN<span style="color:#e6db74">}</span> &amp;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># For machine 2</span>
+</span></span><span style="display:flex;"><span>THIS_NAME<span style="color:#f92672">=</span><span style="color:#e6db74">${</span>NAME_2<span style="color:#e6db74">}</span>
+</span></span><span style="display:flex;"><span>THIS_IP<span style="color:#f92672">=</span><span style="color:#e6db74">${</span>HOST_2<span style="color:#e6db74">}</span>
+</span></span><span style="display:flex;"><span>etcd --data-dir<span style="color:#f92672">=</span>machine2.etcd --name <span style="color:#e6db74">${</span>THIS_NAME<span style="color:#e6db74">}</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>	--initial-advertise-peer-urls http://<span style="color:#e6db74">${</span>THIS_IP<span style="color:#e6db74">}</span>:2381 --listen-peer-urls http://<span style="color:#e6db74">${</span>THIS_IP<span style="color:#e6db74">}</span>:2381 <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>	--advertise-client-urls http://<span style="color:#e6db74">${</span>THIS_IP<span style="color:#e6db74">}</span>:2378 --listen-client-urls http://<span style="color:#e6db74">${</span>THIS_IP<span style="color:#e6db74">}</span>:2378 <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>	--initial-cluster <span style="color:#e6db74">${</span>CLUSTER<span style="color:#e6db74">}</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>	--initial-cluster-state <span style="color:#e6db74">${</span>CLUSTER_STATE<span style="color:#e6db74">}</span> --initial-cluster-token <span style="color:#e6db74">${</span>TOKEN<span style="color:#e6db74">}</span> &amp; 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># For machine 3</span>
+</span></span><span style="display:flex;"><span>THIS_NAME<span style="color:#f92672">=</span><span style="color:#e6db74">${</span>NAME_3<span style="color:#e6db74">}</span>
+</span></span><span style="display:flex;"><span>THIS_IP<span style="color:#f92672">=</span><span style="color:#e6db74">${</span>HOST_3<span style="color:#e6db74">}</span>
+</span></span><span style="display:flex;"><span>etcd --data-dir<span style="color:#f92672">=</span>machine3.etcd --name <span style="color:#e6db74">${</span>THIS_NAME<span style="color:#e6db74">}</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>	--initial-advertise-peer-urls http://<span style="color:#e6db74">${</span>THIS_IP<span style="color:#e6db74">}</span>:2382 --listen-peer-urls http://<span style="color:#e6db74">${</span>THIS_IP<span style="color:#e6db74">}</span>:2382 <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>	--advertise-client-urls http://<span style="color:#e6db74">${</span>THIS_IP<span style="color:#e6db74">}</span>:2379 --listen-client-urls http://<span style="color:#e6db74">${</span>THIS_IP<span style="color:#e6db74">}</span>:2379 <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>	--initial-cluster <span style="color:#e6db74">${</span>CLUSTER<span style="color:#e6db74">}</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>	--initial-cluster-state <span style="color:#e6db74">${</span>CLUSTER_STATE<span style="color:#e6db74">}</span> --initial-cluster-token <span style="color:#e6db74">${</span>TOKEN<span style="color:#e6db74">}</span> &amp;
+</span></span></code></pre></div><p>对于程序的改造，鉴于服务较多且etcd操作流程大体一致，便简单包装了一下，项目地址见文首位置。</p>
+        <a href="/2018/10/23/etcd-service-registration-discovery/">...</a>
+      
+    </p>
+  </article>
+  
+  <article class="markdown book-post">
+    <h2>
+      <a href="/2018/08/29/Golang%E9%80%82%E7%94%A8%E7%9A%84DTO%E5%B7%A5%E5%85%B7/">Golang适用的DTO工具</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>August 29, 2018</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Golang/">Golang</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/Tools/">Tools</a>, 
+      <a href="/tags/DTO/">DTO</a>
+  </div>
+  
+
+
+    <p><blockquote>
+<p>DTO (Data Transfer Object) 是Java中的概念，起到数据封装和隔离的作用。在使用Golang开发Web应用的过程中，也会有类似的需求。先贴项目地址 <a href="https://github.com/yeqown/server-common/tree/master/dbs/tools">github.com/yeqown/server-common/tree/master/dbs/tools</a></p>
+</blockquote>
+<!-- more -->
+<h3 id="举个例子">
+  举个例子
+  <a class="anchor" href="#%e4%b8%be%e4%b8%aa%e4%be%8b%e5%ad%90">#</a>
+</h3>
+<p>现在有一个用户数据结构如下,</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-Golang" data-lang="Golang"><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">UserModel</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">ID</span>          <span style="color:#66d9ef">int64</span>   <span style="color:#e6db74">`gorm:&#34;column:id&#34;`</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Name</span>        <span style="color:#66d9ef">string</span>  <span style="color:#e6db74">`gorm:&#34;column:name&#34;`</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Password</span>    <span style="color:#66d9ef">string</span>  <span style="color:#e6db74">`gorm:&#34;column:password&#34;`</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>// 问题1: 现在要求是想要JSON格式返回用户数据，并且不希望其中包含有Password字段
+// 解决1:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-Golang" data-lang="Golang"><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">UserModel</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">ID</span>          <span style="color:#66d9ef">int64</span>   <span style="color:#e6db74">`gorm:&#34;column:id&#34; json:&#34;id&#34;`</span> 
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Name</span>        <span style="color:#66d9ef">string</span>  <span style="color:#e6db74">`gorm:&#34;column:name&#34; json:&#34;name&#34;`</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Password</span>    <span style="color:#66d9ef">string</span>  <span style="color:#e6db74">`gorm:&#34;column:password&#34; json:&#34;-&#34;`</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>// 问题2: 同样是JSON数据格式，并且希望额外返回用户的身份标示Ident（假设必须要跟用户数据放在一起）
+// 解决2: （这也是我的场景）</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-Golang" data-lang="Golang"><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">UserDTO</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">ID</span>          <span style="color:#66d9ef">int64</span>   <span style="color:#e6db74">`json:&#34;id&#34;`</span> 
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Name</span>        <span style="color:#66d9ef">string</span>  <span style="color:#e6db74">`json:&#34;name&#34;`</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Password</span>    <span style="color:#66d9ef">string</span>  <span style="color:#e6db74">`json:&#34;-&#34;`</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Ident</span>       <span style="color:#66d9ef">string</span>  <span style="color:#e6db74">`json:&#34;ident&#34;`</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">LoadUserDTOFromModel</span>(<span style="color:#a6e22e">data</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">UserMolde</span>) <span style="color:#f92672">*</span><span style="color:#a6e22e">UserDTO</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">ident</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">genUserIdent</span>(<span style="color:#a6e22e">data</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span>{
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">ID</span>          <span style="color:#a6e22e">data</span>.<span style="color:#a6e22e">ID</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">Name</span>        <span style="color:#a6e22e">data</span>.<span style="color:#a6e22e">Name</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">Ident</span>       <span style="color:#a6e22e">ident</span>,
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="背景和需求">
+  背景和需求
+  <a class="anchor" href="#%e8%83%8c%e6%99%af%e5%92%8c%e9%9c%80%e6%b1%82">#</a>
+</h3>
+<p>一般来说我的项目结构如下：其中models和services也就是分开定义Data struct(UserModel)和Object(UserDTO)的文件夹。</p>
+<p><img src="/images/dbtools-web-filetree.png" alt="Web项目结构举例" /></p>
+<p>其实DTO的过程对于我来说，就是基于Data Struct生成一个新的Struct结构，并附带一个<code>func LoadDTOTypeFromModel(data *ModelType) *DTOType</code>。在这个过程中，其实除了个别Object结构体需要额外处理以外，大部分都是新换一个tag~。因此这部分工作步骤都是类似的，那么为什么不用一个工具来避免这部分重复的工作呢～？</p>
+<h3 id="思路">
+  思路
+  <a class="anchor" href="#%e6%80%9d%e8%b7%af">#</a>
+</h3>
+<p>先说一下思路:</p>
+        <a href="/2018/08/29/Golang%E9%80%82%E7%94%A8%E7%9A%84DTO%E5%B7%A5%E5%85%B7/">...</a>
+      
+    </p>
+  </article>
+  
+
+  
+    <ul class="pagination pagination-default">
+      <li class="page-item">
+        <a href="/tags/Golang/" aria-label="First" class="page-link" role="button"><span aria-hidden="true">&laquo;&laquo;</span></a>
+      </li>
+      <li class="page-item">
+        <a href="/tags/Golang/" aria-label="Previous" class="page-link" role="button"><span aria-hidden="true">&laquo;</span></a>
+      </li>
+      <li class="page-item">
+        <a href="/tags/Golang/" aria-label="Page 1" class="page-link" role="button">1</a>
+      </li>
+      <li class="page-item active">
+        <a aria-current="page" aria-label="Page 2" class="page-link" role="button">2</a>
+      </li>
+      <li class="page-item">
+        <a href="/tags/Golang/page/3/" aria-label="Page 3" class="page-link" role="button">3</a>
+      </li>
+      <li class="page-item">
+        <a href="/tags/Golang/page/3/" aria-label="Next" class="page-link" role="button"><span aria-hidden="true">&raquo;</span></a>
+      </li>
+      <li class="page-item">
+        <a href="/tags/Golang/page/3/" aria-label="Last" class="page-link" role="button"><span aria-hidden="true">&raquo;&raquo;</span></a>
+      </li>
+    </ul>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  <nav>
+  <ul>
+  
+    
+    <li class="book-section-flat">
+      <strong>Categories</strong>
+      <ul>
+      
+        <li class="flex justify-between">
+          <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>
+          <span>33</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/%E6%9E%B6%E6%9E%84/">架构</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Golang/">Golang</a>
+          <span>12</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Kubernetes/">Kubernetes</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F/">分布式</a>
+          <span>6</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/">数据库</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Service-Mesh/">Service Mesh</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/design/">Design</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Tracing/">Tracing</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Algorithm/">Algorithm</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/DevOps/">DevOps</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Test/">Test</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4/">常用命令</a>
+          <span>1</span>
+        </li>
+      
+      </ul>
+    </li>
+    
+  
+    
+    <li class="book-section-flat">
+      <strong>Tags</strong>
+      <ul>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Victoria-Logs/">Victoria Logs</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%88%97%E5%BC%8F%E5%AD%98%E5%82%A8/">列式存储</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%AD%98%E5%82%A8/">存储</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E6%97%A5%E5%BF%97/">日志</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/GC/">GC</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Golang/">Golang</a>
+          <span>30</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Green-Tea/">Green Tea</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Debezium/">Debezium</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Incremental-Snapshot/">Incremental Snapshot</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Kafka-Connect/">Kafka Connect</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Mongodb/">Mongodb</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Source-Connector/">Source Connector</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Apache-Doris/">Apache Doris</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/MySQL/">Mysql</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Prepared-Statements/">Prepared Statements</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Kafka/">Kafka</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/MirrorMaker2/">MirrorMaker2</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Replication/">Replication</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Javascript/">Javascript</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/python/">Python</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Rust/">Rust</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/WASM/">WASM</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/WebAssembly/">WebAssembly</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/gRPC/">GRPC</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/grpcreplay/">Grpcreplay</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Istio/">Istio</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Kubernetes/">Kubernetes</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/sidecar/">Sidecar</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/traffic-mirror/">Traffic Mirror</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%8D%8F%E8%AE%AE/">协议</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Doris/">Doris</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/FoundationDB/">FoundationDB</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%AD%98%E7%AE%97%E5%88%86%E7%A6%BB/">存算分离</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/memcached/">Memcached</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Rendezvous-Hashing/">Rendezvous Hashing</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/tcpdump/">Tcpdump</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/wireshark/">Wireshark</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/APISIX/">APISIX</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/CDC/">CDC</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/DMS/">DMS</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Pyroscope/">Pyroscope</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/ShardingSphere-Proxy/">ShardingSphere Proxy</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/shardingsphere/">Shardingsphere</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F/">分布式</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%88%86%E5%BA%93%E5%88%86%E8%A1%A8/">分库分表</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Envoy/">Envoy</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/kubenertes/">Kubenertes</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/service-mesh/">Service Mesh</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/MQ/">MQ</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/multi-raft/">Multi-Raft</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/nats/">Nats</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/raft/">Raft</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/fsnotify/">Fsnotify</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/inotify/">Inotify</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/linux/">Linux</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/c/">C</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/lua/">Lua</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/redis/">Redis</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/exec/">Exec</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/fork/">Fork</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Graceful-Restart/">Graceful Restart</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/tcp/">TCP</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Cloudflare/">Cloudflare</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/SSH/">SSH</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Tunnel/">Tunnel</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/CGO/">CGO</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/POSIX/">POSIX</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/CronJob/">CronJob</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Distributed/">Distributed</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/k8s/">K8s</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Fieldmask/">Fieldmask</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/protocol-buffers/">Protocol-Buffers</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/OpenTelemetry/">OpenTelemetry</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Sentry/">Sentry</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Tools/">Tools</a>
+          <span>6</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Load-Balancing/">Load Balancing</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/docker/">Docker</a>
+          <span>6</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E9%95%9C%E5%83%8F/">镜像</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Jaeger/">Jaeger</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Opentracing/">Opentracing</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Tracing/">Tracing</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Channel/">Channel</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/goim/">Goim</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Gin/">Gin</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/memory-leak/">Memory Leak</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/pprof/">Pprof</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/hashtable/">Hashtable</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/im/">Im</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/socket.io/">Socket.io</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/cache/">Cache</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/repository/">Repository</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/AMQP/">AMQP</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Network/">Network</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Ring-Buffer/">Ring Buffer</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Algorithm/">Algorithm</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Caching/">Caching</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/LRU/">LRU</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/LRU-K/">LRU-K</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Crypto/">Crypto</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/RC4/">RC4</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/snowflake/">Snowflake</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/hot-reload/">Hot-Reload</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Swagger/">Swagger</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/QR-Code/">QR Code</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/etcd/">Etcd</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/microservice/">Microservice</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E6%9C%8D%E5%8A%A1%E6%B3%A8%E5%86%8C%E5%8F%91%E7%8E%B0/">服务注册发现</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/DTO/">DTO</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/HTTP/">HTTP</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Note/">Note</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/api-gateway/">Api-Gateway</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/round-robin/">Round-Robin</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/weighted-round-robin/">Weighted-Round-Robin</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/JSON-RPC2.0/">JSON-RPC2.0</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/RPC/">RPC</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/App/">App</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/RN/">RN</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Spider/">Spider</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/CD/">CD</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/CI/">CI</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Jenkins/">Jenkins</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Distributed-Architecture/">Distributed Architecture</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/aliyun/">Aliyun</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/rds/">Rds</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Trie/">Trie</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Dynamic-Programming/">Dynamic Programming</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Levenshtein-Distance/">Levenshtein Distance</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/ShortURL/">ShortURL</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/drone/">Drone</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/docker-compose/">Docker Compose</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/selenium/">Selenium</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Test/">Test</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Pytest/">Pytest</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Git/">Git</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/database/">Database</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/index/">Index</a>
+          <span>1</span>
+        </li>
+      
+      </ul>
+    </li>
+    
+  
+  </ul>
+</nav>
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

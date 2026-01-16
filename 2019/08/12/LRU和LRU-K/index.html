@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="LRU(Least Recently Used) 是一种根据数据的历史访问频率来淘汰数据的算法，而LRU-K是这种算法的变种之一，其他变种还包括：MQ，2Q">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2019/08/12/LRU%E5%92%8CLRU-K/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="LRU和LRU-K">
+  <meta property="og:description" content="LRU(Least Recently Used) 是一种根据数据的历史访问频率来淘汰数据的算法，而LRU-K是这种算法的变种之一，其他变种还包括：MQ，2Q">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2019-08-12T20:10:32+08:00">
+    <meta property="article:modified_time" content="2019-08-12T20:10:32+08:00">
+    <meta property="article:tag" content="LRU">
+    <meta property="article:tag" content="LRU-K">
+    <meta property="article:tag" content="Caching">
+    <meta property="article:tag" content="Algorithm">
+<title>LRU和LRU-K | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2019/08/12/LRU%E5%92%8CLRU-K/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>LRU和LRU-K</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#缓存淘汰机制">缓存淘汰机制</a></li>
+        <li><a href="#lru--lru-1">LRU / LRU-1</a></li>
+        <li><a href="#lru-k">LRU-K</a></li>
+        <li><a href="#faq">FAQ</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    LRU和LRU-K
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>August 12, 2019</span>
+  </div>
+
+
+
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/LRU/">LRU</a>, 
+      <a href="/tags/LRU-K/">LRU-K</a>, 
+      <a href="/tags/Caching/">Caching</a>, 
+      <a href="/tags/Algorithm/">Algorithm</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><h3 id="缓存淘汰机制">
+  缓存淘汰机制
+  <a class="anchor" href="#%e7%bc%93%e5%ad%98%e6%b7%98%e6%b1%b0%e6%9c%ba%e5%88%b6">#</a>
+</h3>
+<p>缓存淘汰机制在缓存需要被清理的时候使用。主要有以下几种算法：</p>
+<ul>
+<li>FIFO：先入先出，优先清理最先被缓存的数据对象。实现简单，直接使用队列就可以实现。</li>
+<li>LRU：最近最久未被使用，优先清理最近没有被使用的对象。使用一个最近使用时间降序的有序队列，优先清理队列对后的数据。与LFU的区别在于：LRU是按照最近使用使用的时间排序，LFU需要维护一个使用频次并用于排序。</li>
+<li>LFU：最近最少使用，优先清理最近最少使用的数据对象。使用一个使用次数降序的有序队列，优先清理队列最后的数据。</li>
+</ul>
+<p>// <em>其中LRU和LFU可以通过维护一个Hashmap来提高访问效率。</em></p>
+<h3 id="lru--lru-1">
+  LRU / LRU-1
+  <a class="anchor" href="#lru--lru-1">#</a>
+</h3>
+<p>LRU（Least recently used，最近最少使用）算法根据数据的历史访问记录来进行淘汰数据，其核心思想是“如果数据最近被访问过，那么将来被访问的几率也更高”。实现思路也很简单，就不过多赘述了：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// data to cache
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">data</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">key</span>   <span style="color:#66d9ef">int</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">value</span> <span style="color:#66d9ef">int</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// LRUCache structture to support LRU alg.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">LRUCache</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">recoder</span> <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">int</span>]<span style="color:#f92672">*</span><span style="color:#a6e22e">list</span>.<span style="color:#a6e22e">Element</span> <span style="color:#75715e">// key hit for get op O(1)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">linked</span>  <span style="color:#f92672">*</span><span style="color:#a6e22e">list</span>.<span style="color:#a6e22e">List</span>            <span style="color:#75715e">// linked-list
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">rest</span>    <span style="color:#66d9ef">int</span>                   <span style="color:#75715e">// rest capacity
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// Constructor ... to generate a LRUCache
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">Constructor</span>(<span style="color:#a6e22e">capacity</span> <span style="color:#66d9ef">int</span>) <span style="color:#a6e22e">LRUCache</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">c</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">LRUCache</span>{
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">rest</span>:    <span style="color:#a6e22e">capacity</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">linked</span>:  <span style="color:#a6e22e">list</span>.<span style="color:#a6e22e">New</span>(),
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">recoder</span>: make(<span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">int</span>]<span style="color:#f92672">*</span><span style="color:#a6e22e">list</span>.<span style="color:#a6e22e">Element</span>),
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">c</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// Get ... O(1) wanted
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">LRUCache</span>) <span style="color:#a6e22e">Get</span>(<span style="color:#a6e22e">key</span> <span style="color:#66d9ef">int</span>) <span style="color:#66d9ef">int</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">v</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">recoder</span>[<span style="color:#a6e22e">key</span>]
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">ok</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// hit the key
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">_</span> = <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">linked</span>.<span style="color:#a6e22e">Remove</span>(<span style="color:#a6e22e">v</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">recoder</span>[<span style="color:#a6e22e">key</span>] = <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">linked</span>.<span style="color:#a6e22e">PushFront</span>(<span style="color:#a6e22e">v</span>.<span style="color:#a6e22e">Value</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;get&#34;</span>, <span style="color:#a6e22e">key</span>, <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">linked</span>.<span style="color:#a6e22e">Len</span>(), <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">recoder</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">v</span>.<span style="color:#a6e22e">Value</span>.(<span style="color:#f92672">*</span><span style="color:#a6e22e">data</span>).<span style="color:#a6e22e">value</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// Put ... O(1) wanted
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">LRUCache</span>) <span style="color:#a6e22e">Put</span>(<span style="color:#a6e22e">key</span> <span style="color:#66d9ef">int</span>, <span style="color:#a6e22e">value</span> <span style="color:#66d9ef">int</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">v</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">recoder</span>[<span style="color:#a6e22e">key</span>]; <span style="color:#a6e22e">ok</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">linked</span>.<span style="color:#a6e22e">Remove</span>(<span style="color:#a6e22e">v</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">goto</span> <span style="color:#a6e22e">h</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">rest</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">tail</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">linked</span>.<span style="color:#a6e22e">Back</span>()
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">linked</span>.<span style="color:#a6e22e">Remove</span>(<span style="color:#a6e22e">tail</span>)
+</span></span><span style="display:flex;"><span>        delete(<span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">recoder</span>, <span style="color:#a6e22e">tail</span>.<span style="color:#a6e22e">Value</span>.(<span style="color:#f92672">*</span><span style="color:#a6e22e">data</span>).<span style="color:#a6e22e">key</span>)
+</span></span><span style="display:flex;"><span>    } <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">rest</span><span style="color:#f92672">--</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">h</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">head</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">linked</span>.<span style="color:#a6e22e">PushFront</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">data</span>{<span style="color:#a6e22e">key</span>, <span style="color:#a6e22e">value</span>})
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">recoder</span>[<span style="color:#a6e22e">key</span>] = <span style="color:#a6e22e">head</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="lru-k">
+  LRU-K
+  <a class="anchor" href="#lru-k">#</a>
+</h3>
+<p>LRU-K的主要目的是为了解决LRU算法“缓存污染”的问题，其核心思想是将“最近使用过1次”的判断标准扩展为“最近使用过K次”。也就是说没有到达K次访问的数据并不会被缓存，这也意味着需要对于缓存数据的访问次数进行计数，并且访问记录不能无限记录，也需要使用替换算法进行替换。当需要淘汰数据时，LRU-K会淘汰第K次访问时间距当前时间最大的数据。</p>
+<blockquote>
+<p>简单的描述就是：当访问次数达到K次后，将数据索引从历史队列移到缓存队列中（缓存队列时间降序）；缓存数据队列中被访问后重新排序；需要淘汰数据时，淘汰缓存队列中排在末尾的数据。</p>
+</blockquote>
+<p>相比于LRU-1，缓存数据更不容易被替换，而且偶发性的数据不易被缓存。在保证了缓存数据纯净的同时还提高了热点数据命中率。</p>
+<p><em><strong><a href="https://github.com/yeqown/">code</a></strong></em> <em>有点略长</em></p>
+<blockquote>
+<p>下面的代码只能帮助理解LRU-K的算法思想，并不适用于生产。</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// LRUKCache history count struct
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">historyCounter</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">key</span>     <span style="color:#66d9ef">int</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">visited</span> <span style="color:#66d9ef">uint</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// LRUKCache .
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">LRUKCache</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">K</span>           <span style="color:#66d9ef">uint</span>                  <span style="color:#75715e">// the K setting
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">rest</span>        <span style="color:#66d9ef">uint</span>                  <span style="color:#75715e">// max - used = rest
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">historyRest</span> <span style="color:#66d9ef">uint</span>                  <span style="color:#75715e">// historyMax - used = historyRest
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">history</span>     <span style="color:#f92672">*</span><span style="color:#a6e22e">list</span>.<span style="color:#a6e22e">List</span>            <span style="color:#75715e">// history doubly linked list
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">historyHash</span> <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">int</span>]<span style="color:#f92672">*</span><span style="color:#a6e22e">list</span>.<span style="color:#a6e22e">Element</span> <span style="color:#75715e">// history get op O(1)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">cache</span>       <span style="color:#f92672">*</span><span style="color:#a6e22e">list</span>.<span style="color:#a6e22e">List</span>            <span style="color:#75715e">// cache doubly linked list, save
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">cacheHash</span>   <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">int</span>]<span style="color:#f92672">*</span><span style="color:#a6e22e">list</span>.<span style="color:#a6e22e">Element</span> <span style="color:#75715e">// cache get op O(1)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// NewLRUKCache .
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">NewLRUKCache</span>(<span style="color:#a6e22e">k</span> <span style="color:#66d9ef">uint</span>, <span style="color:#a6e22e">capacity</span> <span style="color:#66d9ef">uint</span>) <span style="color:#f92672">*</span><span style="color:#a6e22e">LRUKCache</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ignored
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// reorderCache cache linked-list to sort (Least Recently Used)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">LRUKCache</span>) <span style="color:#a6e22e">reorderCache</span>(<span style="color:#a6e22e">ele</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">list</span>.<span style="color:#a6e22e">Element</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 默认最近访问的元素排在队首
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">LRUKCache</span>) <span style="color:#a6e22e">cacheReplacingCheck</span>() {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">rest</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 如果超出容量则删除队尾元素
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">LRUKCache</span>) <span style="color:#a6e22e">historyReplacingCheck</span>() {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">historyRest</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 如果超出容量则删除队尾元素
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">LRUKCache</span>) <span style="color:#a6e22e">delfromHistory</span>(<span style="color:#a6e22e">key</span> <span style="color:#66d9ef">int</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 从历史中删除一个元素
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">LRUKCache</span>) <span style="color:#a6e22e">addtoCache</span>(<span style="color:#a6e22e">d</span> <span style="color:#a6e22e">data</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 增加一条缓存记录
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">LRUKCache</span>) <span style="color:#a6e22e">addtoHistory</span>(<span style="color:#a6e22e">key</span>, <span style="color:#a6e22e">value</span> <span style="color:#66d9ef">int</span>) <span style="color:#a6e22e">historyCounter</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">var</span> (
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">hc</span> <span style="color:#a6e22e">historyCounter</span>
+</span></span><span style="display:flex;"><span>    )
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">hEle</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">historyHash</span>[<span style="color:#a6e22e">key</span>]
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">ok</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 如果已经存在于历史队列中，则自增访问次数
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">hc</span> = <span style="color:#a6e22e">hEle</span>.<span style="color:#a6e22e">Value</span>.(<span style="color:#a6e22e">historyCounter</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">hc</span>.<span style="color:#a6e22e">visited</span><span style="color:#f92672">++</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 如果访问次数达到标准，则从历史中演移除，增加在缓存队列中去
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">hc</span>.<span style="color:#a6e22e">visited</span> <span style="color:#f92672">&gt;=</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">K</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">// true: removed from history, and add into cache
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">delfromHistory</span>(<span style="color:#a6e22e">key</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">addtoCache</span>(<span style="color:#a6e22e">data</span>{<span style="color:#a6e22e">key</span>: <span style="color:#a6e22e">key</span>, <span style="color:#a6e22e">value</span>: <span style="color:#a6e22e">value</span>})
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">hc</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 否则写回历史队列
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">hEle</span>.<span style="color:#a6e22e">Value</span> = <span style="color:#a6e22e">hc</span>
+</span></span><span style="display:flex;"><span>    } <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 如果不存在于历史队列中
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">historyReplacingCheck</span>()
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">hc</span> = <span style="color:#a6e22e">historyCounter</span>{<span style="color:#a6e22e">key</span>: <span style="color:#a6e22e">key</span>, <span style="color:#a6e22e">visited</span>: <span style="color:#ae81ff">1</span>}
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">hEle</span> = <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">history</span>.<span style="color:#a6e22e">PushFront</span>(<span style="color:#a6e22e">hc</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">historyRest</span><span style="color:#f92672">--</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 更新历史访问数据
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">historyHash</span>[<span style="color:#a6e22e">key</span>] = <span style="color:#a6e22e">hEle</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">hc</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// Get key of cache in LRUKCache .
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">LRUKCache</span>) <span style="color:#a6e22e">Get</span>(<span style="color:#a6e22e">key</span> <span style="color:#66d9ef">int</span>) (<span style="color:#a6e22e">value</span> <span style="color:#66d9ef">int</span>, <span style="color:#a6e22e">ok</span> <span style="color:#66d9ef">bool</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">ele</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">cacheHash</span>[<span style="color:#a6e22e">key</span>]
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">ok</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">reorderCache</span>(<span style="color:#a6e22e">ele</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">ele</span>.<span style="color:#a6e22e">Value</span>.(<span style="color:#a6e22e">data</span>).<span style="color:#a6e22e">value</span>, <span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// false: missed
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>, <span style="color:#66d9ef">false</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// Put of LRUKCache
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">LRUKCache</span>) <span style="color:#a6e22e">Put</span>(<span style="color:#a6e22e">key</span>, <span style="color:#a6e22e">value</span> <span style="color:#66d9ef">int</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">ele</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">cacheHash</span>[<span style="color:#a6e22e">key</span>]
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">ok</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// true: hit the key
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">reorderCache</span>(<span style="color:#a6e22e">ele</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">_</span> = <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">addtoHistory</span>(<span style="color:#a6e22e">key</span>, <span style="color:#a6e22e">value</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Printf</span>(<span style="color:#e6db74">&#34;cacheRest: %d / cacheMap: %v \nhistoryRest: %d / historyMap: %v\n\n&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">rest</span>, <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">cacheHash</span>, <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">historyRest</span>, <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">historyHash</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p><em><strong>testcase</strong></em></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">TestLRUKCache</span>(<span style="color:#a6e22e">t</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">testing</span>.<span style="color:#a6e22e">T</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">cache</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">cp</span>.<span style="color:#a6e22e">NewLRUKCache</span>(<span style="color:#ae81ff">2</span>, <span style="color:#ae81ff">2</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">cache</span>.<span style="color:#a6e22e">Put</span>(<span style="color:#ae81ff">2</span>, <span style="color:#ae81ff">1</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">hit</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">cache</span>.<span style="color:#a6e22e">Get</span>(<span style="color:#ae81ff">2</span>); <span style="color:#a6e22e">hit</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">t</span>.<span style="color:#a6e22e">Error</span>(<span style="color:#e6db74">&#34;could not get 2 hit&#34;</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">cache</span>.<span style="color:#a6e22e">Put</span>(<span style="color:#ae81ff">3</span>, <span style="color:#ae81ff">1</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">hit</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">cache</span>.<span style="color:#a6e22e">Get</span>(<span style="color:#ae81ff">3</span>); <span style="color:#a6e22e">hit</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">t</span>.<span style="color:#a6e22e">Error</span>(<span style="color:#e6db74">&#34;could not get 3 hit&#34;</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">cache</span>.<span style="color:#a6e22e">Put</span>(<span style="color:#ae81ff">3</span>, <span style="color:#ae81ff">1</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">hit</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">cache</span>.<span style="color:#a6e22e">Get</span>(<span style="color:#ae81ff">3</span>); !<span style="color:#a6e22e">hit</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">t</span>.<span style="color:#a6e22e">Error</span>(<span style="color:#e6db74">&#34;should get 3 hit&#34;</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">cache</span>.<span style="color:#a6e22e">Put</span>(<span style="color:#ae81ff">4</span>, <span style="color:#ae81ff">1</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">cache</span>.<span style="color:#a6e22e">Put</span>(<span style="color:#ae81ff">4</span>, <span style="color:#ae81ff">1</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">hit</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">cache</span>.<span style="color:#a6e22e">Get</span>(<span style="color:#ae81ff">2</span>); <span style="color:#a6e22e">hit</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">t</span>.<span style="color:#a6e22e">Error</span>(<span style="color:#e6db74">&#34;could not get 2 hit&#34;</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">hit</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">cache</span>.<span style="color:#a6e22e">Get</span>(<span style="color:#ae81ff">4</span>); !<span style="color:#a6e22e">hit</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">t</span>.<span style="color:#a6e22e">Error</span>(<span style="color:#e6db74">&#34;should get 2 hit&#34;</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">hit</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">cache</span>.<span style="color:#a6e22e">Get</span>(<span style="color:#ae81ff">3</span>); !<span style="color:#a6e22e">hit</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">t</span>.<span style="color:#a6e22e">Error</span>(<span style="color:#e6db74">&#34;should get 3 hit&#34;</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p><em><strong>output</strong></em></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span><span style="color:#75715e"># cacheRest: 2, historyRest: 6, k: 2</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># cache.Put(2, 1) </span>
+</span></span><span style="display:flex;"><span>cacheRest: <span style="color:#ae81ff">2</span> / cacheMap: map<span style="color:#f92672">[]</span> 
+</span></span><span style="display:flex;"><span>historyRest: <span style="color:#ae81ff">5</span> / historyMap: map<span style="color:#f92672">[</span>2:0xc00006e420<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># cache.Put(3, 1)</span>
+</span></span><span style="display:flex;"><span>cacheRest: <span style="color:#ae81ff">2</span> / cacheMap: map<span style="color:#f92672">[]</span> 
+</span></span><span style="display:flex;"><span>historyRest: <span style="color:#ae81ff">4</span> / historyMap: map<span style="color:#f92672">[</span>2:0xc00006e420 3:0xc0000e0000<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># cache.Put(3, 1)</span>
+</span></span><span style="display:flex;"><span>cacheRest: <span style="color:#ae81ff">1</span> / cacheMap: map<span style="color:#f92672">[</span>3:0xc00006e4b0<span style="color:#f92672">]</span> 
+</span></span><span style="display:flex;"><span>historyRest: <span style="color:#ae81ff">5</span> / historyMap: map<span style="color:#f92672">[</span>2:0xc00006e420<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># cache.Put(4, 1)</span>
+</span></span><span style="display:flex;"><span>cacheRest: <span style="color:#ae81ff">1</span> / cacheMap: map<span style="color:#f92672">[</span>3:0xc00006e4b0<span style="color:#f92672">]</span> 
+</span></span><span style="display:flex;"><span>historyRest: <span style="color:#ae81ff">4</span> / historyMap: map<span style="color:#f92672">[</span>2:0xc00006e420 4:0xc00006e570<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># cache.Put(4, 1)</span>
+</span></span><span style="display:flex;"><span>cacheRest: <span style="color:#ae81ff">0</span> / cacheMap: map<span style="color:#f92672">[</span>3:0xc00006e4b0 4:0xc0000e00f0<span style="color:#f92672">]</span> 
+</span></span><span style="display:flex;"><span>historyRest: <span style="color:#ae81ff">5</span> / historyMap: map<span style="color:#f92672">[</span>2:0xc00006e420<span style="color:#f92672">]</span>
+</span></span></code></pre></div><h3 id="faq">
+  FAQ
+  <a class="anchor" href="#faq">#</a>
+</h3>
+<p>Q1. LRU缓存污染指的是什么情况？</p>
+<blockquote>
+<p>偶发性的、周期性的批量操作会导致LRU命中率急剧下降，这时候缓存中的数据大部分都不是热点数据。</p>
+</blockquote>
+<p>Q2. LRU-K的K值怎么确定？</p>
+<blockquote>
+<p>K值增大，命中率会更高，但是适应性差（清除一个缓存需要大量的数据访问，一般选择LRU-2）。</p>
+</blockquote>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "lru-and-lru-k", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#缓存淘汰机制">缓存淘汰机制</a></li>
+        <li><a href="#lru--lru-1">LRU / LRU-1</a></li>
+        <li><a href="#lru-k">LRU-K</a></li>
+        <li><a href="#faq">FAQ</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

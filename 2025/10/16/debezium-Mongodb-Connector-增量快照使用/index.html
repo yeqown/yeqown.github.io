@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="在之前的一篇博客中提到了 MongodbSourceConnector 支持增量快照，可以用来解决大数据集在快照时无法完成的问题，那么具体应该怎么使用？它又是怎么实现的？">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2025/10/16/debezium-Mongodb-Connector-%E5%A2%9E%E9%87%8F%E5%BF%AB%E7%85%A7%E4%BD%BF%E7%94%A8/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="Debezium Mongodb Connector 增量快照使用">
+  <meta property="og:description" content="在之前的一篇博客中提到了 MongodbSourceConnector 支持增量快照，可以用来解决大数据集在快照时无法完成的问题，那么具体应该怎么使用？它又是怎么实现的？">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2025-10-16T14:34:23+08:00">
+    <meta property="article:modified_time" content="2025-10-16T14:34:23+08:00">
+    <meta property="article:tag" content="Kafka Connect">
+    <meta property="article:tag" content="Mongodb">
+    <meta property="article:tag" content="Source Connector">
+    <meta property="article:tag" content="Debezium">
+    <meta property="article:tag" content="Incremental Snapshot">
+<title>Debezium Mongodb Connector 增量快照使用 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2025/10/16/debezium-Mongodb-Connector-%E5%A2%9E%E9%87%8F%E5%BF%AB%E7%85%A7%E4%BD%BF%E7%94%A8/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>Debezium Mongodb Connector 增量快照使用</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#机制简介">机制简介</a></li>
+    <li><a href="#使用场景">使用场景</a></li>
+    <li><a href="#使用演示">使用演示</a>
+      <ul>
+        <li><a href="#1-创建存量数据">1. 创建存量数据</a></li>
+        <li><a href="#2-创建-connector">2. 创建 Connector</a></li>
+        <li><a href="#3-检查存量数据是否被同步到-es-中">3. 检查存量数据是否被同步到 ES 中</a></li>
+        <li><a href="#4-插入数据验证变更流处理正常">4. 插入数据验证变更流处理正常</a></li>
+        <li><a href="#5-触发增量快照-模拟大数据集合">5. 触发增量快照-模拟大数据集合</a></li>
+        <li><a href="#6-触发增量快照-重新快照">6. 触发增量快照-重新快照</a></li>
+      </ul>
+    </li>
+    <li><a href="#实现原理">实现原理</a>
+      <ul>
+        <li><a href="#1-dblog---顶层架构">1. DBLog - 顶层架构</a></li>
+        <li><a href="#2-dblog---实现细节">2. DBLog - 实现细节</a></li>
+        <li><a href="#3-debezium-实现源码">3. Debezium 实现源码</a></li>
+      </ul>
+    </li>
+    <li><a href="#总结">总结</a></li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    Debezium Mongodb Connector 增量快照使用
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>October 16, 2025</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Kafka-Connect/">Kafka Connect</a>, 
+      <a href="/tags/Mongodb/">Mongodb</a>, 
+      <a href="/tags/Source-Connector/">Source Connector</a>, 
+      <a href="/tags/Debezium/">Debezium</a>, 
+      <a href="/tags/Incremental-Snapshot/">Incremental Snapshot</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><blockquote>
+<p>之前的博客 <a href="https://yeqown.xyz/2024/12/17/%E8%BF%91%E6%9C%9F%E7%9A%84%E4%B8%80%E4%BA%9B%E7%BB%8F%E9%AA%8C%E6%80%BB%E7%BB%93/#16-cdc-kafka-connect-mongodb-%e4%be%a7%e5%8f%8d%e5%a4%8d%e8%bf%9b%e8%a1%8c-%e5%bf%ab%e7%85%a7-%e5%af%bc%e8%87%b4%e6%95%b0%e6%8d%ae%e5%90%8c%e6%ad%a5%e5%bc%82%e5%b8%b8">Kafka Connect Mongodb 反复快照 - 大数据集快照</a></p>
+</blockquote>
+<p><em>本文中使用的 <code>MongodbSourceConnector</code> 是 <code>io.debezium.connector.mongodb.MongoDbConnector 2.2.1.Final</code>。</em></p>
+<h2 id="机制简介">
+  机制简介
+  <a class="anchor" href="#%e6%9c%ba%e5%88%b6%e7%ae%80%e4%bb%8b">#</a>
+</h2>
+<p>为了提供管理快照的灵活性，Debezium 包含一个补充快照机制，称为增量快照。增量快照依赖于 Debezium 机制向 Debezium 连接器发送信号。‼️ <em><strong>增量快照运行时，不会阻塞变更流事件处理</strong></em>。</p>
+<blockquote>
+<p>初始快照会先保存 change stream 的位点，开始执行全量快照，全量快照完成后，再从保存的位点开始增量处理变更事件。</p>
+</blockquote>
+<p>目前 Debezium 支持增量快照的连接器有：</p>
+<ul>
+<li>Db2</li>
+<li>MariaDB (Technology Preview)</li>
+<li>MongoDB</li>
+<li>MySQL</li>
+<li>Oracle</li>
+<li>PostgreSQL</li>
+<li>SQL Server</li>
+</ul>
+<p>发送这个信号支持多种方式，通过配置 <code>signal.enabled.channels</code> 来指定，默认为 <code>source</code>（也就是数据集合方式），可选值有：source、kafka、file 和 jmx：</p>
+<ul>
+<li>source 源数据库： 配置 <code>signal.data.collection</code> 来指定集合</li>
+<li>kafka: 配置 <code>signal.kafka.topic</code> 来指定 topic</li>
+<li>file: 配置 <code>signal.file</code> 来指定文件路径，写入文件的格式数据为 JSON，字段取值参考下面的表格。</li>
+<li>jmx: 启用 <code>JMX MBean Server</code> 来暴露 signaling bean</li>
+</ul>
+<p>需要启用增量快照时，只需要向特定方式中写入数据即可。如果是 source 只需要向数据库中插入一条数据，如果是 kafka 那么则是投递一条消息。</p>
+<p><em><strong>source(mongodb) 集合数据格式：</strong></em></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-javascript" data-lang="javascript"><span style="display:flex;"><span><span style="color:#f92672">&lt;</span><span style="color:#a6e22e">signalDataCollection</span><span style="color:#f92672">&gt;</span>.<span style="color:#a6e22e">insert</span>({
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;id&#34;</span> <span style="color:#f92672">:</span> <span style="color:#a6e22e">_</span><span style="color:#f92672">&lt;</span><span style="color:#a6e22e">idNumber</span><span style="color:#f92672">&gt;</span>,            <span style="color:#75715e">// 增量快照信号文档的 ID，必须唯一, 使用 UUID 等方式生成, mongodb 中作为 _id 字段
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#e6db74">&#34;type&#34;</span> <span style="color:#f92672">:</span> <span style="color:#f92672">&lt;</span><span style="color:#a6e22e">snapshotType</span><span style="color:#f92672">&gt;</span>,       <span style="color:#75715e">// 信号类型，固定值: execute-snapshot, stop-snapshot, pause-snapshot, resume-snapshot
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#e6db74">&#34;data&#34;</span> <span style="color:#f92672">:</span> {                     <span style="color:#75715e">// 信号数据，根据 type 不同而不同, 这里以 execute-snapshot 为例
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#e6db74">&#34;data-collections&#34;</span> <span style="color:#f92672">:</span> [     <span style="color:#75715e">// 要执行增量快照的数据集合，必须是已注册的集合
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#e6db74">&#34;&lt;collectionName&gt;&#34;</span>, 
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;&lt;collectionName&gt;&#34;</span>
+</span></span><span style="display:flex;"><span>        ],
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;type&#34;</span><span style="color:#f92672">:</span> <span style="color:#f92672">&lt;</span><span style="color:#a6e22e">snapshotType</span><span style="color:#f92672">&gt;</span>,      <span style="color:#75715e">// 快照类型: `incremental`  和 `blocking`
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#75715e">// 注意：2.2.1-Final 中不支持 additional-conditions，2.7.0-Alpha1 开始支持
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#e6db74">&#34;additional-conditions&#34;</span><span style="color:#f92672">:</span> [   <span style="color:#75715e">// 可选，增量快照时的筛选条件
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            {
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;data-collection&#34;</span> <span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;&lt;collectionName&gt;&#34;</span>,  <span style="color:#75715e">// 指定集合
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>                <span style="color:#e6db74">&#34;filter&#34;</span> <span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;&lt;additional-condition&gt;&#34;</span>        <span style="color:#75715e">// 可选，增量快照时的筛选条件，如：`age &gt; 18`
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            }
+</span></span><span style="display:flex;"><span>        ] 
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>});
+</span></span></code></pre></div><p>举例如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;id&#34;</span>: <span style="color:#e6db74">&#34;execute-mode-snapshot-sample&#34;</span>, 
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;type&#34;</span>: <span style="color:#e6db74">&#34;execute-snapshot&#34;</span>, 
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;data&#34;</span>: {
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;data-collections&#34;</span>: [
+</span></span><span style="display:flex;"><span>      <span style="color:#e6db74">&#34;test.users&#34;</span>
+</span></span><span style="display:flex;"><span>    ],
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;type&#34;</span>: <span style="color:#e6db74">&#34;incremental&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;additional-conditions&#34;</span>: [
+</span></span><span style="display:flex;"><span>      {
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&#34;data-collection&#34;</span>: <span style="color:#e6db74">&#34;test.users&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&#34;filter&#34;</span>: <span style="color:#e6db74">&#34;age &gt; 18&#34;</span>
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>    ]
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p><em><strong>kafka 消息格式：</strong></em></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>Key <span style="color:#f92672">=</span> <span style="color:#e6db74">`</span>test_connector<span style="color:#e6db74">`</span>
+</span></span><span style="display:flex;"><span>Value <span style="color:#f92672">=</span> <span style="color:#e6db74">`</span><span style="color:#f92672">{</span><span style="color:#e6db74">&#34;type&#34;</span>:<span style="color:#e6db74">&#34;execute-snapshot&#34;</span>,<span style="color:#e6db74">&#34;data&#34;</span>: <span style="color:#f92672">{</span><span style="color:#e6db74">&#34;data-collections&#34;</span>: <span style="color:#f92672">[</span><span style="color:#e6db74">&#34;schema1.table1&#34;</span>, <span style="color:#e6db74">&#34;schema1.table2&#34;</span><span style="color:#f92672">]</span>, <span style="color:#e6db74">&#34;type&#34;</span>: <span style="color:#e6db74">&#34;INCREMENTAL&#34;</span><span style="color:#f92672">}}</span><span style="color:#e6db74">`</span>
+</span></span></code></pre></div><blockquote>
+<p>其实现基于 <a href="https://github.com/debezium/debezium-design-documents/blob/main/DDD-3.md">DDD-3 设计文档</a> ；官方详细介绍在 <a href="https://debezium.io/documentation/reference/stable/configuration/signalling.html">debezium mongodb incremental-snapshots</a>。</p>
+</blockquote>
+<h2 id="使用场景">
+  使用场景
+  <a class="anchor" href="#%e4%bd%bf%e7%94%a8%e5%9c%ba%e6%99%af">#</a>
+</h2>
+<p>增量快照提出的背景是：</p>
+<ul>
+<li>Debezium 通常通过数据库事务日志流式传输变更数据。然而，初始快照（即捕获既有数据）是全表扫描。这种方式不仅耗时长，而且一旦中断就需要从头开始。</li>
+<li>在某些场景下，我们不需要立即获取全部历史数据。有时，我们还需要在 connector 运行期间动态添加新表，且不希望暂停数据流转。</li>
+</ul>
+<p>具体举例来说：</p>
+<ol>
+<li>假设 Source Connector 已经将变更同步到 Kafka 中。但在 Sink Connector 消费之前，Kafka 中的 topic 被错误删除。这时如果想要恢复这些数据，使用初始化快照会非常笨重和麻烦。</li>
+<li>假设集合 A 拥有超大数据量，执行完整快照需要 5 个小时。但数据库的 oplog 最多只能保存 1 个小时的变更事件。在这种情况下，如果使用初始快照，就无法实现完整的数据同步。</li>
+</ol>
+<h2 id="使用演示">
+  使用演示
+  <a class="anchor" href="#%e4%bd%bf%e7%94%a8%e6%bc%94%e7%a4%ba">#</a>
+</h2>
+<p>假设已经搭建好了一整套 CDC 系统: 将 mongodb 中的 <code>test.users</code> 同步到 ES 中。</p>
+<h3 id="1-创建存量数据">
+  1. 创建存量数据
+  <a class="anchor" href="#1-%e5%88%9b%e5%bb%ba%e5%ad%98%e9%87%8f%e6%95%b0%e6%8d%ae">#</a>
+</h3>
+<p>为了演示增量快照的使用，我们先向 <code>test.users</code> 集合中插入 5 条数据：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-javascript" data-lang="javascript"><span style="display:flex;"><span><span style="color:#66d9ef">for</span>(<span style="color:#66d9ef">let</span> <span style="color:#a6e22e">i</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>; <span style="color:#a6e22e">i</span> <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">5</span>; <span style="color:#a6e22e">i</span><span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">users</span>.<span style="color:#a6e22e">insertOne</span>({
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">name</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#39;Pre-connector User &#39;</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">i</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">email</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#39;pre&#39;</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">i</span> <span style="color:#f92672">+</span> <span style="color:#e6db74">&#39;@example.com&#39;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">created_at</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">new</span> Date()
+</span></span><span style="display:flex;"><span>  });
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="2-创建-connector">
+  2. 创建 Connector
+  <a class="anchor" href="#2-%e5%88%9b%e5%bb%ba-connector">#</a>
+</h3>
+<p>其中 Source Connector 配置如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;name&#34;</span>: <span style="color:#e6db74">&#34;mongodb-source&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;config&#34;</span>: {
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&#34;connector.class&#34;</span>: <span style="color:#e6db74">&#34;io.debezium.connector.mongodb.MongoDbConnector&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&#34;mongodb.connection.string&#34;</span>: <span style="color:#e6db74">&#34;mongodb://mongodb:27017/?replicaSet=rs0&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&#34;topic.prefix&#34;</span>: <span style="color:#e6db74">&#34;mongodb-cdc&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&#34;database.include.list&#34;</span>: <span style="color:#e6db74">&#34;test&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&#34;collection.include.list&#34;</span>: <span style="color:#e6db74">&#34;test.users&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&#34;snapshot.mode&#34;</span>: <span style="color:#e6db74">&#34;never&#34;</span>,                            <span style="color:#75715e">// 快照模式，never 代表不执行快照，只处理变更流（如果是大数据集合，建议使用 never，通过增量快照来处理存量数据）
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#f92672">&#34;incremental.snapshot.chunk.size&#34;</span>: <span style="color:#e6db74">&#34;1024&#34;</span>,           <span style="color:#75715e">// 增量快照每次处理的文档数
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#f92672">&#34;incremental.snapshot.allow.schema.changes&#34;</span>: <span style="color:#e6db74">&#34;true&#34;</span>, <span style="color:#75715e">// 是否允许增量快照时集合的 schema 发生变化
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#f92672">&#34;signal.data.collection&#34;</span>: <span style="color:#e6db74">&#34;test.debezium_signal&#34;</span>     <span style="color:#75715e">// 增量快照信号集合
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># 创建 Source Connector</span>
+</span></span><span style="display:flex;"><span>curl -X POST http://localhost:8083/connectors -H <span style="color:#e6db74">&#34;Content-Type: application/json&#34;</span> -d @connector-tasks/mongodb-source.test.users.json
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 创建 Sink Connector</span>
+</span></span><span style="display:flex;"><span>curl -X POST http://localhost:8083/connectors -H <span style="color:#e6db74">&#34;Content-Type: application/json&#34;</span> -d @connector-tasks/es-sink.mongodb.users.json
+</span></span></code></pre></div><h3 id="3-检查存量数据是否被同步到-es-中">
+  3. 检查存量数据是否被同步到 ES 中
+  <a class="anchor" href="#3-%e6%a3%80%e6%9f%a5%e5%ad%98%e9%87%8f%e6%95%b0%e6%8d%ae%e6%98%af%e5%90%a6%e8%a2%ab%e5%90%8c%e6%ad%a5%e5%88%b0-es-%e4%b8%ad">#</a>
+</h3>
+<p>我们可以通过查询 ES 中的 <code>mongodb-cdc-test-users</code> 索引来检查存量数据是否被同步到 ES 中：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>&gt; sleep <span style="color:#ae81ff">10</span> <span style="color:#f92672">&amp;&amp;</span> curl -X GET <span style="color:#e6db74">&#34;http://localhost:9200/_cat/indices?v&#34;</span> <span style="color:#f92672">&amp;&amp;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span><span style="color:#ae81ff"></span>    echo <span style="color:#f92672">&amp;&amp;</span> curl -X GET <span style="color:#e6db74">&#34;http://localhost:9200/mongodb-cdc.test.users/_count&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+</span></span><span style="display:flex;"><span>                                 Dload  Upload   Total   Spent    Left  Speed
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">100</span>    <span style="color:#ae81ff">83</span>  <span style="color:#ae81ff">100</span>    <span style="color:#ae81ff">83</span>    <span style="color:#ae81ff">0</span>     <span style="color:#ae81ff">0</span>   <span style="color:#ae81ff">1659</span>      <span style="color:#ae81ff">0</span> --:--:-- --:--:-- --:--:--  <span style="color:#ae81ff">1693</span>
+</span></span><span style="display:flex;"><span>health status index uuid pri rep docs.count docs.deleted store.size pri.store.size
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#e6db74">&#34;error&#34;</span>: <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;root_cause&#34;</span>: <span style="color:#f92672">[</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;type&#34;</span>: <span style="color:#e6db74">&#34;index_not_found_exception&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;reason&#34;</span>: <span style="color:#e6db74">&#34;no such index [mongodb-cdc.test.users]&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;resource.type&#34;</span>: <span style="color:#e6db74">&#34;index_or_alias&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;resource.id&#34;</span>: <span style="color:#e6db74">&#34;mongodb-cdc.test.users&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;index_uuid&#34;</span>: <span style="color:#e6db74">&#34;_na_&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;index&#34;</span>: <span style="color:#e6db74">&#34;mongodb-cdc.test.users&#34;</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">}</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">]</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;type&#34;</span>: <span style="color:#e6db74">&#34;index_not_found_exception&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;reason&#34;</span>: <span style="color:#e6db74">&#34;no such index [mongodb-cdc.test.users]&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;resource.type&#34;</span>: <span style="color:#e6db74">&#34;index_or_alias&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;resource.id&#34;</span>: <span style="color:#e6db74">&#34;mongodb-cdc.test.users&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;index_uuid&#34;</span>: <span style="color:#e6db74">&#34;_na_&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;index&#34;</span>: <span style="color:#e6db74">&#34;mongodb-cdc.test.users&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">}</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#e6db74">&#34;status&#34;</span>: <span style="color:#ae81ff">404</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">}</span>
+</span></span></code></pre></div><p>可以看到，ES 中没有 <code>mongodb-cdc-test-users</code> 索引，说明存量数据还没有被同步到 ES 中。</p>
+<h3 id="4-插入数据验证变更流处理正常">
+  4. 插入数据验证变更流处理正常
+  <a class="anchor" href="#4-%e6%8f%92%e5%85%a5%e6%95%b0%e6%8d%ae%e9%aa%8c%e8%af%81%e5%8f%98%e6%9b%b4%e6%b5%81%e5%a4%84%e7%90%86%e6%ad%a3%e5%b8%b8">#</a>
+</h3>
+<p>为了验证变更流处理正常，我们向 <code>test.users</code> 集合中插入一条数据：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-javascript" data-lang="javascript"><span style="display:flex;"><span><span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">users</span>.<span style="color:#a6e22e">insertOne</span>({
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">name</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#39;CDC Test User&#39;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">email</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#39;cdc@example.com&#39;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">created_at</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">new</span> Date()
+</span></span><span style="display:flex;"><span>});
+</span></span></code></pre></div><p>再检查 ES 中的 <code>mongodb-cdc-test-users</code> 索引，可以看到新增的数据：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>&gt; sleep <span style="color:#ae81ff">10</span> <span style="color:#f92672">&amp;&amp;</span> curl -X GET <span style="color:#e6db74">&#34;http://localhost:9200/mongodb-cdc.test.users/_count&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#e6db74">&#34;count&#34;</span>: 1,
+</span></span><span style="display:flex;"><span>  <span style="color:#e6db74">&#34;_shards&#34;</span>: <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;total&#34;</span>: 1,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;successful&#34;</span>: 1,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;skipped&#34;</span>: 0,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;failed&#34;</span>: <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">}</span>
+</span></span></code></pre></div><h3 id="5-触发增量快照-模拟大数据集合">
+  5. 触发增量快照-模拟大数据集合
+  <a class="anchor" href="#5-%e8%a7%a6%e5%8f%91%e5%a2%9e%e9%87%8f%e5%bf%ab%e7%85%a7-%e6%a8%a1%e6%8b%9f%e5%a4%a7%e6%95%b0%e6%8d%ae%e9%9b%86%e5%90%88">#</a>
+</h3>
+<p>现在向 <code>test.debezium_signal</code> 集合中插入一条文档：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-javascript" data-lang="javascript"><span style="display:flex;"><span><span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">debezium_signal</span>.<span style="color:#a6e22e">insertOne</span>({
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">_id</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#39;never-mode-snapshot&#39;</span>, <span style="color:#75715e">// 增量快照信号文档的 ID，必须唯一, 使用 UUID 等方式生成
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>  <span style="color:#a6e22e">type</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#39;execute-snapshot&#39;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">data</span><span style="color:#f92672">:</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;data-collections&#39;</span><span style="color:#f92672">:</span> [<span style="color:#e6db74">&#39;test.users&#39;</span>],
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;type&#39;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#39;incremental&#39;</span>
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>});
+</span></span></code></pre></div><p>再检查 ES 中的 <code>mongodb-cdc-test-users</code> 索引，可以看到增量快照处理完成后，数据总数为 6：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>&gt; sleep <span style="color:#ae81ff">10</span> <span style="color:#f92672">&amp;&amp;</span> curl -X GET <span style="color:#e6db74">&#34;http://localhost:9200/mongodb-cdc.test.users/_count&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#e6db74">&#34;count&#34;</span>: 6,
+</span></span><span style="display:flex;"><span>  <span style="color:#e6db74">&#34;_shards&#34;</span>: <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;total&#34;</span>: 1,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;successful&#34;</span>: 1,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;skipped&#34;</span>: 0,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;failed&#34;</span>: <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">}</span>
+</span></span></code></pre></div><table>
+  <thead>
+      <tr>
+          <th>场景</th>
+          <th>Mongodb 中数据</th>
+          <th>ES 中数据</th>
+          <th>kafka 中消息</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>触发前</td>
+          <td>6 条</td>
+          <td>1 条</td>
+          <td>1 条</td>
+      </tr>
+      <tr>
+          <td>触发后</td>
+          <td>6 条</td>
+          <td>6 条</td>
+          <td>7 条</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="6-触发增量快照-重新快照">
+  6. 触发增量快照-重新快照
+  <a class="anchor" href="#6-%e8%a7%a6%e5%8f%91%e5%a2%9e%e9%87%8f%e5%bf%ab%e7%85%a7-%e9%87%8d%e6%96%b0%e5%bf%ab%e7%85%a7">#</a>
+</h3>
+<p>这时候再触发一次增量快照，模拟重新触发增量快照的场景：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-javascript" data-lang="javascript"><span style="display:flex;"><span><span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">debezium_signal</span>.<span style="color:#a6e22e">insertOne</span>({
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">_id</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#39;never-mode-snapshot-again&#39;</span>, <span style="color:#75715e">// 增量快照信号文档的 ID，必须唯一, 使用 UUID 等方式生成
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>  <span style="color:#a6e22e">type</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#39;execute-snapshot&#39;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">data</span><span style="color:#f92672">:</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;data-collections&#39;</span><span style="color:#f92672">:</span> [<span style="color:#e6db74">&#39;test.users&#39;</span>],
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;type&#39;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#39;incremental&#39;</span>
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>});
+</span></span></code></pre></div><p>这时候再检查 ES 中的 <code>mongodb-cdc-test-users</code> 索引，可以看到增量快照处理完成后，数据总数为 6（ES Sink 采用了 upsert 模式）：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>&gt; sleep <span style="color:#ae81ff">10</span> <span style="color:#f92672">&amp;&amp;</span> curl -X GET <span style="color:#e6db74">&#34;http://localhost:9200/mongodb-cdc.test.users/_count&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#e6db74">&#34;count&#34;</span>: 6,
+</span></span><span style="display:flex;"><span>  <span style="color:#e6db74">&#34;_shards&#34;</span>: <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;total&#34;</span>: 1,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;successful&#34;</span>: 1,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;skipped&#34;</span>: 0,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;failed&#34;</span>: <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">}</span>
+</span></span></code></pre></div><table>
+  <thead>
+      <tr>
+          <th>场景</th>
+          <th>Mongodb 中数据</th>
+          <th>ES 中数据</th>
+          <th>kafka 中消息</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>触发前</td>
+          <td>6 条</td>
+          <td>6 条</td>
+          <td>7 条</td>
+      </tr>
+      <tr>
+          <td>触发后</td>
+          <td>6 条</td>
+          <td>6 条</td>
+          <td>13 条</td>
+      </tr>
+  </tbody>
+</table>
+<p>可以看到，kafka 中消息增加了 6 条，说明全部的 6 条数据又被快照了一次。</p>
+<h2 id="实现原理">
+  实现原理
+  <a class="anchor" href="#%e5%ae%9e%e7%8e%b0%e5%8e%9f%e7%90%86">#</a>
+</h2>
+<p>Debezium 的实现方案参考了：<a href="https://arxiv.org/pdf/2010.12597v1">DBLog: A Watermark Based Change-Data-Capture Framework</a> 这篇论文。</p>
+<blockquote>
+<p>We wanted to (a) trigger the full state capture at any point
+in time. That is because the full state may not only be needed
+initially and may be needed at any time afterwards. For instance if
+the database is restored from a backup or for repairs if there is data
+loss or corruption downstream. There are also cases where only
+a subset of data needs to be repaired, for example if a specific set
+of rows has been identified to be corrupt downstream. (b) pause
+or resume at any time so that full state capture does not need to
+start from the beginning for large tables after restarting the process.
+(c) capture transaction log events and the full state side by side
+without stalling one or the other. There are use cases that require
+high availability of transaction log events so that the replication
+lag to the source is kept to a minimum. (d) prevent time-travel,
+by preserving the order of history when transmitting events to a
+derived datastore. This way an earlier version of a row (like the
+residential address of a member account) is not delivered after a later
+version. Hence, a solution had to combine transaction log events
+and the full state in a way that preserves the history of changes.
+(e) offer this as a platform. Hence it was crucial to minimize the
+impact on the source database. Otherwise this can hinter adoption
+of the platform, especially for use cases that have high traffic. In
+that regard we want to avoid primitives such as table locks which
+can block application write traffic. (f) function across a variety
+of Relational Database Management Systems (RDMBS), such as
+MySQL, PostgreSQL, Aurora [ 19 ] etc, that we use in production.
+In order to achieve that we wanted to avoid using vendor specific
+features</p>
+</blockquote>
+<p>可以看到 DBLog 想要解决以下的问题：</p>
+<p><strong>a) 随时触发全量快照，更灵活</strong></p>
+<p><strong>b) 随时暂停或恢复，让大表不需要重头开始快照</strong></p>
+<p><strong>c) 快照和实时变更事件可以并行处理，互不干扰</strong></p>
+<p><strong>d) 防止时间旅行（变更事件的时序不能错乱），按变更顺序处理事件</strong></p>
+<p>e) 提供平台化的解决方案，最小化对源数据库的影响</p>
+<p>f) 支持跨多种 RDBMS，如 MySQL, PostgreSQL, Aurora 等</p>
+<h3 id="1-dblog---顶层架构">
+  1. DBLog - 顶层架构
+  <a class="anchor" href="#1-dblog---%e9%a1%b6%e5%b1%82%e6%9e%b6%e6%9e%84">#</a>
+</h3>
+<figure>
+  <img src="/images/debezium-incremental-snapshot/dblog-high-level-architecture.png" alt="DBLog 顶层架构">
+  <figcaption>DBLog 顶层架构</figcaption>
+</figure>
+<p>DBLog 将从 Source 按照 chunk 大小分块依次读取全表，并同时处理 change log，将处理好的数据写入到 Output 中去，于此同时通过 State 组件跟踪记录。</p>
+<blockquote>
+<p>它采用了主从架构来提供高可用支持, 这不是我们关注的重点，就不展开了。</p>
+</blockquote>
+<h3 id="2-dblog---实现细节">
+  2. DBLog - 实现细节
+  <a class="anchor" href="#2-dblog---%e5%ae%9e%e7%8e%b0%e7%bb%86%e8%8a%82">#</a>
+</h3>
+<p>想要实现这样的解决方案，绕不开两方面的数据捕获，分别是：</p>
+<p><strong>a) 增量变更事件</strong></p>
+<p>增量变更事件代表了数据库中发生的每次变更操作，包括插入、更新和删除，这些事件会被实时捕获并处理。</p>
+<p><strong>b) 全量快照</strong></p>
+<p>全量快照是指对数据库中的所有数据进行一次完整的备份或复制。</p>
+<p>但是很明显，增量和全量不能简单的并行处理。按照其他方案的处理方式，全量快照要么会暂停增量捕获（如 Maxwell 和 Debezium），要么需要创建一个副本（MySQLStreamer），还有些会加上表锁（如 Debezium, 锁定的取决于数据库和实现）。这些方法这对于大型数据库来说是不可接受的。</p>
+<p>为了解决这一问题，DBLog 提出的解决方案是：将增量和全量快照合并处理。具体来说：</p>
+<p>其算法描述如下图：</p>
+<figure>
+  <img src="/images/debezium-incremental-snapshot/dblog-algorithm.png" alt="DBLog 算法描述">
+  <figcaption>DBLog 算法描述</figcaption>
+</figure>
+<p>举例演示如下图：</p>
+<figure>
+  <img src="/images/debezium-incremental-snapshot/dblog-example.png" alt="DBLog 举例演示">
+  <figcaption>DBLog 举例演示</figcaption>
+</figure>
+<p>总结来说，DBLog 提出的解决方案是：</p>
+<ol>
+<li>全量快照采用 <em><strong>分块</strong></em> 的方式从数据集合中 <em><strong>读出</strong></em>（这要求表/集合的 PK 是有序的且稳定的）。</li>
+<li>向变更流中插入 Low Watermark（LW）和 High Watermark（HW），分别表示全量快照的开始和结束位置。</li>
+<li>将全量 Chunk 和 增量变更事件合并，生成全新的事件流。</li>
+</ol>
+<p>通过分块读，可以实现对大部分数据库的兼容，不需要依赖于数据库的特定功能。chunk 跟 增量事件合并实现了宏观上的并行处理，保证了增量事件的实时性。水印则可以用来控制 chunk 的大小 和 控制快照的起停。</p>
+<h3 id="3-debezium-实现源码">
+  3. Debezium 实现源码
+  <a class="anchor" href="#3-debezium-%e5%ae%9e%e7%8e%b0%e6%ba%90%e7%a0%81">#</a>
+</h3>
+<p>知道了整个增量快照的实现思路后，现在来看看 Debezium 是如何实现的。<code>io.debezium.pipeline.signal.AbstractSnapshotSignal</code> 抽象了增量快照的几个信号：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">abstract</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">AbstractSnapshotSignal</span><span style="color:#f92672">&lt;</span>P <span style="color:#66d9ef">extends</span> Partition<span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">implements</span> Signal.<span style="color:#a6e22e">Action</span><span style="color:#f92672">&lt;</span>P<span style="color:#f92672">&gt;</span> {
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> Logger LOGGER <span style="color:#f92672">=</span> LoggerFactory.<span style="color:#a6e22e">getLogger</span>(AbstractSnapshotSignal.<span style="color:#a6e22e">class</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">protected</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> String FIELD_DATA_COLLECTIONS <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;data-collections&#34;</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">protected</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> String FIELD_TYPE <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;type&#34;</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">protected</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> String FIELD_ADDITIONAL_CONDITION <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;additional-condition&#34;</span>;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">protected</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> String FIELD_SURROGATE_KEY <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;surrogate-key&#34;</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 忽略其他代码...</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>信号创建后，会触发对应信号的 <code>arrived</code> 方法，这里以 <code>io.debezium.pipeline.signal.ExecuteSnapshot</code> 为例：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">boolean</span> <span style="color:#a6e22e">arrived</span>(Payload<span style="color:#f92672">&lt;</span>P<span style="color:#f92672">&gt;</span> signalPayload) <span style="color:#66d9ef">throws</span> InterruptedException {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">final</span> List<span style="color:#f92672">&lt;</span>String<span style="color:#f92672">&gt;</span> dataCollections <span style="color:#f92672">=</span> getDataCollections(signalPayload.<span style="color:#a6e22e">data</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (dataCollections <span style="color:#f92672">==</span> <span style="color:#66d9ef">null</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">false</span>;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    SnapshotType type <span style="color:#f92672">=</span> getSnapshotType(signalPayload.<span style="color:#a6e22e">data</span>);
+</span></span><span style="display:flex;"><span>    Optional<span style="color:#f92672">&lt;</span>String<span style="color:#f92672">&gt;</span> additionalCondition <span style="color:#f92672">=</span> getAdditionalCondition(signalPayload.<span style="color:#a6e22e">data</span>);
+</span></span><span style="display:flex;"><span>    Optional<span style="color:#f92672">&lt;</span>String<span style="color:#f92672">&gt;</span> surrogateKey <span style="color:#f92672">=</span> getSurrogateKey(signalPayload.<span style="color:#a6e22e">data</span>);
+</span></span><span style="display:flex;"><span>    LOGGER.<span style="color:#a6e22e">info</span>(<span style="color:#e6db74">&#34;Requested &#39;{}&#39; snapshot of data collections &#39;{}&#39; with additional condition &#39;{}&#39; and surrogate key &#39;{}&#39;&#34;</span>, type, dataCollections,
+</span></span><span style="display:flex;"><span>            additionalCondition.<span style="color:#a6e22e">orElse</span>(<span style="color:#e6db74">&#34;No condition passed&#34;</span>), surrogateKey.<span style="color:#a6e22e">orElse</span>(<span style="color:#e6db74">&#34;PK of table will be used&#34;</span>));
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">switch</span> (type) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">case</span> INCREMENTAL:
+</span></span><span style="display:flex;"><span>            dispatcher.<span style="color:#a6e22e">getIncrementalSnapshotChangeEventSource</span>().<span style="color:#a6e22e">addDataCollectionNamesToSnapshot</span>(
+</span></span><span style="display:flex;"><span>                    signalPayload.<span style="color:#a6e22e">partition</span>, dataCollections, additionalCondition, surrogateKey, signalPayload.<span style="color:#a6e22e">offsetContext</span>);
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">true</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>可以看到，如果是增量快照，会调用 <code>IncrementalSnapshotChangeEventSource</code> 的 <code>MongoDbIncrementalSnapshotChangeEventSource#addDataCollectionNamesToSnapshot</code> 方法：</p>
+<ul>
+<li>此方法会触发 <code>readChunk</code> 方法;</li>
+<li><code>readChunk</code> 方法会先触发 <code>emitWindowOpen</code> 方法，再执行实际的分块读取和处理逻辑 <code>createDataEventsForDataCollection</code>;</li>
+<li><code>readChunk</code> 方法会触发 <code>emitWindowClose</code> 方法;</li>
+<li><code>emitWindowClose</code> 实际上会发出 <code>snapshot-window-close</code> 信号，被 <code>io.debezium.pipeline.source.snapshot.incremental.CloseIncrementalSnapshotWindow</code> 处理;</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">addDataCollectionNamesToSnapshot</span>(MongoDbPartition partition, List<span style="color:#f92672">&lt;</span>String<span style="color:#f92672">&gt;</span> dataCollectionIds,
+</span></span><span style="display:flex;"><span>                                              Optional<span style="color:#f92672">&lt;</span>String<span style="color:#f92672">&gt;</span> additionalCondition, Optional<span style="color:#f92672">&lt;</span>String<span style="color:#f92672">&gt;</span> surrogateKey, OffsetContext offsetContext)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">throws</span> InterruptedException {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 忽略其他代码...</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">final</span> <span style="color:#66d9ef">boolean</span> shouldReadChunk <span style="color:#f92672">=</span> <span style="color:#f92672">!</span>context.<span style="color:#a6e22e">snapshotRunning</span>();
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (shouldReadChunk) {
+</span></span><span style="display:flex;"><span>        readChunk(partition);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">protected</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">readChunk</span>(MongoDbPartition partition) <span style="color:#66d9ef">throws</span> InterruptedException {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">try</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 触发窗口打开事件</span>
+</span></span><span style="display:flex;"><span>        emitWindowOpen(); 
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">while</span> (context.<span style="color:#a6e22e">snapshotRunning</span>()) {
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">// 读取 chunk 数据到 window 中</span>
+</span></span><span style="display:flex;"><span>            createDataEventsForDataCollection(partition);
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">// 如果 window 为空，说明当前数据集合已经读取完毕</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> (window.<span style="color:#a6e22e">isEmpty</span>()) {
+</span></span><span style="display:flex;"><span>                LOGGER.<span style="color:#a6e22e">info</span>(<span style="color:#e6db74">&#34;No data returned by the query, incremental snapshotting of table &#39;{}&#39; finished&#34;</span>,
+</span></span><span style="display:flex;"><span>                        currentDataCollectionId);
+</span></span><span style="display:flex;"><span>                collectionScanCompleted(partition);
+</span></span><span style="display:flex;"><span>                nextDataCollection(partition);
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 触发窗口关闭事件</span>
+</span></span><span style="display:flex;"><span>        emitWindowClose();
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 省略其他代码...</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">private</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">createDataEventsForDataCollection</span>(MongoDbPartition partition) <span style="color:#66d9ef">throws</span> InterruptedException {
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    mongo.<span style="color:#a6e22e">execute</span>(<span style="color:#e6db74">&#34;chunk query key for &#39;&#34;</span> <span style="color:#f92672">+</span> currentCollection.<span style="color:#a6e22e">id</span>() <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34;&#39;&#34;</span>, client <span style="color:#f92672">-&gt;</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 构造查询条件：_id &lt;= maxKey (快照启动时，整个文档的最大主键值)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">final</span> Document maxKeyPredicate <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Document();
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">final</span> Document maxKeyOp <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Document();
+</span></span><span style="display:flex;"><span>        maxKeyOp.<span style="color:#a6e22e">put</span>(<span style="color:#e6db74">&#34;$lte&#34;</span>, context.<span style="color:#a6e22e">maximumKey</span>().<span style="color:#a6e22e">get</span>()<span style="color:#f92672">[</span>0<span style="color:#f92672">]</span>);
+</span></span><span style="display:flex;"><span>        maxKeyPredicate.<span style="color:#a6e22e">put</span>(DOCUMENT_ID, maxKeyOp);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        Document predicate <span style="color:#f92672">=</span> maxKeyPredicate;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 如果上一次读取的最大主键值不为空，那么构造查询条件：_id &gt; chunkEndPosition (上一次读取的最大主键值)</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (context.<span style="color:#a6e22e">chunkEndPosititon</span>() <span style="color:#f92672">!=</span> <span style="color:#66d9ef">null</span>) {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">final</span> Document chunkEndPredicate <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Document();
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">final</span> Document chunkEndOp <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Document();
+</span></span><span style="display:flex;"><span>            chunkEndOp.<span style="color:#a6e22e">put</span>(<span style="color:#e6db74">&#34;$gt&#34;</span>, context.<span style="color:#a6e22e">chunkEndPosititon</span>()<span style="color:#f92672">[</span>0<span style="color:#f92672">]</span>);
+</span></span><span style="display:flex;"><span>            chunkEndPredicate.<span style="color:#a6e22e">put</span>(DOCUMENT_ID, chunkEndOp);
+</span></span><span style="display:flex;"><span>            predicate <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> Document();
+</span></span><span style="display:flex;"><span>            predicate.<span style="color:#a6e22e">put</span>(<span style="color:#e6db74">&#34;$and&#34;</span>, Arrays.<span style="color:#a6e22e">asList</span>(chunkEndPredicate, maxKeyPredicate));
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 按照 PK 主键升序查询，限制返回的记录数为 incremental.snapshot.chunk.size</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> (BsonDocument doc : collection.<span style="color:#a6e22e">find</span>(predicate).<span style="color:#a6e22e">sort</span>(<span style="color:#66d9ef">new</span> Document(DOCUMENT_ID, 1))
+</span></span><span style="display:flex;"><span>                .<span style="color:#a6e22e">limit</span>(connectorConfig.<span style="color:#a6e22e">getIncrementalSnashotChunkSize</span>())) {
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">// 放入 window 中， keyStruct 为主键</span>
+</span></span><span style="display:flex;"><span>            window.<span style="color:#a6e22e">put</span>(keyStruct, row);
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 设置下一次 read chunk 的下限为这一次读取的最大主键值</span>
+</span></span><span style="display:flex;"><span>        context.<span style="color:#a6e22e">nextChunkPosition</span>(lastKey);
+</span></span><span style="display:flex;"><span>    });
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>而 <code>CloseIncrementalSnapshotWindow</code> 实际上会回调 <code>IncrementalSnapshotChangeEventSource#closeWindow</code> 方法</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#75715e">// class CloseIncrementalSnapshotWindow</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">boolean</span> <span style="color:#a6e22e">arrived</span>(Payload<span style="color:#f92672">&lt;</span>P<span style="color:#f92672">&gt;</span> signalPayload) <span style="color:#66d9ef">throws</span> InterruptedException {
+</span></span><span style="display:flex;"><span>    dispatcher.<span style="color:#a6e22e">getIncrementalSnapshotChangeEventSource</span>().<span style="color:#a6e22e">closeWindow</span>(signalPayload.<span style="color:#a6e22e">partition</span>, signalPayload.<span style="color:#a6e22e">id</span>,
+</span></span><span style="display:flex;"><span>            signalPayload.<span style="color:#a6e22e">offsetContext</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">true</span>;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>因此逻辑又回到了 <code>MongoDbIncrementalSnapshotChangeEventSource</code> 中：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span>    <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">closeWindow</span>(MongoDbPartition partition, String id, OffsetContext offsetContext) <span style="color:#66d9ef">throws</span> InterruptedException {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 将 window 中的数据发送</span>
+</span></span><span style="display:flex;"><span>        sendWindowEvents(partition, offsetContext);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 触发下一个分块读取</span>
+</span></span><span style="display:flex;"><span>        readChunk(partition);
+</span></span><span style="display:flex;"><span>    }
+</span></span></code></pre></div><p>另外在 Debezium 中, <code>ChangeEventSourceCoordinator</code> 会协调 <code>SnapshotChangeEventSource</code> 和 <code>StreamingChangeEventSource</code> 的执行，这两者产生的事件会进入到 <code>EventDispatcher</code> 中的共享队列中。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#75715e">// ChangeEventSourceCoordinator#executeChangeEventSources</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">protected</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">executeChangeEventSources</span>(CdcSourceTaskContext taskContext, SnapshotChangeEventSource<span style="color:#f92672">&lt;</span>P, O<span style="color:#f92672">&gt;</span> snapshotSource, Offsets<span style="color:#f92672">&lt;</span>P, O<span style="color:#f92672">&gt;</span> previousOffsets,
+</span></span><span style="display:flex;"><span>                                          AtomicReference<span style="color:#f92672">&lt;</span>LoggingContext.<span style="color:#a6e22e">PreviousContext</span><span style="color:#f92672">&gt;</span> previousLogContext, ChangeEventSourceContext context)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">throws</span> InterruptedException {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">final</span> P partition <span style="color:#f92672">=</span> previousOffsets.<span style="color:#a6e22e">getTheOnlyPartition</span>();
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">final</span> O previousOffset <span style="color:#f92672">=</span> previousOffsets.<span style="color:#a6e22e">getTheOnlyOffset</span>();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    previousLogContext.<span style="color:#a6e22e">set</span>(taskContext.<span style="color:#a6e22e">configureLoggingContext</span>(<span style="color:#e6db74">&#34;snapshot&#34;</span>, partition));
+</span></span><span style="display:flex;"><span>    SnapshotResult<span style="color:#f92672">&lt;</span>O<span style="color:#f92672">&gt;</span> snapshotResult <span style="color:#f92672">=</span> doSnapshot(snapshotSource, context, partition, previousOffset);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> (running <span style="color:#f92672">&amp;&amp;</span> snapshotResult.<span style="color:#a6e22e">isCompletedOrSkipped</span>()) {
+</span></span><span style="display:flex;"><span>        previousLogContext.<span style="color:#a6e22e">set</span>(taskContext.<span style="color:#a6e22e">configureLoggingContext</span>(<span style="color:#e6db74">&#34;streaming&#34;</span>, partition));
+</span></span><span style="display:flex;"><span>        streamEvents(context, partition, snapshotResult.<span style="color:#a6e22e">getOffset</span>());
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>在梳理过程中，我没有发现 Debezium 中有 DBLog 中提到的 Low Watermark 和 High Watermark 相关的逻辑，而是在 <code>EventDispatcher</code> 中，当 <code>StreamingChangeEvent</code> 提交时 (<code>dispatchDataChangeEvent</code> 方法)，通知增量快照对窗口中的事件进行去重。</p>
+<blockquote>
+<p>这里我个人没有梳理清楚，增量快照 和 实时流变更 的事件顺序是怎么样的，看起来是和 DBLog 中的实现不完全一致。</p>
+</blockquote>
+<p>Debezium 这一块的架构梳理如下：</p>
+<figure>
+    <img src="/images/debezium-incremental-snapshot/source-connector-architecture.png" alt="source-connector-architecture">
+    <figcaption>Debezium Source Connector Architecture</figcaption>
+</figure>
+<h2 id="总结">
+  总结
+  <a class="anchor" href="#%e6%80%bb%e7%bb%93">#</a>
+</h2>
+<p>增量快照相比初始快照，更加灵活可控；对于大型数据库或者集合的快照过程更友好，不会影响实时流变更的处理。</p>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#机制简介">机制简介</a></li>
+    <li><a href="#使用场景">使用场景</a></li>
+    <li><a href="#使用演示">使用演示</a>
+      <ul>
+        <li><a href="#1-创建存量数据">1. 创建存量数据</a></li>
+        <li><a href="#2-创建-connector">2. 创建 Connector</a></li>
+        <li><a href="#3-检查存量数据是否被同步到-es-中">3. 检查存量数据是否被同步到 ES 中</a></li>
+        <li><a href="#4-插入数据验证变更流处理正常">4. 插入数据验证变更流处理正常</a></li>
+        <li><a href="#5-触发增量快照-模拟大数据集合">5. 触发增量快照-模拟大数据集合</a></li>
+        <li><a href="#6-触发增量快照-重新快照">6. 触发增量快照-重新快照</a></li>
+      </ul>
+    </li>
+    <li><a href="#实现原理">实现原理</a>
+      <ul>
+        <li><a href="#1-dblog---顶层架构">1. DBLog - 顶层架构</a></li>
+        <li><a href="#2-dblog---实现细节">2. DBLog - 实现细节</a></li>
+        <li><a href="#3-debezium-实现源码">3. Debezium 实现源码</a></li>
+      </ul>
+    </li>
+    <li><a href="#总结">总结</a></li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

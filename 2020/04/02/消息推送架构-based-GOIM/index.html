@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="GOIM 是Go实现的消息推送的分布式服务，易于扩容伸缩，使用了bilibili/discovery来支持服务发现。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2020/04/02/%E6%B6%88%E6%81%AF%E6%8E%A8%E9%80%81%E6%9E%B6%E6%9E%84-based-GOIM/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="消息推送架构-Based-GOIM">
+  <meta property="og:description" content="GOIM 是Go实现的消息推送的分布式服务，易于扩容伸缩，使用了bilibili/discovery来支持服务发现。">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2020-04-02T14:50:04+08:00">
+    <meta property="article:modified_time" content="2020-04-02T14:50:04+08:00">
+    <meta property="article:tag" content="分布式">
+    <meta property="article:tag" content="Goim">
+<title>消息推送架构-Based-GOIM | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2020/04/02/%E6%B6%88%E6%81%AF%E6%8E%A8%E9%80%81%E6%9E%B6%E6%9E%84-based-GOIM/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>消息推送架构-Based-GOIM</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#架构图">架构图</a></li>
+    <li><a href="#消息流转">消息流转</a>
+      <ul>
+        <li><a href="#生成消息">生成消息</a></li>
+        <li><a href="#传输消息">传输消息</a></li>
+        <li><a href="#投递消息">投递消息</a></li>
+        <li><a href="#附">附</a></li>
+        <li><a href="#总结">总结</a></li>
+      </ul>
+    </li>
+    <li><a href="#参考文档">参考文档</a></li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    消息推送架构-Based-GOIM
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>April 2, 2020</span>
+  </div>
+
+
+
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F/">分布式</a>, 
+      <a href="/tags/goim/">Goim</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><blockquote>
+<p>本文的重点，主要梳理了GOIM的架构，消息流转和消息处理。本文没有提到Comet的具体逻辑，套接字编程和RingBuffer等，但是Comet的复杂度远高于其他两个网元，因此强烈建议阅读Comet源码，应该会对Go网络编程有更多认识。</p>
+</blockquote>
+<p>GOIM 是Go实现的消息推送的分布式服务，易于扩容伸缩，使用了bilibili/discovery来支持服务发现。相较于我之前用<a href="/2019/12/04/%e5%9f%ba%e4%ba%8esocket.io%e6%9e%84%e5%bb%ba%e5%8d%b3%e6%97%b6%e9%80%9a%e8%ae%af%e7%b3%bb%e7%bb%9f/">Socket.IO做的信令服务</a>，优点在于更优雅的扩容，将连接层和逻辑层分离，职责更清晰。当然缺点也有（没有和具体实现解耦，如MQ的选型，导致不够灵活；客户端非全双工通信，TCP利用率偏低，这点并不全是缺点，好处是：消息流转清晰，职责非常明确），这部分可以自己做定制（最后的参考文献2中讲很多）。</p>
+<h2 id="架构图">
+  架构图
+  <a class="anchor" href="#%e6%9e%b6%e6%9e%84%e5%9b%be">#</a>
+</h2>
+<p>总的来说，整个应用的架构如下</p>
+<blockquote>
+<p>这里省略了其中用于服务发现的“bilibili/discovery”。在整个GOIM中用到服务发现的主要是gRPC和消息推送关系查找。</p>
+</blockquote>
+<image src="/images/goim-0.svg"/>
+<p>如上图：</p>
+<ul>
+<li>Comet负责建立和维持客户端的长连接；</li>
+<li>Job负责消息的分发；</li>
+<li>Logic提供三种纬度的消息（全局，ROOM，用户）投递，还包括业务逻辑，Session管理。</li>
+</ul>
+<h2 id="消息流转">
+  消息流转
+  <a class="anchor" href="#%e6%b6%88%e6%81%af%e6%b5%81%e8%bd%ac">#</a>
+</h2>
+<p>从上述的架构图中可以知道，消息是通过HTTP调用Logic产生的，然后用MQ来中转（存储，削峰）；每个Job成员都从给队列中消费消息，投递给一个或者多个Comet，由Comet将消息发送给客户端。</p>
+<h3 id="生成消息">
+  生成消息
+  <a class="anchor" href="#%e7%94%9f%e6%88%90%e6%b6%88%e6%81%af">#</a>
+</h3>
+<p>目前在Github上的GOIM版本，消息（除鉴权/心跳等基础数据包外）生成都是由Logic完成第一手处理，Logic提供了HTTP接口以支持消息发送能力，主要有三个纬度：用户，房间，全应用广播，如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>curl -d <span style="color:#e6db74">&#39;mid message&#39;</span> http://api.goim.io:3111/goim/push/mids?operation<span style="color:#f92672">=</span>1000&amp;mids<span style="color:#f92672">=</span><span style="color:#ae81ff">123</span>
+</span></span><span style="display:flex;"><span>curl -d <span style="color:#e6db74">&#39;room message&#39;</span> http://api.goim.io:3111/goim/push/room?operation<span style="color:#f92672">=</span>1000&amp;type<span style="color:#f92672">=</span>live&amp;room<span style="color:#f92672">=</span><span style="color:#ae81ff">1000</span>
+</span></span><span style="display:flex;"><span>curl -d <span style="color:#e6db74">&#39;broadcast message&#39;</span> http://api.goim.io:3111/goim/push/all?operation<span style="color:#f92672">=</span><span style="color:#ae81ff">1000</span>
+</span></span></code></pre></div><p>在Logic服务中会通过处理，将消息处理成**<a href="#%e6%b6%88%e6%81%af%e6%a0%bc%e5%bc%8f">附#消息格式#任务队列消息</a>**的格式，然后投递到MQ中。其中三种纬度的消息处理稍有不同：</p>
+<p><strong>用户</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// goim/internal/logic/push.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// mid =&gt; []PushMsg{op, server, keys, msg}
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">l</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Logic</span>) <span style="color:#a6e22e">PushMids</span>(<span style="color:#a6e22e">c</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">op</span> <span style="color:#66d9ef">int32</span>, <span style="color:#a6e22e">mids</span> []<span style="color:#66d9ef">int64</span>, <span style="color:#a6e22e">msg</span> []<span style="color:#66d9ef">byte</span>) (<span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 根据用户ID获取所有的 key:server 对应关系；在redis中是一个hash
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">keyServers</span>, <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">l</span>.<span style="color:#a6e22e">dao</span>.<span style="color:#a6e22e">KeysByMids</span>(<span style="color:#a6e22e">c</span>, <span style="color:#a6e22e">mids</span>) 
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">keys</span> <span style="color:#f92672">:=</span> make(<span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>][]<span style="color:#66d9ef">string</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">key</span>, <span style="color:#a6e22e">server</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">keyServers</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">keys</span>[<span style="color:#a6e22e">server</span>] = append(<span style="color:#a6e22e">keys</span>[<span style="color:#a6e22e">server</span>], <span style="color:#a6e22e">key</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">server</span>, <span style="color:#a6e22e">keys</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">keys</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// 通过DAO组装PushMsg投递给MQ
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">l</span>.<span style="color:#a6e22e">dao</span>.<span style="color:#a6e22e">PushMsg</span>(<span style="color:#a6e22e">c</span>, <span style="color:#a6e22e">op</span>, <span style="color:#a6e22e">server</span>, <span style="color:#a6e22e">keys</span>, <span style="color:#a6e22e">msg</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p><strong>房间</strong> 没什么特别的处理</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// goim/internal/logic/push.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">l</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Logic</span>) <span style="color:#a6e22e">PushRoom</span>(<span style="color:#a6e22e">c</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">op</span> <span style="color:#66d9ef">int32</span>, <span style="color:#a6e22e">typ</span>, <span style="color:#a6e22e">room</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">msg</span> []<span style="color:#66d9ef">byte</span>) (<span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">l</span>.<span style="color:#a6e22e">dao</span>.<span style="color:#a6e22e">BroadcastRoomMsg</span>(<span style="color:#a6e22e">c</span>, <span style="color:#a6e22e">op</span>, <span style="color:#a6e22e">model</span>.<span style="color:#a6e22e">EncodeRoomKey</span>(<span style="color:#a6e22e">typ</span>, <span style="color:#a6e22e">room</span>), <span style="color:#a6e22e">msg</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// // goim/internal/logic/dao
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">d</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Dao</span>) <span style="color:#a6e22e">BroadcastRoomMsg</span>(<span style="color:#a6e22e">c</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">op</span> <span style="color:#66d9ef">int32</span>, <span style="color:#a6e22e">room</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">msg</span> []<span style="color:#66d9ef">byte</span>) (<span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">pushMsg</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">pb</span>.<span style="color:#a6e22e">PushMsg</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Type</span>:      <span style="color:#a6e22e">pb</span>.<span style="color:#a6e22e">PushMsg_ROOM</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Operation</span>: <span style="color:#a6e22e">op</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Room</span>:      <span style="color:#a6e22e">room</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Msg</span>:       <span style="color:#a6e22e">msg</span>,
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">b</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">proto</span>.<span style="color:#a6e22e">Marshal</span>(<span style="color:#a6e22e">pushMsg</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">nsqProducer</span>.<span style="color:#a6e22e">Publish</span>(<span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Nsq</span>.<span style="color:#a6e22e">Topic</span>, <span style="color:#a6e22e">b</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;PushMsg.send(push pushMsg:%v) error(%v)&#34;</span>, <span style="color:#a6e22e">pushMsg</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p><strong>广播</strong> 没什么特别的处理</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// goim/internal/logic/push.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">l</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Logic</span>) <span style="color:#a6e22e">PushAll</span>(<span style="color:#a6e22e">c</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">op</span>, <span style="color:#a6e22e">speed</span> <span style="color:#66d9ef">int32</span>, <span style="color:#a6e22e">msg</span> []<span style="color:#66d9ef">byte</span>) (<span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">l</span>.<span style="color:#a6e22e">dao</span>.<span style="color:#a6e22e">BroadcastMsg</span>(<span style="color:#a6e22e">c</span>, <span style="color:#a6e22e">op</span>, <span style="color:#a6e22e">speed</span>, <span style="color:#a6e22e">msg</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// goim/internal/logic/dao
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">d</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Dao</span>) <span style="color:#a6e22e">BroadcastMsg</span>(<span style="color:#a6e22e">c</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">op</span>, <span style="color:#a6e22e">speed</span> <span style="color:#66d9ef">int32</span>, <span style="color:#a6e22e">msg</span> []<span style="color:#66d9ef">byte</span>) (<span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">pushMsg</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">pb</span>.<span style="color:#a6e22e">PushMsg</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Type</span>:      <span style="color:#a6e22e">pb</span>.<span style="color:#a6e22e">PushMsg_BROADCAST</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Operation</span>: <span style="color:#a6e22e">op</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Speed</span>:     <span style="color:#a6e22e">speed</span>, <span style="color:#75715e">// 这里需要去到Job才知道speed的具体功效
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">Msg</span>:       <span style="color:#a6e22e">msg</span>,
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">b</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">proto</span>.<span style="color:#a6e22e">Marshal</span>(<span style="color:#a6e22e">pushMsg</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">nsqProducer</span>.<span style="color:#a6e22e">Publish</span>(<span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Nsq</span>.<span style="color:#a6e22e">Topic</span>, <span style="color:#a6e22e">b</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;PushMsg.send(push pushMsg:%v) error(%v)&#34;</span>, <span style="color:#a6e22e">pushMsg</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>小结：</p>
+<ul>
+<li>针对用户单发时，会获取到具体的sever和keys组装到PushMsg</li>
+<li>房间消息，没有server和keys, 但是多一个room是通过typ和roomID组装而成的 “live://1000”</li>
+<li>广播消息，除了消息体之外，另外有一个speed字段</li>
+</ul>
+<h3 id="传输消息">
+  传输消息
+  <a class="anchor" href="#%e4%bc%a0%e8%be%93%e6%b6%88%e6%81%af">#</a>
+</h3>
+<p>由Logic处理好的消息会放在MQ中，Job任务会自动消费消息，然后通过gRPC调用Comet单元。相比其他两个网元，Job就简单多了。从MQ中消费到消息后会调用<code>c.job.push(ctx, pushMsg)</code>。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// job 发送消息（普通消息，房间消息，广播）
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">j</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Job</span>) <span style="color:#a6e22e">push</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">pushMsg</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">pb</span>.<span style="color:#a6e22e">PushMsg</span>) (<span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">switch</span> <span style="color:#a6e22e">pushMsg</span>.<span style="color:#a6e22e">Type</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">pb</span>.<span style="color:#a6e22e">PushMsg_PUSH</span>:
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">j</span>.<span style="color:#a6e22e">pushKeys</span>(<span style="color:#a6e22e">pushMsg</span>.<span style="color:#a6e22e">Operation</span>, <span style="color:#a6e22e">pushMsg</span>.<span style="color:#a6e22e">Server</span>, <span style="color:#a6e22e">pushMsg</span>.<span style="color:#a6e22e">Keys</span>, <span style="color:#a6e22e">pushMsg</span>.<span style="color:#a6e22e">Msg</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">pb</span>.<span style="color:#a6e22e">PushMsg_ROOM</span>:
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// 获取一个job中的Room缓存，用于房间内“定时，定量”发送消息，减少请求次数
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#75715e">// 这里调用的Push并不会立即发送，而是放在Room.proto这个channel中
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#75715e">// 实际放松是由Room.pushproc来定时
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">j</span>.<span style="color:#a6e22e">getRoom</span>(<span style="color:#a6e22e">pushMsg</span>.<span style="color:#a6e22e">Room</span>).<span style="color:#a6e22e">Push</span>(<span style="color:#a6e22e">pushMsg</span>.<span style="color:#a6e22e">Operation</span>, <span style="color:#a6e22e">pushMsg</span>.<span style="color:#a6e22e">Msg</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">pb</span>.<span style="color:#a6e22e">PushMsg_BROADCAST</span>:
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">j</span>.<span style="color:#a6e22e">broadcast</span>(<span style="color:#a6e22e">pushMsg</span>.<span style="color:#a6e22e">Operation</span>, <span style="color:#a6e22e">pushMsg</span>.<span style="color:#a6e22e">Msg</span>, <span style="color:#a6e22e">pushMsg</span>.<span style="color:#a6e22e">Speed</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">default</span>:
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;no match push type: %s&#34;</span>, <span style="color:#a6e22e">pushMsg</span>.<span style="color:#a6e22e">Type</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 根据serverID发送给特定的Comet服务，避免广播
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// cometServers 是由discovery服务发现维护的comet列表。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">j</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Job</span>) <span style="color:#a6e22e">pushKeys</span>(<span style="color:#a6e22e">operation</span> <span style="color:#66d9ef">int32</span>, <span style="color:#a6e22e">serverID</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">subKeys</span> []<span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">body</span> []<span style="color:#66d9ef">byte</span>) (<span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">buf</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">bytes</span>.<span style="color:#a6e22e">NewWriterSize</span>(len(<span style="color:#a6e22e">body</span>) <span style="color:#f92672">+</span> <span style="color:#ae81ff">64</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">p</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">comet</span>.<span style="color:#a6e22e">Proto</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Ver</span>:  <span style="color:#ae81ff">1</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Op</span>:   <span style="color:#a6e22e">operation</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Body</span>: <span style="color:#a6e22e">body</span>,
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">p</span>.<span style="color:#a6e22e">WriteTo</span>(<span style="color:#a6e22e">buf</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">p</span>.<span style="color:#a6e22e">Body</span> = <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">Buffer</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">p</span>.<span style="color:#a6e22e">Op</span> = <span style="color:#a6e22e">comet</span>.<span style="color:#a6e22e">OpRaw</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">args</span> = <span style="color:#a6e22e">comet</span>.<span style="color:#a6e22e">PushMsgReq</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Keys</span>:    <span style="color:#a6e22e">subKeys</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">ProtoOp</span>: <span style="color:#a6e22e">operation</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Proto</span>:   <span style="color:#a6e22e">p</span>,
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">c</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">j</span>.<span style="color:#a6e22e">cometServers</span>[<span style="color:#a6e22e">serverID</span>]; <span style="color:#a6e22e">ok</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Push</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">args</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;c.Push(%v) serverID:%s error(%v)&#34;</span>, <span style="color:#a6e22e">args</span>, <span style="color:#a6e22e">serverID</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Infof</span>(<span style="color:#e6db74">&#34;pushKey:%s comets:%d&#34;</span>, <span style="color:#a6e22e">serverID</span>, len(<span style="color:#a6e22e">j</span>.<span style="color:#a6e22e">cometServers</span>))
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 处理成一个BroadcastReq,并广播给所有的Comet
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">j</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Job</span>) <span style="color:#a6e22e">broadcast</span>(<span style="color:#a6e22e">operation</span> <span style="color:#66d9ef">int32</span>, <span style="color:#a6e22e">body</span> []<span style="color:#66d9ef">byte</span>, <span style="color:#a6e22e">speed</span> <span style="color:#66d9ef">int32</span>) (<span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// ... 与pushKeys一致，生成一个p
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">comets</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">j</span>.<span style="color:#a6e22e">cometServers</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 如 speed = 64, len(comets) = 2, speed = 32
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">speed</span> <span style="color:#f92672">/=</span> int32(len(<span style="color:#a6e22e">comets</span>)) 
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">args</span> = <span style="color:#a6e22e">comet</span>.<span style="color:#a6e22e">BroadcastReq</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">ProtoOp</span>: <span style="color:#a6e22e">operation</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Proto</span>:   <span style="color:#a6e22e">p</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Speed</span>:   <span style="color:#a6e22e">speed</span>, <span style="color:#75715e">// 是被传递给Comet处理，继续跟踪
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">serverID</span>, <span style="color:#a6e22e">c</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">comets</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Broadcast</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">args</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;c.Broadcast(%v) serverID:%s error(%v)&#34;</span>, <span style="color:#a6e22e">args</span>, <span style="color:#a6e22e">serverID</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Infof</span>(<span style="color:#e6db74">&#34;broadcast comets:%d&#34;</span>, len(<span style="color:#a6e22e">comets</span>))
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p><strong>房间消息处理</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>getRoom<span style="color:#f92672">(</span>roomID<span style="color:#f92672">)</span> -&gt; room.Push<span style="color:#f92672">()</span> -&gt; p -&gt; room.proto
+</span></span><span style="display:flex;"><span>	|
+</span></span><span style="display:flex;"><span>| ---&gt; NewRoom<span style="color:#f92672">(</span>batch, duration<span style="color:#f92672">)</span>              |
+</span></span><span style="display:flex;"><span>|--------------------------------------------|
+</span></span><span style="display:flex;"><span>| ---&gt; go room.pushproc<span style="color:#f92672">()</span> -&gt; p &lt;- room.proto |
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// goim/internal/job/room.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Room</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">c</span>     <span style="color:#f92672">*</span><span style="color:#a6e22e">conf</span>.<span style="color:#a6e22e">Room</span> <span style="color:#75715e">// 关于房间的配置
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">job</span>   <span style="color:#f92672">*</span><span style="color:#a6e22e">Job</span>       <span style="color:#75715e">// 绑定job，为了追溯Room所属的Job
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">id</span>    <span style="color:#66d9ef">string</span>     <span style="color:#75715e">// 房间ID
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">proto</span> <span style="color:#66d9ef">chan</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">comet</span>.<span style="color:#a6e22e">Proto</span> <span style="color:#75715e">// 有缓冲channel
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// pushproc merge proto and push msgs in batch.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// 默认batch = 20, sigTime = 1s
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">r</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Room</span>) <span style="color:#a6e22e">pushproc</span>(<span style="color:#a6e22e">batch</span> <span style="color:#66d9ef">int</span>, <span style="color:#a6e22e">sigTime</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Duration</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">var</span> (
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">n</span>    <span style="color:#66d9ef">int</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">last</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Time</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">p</span>    <span style="color:#f92672">*</span><span style="color:#a6e22e">comet</span>.<span style="color:#a6e22e">Proto</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">buf</span>  = <span style="color:#a6e22e">bytes</span>.<span style="color:#a6e22e">NewWriterSize</span>(int(<span style="color:#a6e22e">comet</span>.<span style="color:#a6e22e">MaxBodySize</span>)) <span style="color:#75715e">// 4096B = 4KB
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	)
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 设置了一个定时器,在一定时间后往room.proto放送一个roomReadyProto信号。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">td</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">AfterFunc</span>(<span style="color:#a6e22e">sigTime</span>, <span style="color:#66d9ef">func</span>() {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">select</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">r</span>.<span style="color:#a6e22e">proto</span> <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">roomReadyProto</span>:
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">default</span>:
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	})
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">td</span>.<span style="color:#a6e22e">Stop</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">p</span> = <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">r</span>.<span style="color:#a6e22e">proto</span>; <span style="color:#a6e22e">p</span> <span style="color:#f92672">==</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#75715e">// 如果创建了room，但是读到空包
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>			<span style="color:#66d9ef">break</span> <span style="color:#75715e">// exit
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		} <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">p</span> <span style="color:#f92672">!=</span> <span style="color:#a6e22e">roomReadyProto</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#75715e">// 读取room.proto 如果是正常的数据包，则合并到buf中去,如果满了怎么办？
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>			<span style="color:#a6e22e">p</span>.<span style="color:#a6e22e">WriteTo</span>(<span style="color:#a6e22e">buf</span>)
+</span></span><span style="display:flex;"><span>			<span style="color:#75715e">// 如果是第一个数据包，则重置定时器，并继续读取后续数据包
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">n</span><span style="color:#f92672">++</span>; <span style="color:#a6e22e">n</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span> {
+</span></span><span style="display:flex;"><span>				<span style="color:#a6e22e">last</span> = <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Now</span>()
+</span></span><span style="display:flex;"><span>				<span style="color:#a6e22e">td</span>.<span style="color:#a6e22e">Reset</span>(<span style="color:#a6e22e">sigTime</span>)
+</span></span><span style="display:flex;"><span>				<span style="color:#66d9ef">continue</span>
+</span></span><span style="display:flex;"><span>			} <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">n</span> &lt; <span style="color:#a6e22e">batch</span> {
+</span></span><span style="display:flex;"><span>				<span style="color:#75715e">// 后续的数据包，不会重置定时器，但是如果时间仍在第一个数据包的 sigTime 时间间隔内
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>				<span style="color:#75715e">// 简单说，定时器还没到时间
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>				<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">sigTime</span> &gt; <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Since</span>(<span style="color:#a6e22e">last</span>) {
+</span></span><span style="display:flex;"><span>					<span style="color:#66d9ef">continue</span>
+</span></span><span style="display:flex;"><span>				}
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>			<span style="color:#75715e">// 累计的数据包数量已经超过了batch, 执行发送动作
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		} <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#75715e">// 定时器到读到了roomReadyProto 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>			<span style="color:#75715e">// 如果buf已经被重置了，则跳出循环执行清理动作；否则执行发送消息		
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">n</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>				<span style="color:#66d9ef">break</span>
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// 发送房间内的消息
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">_</span> = <span style="color:#a6e22e">r</span>.<span style="color:#a6e22e">job</span>.<span style="color:#a6e22e">broadcastRoomRawBytes</span>(<span style="color:#a6e22e">r</span>.<span style="color:#a6e22e">id</span>, <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">Buffer</span>())		
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">buf</span> = <span style="color:#a6e22e">bytes</span>.<span style="color:#a6e22e">NewWriterSize</span>(<span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">Size</span>())
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">n</span> = <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// 如果配置了房间最大闲置时间，则重新设定定时器
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#75715e">// 也就是说，如果房间被创建后，处理完了该房间的消息，并不是直接跳出循环清理房间
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#75715e">// 而是，会阻塞等待下一次的消息再来，如果在 “1m / r.c.Idle” 时间内没有来，则会跳出循环清理掉该房间
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#75715e">// 如果在 “1m / r.c.Idle” 内有消息，则会重新设定定时器为sigTime，并为proto计数
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">r</span>.<span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Idle</span> <span style="color:#f92672">!=</span> <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">td</span>.<span style="color:#a6e22e">Reset</span>(<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Duration</span>(<span style="color:#a6e22e">r</span>.<span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Idle</span>)) <span style="color:#75715e">// 默认15分钟
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		} <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">td</span>.<span style="color:#a6e22e">Reset</span>(<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Minute</span>)
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 清理动作
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">r</span>.<span style="color:#a6e22e">job</span>.<span style="color:#a6e22e">delRoom</span>(<span style="color:#a6e22e">r</span>.<span style="color:#a6e22e">id</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>总结如下图：</p>
+<img src="/images/goim-1.svg">
+<p>小结：</p>
+<ul>
+<li>针对用户单发时，会直接发送到对应的comet服务，根据key再去给特定的channel发送消息</li>
+<li>房间消息，这个会特殊一些，Job持有一个特殊的Room结构，用于合并发送到该房间的消息，定时定量发送房间消息（好处是，减少了gRPC调用次数降低系统负载，缺点增加时消息延迟）</li>
+<li>广播消息，将消息封装到<code>BroadcastPushReq</code>中，然后直接发送给所有的Comet</li>
+</ul>
+<h3 id="投递消息">
+  投递消息
+  <a class="anchor" href="#%e6%8a%95%e9%80%92%e6%b6%88%e6%81%af">#</a>
+</h3>
+<p>Comet接收到Job单元的gRPC调用之后，会将消息通过Websocket套接字按照GOIM约定的协议格式发送给指定客户端。从Job那边传输过来的消息，依旧是分为用户消息，房间消息，全局消息。这里得先说明下Comet是如何管理用户端的长连接，如下图：</p>
+<img src="/images/goim-2.svg" height="400px" />
+<blockquote>
+<p>Bucket是在一个管理Channel和Room的数据结构，它的作用在于使用了hash来将Channel做分片管理，相较于集中管理，这样channel分布在不同的bucket中而不是一个map，可以降低冲突，减小锁的粒度。</p>
+</blockquote>
+<p>有了上述结构，那么消息发送在忽略传输层的情况下：</p>
+<p><strong>针对用户单发</strong></p>
+<p>调用链路为：comet.Bucket(key).Channel(key).Push(proto)，这里Push也只是将proto放在了channel的队列中（10缓冲），消息的下发在<code>goim/internal/comet/server_websocket.go#dispatchWebsocket</code>。</p>
+<p><strong>房间消息</strong></p>
+<p>在Comet内部遍历Buckets并调用Bucket.BroadcastRoom()，但是这里也只是把消息放到了“某处”，并没有直接发送。实际发送代码在<code>goim/internal/comet/bucket.go#roomproc</code>。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// BroadcastRoom broadcast a message to specified room
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">b</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Bucket</span>) <span style="color:#a6e22e">BroadcastRoom</span>(<span style="color:#a6e22e">arg</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">BroadcastRoomReq</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 这里取模选中一个goroutine来执行任务
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">num</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">atomic</span>.<span style="color:#a6e22e">AddUint64</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">b</span>.<span style="color:#a6e22e">routinesNum</span>, <span style="color:#ae81ff">1</span>) <span style="color:#f92672">%</span> <span style="color:#a6e22e">b</span>.<span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">RoutineAmount</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// b.routines 是 b.c.RoutineAmount 数量的 有 b.c.RoutineSize 缓冲大小的 chan *grpc.BroadcastRoomReq
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">b</span>.<span style="color:#a6e22e">routines</span>[<span style="color:#a6e22e">num</span>] <span style="color:#f92672">&lt;-</span> <span style="color:#a6e22e">arg</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 在创建Bucket时，便开启了goroutine来处理
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">b</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Bucket</span>) <span style="color:#a6e22e">roomproc</span>(<span style="color:#a6e22e">c</span> <span style="color:#66d9ef">chan</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">BroadcastRoomReq</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">arg</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">c</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">room</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">b</span>.<span style="color:#a6e22e">Room</span>(<span style="color:#a6e22e">arg</span>.<span style="color:#a6e22e">RoomID</span>); <span style="color:#a6e22e">room</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">room</span>.<span style="color:#a6e22e">Push</span>(<span style="color:#a6e22e">arg</span>.<span style="color:#a6e22e">Proto</span>)
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 遍历房间内的channel的链表，将消息放到channel的发送队列中，又回到了channel消息单发的逻辑。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">r</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Room</span>) <span style="color:#a6e22e">Push</span>(<span style="color:#a6e22e">p</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">Proto</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">r</span>.<span style="color:#a6e22e">rLock</span>.<span style="color:#a6e22e">RLock</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">ch</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">r</span>.<span style="color:#a6e22e">next</span>; <span style="color:#a6e22e">ch</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span>; <span style="color:#a6e22e">ch</span> = <span style="color:#a6e22e">ch</span>.<span style="color:#a6e22e">Next</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">_</span> = <span style="color:#a6e22e">ch</span>.<span style="color:#a6e22e">Push</span>(<span style="color:#a6e22e">p</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">r</span>.<span style="color:#a6e22e">rLock</span>.<span style="color:#a6e22e">RUnlock</span>()
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p><strong>广播消息</strong></p>
+<p>在Comet内部遍历Buckets并向Bucket中的所有Channel发送消息。这里终于用到了speed，上文提到过，如果设定speed = 64， len(comets) = 2, 那么这里用到的 speed = 32。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// Broadcast broadcast msg to all user.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">s</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">server</span>) <span style="color:#a6e22e">Broadcast</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">req</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">pb</span>.<span style="color:#a6e22e">BroadcastReq</span>) (<span style="color:#f92672">*</span><span style="color:#a6e22e">pb</span>.<span style="color:#a6e22e">BroadcastReply</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">req</span>.<span style="color:#a6e22e">Proto</span> <span style="color:#f92672">==</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">errors</span>.<span style="color:#a6e22e">ErrBroadCastArg</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">go</span> <span style="color:#66d9ef">func</span>() {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">bucket</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">srv</span>.<span style="color:#a6e22e">Buckets</span>() {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">bucket</span>.<span style="color:#a6e22e">Broadcast</span>(<span style="color:#a6e22e">req</span>.<span style="color:#a6e22e">GetProto</span>(), <span style="color:#a6e22e">req</span>.<span style="color:#a6e22e">ProtoOp</span>)
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">req</span>.<span style="color:#a6e22e">Speed</span> &gt; <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>				<span style="color:#75715e">//该bucket
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>				<span style="color:#75715e">// 有0个channel时，t = 0 / 32 = 0
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>				<span style="color:#75715e">// 有2个channel时, t = 2 / 32 = 0.0625
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>				<span style="color:#75715e">// 有32个channel时, t = 32 / 32 = 1
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>				<span style="color:#75715e">// 有64个channel时，t = 64 / 32 = 2
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>				<span style="color:#75715e">// 由此可得，（comet）speed 的含义是 每个bucket每秒最多发送的消息数量
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>				<span style="color:#a6e22e">t</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">bucket</span>.<span style="color:#a6e22e">ChannelCount</span>() <span style="color:#f92672">/</span> int(<span style="color:#a6e22e">req</span>.<span style="color:#a6e22e">Speed</span>)
+</span></span><span style="display:flex;"><span>				<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Sleep</span>(<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Duration</span>(<span style="color:#a6e22e">t</span>) <span style="color:#f92672">*</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Second</span>)
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}()
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">pb</span>.<span style="color:#a6e22e">BroadcastReply</span>{}, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 广播，直接从bucket.chs中遍历
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">b</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Bucket</span>) <span style="color:#a6e22e">Broadcast</span>(<span style="color:#a6e22e">p</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">Proto</span>, <span style="color:#a6e22e">op</span> <span style="color:#66d9ef">int32</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">ch</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Channel</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">b</span>.<span style="color:#a6e22e">cLock</span>.<span style="color:#a6e22e">RLock</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">ch</span> = <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">b</span>.<span style="color:#a6e22e">chs</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// 如果不在该channel的监听队列中，那么该消息不会发给该客户端
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#75715e">// 这个监听队列，是在建立连接是发送的 “accepts” 字段中取得的
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#75715e">// 譬如accpets = [1000, 1001, 1002], 但是op = 1003， 那么就不会发送
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#75715e">// 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#75715e">// 值得注意的是，这个op是从BroadcastReq.ProtoOp取得，BroadcastReq.ProtoOp又是从pushMsg.Operation取得
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#75715e">// 也就是说 op = grpc.BroadcastReq.ProtoOp = proto.Op = PushMsg.Operation = 从发送消息接口产生。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#75715e">// 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">ch</span>.<span style="color:#a6e22e">NeedPush</span>(<span style="color:#a6e22e">op</span>) {
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">continue</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">_</span> = <span style="color:#a6e22e">ch</span>.<span style="color:#a6e22e">Push</span>(<span style="color:#a6e22e">p</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">b</span>.<span style="color:#a6e22e">cLock</span>.<span style="color:#a6e22e">RUnlock</span>()
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>小结：</p>
+<ul>
+<li>针对用户单发时，直接利用key定位到Bucket和Channel，将消息放到队列中。</li>
+<li>房间消息，将消息分配到房间协程之一的队列中，在该协程中会持续不断的消费消费消息并处理，处理动作是将消息分发到Channel的消息队列（buffered chan）上。</li>
+<li>广播消息，直接使用了bucket的chs遍历，来为每一个Channel推送一条消息到消息队列上。</li>
+</ul>
+<h3 id="附">
+  附
+  <a class="anchor" href="#%e9%99%84">#</a>
+</h3>
+<p>这里会展示GOIM中必要的数据结构，帮助理解GOIM中的数据流转过程。
+这里会出现几个名词：</p>
+<ul>
+<li>server: comet服务的hostname (string)</li>
+<li>mid: 用户在业务中的ID (int64)</li>
+<li>key: 用户在GOIM中的唯一ID (string)</li>
+</ul>
+<h4 id="session结构">
+  Session结构
+  <a class="anchor" href="#session%e7%bb%93%e6%9e%84">#</a>
+</h4>
+<p>Session由Redis管理，维持了客户端MID，Server，Key的关系，这部分是在Logic中gRPC服务的<code>Connect</code>方法中设置。如下图所示：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// goim/internal/logic/conn.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">l</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Logic</span>) <span style="color:#a6e22e">Connect</span>(<span style="color:#a6e22e">c</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">server</span>, <span style="color:#a6e22e">cookie</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">token</span> []<span style="color:#66d9ef">byte</span>) (<span style="color:#a6e22e">mid</span> <span style="color:#66d9ef">int64</span>, <span style="color:#a6e22e">key</span>, <span style="color:#a6e22e">roomID</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">accepts</span> []<span style="color:#66d9ef">int32</span>, <span style="color:#a6e22e">hb</span> <span style="color:#66d9ef">int64</span>, <span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">params</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">Mid</span>      <span style="color:#66d9ef">int64</span>   <span style="color:#e6db74">`json:&#34;mid&#34;`</span>     <span style="color:#75715e">// 用户ID
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">Key</span>      <span style="color:#66d9ef">string</span>  <span style="color:#e6db74">`json:&#34;key&#34;`</span>     <span style="color:#75715e">// 客户端标识别，如果为空则自动生成UUID
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">RoomID</span>   <span style="color:#66d9ef">string</span>  <span style="color:#e6db74">`json:&#34;room_id&#34;`</span> <span style="color:#75715e">// 客户端加入房间 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">Platform</span> <span style="color:#66d9ef">string</span>  <span style="color:#e6db74">`json:&#34;platform&#34;`</span><span style="color:#75715e">// 客户端所在平台
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">Accepts</span>  []<span style="color:#66d9ef">int32</span> <span style="color:#e6db74">`json:&#34;accepts&#34;`</span> <span style="color:#75715e">// 监听房间
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">json</span>.<span style="color:#a6e22e">Unmarshal</span>(<span style="color:#a6e22e">token</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">params</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;json.Unmarshal(%s) error(%v)&#34;</span>, <span style="color:#a6e22e">token</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mid</span> = <span style="color:#a6e22e">params</span>.<span style="color:#a6e22e">Mid</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">roomID</span> = <span style="color:#a6e22e">params</span>.<span style="color:#a6e22e">RoomID</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">accepts</span> = <span style="color:#a6e22e">params</span>.<span style="color:#a6e22e">Accepts</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">hb</span> = int64(<span style="color:#a6e22e">l</span>.<span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Node</span>.<span style="color:#a6e22e">Heartbeat</span>) <span style="color:#f92672">*</span> int64(<span style="color:#a6e22e">l</span>.<span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Node</span>.<span style="color:#a6e22e">HeartbeatMax</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">key</span> = <span style="color:#a6e22e">params</span>.<span style="color:#a6e22e">Key</span>; <span style="color:#a6e22e">key</span> <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;&#34;</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">key</span> = <span style="color:#a6e22e">uuid</span>.<span style="color:#a6e22e">New</span>().<span style="color:#a6e22e">String</span>()
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">l</span>.<span style="color:#a6e22e">dao</span>.<span style="color:#a6e22e">AddMapping</span>(<span style="color:#a6e22e">c</span>, <span style="color:#a6e22e">mid</span>, <span style="color:#a6e22e">key</span>, <span style="color:#a6e22e">server</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;l.dao.AddMapping(%d,%s,%s) error(%v)&#34;</span>, <span style="color:#a6e22e">mid</span>, <span style="color:#a6e22e">key</span>, <span style="color:#a6e22e">server</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Infof</span>(<span style="color:#e6db74">&#34;conn connected key:%s server:%s mid:%d token:%s&#34;</span>, <span style="color:#a6e22e">key</span>, <span style="color:#a6e22e">server</span>, <span style="color:#a6e22e">mid</span>, <span style="color:#a6e22e">token</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// goim/internal/logic/dao/redis.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">d</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Dao</span>) <span style="color:#a6e22e">AddMapping</span>(<span style="color:#a6e22e">c</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">mid</span> <span style="color:#66d9ef">int64</span>, <span style="color:#a6e22e">key</span>, <span style="color:#a6e22e">server</span> <span style="color:#66d9ef">string</span>) (<span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">mid</span> &gt; <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">conn</span>.<span style="color:#a6e22e">Send</span>(<span style="color:#e6db74">&#34;HSET&#34;</span>, <span style="color:#a6e22e">keyMidServer</span>(<span style="color:#a6e22e">mid</span>), <span style="color:#a6e22e">key</span>, <span style="color:#a6e22e">server</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;conn.Send(HSET %d,%s,%s) error(%v)&#34;</span>, <span style="color:#a6e22e">mid</span>, <span style="color:#a6e22e">server</span>, <span style="color:#a6e22e">key</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">conn</span>.<span style="color:#a6e22e">Send</span>(<span style="color:#e6db74">&#34;EXPIRE&#34;</span>, <span style="color:#a6e22e">keyMidServer</span>(<span style="color:#a6e22e">mid</span>), <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">redisExpire</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;conn.Send(EXPIRE %d,%s,%s) error(%v)&#34;</span>, <span style="color:#a6e22e">mid</span>, <span style="color:#a6e22e">key</span>, <span style="color:#a6e22e">server</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">conn</span>.<span style="color:#a6e22e">Send</span>(<span style="color:#e6db74">&#34;SET&#34;</span>, <span style="color:#a6e22e">keyKeyServer</span>(<span style="color:#a6e22e">key</span>), <span style="color:#a6e22e">server</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;conn.Send(HSET %d,%s,%s) error(%v)&#34;</span>, <span style="color:#a6e22e">mid</span>, <span style="color:#a6e22e">server</span>, <span style="color:#a6e22e">key</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">conn</span>.<span style="color:#a6e22e">Send</span>(<span style="color:#e6db74">&#34;EXPIRE&#34;</span>, <span style="color:#a6e22e">keyKeyServer</span>(<span style="color:#a6e22e">key</span>), <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">redisExpire</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;conn.Send(EXPIRE %d,%s,%s) error(%v)&#34;</span>, <span style="color:#a6e22e">mid</span>, <span style="color:#a6e22e">key</span>, <span style="color:#a6e22e">server</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div><p>从<code>AddMapping</code>方法中，总结下得到：</p>
+<pre><code>如果(mid=1, key=69dafe8b58066478aea48f3d0f384820,server=comet.001)
+mid_1 = {69dafe8b58066478aea48f3d0f384820: comet.001}
+key_69dafe8b58066478aea48f3d0f384820 = &quot;comet.001&quot;
+</code></pre>
+<p>也就是说，同一个用户可以在多个地方同时连入系统；同时也能看出来，Session管理并不包括用户所在的房间，用户需要接受哪些房间的消息，这部分是在是在<code>Logic.Connect</code>处理好了之后通过gRPC响应，交给Comet处理的。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// goim/internal/comet/server_websocket.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">s</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Server</span>) <span style="color:#a6e22e">ServeWebsocket</span>(<span style="color:#a6e22e">conn</span> <span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">Conn</span>, <span style="color:#a6e22e">rp</span>, <span style="color:#a6e22e">wp</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">bytes</span>.<span style="color:#a6e22e">Pool</span>, <span style="color:#a6e22e">tr</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">xtime</span>.<span style="color:#a6e22e">Timer</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">p</span>, <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">ch</span>.<span style="color:#a6e22e">CliProto</span>.<span style="color:#a6e22e">Set</span>(); <span style="color:#a6e22e">err</span> <span style="color:#f92672">==</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">ch</span>.<span style="color:#a6e22e">Mid</span>, <span style="color:#a6e22e">ch</span>.<span style="color:#a6e22e">Key</span>, <span style="color:#a6e22e">rid</span>, <span style="color:#a6e22e">accepts</span>, <span style="color:#a6e22e">hb</span>, <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">authWebsocket</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">ws</span>, <span style="color:#a6e22e">p</span>, <span style="color:#a6e22e">req</span>.<span style="color:#a6e22e">Header</span>.<span style="color:#a6e22e">Get</span>(<span style="color:#e6db74">&#34;Cookie&#34;</span>)); <span style="color:#a6e22e">err</span> <span style="color:#f92672">==</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">ch</span>.<span style="color:#a6e22e">Watch</span>(<span style="color:#a6e22e">accepts</span><span style="color:#f92672">...</span>) <span style="color:#75715e">// 监听房间列表
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>			<span style="color:#a6e22e">b</span> = <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">Bucket</span>(<span style="color:#a6e22e">ch</span>.<span style="color:#a6e22e">Key</span>) <span style="color:#75715e">// 根据用户key选择一个bucket (对key做cityhash再取模)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>			<span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">b</span>.<span style="color:#a6e22e">Put</span>(<span style="color:#a6e22e">rid</span>, <span style="color:#a6e22e">ch</span>) <span style="color:#75715e">// 将用户ID和连接Channel维护到Bucket中
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>			<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">conf</span>.<span style="color:#a6e22e">Conf</span>.<span style="color:#a6e22e">Debug</span> {
+</span></span><span style="display:flex;"><span>				<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Infof</span>(<span style="color:#e6db74">&#34;websocket connnected key:%s mid:%d proto:%+v&#34;</span>, <span style="color:#a6e22e">ch</span>.<span style="color:#a6e22e">Key</span>, <span style="color:#a6e22e">ch</span>.<span style="color:#a6e22e">Mid</span>, <span style="color:#a6e22e">p</span>)
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// auth for goim handshake with client, use rsa &amp; aes.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">s</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Server</span>) <span style="color:#a6e22e">authWebsocket</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">ws</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">websocket</span>.<span style="color:#a6e22e">Conn</span>, <span style="color:#a6e22e">p</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">Proto</span>, <span style="color:#a6e22e">cookie</span> <span style="color:#66d9ef">string</span>) (<span style="color:#a6e22e">mid</span> <span style="color:#66d9ef">int64</span>, <span style="color:#a6e22e">key</span>, <span style="color:#a6e22e">rid</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">accepts</span> []<span style="color:#66d9ef">int32</span>, <span style="color:#a6e22e">hb</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Duration</span>, <span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">p</span>.<span style="color:#a6e22e">ReadWebsocket</span>(<span style="color:#a6e22e">ws</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">p</span>.<span style="color:#a6e22e">Op</span> <span style="color:#f92672">==</span> <span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">OpAuth</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">break</span>
+</span></span><span style="display:flex;"><span>		} <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;ws request operation(%d) not auth&#34;</span>, <span style="color:#a6e22e">p</span>.<span style="color:#a6e22e">Op</span>)
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// rid roomID
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">mid</span>, <span style="color:#a6e22e">key</span>, <span style="color:#a6e22e">rid</span>, <span style="color:#a6e22e">accepts</span>, <span style="color:#a6e22e">hb</span>, <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">Connect</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">p</span>, <span style="color:#a6e22e">cookie</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">p</span>.<span style="color:#a6e22e">Op</span> = <span style="color:#a6e22e">grpc</span>.<span style="color:#a6e22e">OpAuthReply</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">p</span>.<span style="color:#a6e22e">Body</span> = <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">p</span>.<span style="color:#a6e22e">WriteWebsocket</span>(<span style="color:#a6e22e">ws</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">ws</span>.<span style="color:#a6e22e">Flush</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h4 id="消息格式">
+  消息格式
+  <a class="anchor" href="#%e6%b6%88%e6%81%af%e6%a0%bc%e5%bc%8f">#</a>
+</h4>
+<p><strong>1 - 任务队列消息</strong>：</p>
+<p>不管是个人消息，还是房间消息和广播消息，都是用的如下结构；其中Op和Type可以帮助Job单元可以针对消息上做差异化的处理。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">PushMsg</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Type</span>                 <span style="color:#a6e22e">PushMsg_Type</span> <span style="color:#75715e">// 消息类型，个人，房间广播，广播
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">Operation</span>            <span style="color:#66d9ef">int32</span>        <span style="color:#75715e">// 指令 goim/api/comet/grpc/operation.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">Speed</span>                <span style="color:#66d9ef">int32</span>        <span style="color:#75715e">// 广播时用 TODO:
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">Server</span>               <span style="color:#66d9ef">string</span>       <span style="color:#75715e">// Comet的Hostname, 个人消息时指定
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">Room</span>                 <span style="color:#66d9ef">string</span>       <span style="color:#75715e">// 房间号
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">Keys</span>                 []<span style="color:#66d9ef">string</span>     <span style="color:#75715e">// bucket key
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">Msg</span>                  []<span style="color:#66d9ef">byte</span>       <span style="color:#75715e">// 消息体
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div><p><strong>2 - GOIM消息协议</strong>：</p>
+<p>区别于任务队列消息，这个条消息是客户端实际收到的消息（对比可以发现，其中只有Op和Body是从Logic单元传递过来的，其他字段很大一部分用于分流（定位Comet/Bucket/Room/Channel），或者系统字段用于差异化处理消息）：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Proto</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Ver</span>                  <span style="color:#66d9ef">int32</span>    <span style="color:#75715e">// 版本号
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">Op</span>                   <span style="color:#66d9ef">int32</span>    <span style="color:#75715e">// 消息类型，如Ping，Pong, Text
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">Seq</span>                  <span style="color:#66d9ef">int32</span>    <span style="color:#75715e">// 序列号 TODO:
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">Body</span>                 []<span style="color:#66d9ef">byte</span>   <span style="color:#75715e">// 消息体 等于 PushMsg.Msg
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div><h4 id="服务发现">
+  服务发现
+  <a class="anchor" href="#%e6%9c%8d%e5%8a%a1%e5%8f%91%e7%8e%b0">#</a>
+</h4>
+<p>服务发现可以帮助整个应用发现Comet单元和Logic单元，而Job单元并不需要注册自己（不需要被发现）。当然可以没有服务发现功能，直接在代码和配置中配置好（Comet/Logic）服务地址，但是也就失去了动态扩容的能力。另外，如果是K8S部署，这里的服务发现功能就有点冗余了，因此需要做一些调整再用K8S部署，调整包括（服务注册和发现抽象即于discovery结耦，可选开启；对于Comet的gRPC调用，在针对用户单发消息时，需要从定向单播变成广播）。</p>
+<h3 id="总结">
+  总结
+  <a class="anchor" href="#%e6%80%bb%e7%bb%93">#</a>
+</h3>
+<ul>
+<li>GOIM将整个应用职责，分配给三个单个独立网元来承担相应的工作，让流程更清晰，应用也易于扩展（动态）。</li>
+<li>在用户和长连接的映射上，使用了Key来区别应用用户和业务用户，得以支持单个用户同时登陆（多平台）的场景；另外key也作为了Comet网元定位用户的唯一标识；利用了bucket + cityhash来降低竞争，加速用户定位并发送消息。</li>
+<li>在房间消息的处理上，出于消息频繁和业务场景的考虑：在Job上为房间消息增加了数据包合并机制；在Comet层为每一个Bucket都创建了一定数量的goroutine来持续处理房间消息。这两个动作，都能提高整个应用对于房间消息处理能力，提升吞吐量。</li>
+<li>从Job端将消息分发到Comet时，除了单个用户的消息能够指定Comet以外，其他的消息都只能广播给所有的Comet处理。</li>
+</ul>
+<blockquote>
+<p>水平有限，如有错误，欢迎勘误指正🙏。</p>
+</blockquote>
+<h2 id="参考文档">
+  参考文档
+  <a class="anchor" href="#%e5%8f%82%e8%80%83%e6%96%87%e6%a1%a3">#</a>
+</h2>
+<ul>
+<li><a href="https://github.com/Terry-Mao/goim">https://github.com/Terry-Mao/goim</a></li>
+<li><a href="https://juejin.im/post/5cd12fa16fb9a0320b40ec32">https://juejin.im/post/5cd12fa16fb9a0320b40ec32</a></li>
+</ul>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "goim-introduction", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#架构图">架构图</a></li>
+    <li><a href="#消息流转">消息流转</a>
+      <ul>
+        <li><a href="#生成消息">生成消息</a></li>
+        <li><a href="#传输消息">传输消息</a></li>
+        <li><a href="#投递消息">投递消息</a></li>
+        <li><a href="#附">附</a></li>
+        <li><a href="#总结">总结</a></li>
+      </ul>
+    </li>
+    <li><a href="#参考文档">参考文档</a></li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

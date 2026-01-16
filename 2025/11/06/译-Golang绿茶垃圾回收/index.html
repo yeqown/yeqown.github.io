@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="2025年10月29日，Go 官方博客发布了一篇关于 Green Tea 垃圾回收器的文章，介绍了 Golang 1.25 中引入的 Green Tea 垃圾回收器的设计背景和实现原理。这里对这篇文章进行翻译，顺便了解一下 Go 垃圾回收的现状和未来发展方向。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2025/11/06/%E8%AF%91-Golang%E7%BB%BF%E8%8C%B6%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="译：The Green Tea Garbage Collector">
+  <meta property="og:description" content="2025年10月29日，Go 官方博客发布了一篇关于 Green Tea 垃圾回收器的文章，介绍了 Golang 1.25 中引入的 Green Tea 垃圾回收器的设计背景和实现原理。这里对这篇文章进行翻译，顺便了解一下 Go 垃圾回收的现状和未来发展方向。">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2025-11-06T14:09:28+08:00">
+    <meta property="article:modified_time" content="2025-11-06T14:09:28+08:00">
+    <meta property="article:tag" content="Golang">
+    <meta property="article:tag" content="GC">
+    <meta property="article:tag" content="Green Tea">
+<title>译：The Green Tea Garbage Collector | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2025/11/06/%E8%AF%91-Golang%E7%BB%BF%E8%8C%B6%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>译：The Green Tea Garbage Collector</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#理解垃圾回收">理解垃圾回收</a>
+      <ul>
+        <li><a href="#对象和指针">对象和指针</a></li>
+        <li><a href="#标记清除">标记清除</a></li>
+        <li><a href="#就这">就这？</a></li>
+        <li><a href="#算法演示graph-flood">算法演示：Graph Flood</a></li>
+      </ul>
+    </li>
+    <li><a href="#有什么问题">有什么问题？</a>
+      <ul>
+        <li><a href="#垃圾收集的成本">垃圾收集的成本</a></li>
+        <li><a href="#微架构灾难">“微架构灾难”</a></li>
+      </ul>
+    </li>
+    <li><a href="#green-tea">Green Tea</a>
+      <ul>
+        <li><a href="#算法演示green-tea">算法演示：Green Tea</a></li>
+        <li><a href="#开上高速">开上高速</a></li>
+        <li><a href="#向量加速">向量加速</a></li>
+        <li><a href="#评估">评估</a></li>
+        <li><a href="#可用性">可用性</a></li>
+      </ul>
+    </li>
+    <li><a href="#历程">历程</a></li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    译：The Green Tea Garbage Collector
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>November 6, 2025</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Golang/">Golang</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/GC/">GC</a>, 
+      <a href="/tags/Green-Tea/">Green Tea</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><blockquote>
+<p>原文链接：<a href="https://go.dev/blog/greenteagc">The Green Tea Garbage Collector</a></p>
+</blockquote>
+<p>Go <code>1.25</code> 引入了一款名为 Green Tea 的新型实验性垃圾回收器，在构建时通过设置 <code>GOEXPERIMENT=greenteagc</code> 来启用。</p>
+<p>许多工作负载在垃圾回收上花费的时间减少了约 10%，但有些工作负载的降幅高达 <strong>40%</strong>！它已经为生产环境做好了准备，并且已经在 <em>Google</em> 内部使用，我们鼓励您尝试一下。我们知道有些工作负载受益不多，甚至根本没有受益，因此您的反馈对于我们未来的工作至关重要。</p>
+<p>根据我们现在掌握的数据，我们计划在 Go <code>1.26</code> 中将其作为默认设置。要报告任何问题，请提交一个新 issue。要报告任何成功案例，请回复现有的 <a href="https://github.com/golang/go/issues/73581">Green Tea issue</a>。</p>
+<p>本文是根据 <em><strong>Michael Knyszek</strong></em> 在 <em><strong>GopherCon 2025</strong></em> 上的演讲整理而成的博客文章。一旦演讲视频在线发布，我们将更新这篇博文并附上链接。</p>
+<h2 id="理解垃圾回收">
+  理解垃圾回收
+  <a class="anchor" href="#%e7%90%86%e8%a7%a3%e5%9e%83%e5%9c%be%e5%9b%9e%e6%94%b6">#</a>
+</h2>
+<p>在我们讨论 <strong>Green Tea</strong> 之前，让我们先就垃圾回收达成共识。</p>
+<h3 id="对象和指针">
+  对象和指针
+  <a class="anchor" href="#%e5%af%b9%e8%b1%a1%e5%92%8c%e6%8c%87%e9%92%88">#</a>
+</h3>
+<p>垃圾回收的目的是自动回收和重用程序不再使用的内存。为此，Go 垃圾回收器关注的是 <em>对象</em> 和 <em>指针</em>。</p>
+<p>在 Go 运行时的上下文中，对象是其底层内存在堆上分配的 Go 值。当 Go 编译器无法确定值的生命周期时，就会在堆上分配内存。例如，以下代码片段分配了一个堆对象：一个指针切片的底层存储空间。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">var</span> <span style="color:#a6e22e">x</span> = make([]<span style="color:#f92672">*</span><span style="color:#66d9ef">int</span>, <span style="color:#ae81ff">10</span>) <span style="color:#75715e">// 全局变量
+</span></span></span></code></pre></div><p>Go 编译器无法将切片底层存储分配在堆以外的任何地方，因为它很难知道（甚至不可能知道） <code>x</code> 会引用该对象多长时间。</p>
+<p>指针只是指示 Go 值在内存中位置的数字，Go 程序就是通过指针来引用对象的。例如，要获取上一个代码片段中分配的对象的起始地址的指针，我们可以这样写：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#f92672">&amp;</span><span style="color:#a6e22e">x</span>[<span style="color:#ae81ff">0</span>] <span style="color:#75715e">// 0xc000104000
+</span></span></span></code></pre></div><h3 id="标记清除">
+  标记清除
+  <a class="anchor" href="#%e6%a0%87%e8%ae%b0%e6%b8%85%e9%99%a4">#</a>
+</h3>
+<p>Go 的垃圾回收器遵循一种广义上称为<em><strong>追踪式垃圾回收</strong></em>的策略，这意味着垃圾回收器会跟随或“追踪”程序中的指针，以确定程序仍在使用的对象。</p>
+<p>更具体地说，Go 垃圾回收器实现了***标记-清除（Mark-and-Sweep）***算法，这个名字很形象地描述了它的工作原理。</p>
+<p>想象一下，对象和指针就像计算机科学中的图：<em><strong>对象是节点，指针是边</strong></em>。</p>
+<p><em><strong>标记-清除</strong></em>算法就作用于这个图，顾名思义，它分两个阶段进行：</p>
+<ul>
+<li>
+<p>第一个阶段：即 <em>标记</em> 阶段。</p>
+<p>从称为 <strong>根（Roots）</strong> 的明确定义的起始点（可以想象成全局变量和当前函数调用栈中的局部变量）开始遍历对象图。然后，垃圾回收器将沿途找到的所有对象都标记为“已访问”，以避免重复访问和循环。这类似于图遍历算法，如深度优先搜索（DFS）或广度优先搜索（BFS）。</p>
+</li>
+<li>
+<p>第二个阶段：即 <em>清除</em> 阶段。</p>
+<p>在图遍历结束后，所有未被访问到的对象就是程序不再使用或“无法访问”的了。我们称这种状态为<em><strong>不可达</strong></em>，因为在遵循 Go 语言规范的正常代码中，已经无法再访问到这块内存了。</p>
+</li>
+</ul>
+<p>要完成清除，算法只需遍历所有未被标记为“已访问”的对象，并将其内存标记为空闲，以便内存分配器可以重新使用它们。</p>
+<h3 id="就这">
+  就这？
+  <a class="anchor" href="#%e5%b0%b1%e8%bf%99">#</a>
+</h3>
+<p>你可能觉得我讲得过于简单了，毕竟垃圾回收器常常被认为是魔法和黑盒。你说对了一部分，垃圾回收器的实现确实还有很多复杂性和细节。</p>
+<p>例如，该算法实际上会与你的 Go 代码<strong>并发执行</strong>：在一个不断变化的图上进行遍历会带来挑战。我们还并行化了这个算法，这个细节稍后会再次提到。</p>
+<p>但请相信我，这些细节在很大程度上与核心算法是独立的，其核心确实只是一个简单的<em><strong>图遍历</strong></em>算法。</p>
+<h3 id="算法演示graph-flood">
+  算法演示：Graph Flood
+  <a class="anchor" href="#%e7%ae%97%e6%b3%95%e6%bc%94%e7%a4%bagraph-flood">#</a>
+</h3>
+<p>让我们来看一个例子：</p>
+<p><img src="/images/greengc/marksweep-007.png" alt="marksweep-007" />
+这是一张全局变量和 Go 堆的图表，让我们一步步来分析。</p>
+<p><img src="/images/greengc/marksweep-008.png" alt="marksweep-008" />
+左边是我们的根节点，即全局变量 x 和 y。它们是图遍历的起点。根据左下角的图例，蓝色标记表示它们当前位于我们的工作列表中。</p>
+<p><img src="/images/greengc/marksweep-009.png" alt="marksweep-009" />
+右边是我们的堆。目前，堆中的所有内容都显示为灰色，因为我们还没有开始遍历它们。</p>
+<p><img src="/images/greengc/marksweep-010.png" alt="marksweep-010" />
+每一个矩形都代表一个对象，并标记了它的类型。框选出来的是一个 <code>T</code> 类型的对象，它的类型定义在左上角。类型 <code>T</code> 拥有一个指向子元素数组的指针 <code>children</code> 和一个 <code>int</code> 类型的值。看得出来这是一种递归的数据结构。</p>
+<p><img src="/images/greengc/marksweep-011.png" alt="marksweep-011" />
+除了 <code>T</code> 类型的对象之外，你还会注意到我们还有包含 <code>*T</code> 的数组对象。这些对象由 <code>T</code> 类型的 <code>children</code> 字段引用。</p>
+<p><img src="/images/greengc/marksweep-012.png" alt="marksweep-012" />
+矩形内的每个方块代表 8 字节的内存。带点的方块代表指针，如果它有箭头，则它是一个指向其他对象的非空指针。</p>
+<p><img src="/images/greengc/marksweep-013.png" alt="marksweep-013" />
+如果它没有对应的箭头，那么它就是一个空指针。</p>
+<p><img src="/images/greengc/marksweep-014.png" alt="marksweep-014" />
+这些虚线矩形代表可用内存，我称之为空闲“插槽”。我们可以在那里放置一个对象，当然目前没有对象占用这些内存。</p>
+<p><img src="/images/greengc/marksweep-015.png" alt="marksweep-015" />
+你应该注意到了，对象被一些带标签的虚线圆角矩形组合在了一起（框选中的部分）。其中每一个都代表一个<strong>页（Page）</strong>，它是一个连续的、固定大小且对齐的内存块。在 Go 中，页面大小为 8 KiB（无论硬件虚拟内存页面大小如何）。后面我们会用 A、B、C、D 来指代这四个页面。</p>
+<p>在这个图中，每个对象都被分配到某个页面中。跟实际实现的一样，每一页只包含特定大小的对应对象，Go 堆就是这样组织的。</p>
+<p><img src="/images/greengc/marksweep-016.png" alt="marksweep-016" />
+页也是我们组织每个对象元数据的方式。这里可以看到七个方框，每个方框对应页面 A 中的七个对象槽位之一。</p>
+<p>每个框使用一个位（bit）来表明我们是否已经访问过这个对象。实际上，运行时就是通过这种方式来管理对象是否被访问过的，这一点很重要。</p>
+<p><img src="/images/greengc/marksweep-017.png" alt="marksweep-017" />
+细节很多，感谢耐心阅读，这些内容稍后都会派上用场。</p>
+<hr/>
+<p>现在，我们来看看<em><strong>图遍历</strong></em>算法如何应用于这张图：</p>
+<p><img src="/images/greengc/marksweep-018.png" alt="marksweep-018" />
+我们从工作列表中取出一个根对象，将其标记为红色，表示它现在处于活动状态。</p>
+<p><img src="/images/greengc/marksweep-019.png" alt="marksweep-019" />
+沿着该根对象（x）的指针，我们找到了一个 <code>T</code> 类型的对象，并将其添加到我们的工作列表中。根据我们的图例，我们将该对象绘制成蓝色以表示它在我们的工作列表中。请注意，我们在元数据中设置了与此对象对应的<strong>已访问</strong>位。</p>
+<p><img src="/images/greengc/marksweep-020.png" alt="marksweep-020" />
+下一个根对象（y）也同样处理。</p>
+<p><img src="/images/greengc/marksweep-021.png" alt="marksweep-021" />
+现在我们已经处理完所有的根对象，工作列表中还剩下两个对象。让我们从工作列表中取出一个对象。</p>
+<p><img src="/images/greengc/marksweep-022.png" alt="marksweep-022" />
+我们现在要做的是遍历所有（工作列表中的）对象的引用（指针），以找到更多对象。这个过程称为<strong>扫描</strong>对象。</p>
+<p><img src="/images/greengc/marksweep-023.png" alt="marksweep-023" />
+我们找到了这个有效的数组对象（红色箭头指向）。</p>
+<p><img src="/images/greengc/marksweep-024.png" alt="marksweep-024" />
+现在并将其添加到我们的工作列表中（将其标记为蓝色）。</p>
+<p><img src="/images/greengc/marksweep-025.png" alt="marksweep-025" />
+从这里开始，我们要<strong>递归地</strong>进行处理了。</p>
+<p><img src="/images/greengc/marksweep-026.png" alt="marksweep-026" />
+遍历数组的指针（访问 index=0 元素，空指针跳过）。</p>
+<p><img src="/images/greengc/marksweep-027.png" alt="marksweep-027" />
+（访问 index=1 的元素，非空指针，沿着指针访问）。</p>
+<p><img src="/images/greengc/marksweep-028.png" alt="marksweep-028" />
+（将指针指向的对象，加入到工作列表中）。</p>
+<p><img src="/images/greengc/marksweep-029.png" alt="marksweep-029" />
+找到更多的对象（访问 index=2 的元素，非空指针，沿着指针访问）。</p>
+<p><img src="/images/greengc/marksweep-030.png" alt="marksweep-030" />
+（将指针指向的对象，加入到工作列表中）。</p>
+<p><img src="/images/greengc/marksweep-031.png" alt="marksweep-031" />
+（访问 index=3 的元素，空指针跳过）。</p>
+<p><img src="/images/greengc/marksweep-032.png" alt="marksweep-032" />
+现在我们开始遍历数组对象引用的对象（注意！这里先访问的是 index=2 指向的对象，是后加入工作队列的）。</p>
+<p><img src="/images/greengc/marksweep-033.png" alt="marksweep-033" />
+注意，我们仍然需要遍历所有指针（<code>T</code> 中的 <code>children</code>），即使它们是 <code>nil</code>。因为我们也无法提前知道它们是否是 <code>nil</code>。</p>
+<p><img src="/images/greengc/marksweep-034.png" alt="marksweep-034" />
+还有另外一个对象（index=1 指向的对象）。</p>
+<p><img src="/images/greengc/marksweep-035.png" alt="marksweep-035" />
+（空指针，结束）。</p>
+<p><img src="/images/greengc/marksweep-036.png" alt="marksweep-036" />
+现在我们切到另一个分支，从我们之前从一个根对象（x）找到的那个对象（位于 Page A）开始。你可能注意到了工作列表在这里遵循<em><strong>后进先出</strong></em>的原则，这表明我们的工作列表是一个堆栈，因此我们的<em><strong>图遍历</strong></em>算法近似于<em><strong>深度优先搜索</strong></em>。这是特意用来反映 Go 运行时中实际的<em><strong>图遍历</strong></em>算法。</p>
+<p><img src="/images/greengc/marksweep-037.png" alt="marksweep-037" />
+让我们继续&hellip;</p>
+<p><img src="/images/greengc/marksweep-038.png" alt="marksweep-038" />
+接下来我们找到另一个数组对象（Page B 中的蓝色矩形）。</p>
+<p><img src="/images/greengc/marksweep-039.png" alt="marksweep-039" />
+遍历它。</p>
+<p><img src="/images/greengc/marksweep-040.png" alt="marksweep-040" />
+(访问 index=0，空指针)</p>
+<p><img src="/images/greengc/marksweep-041.png" alt="marksweep-041" />
+(访问 index=1，空指针)</p>
+<p><img src="/images/greengc/marksweep-042.png" alt="marksweep-042" />
+(访问 index=2，非空指针)</p>
+<p><img src="/images/greengc/marksweep-043.png" alt="marksweep-043" />
+(将 index=2 指向的对象加入到工作列表中)</p>
+<p><img src="/images/greengc/marksweep-044.png" alt="marksweep-044" />
+（访问 index=3，空指针）现在我们的工作列表中只剩下一个对象了。</p>
+<p><img src="/images/greengc/marksweep-045.png" alt="marksweep-045" />
+让我们开始扫描它&hellip;</p>
+<p><img src="/images/greengc/marksweep-046.png" alt="marksweep-046" />
+（它包含了一个空指针，跳过）。</p>
+<p><img src="/images/greengc/marksweep-047.png" alt="marksweep-047" />
+到这里标记阶段结束了！没有正在处理的对象，工作列表也空了。如图，所有黑色的对象都是可达的，所有灰色的对象都是不可达的。让我们一次性清除所有不可达的对象：</p>
+<p><img src="/images/greengc/marksweep-048.png" alt="marksweep-048" />
+我们已经将这些对象转换为空闲插槽，准备好容纳新对象。</p>
+<h2 id="有什么问题">
+  有什么问题？
+  <a class="anchor" href="#%e6%9c%89%e4%bb%80%e4%b9%88%e9%97%ae%e9%a2%98">#</a>
+</h2>
+<p>经过一番摸索，我们基本掌握了 Go 垃圾回收器的工作原理。目前看来，这个过程运行良好，那么问题出在哪里呢？</p>
+<p>事实证明，在某些程序中，执行这个算法会花费大量时间，而且几乎会给所有 Go 程序带来显著的开销。Go 程序将 20% 甚至更多的 CPU 时间用于垃圾回收的情况并不少见。</p>
+<p>让我们来分析一下这些时间都花在了哪里。</p>
+<h3 id="垃圾收集的成本">
+  垃圾收集的成本
+  <a class="anchor" href="#%e5%9e%83%e5%9c%be%e6%94%b6%e9%9b%86%e7%9a%84%e6%88%90%e6%9c%ac">#</a>
+</h3>
+<p>从宏观层面来看，垃圾回收器的成本由两部分组成：一是运行频率，二是每次运行的工作量。将这两部分相乘，即可得到垃圾回收器的总成本。</p>
+<pre><code>总 GC 开销 = GC 运行频次 × 平均每次 GC 开销
+</code></pre>
+<p>多年来，我们一直在研究这个等式中的这两个方面。要了解更多关于垃圾回收器运行频率的信息，请参阅 <em><strong>Michael</strong></em> 在 <a href="https://www.youtube.com/watch?v=07wduWyWx8M">2022 GopherCon EU</a> 大会上的演讲。关于内存限制，<a href="https://go.dev/doc/gc-guide">Go 垃圾回收器指南</a> 也对此主题进行了深入阐述，如果想深入了解，值得一看。</p>
+<p>这里，我们只关注第二部分：每次 GC 运行的成本。</p>
+<p>多年来，我们不断分析 CPU profile，试图提高性能，从中我们了解到 Go 的垃圾回收器有两大开销：</p>
+<ul>
+<li>首先，垃圾收集器的成本约 90% 用于标记，只有约 10% 用于清扫。事实证明，清扫比标记更容易优化，多年来 Go 也确实拥有了非常高效的清扫实现。</li>
+<li>其次，在标记任务所花费的时间中，相当一部分（通常至少 35%）都浪费在了访问堆内存上。这本身就够糟糕的了，更糟糕的是，它 <strong>“严重影响”</strong> 了现代 CPU 发挥其全部性能的关键机制。</li>
+</ul>
+<h3 id="微架构灾难">
+  “微架构灾难”
+  <a class="anchor" href="#%e5%be%ae%e6%9e%b6%e6%9e%84%e7%81%be%e9%9a%be">#</a>
+</h3>
+<p>在这个语境下，<em>“严重影响”</em> 是意味着什么？现代 CPU 的具体构造相当复杂，所以我们用一个类比来解释：</p>
+<p>想象一下，CPU 在一条名为 <em>“你的程序”</em> 的道路上开车。CPU 想要提高速度，为此它需要能够看到前方很远的路况，而且道路必须畅通无阻。但对于 CPU 来说，<em>图遍历</em> 算法就像是在城市街道上开车。CPU 看不到拐角处的情况，也无法预测接下来会发生什么。为了前进，它不得不不断减速转弯、在红绿灯前停车、避让行人。你的引擎速度能转多快也无济于事，因为你根本没有加速的机会。</p>
+<p>让我们再来看一个例子，让它更具体一些。我在这里把堆和我们走过的路径叠加在一起了。每个从左到右的箭头代表我们完成的一项扫描工作，虚线箭头则表示我们在不同的扫描工作之间跳转。</p>
+<figure>
+    <img src="/images/greengc/graphflood-path.png" alt="graphflood-path" width="100%" />
+    <figcaption>在我们的图遍历示例中，垃圾回收器在堆中执行的路径</figcaption>
+</figure>
+<p>现代 CPU 会进行大量的缓存。访问主内存的速度可能比访问缓存中的内存慢 100 倍。CPU 缓存中存储的是最近访问过的内存，以及与最近访问过的内存位置相近的内存。但是，并不能保证两个相互指向的对象在内存中也彼此靠近。图遍历算法并没有考虑到这一点。</p>
+<p>补充说明一下：如果只是延迟对主内存的读取操作，情况可能还不至于这么糟糕。CPU 可以异步发出内存请求，所以即使是慢速请求，如果 CPU 能提前看到足够多的信息，也能相互重叠。但在<em>图遍历</em>中，每一项工作都很小、不可预测，而且高度依赖于前一项工作，因此 CPU 几乎每次读取内存都会被迫等待。</p>
+<p>不幸的是，这个问题只会越来越严重。虽然业内有句老话：“等两年，你的代码运行速度就会提升”。但 Go 语言作为一种依赖标记清除算法的垃圾回收语言，却面临着相反的风险：“两年后，你的代码运行速度会变慢”。现代 CPU 硬件的发展趋势正在给垃圾回收器的性能带来新的挑战：</p>
+<ul>
+<li>
+<p><strong>非均匀内存访问（Non-uniform memory access, NUMA）</strong>：</p>
+<p>首先，内存现在往往与 CPU 核心的子集相关联。其他 CPU 核心访问该内存的速度会变慢。换句话说，主内存访问的成本取决于哪个 CPU 核心在访问它。这种成本是不均匀的，因此我们称之为非均匀内存访问，简称 NUMA。</p>
+</li>
+<li>
+<p><strong>内存带宽下降（Reduced memory bandwidth）</strong>：</p>
+<p>每个 CPU 核心可用的内存带宽呈下降趋势。这意味着虽然我们拥有更多的 CPU 核心，但每个核心能够处理的数据量相对较少。对主内存的请求导致未缓存的请求等待时间比以前更长。</p>
+</li>
+<li>
+<p><strong>更多的 CPU 核心（Ever more CPU cores）</strong>：</p>
+<p>上面我们讨论的是一种顺序标记算法，但真正的垃圾回收器执行的是并行算法。这种方法在 CPU 核心数量有限的情况下扩展性很好，但待扫描对象的共享队列会成为瓶颈，即使经过精心设计，仍然存在争用。</p>
+</li>
+<li>
+<p><strong>现代硬件特性（Modern hardware features）</strong>：</p>
+<p>新硬件具有向量指令等先进功能，使我们能够一次处理大量数据。虽然这有可能大幅提升速度，但目前还不清楚如何才能实现这一点，因为标记工作涉及很多不规则且通常是小块的工作。</p>
+</li>
+</ul>
+<h2 id="green-tea">
+  Green Tea
+  <a class="anchor" href="#green-tea">#</a>
+</h2>
+<p>最后，我们来看看 Green Tea 算法，这是我们对标记扫描算法的一种新方法。Green Tea 算法的核心思想非常简单：</p>
+<p><em><strong>以页（Page）为单位进行处理，而不是对象（Object）</strong></em></p>
+<p>听起来很简单，对吧？然而，为了弄清楚如何安排对象图遍历的顺序以及我们需要跟踪哪些内容才能使其在实践中有效运作，我们做了大量的工作。更具体地说：</p>
+<ul>
+<li>不扫描对象，而是扫描页。</li>
+<li>不在工作列表中跟踪对象，而是跟踪整个页面。</li>
+<li>最终仍然需要标记对象，但我们会跟踪每个页面本地标记的对象，而不是在整个堆中进行跟踪。</li>
+</ul>
+<h3 id="算法演示green-tea">
+  算法演示：Green Tea
+  <a class="anchor" href="#%e7%ae%97%e6%b3%95%e6%bc%94%e7%a4%bagreen-tea">#</a>
+</h3>
+<p>让我们再次查看我们的示例堆，看看这在实践中意味着什么，但这次运行的是 <em>Green Tea</em> 而不是直接的 <em>图遍历</em>。</p>
+<p><img src="/images/greengc/greentea-060.png" alt="greentea-060" />
+这和之前的堆一样，但是现在每个对象有两个元数据位而不是一个。同样，每个位或框对应于页面中的一个对象插槽。总共，我们现在有 14 个位对应于页面 A 中的 7 个插槽。</p>
+<p>顶部的位代表和以前一样的东西：我们是否看到了指向该对象的指针，我称之为 <em><strong>已见（seen）位</strong></em>。底部的位是新引入的，称为 <em><strong>已扫描（scanned）位</strong></em> 跟踪我们是否扫描了该对象。</p>
+<p>这个新的元数据是必要的，因为在 <em>Green Tea</em> 中，工作列表虽然是跟踪页面而不是对象，但我们仍然需要在某个级别上跟踪对象，这些位就是用来在辅助跟踪对象的。</p>
+<p><img src="/images/greengc/greentea-062.png" alt="greentea-062" />
+我们像以前一样，从根节点开始遍历对象。</p>
+<p><img src="/images/greengc/greentea-063.png" alt="greentea-063" />
+（从 x 开始）</p>
+<p><img src="/images/greengc/greentea-064.png" alt="greentea-064" />
+但这一次，我们不是将一个对象放入工作列表，而是将整个页面（在本例中是页面 A）放入工作列表，用蓝色阴影表示整个页面。</p>
+<p><img src="/images/greengc/greentea-066.png" alt="greentea-066" />
+我们找到的对象也是蓝色的，表示当我们从工作列表中取出此页面时，我们将需要查看该对象。请注意，对象的蓝色色调直接反映了页面 A 中的元数据。其对应的“已见”位为 1，但其“已扫描”位未置 1。</p>
+<p><img src="/images/greengc/greentea-069.png" alt="greentea-069" />
+我们跟随下一个根，找到另一个对象，然后再次将整个页面 C 放到工作列表中，并设置该对象的“已见”位。</p>
+<p><img src="/images/greengc/greentea-071.png" alt="greentea-071" />
+我们已经完成了对根的跟踪，所以我们转向工作列表，并将页面 A 从工作列表中取出。</p>
+<p><img src="/images/greengc/greentea-072.png" alt="greentea-072" />
+使用“已见”和“已扫描”位，我们可以知道页面 A 上有一个要扫描的对象。</p>
+<p><img src="/images/greengc/greentea-074.png" alt="greentea-074" />
+我们扫描该对象，跟随它的指针。结果，我们将页面 B 添加到工作列表中，因为页面 A 中的第一个对象指向页面 B 中的一个对象。</p>
+<p><img src="/images/greengc/greentea-075.png" alt="greentea-075" />
+我们处理完页面 A。接下来我们从工作列表中取出页面 C。</p>
+<p><img src="/images/greengc/greentea-076.png" alt="greentea-076" />
+与页面 A 类似，页面 C 上只有一个要扫描的对象。</p>
+<p><img src="/images/greengc/greentea-078.png" alt="greentea-078" />
+我们在页面 B 中找到了指向另一个对象的指针。页面 B 已在工作列表中，因此我们无需向工作列表添加任何内容。我们只需为目标对象设置“已见”位。</p>
+<p><img src="/images/greengc/greentea-079.png" alt="greentea-079" />
+现在轮到页面 B 了。我们已经在页面 B 上累积了两个要扫描的对象，我们可以按内存顺序连续处理这两个对象！</p>
+<p><img src="/images/greengc/greentea-081.png" alt="greentea-081" />
+我们遍历第一个对象的指针（index 0，空指针）</p>
+<p><img src="/images/greengc/greentea-082.png" alt="greentea-082" />
+（index 1, 也是空指针）</p>
+<p><img src="/images/greengc/greentea-083.png" alt="greentea-083" />
+（index 2, 指向了 Page A 中的对象）</p>
+<p><img src="/images/greengc/greentea-084.png" alt="greentea-084" />
+我们在页面 A 中找到了一个指向对象的指针。页面 A 先前在工作列表中，但此时不在，所以我们将其放回工作列表。与原始的标记-清除算法不同（其中任何给定对象在整个标记阶段最多只添加到工作列表一次），在 Green Tea 中，给定页面可以在标记阶段多次重新出现在工作列表中。</p>
+<p><img src="/images/greengc/greentea-085.png" alt="greentea-085" />
+（index 3, 空指针）</p>
+<p><img src="/images/greengc/greentea-086.png" alt="greentea-086" />
+我们紧接着第一个对象扫描页面中看到的第二个对象。</p>
+<p><img src="/images/greengc/greentea-087.png" alt="greentea-087" />
+（index 0, 空指针）</p>
+<p><img src="/images/greengc/greentea-088.png" alt="greentea-088" />
+（index 1, 指向了 Page A 中的对象）</p>
+<p><img src="/images/greengc/greentea-089.png" alt="greentea-089" />
+我们在页面 A 中找到了更多的对象（将其标记为已访问，待扫描）</p>
+<p><img src="/images/greengc/greentea-090.png" alt="greentea-090" />
+(index 2, 指向了 Page A 中的对象)</p>
+<p><img src="/images/greengc/greentea-091.png" alt="greentea-091" />
+（同样的，标记为已访问，待扫描）</p>
+<p><img src="/images/greengc/greentea-092.png" alt="greentea-092" />
+（index 3, 空指针）</p>
+<p><img src="/images/greengc/greentea-093.png" alt="greentea-093" />
+我们扫描完页面 B，因此我们将页面 A 从工作列表中拉出。</p>
+<p><img src="/images/greengc/greentea-094.png" alt="greentea-094" />
+这次我们只需要扫描三个对象，而不是四个，因为我们已经扫描了第一个对象。我们通过查看“已见”和“已扫描”位之间的差异来知道要扫描哪些对象。</p>
+<p><img src="/images/greengc/greentea-095.png" alt="greentea-095" />
+我们将按顺序扫描（Page A 中）这些（待扫描的）对象，从第二个位置开始。</p>
+<p><img src="/images/greengc/greentea-096.png" alt="greentea-096" />
+（第二个位置上的对象，不包含额外的指针；标记其为已扫描）</p>
+<p><img src="/images/greengc/greentea-097.png" alt="greentea-097" />
+（第五个位置上的对象，扫描它是否包含指针）</p>
+<p><img src="/images/greengc/greentea-098.png" alt="greentea-098" />
+（第五个位置上的对象，不包含额外指针；标记其为已扫描）</p>
+<p><img src="/images/greengc/greentea-099.png" alt="greentea-099" />
+（第六个位置上的对象，扫描它是否包含指针）</p>
+<p><img src="/images/greengc/greentea-100.png" alt="greentea-100" />
+（第六个位置上的对象，不包含额外指针；标记其为已扫描）</p>
+<p><img src="/images/greengc/greentea-101.png" alt="greentea-101" />
+（扫描完成，工作列表为空，也没有正在扫描的对象。灰色对象代表不可达）</p>
+<p><img src="/images/greengc/greentea-102.png" alt="greentea-102" /></p>
+<p>最后，我们可以清除所有未访问的对象，就像之前一样。</p>
+<h3 id="开上高速">
+  开上高速
+  <a class="anchor" href="#%e5%bc%80%e4%b8%8a%e9%ab%98%e9%80%9f">#</a>
+</h3>
+<p>让我们回到开车的比喻。我们终于上高速公路了吗？</p>
+<p>让我们回顾一下之前绘制的洪水图：</p>
+<figure>
+  <img src="/images/greengc/graphflood-path2.png" alt="graphflood-path2">
+  <figcaption>原始*Graph Flood*在堆中经过的路径需要 7 次单独的扫描</figcaption>
+</figure>
+<p>我们四处奔波，在不同的地方做着零零碎碎的工作。绿茶的发展道路看起来截然不同:</p>
+<figure>
+  <img src="/images/greengc/greentea-path.png" alt="greentea-path">
+  <figcaption>绿茶的路径只需要扫描 4 次</figcaption>
+</figure>
+<p>相比之下，绿茶在 A 和 B 页面上从左到右的移动次数较少，但每次移动时间更长。这些箭头越长越好，堆越大效果越明显。这就是绿茶的魅力所在，这也是我们驰骋高速公路的机会。</p>
+<p>这一切都使得它与微架构更加契合。现在，我们可以更精确地扫描彼此靠近的对象，从而更有可能利用缓存并避免使用主内存。同样，每页的元数据也更有可能被缓存。跟踪页面而非对象意味着工作列表更小，而工作列表压力的降低意味着争用更少，CPU 停顿也更少。</p>
+<p>说到高速公路，我们可以把我们比喻意义上的引擎开到以前从未开过的档位，因为现在我们已经可以用上 <strong>向量硬件</strong> 来加速扫描了！</p>
+<h3 id="向量加速">
+  向量加速
+  <a class="anchor" href="#%e5%90%91%e9%87%8f%e5%8a%a0%e9%80%9f">#</a>
+</h3>
+<p>如果你对向量硬件只有粗浅的了解，可能会不明白我们在这里如何使用它。但除了常见的算术和三角运算之外，最新的向量硬件还支持两项对绿茶算法非常有用的功能：超宽寄存器和复杂的位运算。</p>
+<p>大多数现代 <em>x86 CPU</em> 都支持 <em>AVX-512</em> 指令集，它拥有 512 位宽的向量寄存器。如此宽的寄存器足以在 CPU 上仅使用两个寄存器来存储整个页面的所有元数据，从而使 <em>Green Tea</em> 能够仅几条顺序执行的指令就完成整个页面的扫描。</p>
+<p>向量硬件长期以来一直支持对整个向量寄存器进行基本的位运算，但从 <em>AMD Zen 4</em> 和 <em>Intel Ice Lake</em> 开始，它还支持一种新的位向量“瑞士军刀”指令，使得 <em>Green Tea</em> 扫描过程中的关键步骤能够在几个 <em>CPU</em> 周期内完成。这些改进共同作用，使我们能够大幅提升 <em>Green Tea</em> 的扫描循环速度。</p>
+<p>对于 <em>Graph Flood</em> 来说，这根本不可能，因为我们需要在各种大小的对象之间来回扫描。有时只需要两位的元数据，但有时却需要一万，根本具备足够的可预测性和规律性，来使用向量硬件加速。</p>
+<p>如果还想深入了解一些细节，请继续往下。如果不感兴趣，可以直接跳到<a href="#%e8%af%84%e4%bc%b0">评估部分</a></p>
+<h4 id="译者注">
+  译者注：
+  <a class="anchor" href="#%e8%af%91%e8%80%85%e6%b3%a8">#</a>
+</h4>
+<p><em>下面这部分描述的是在 GC 标记过程中，当从工作列表取出一个对象时，要遍历它所持有的指针（以发现尽可能多的对象）。</em></p>
+<p><em>在 Green Tea 算法思想中，是以页位单位进行的扫描，而且希望一次性扫描页中尽可能多的对象。那么完全可以利用向量来加速这个 “遍历” 过程：将活跃对象转换为 <em><strong>活跃字位图</strong></em>，结合页上的 <em><strong>指针位图</strong></em> 就可以快速的知道这一页上，当前需要扫描的对象中，哪些位置是指针，而不需要依次去遍历。</em></p>
+<p><em>就好比，要运算 8bit 的 AND 操作，但之前只有一个门电路，只能按位 AND。现在有八个门电路，可以同时完成8位的 AND。</em></p>
+<figure>
+  <img src="/images/greengc/vector-example.svg" alt="vector-example">
+  <figcaption>利用向量加速的类比示例</figcaption>
+</figure>
+<p><em>相比之下，图遍历算法需要在不同页之间跳来跳去，metadata 的位大小不可预测，无法使用向量来加速这一个过程，只能遍历。（或者说不值得，可能为了强行使用上的开销比加速带来的提升还多）。</em></p>
+<p><em>这一切的前提是，Go 内存分配器已经为每一页维护了一份 “指针位图”，可以知道页中每一个字是否存储了指针。</em></p>
+<h4 id="avx-512-扫描内核">
+  AVX-512 扫描内核
+  <a class="anchor" href="#avx-512-%e6%89%ab%e6%8f%8f%e5%86%85%e6%a0%b8">#</a>
+</h4>
+<p>为了了解 AVX-512 GC 扫描的样子，请看下图:</p>
+<figure>
+  <img src="/images/greengc/avx512.svg" alt="avx512">
+  <figcaption>用于扫描的 AVX-512 向量内核</figcaption>
+</figure>
+<p>这里面涉及的内容很多，我们可能光是解释它的运作原理就能写一整篇博客文章。现在，我们先从宏观层面来概括一下：</p>
+<ol>
+<li>
+<p>首先，我们获取页面的“已查看”和“已扫描”位。请记住，页面中的每个对象对应一位，并且页面中的所有对象大小相同。</p>
+</li>
+<li>
+<p>接下来，我们比较这两个位集。它们的并集成为新的“扫描”位，而它们的差集则是“活动对象”位图，它告诉我们在本次页面扫描过程中（与之前的扫描相比）需要扫描哪些对象。</p>
+</li>
+<li>
+<p>我们计算两个位图的差值并进行“扩展”，这样就不是每个对象占用一位，而是页面中的每个字（8 字节）占用一位。我们称之为“活动字”位图。例如，如果页面是存储 6 个字（48 字节）的对象，则活动对象位图中的每位将被复制到活动字位图中的 6 位。如下所示：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#ae81ff">0</span> <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">1</span> <span style="color:#ae81ff">1</span> ... → <span style="color:#ae81ff">000000</span> <span style="color:#ae81ff">000000</span> <span style="color:#ae81ff">111111</span> <span style="color:#ae81ff">111111</span> ...
+</span></span></code></pre></div></li>
+<li>
+<p>接下来，我们获取页面的 <em><strong>指针位图</strong></em> 。其中，这里的每一位都对应页面的一个字（8 字节），并告诉我们该字是否存储的指针。</p>
+<blockquote>
+<p>指针位图：是由 Go 的内存分配器（allocator）在对象分配时就已经构建好并维护的。</p>
+<p>指针位图是一个按字（word，8 字节）粒度的位图, 每个 bit 对应页面中的一个 word，如果该位置是指针字段，则为 1，否则为 0。</p>
+</blockquote>
+</li>
+<li>
+<p>现在，我们取 <em><strong>指针/标量位图</strong></em> 和 <em><strong>活动字位图</strong></em> 的交集。结果就是 <em><strong>活动指针位图</strong></em>：这个位图告诉我们尚未扫描的任何活动对象中包含的整个页面中每个指针的位置。</p>
+</li>
+<li>
+<p>最后，我们可以遍历页面内存并收集所有指针。逻辑上，我们遍历活动指针位图中的每个置位，加载该处的指针值，并将其写回缓冲区。该缓冲区稍后将用于标记已访问的对象并将页面添加到工作列表中。利用向量指令，我们只需几条指令即可一次处理 64 字节。</p>
+</li>
+</ol>
+<p>速度快的部分原因在于 VGF2P8AFFINEQB 指令，它是 x86 扩展“伽罗瓦域新指令”的一部分，也是我们前面提到的位操作“瑞士军刀”。它才是真正的关键所在，因为它使我们能够非常高效地执行扫描内核中的步骤 (3)。它执行按位<a href="https://en.wikipedia.org/wiki/Affine_transformation">仿射变换</a> ，将向量中的每个字节本身视为一个 8 位数学向量，并将其与一个 8x8 位矩阵相乘。所有这些操作都在<a href="https://en.wikipedia.org/wiki/Finite_field">伽罗瓦域</a> GF(2) 上完成，这意味着乘法运算是 AND 运算，加法运算是 XOR 运算。其结果是，我们可以为每个对象大小定义几个 8x8 位矩阵，它们能够精确地执行我们需要的 1:n 位扩展。</p>
+<p>完整的汇编代码请参见<a href="https://cs.opensource.google/go/go/&#43;/master:src/internal/runtime/gc/scan/scan_amd64.s;l=23;drc=041f564b3e6fa3f4af13a01b94db14c1ee8a42e0">此文件</a> 。“扩展器”针对每个尺寸类别使用不同的矩阵和不同的排列，因此它们位于<a href="https://cs.opensource.google/go/go/&#43;/master:src/internal/runtime/gc/scan/expand_amd64.s;drc=041f564b3e6fa3f4af13a01b94db14c1ee8a42e0">单独的文件</a>中。这段代码是由代码生成器生成的。除了扩展函数之外，它实际上并没有太多代码。由于我们可以对完全存储在寄存器中的数据执行上述大部分操作，因此大部分代码都得到了极大的简化。而且，希望不久之后这段汇编代码就能被 Go 代码取代 ！</p>
+<p>感谢 <em><strong>Austin Clements</strong></em> 设计了这套流程。它简直太棒了，而且速度惊人！</p>
+<h3 id="评估">
+  评估
+  <a class="anchor" href="#%e8%af%84%e4%bc%b0">#</a>
+</h3>
+<p>以上就是 <em>Green Tea</em> 的工作原理。那么，它究竟有多大帮助呢？</p>
+<p>效果可能相当显著。即使不考虑向量增强，我们的基准测试套件也显示 <em><strong>垃圾回收的 CPU 成本降低了 10% 到 40%</strong></em>。例如，如果应用程序 10% 的时间都花在了垃圾回收器上，那么根据工作负载的具体情况，<em><strong>整体 CPU 消耗将降低 1% 到 4%</strong></em>。垃圾回收 CPU 时间降低 10% 大致是典型的改进幅度。（更多细节请参见 <a href="https://go.dev/issue/73581">GitHub Issues</a>）</p>
+<p>我们在谷歌内部推广了绿茶，并且大规模推广后也看到了类似的效果。</p>
+<p>我们仍在逐步推出向量增强功能，但基准测试和早期结果表明，这将额外减少 10% 的 GC CPU 使用率。</p>
+<p>虽然大多数工作负载都能在一定程度上受益，但也有一些工作负载不会受益。</p>
+<p><em><strong>Green Tea</strong></em> 算法基于这样的假设：<em><strong>我们可以一次性在单页上累积足够多的对象进行扫描，从而抵消累积过程的成本</strong></em>。如果堆结构非常规则（对象大小相同，且在对象图中的深度也相近），那么这个假设显然成立。但是，有些工作负载通常要求我们每次只能扫描一个对象。这可能比 <em>Graph Flood</em> 更糟糕：在尝试累积对象到页面上的过程中，反而消耗了更多。</p>
+<p><em><strong>Green Tea</strong></em> 算法针对仅包含单个待扫描对象的页面进行了特殊处理。这有助于减少回归错误，但并不能完全消除它们。</p>
+<p>然而，要超越 <em><strong>Graph Flood</strong></em> 算法，所需的单页累积数据量远比你想象的要少。这项研究的一个意外发现是，每次仅扫描页面 2% 的数据就能取得比 <em><strong>Graph Flood</strong></em> 算法更好的性能。</p>
+<h3 id="可用性">
+  可用性
+  <a class="anchor" href="#%e5%8f%af%e7%94%a8%e6%80%a7">#</a>
+</h3>
+<p><em><strong>Green Tea</strong></em> 已作为实验性功能包含在最新的 Go <code>1.25</code> 版本中，可通过在构建时将环境变量 <code>GOEXPERIMENT</code> 设置为 <code>greenteagc</code> 来启用。但这并不包含前面提到的向量加速功能。</p>
+<p>我们计划在 Go <code>1.26</code> 中将其设为默认垃圾回收器，但您仍然可以在编译时使用 <code>GOEXPERIMENT=nogreenteagc</code> 来选择禁用它。Go <code>1.26</code> 还将为较新的 x86 硬件添加向量加速，并根据我们目前收集到的反馈进行一系列调整和改进。</p>
+<p>如果可以，我们鼓励您尝试使用 Go 的最新版本！如果您更喜欢使用 Go 1.25，我们也同样欢迎您的反馈。请参阅这条 <a href="https://go.dev/issue/73581#issuecomment-2847696497">GitHub 评论</a>， 其中详细说明了我们希望看到的诊断信息（如果您可以分享这些信息），以及我们推荐的反馈渠道。</p>
+<h2 id="历程">
+  历程
+  <a class="anchor" href="#%e5%8e%86%e7%a8%8b">#</a>
+</h2>
+<p>在结束这篇博文之前，让我们花点时间谈谈我们走到今天的历程，以及这项技术背后的人性因素。</p>
+<p>绿茶的核心理念看似简单，就像某个人灵光一闪的灵感火花。</p>
+<p>但实际上，<strong>Green Tea</strong> 是许多人多年来共同努力和构思的成果。Go 团队的多位成员都参与了构思，包括 <em>Michael Pratt</em>、<em>Cherry Mui</em>、<em>David Chase</em> 和 <em>Keith Randall</em>。当时在英特尔工作的 <em>Yves Vandriessche</em> 的微架构见解也对设计探索起到了至关重要的作用。为了使这个看似简单的理念得以实现，我们尝试了许多方法，也处理了许多细节问题。</p>
+<figure>
+  <img src="/images/greengc/timeline.png" alt="timeline">
+  <figcaption>时间线描绘了我们在达到今天这种状态之前，尝试过的一些类似想法</figcaption>
+</figure>
+<p>这个想法的萌芽可以追溯到 2018 年。有趣的是，团队里的每个人都认为最初的想法是别人提出的。</p>
+<p>绿茶这个名字是在 2024 年得来的。当时，奥斯汀在日本四处寻觅咖啡馆，喝了无数抹茶，并由此构思出了早期版本的原型！这个原型证明了绿茶的核心理念是可行的。从此，我们便开始了绿茶的研发之路。</p>
+<p>在 2025 年，随着 <em>Michael</em> 将绿茶项目实施并投入生产，其理念进一步发展和变化。</p>
+<p>这需要大量的协作探索，因为绿茶算法不仅仅是一个算法，而是一个完整的设计空间。我们认为，单凭我们中的任何一个人都无法独自驾驭它。仅仅有想法是不够的，你还需要弄清楚细节并加以验证。现在我们已经做到了，终于可以开始迭代了。</p>
+<p>绿茶的未来一片光明。</p>
+<p>请再次尝试设置 <code>GOEXPERIMENT=greenteagc</code> ，并告诉我们结果如何！我们对这项工作感到非常兴奋，并期待您的反馈！</p>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#理解垃圾回收">理解垃圾回收</a>
+      <ul>
+        <li><a href="#对象和指针">对象和指针</a></li>
+        <li><a href="#标记清除">标记清除</a></li>
+        <li><a href="#就这">就这？</a></li>
+        <li><a href="#算法演示graph-flood">算法演示：Graph Flood</a></li>
+      </ul>
+    </li>
+    <li><a href="#有什么问题">有什么问题？</a>
+      <ul>
+        <li><a href="#垃圾收集的成本">垃圾收集的成本</a></li>
+        <li><a href="#微架构灾难">“微架构灾难”</a></li>
+      </ul>
+    </li>
+    <li><a href="#green-tea">Green Tea</a>
+      <ul>
+        <li><a href="#算法演示green-tea">算法演示：Green Tea</a></li>
+        <li><a href="#开上高速">开上高速</a></li>
+        <li><a href="#向量加速">向量加速</a></li>
+        <li><a href="#评估">评估</a></li>
+        <li><a href="#可用性">可用性</a></li>
+      </ul>
+    </li>
+    <li><a href="#历程">历程</a></li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

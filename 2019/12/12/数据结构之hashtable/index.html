@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="hashtable是最最最最常用的数据结构之一，那就来动手撸(zao)一(lun)个(zi)吧。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2019/12/12/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E4%B9%8Bhashtable/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="数据结构 - hashtable">
+  <meta property="og:description" content="hashtable是最最最最常用的数据结构之一，那就来动手撸(zao)一(lun)个(zi)吧。">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2019-12-12T13:50:26+08:00">
+    <meta property="article:modified_time" content="2019-12-12T13:50:26+08:00">
+    <meta property="article:tag" content="Hashtable">
+<title>数据结构 - hashtable | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2019/12/12/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E4%B9%8Bhashtable/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>数据结构 - hashtable</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#背景">背景</a></li>
+        <li><a href="#redis中hashtable的特点">redis中hashtable的特点</a></li>
+        <li><a href="#解析和实现">解析和实现</a></li>
+        <li><a href="#测试">测试</a></li>
+        <li><a href="#总结">总结</a></li>
+        <li><a href="#参考资料">参考资料</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    数据结构 - hashtable
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>December 12, 2019</span>
+  </div>
+
+
+
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/hashtable/">Hashtable</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><h3 id="背景">
+  背景
+  <a class="anchor" href="#%e8%83%8c%e6%99%af">#</a>
+</h3>
+<p>最近一直在看《redis设计与实现》，其中讲了redis中使用到的数据结构如：<code>sds</code>, <code>ziplist</code>, <code>skiplist</code>, <code>hashtable</code>, <code>intset</code>, <code>linkedlist</code>等。读完第一部分之后，再结合<strong>github上</strong>的源码<a href="https://github.com/antirez/redis">redis</a>，本着好记性不如烂笔头的理念，便准备动手撸一遍。</p>
+<h3 id="redis中hashtable的特点">
+  redis中hashtable的特点
+  <a class="anchor" href="#redis%e4%b8%adhashtable%e7%9a%84%e7%89%b9%e7%82%b9">#</a>
+</h3>
+<ol>
+<li>链地址法解决hash冲突（除此以外，常见的冲突解决办法还有：再散列法/再哈希法/建立公共溢出区）</li>
+<li>使用了<code>murmur2</code>哈希函数。</li>
+<li>渐进式<code>rehash</code>，<code>rehash</code>过程并不是一步到位，而是在<strong>get/set/del</strong> 等操作中，穿插着完成。</li>
+<li>自动扩容和自动收缩，通过阀值来控制扩容和收缩。</li>
+<li>有2个bucket，其中0号bucket是最常用的，而1号只会在rehash过程中使用，一旦rehash完成，便不再使用。</li>
+</ol>
+<h3 id="解析和实现">
+  解析和实现
+  <a class="anchor" href="#%e8%a7%a3%e6%9e%90%e5%92%8c%e5%ae%9e%e7%8e%b0">#</a>
+</h3>
+<blockquote>
+<p>hashtable：是根据Key直接访问在内存存储位置的数据结构。如何根据key得到内存中的位置，就需要使用hash函数来从旁协助了。</p>
+</blockquote>
+<blockquote>
+<p>hash函数：是一种从任何一种数据中创建小的数字“指纹”的方法。简单的说：hash(input) = 1122334455。</p>
+</blockquote>
+<blockquote>
+<p>这里选择了golang来实现；murmur3 hash算法；</p>
+</blockquote>
+<h4 id="数据结构">
+  数据结构
+  <a class="anchor" href="#%e6%95%b0%e6%8d%ae%e7%bb%93%e6%9e%84">#</a>
+</h4>
+<p>一图以蔽之：</p>
+<img src="/images/hashtable-dt.svg">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// 对外暴露的hashtable
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">LinkedDict</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 2个存储桶，0号正常使用，1号在rehash过程中使用；rehash完成之后，1号赋值给0号然后重置1号。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">ht</span> [<span style="color:#ae81ff">2</span>]<span style="color:#f92672">*</span><span style="color:#a6e22e">hashtable</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 初始值 -1，表示没有在rehash
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">rehashIdx</span> <span style="color:#66d9ef">int</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 存储桶
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">hashtable</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 底层“数组”
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">table</span> []<span style="color:#f92672">*</span><span style="color:#a6e22e">dictEntry</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">size</span> <span style="color:#66d9ef">int</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">sizemask</span> <span style="color:#66d9ef">int</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">used</span> <span style="color:#66d9ef">int</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// hashtable 元素定义
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">dictEntry</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">key</span> <span style="color:#66d9ef">string</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">value</span> <span style="color:#66d9ef">interface</span>{}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">next</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">dictEntry</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h4 id="方法集">
+  方法集
+  <a class="anchor" href="#%e6%96%b9%e6%b3%95%e9%9b%86">#</a>
+</h4>
+<p>hashtable常用的方法有 <strong>GET/SET/DELETE/ITER</strong>，接下来会在SET和DEL中介绍rehash的详细过程。</p>
+<h5 id="set">
+  SET
+  <a class="anchor" href="#set">#</a>
+</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">d</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">LinkedDict</span>) <span style="color:#a6e22e">Set</span>(<span style="color:#a6e22e">key</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">value</span> <span style="color:#66d9ef">interface</span>{}) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">ht</span>[<span style="color:#ae81ff">0</span>].<span style="color:#a6e22e">table</span> <span style="color:#f92672">==</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">ht</span>[<span style="color:#ae81ff">0</span>].<span style="color:#a6e22e">init</span>(<span style="color:#a6e22e">InitTableSize</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// isRehashing 判定：`rehashIdx != -1`
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// needRehash 判定: 装载因子 used / size &gt; 1.0 时触发扩容rehash
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">isRehashing</span>() <span style="color:#f92672">&amp;&amp;</span> <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">needRehash</span>() {
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// rehashGrowup 表示本次rehash是需要扩容，在配置ht[1].table时会扩展为当前的2倍
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#75715e">// 反之则会缩减内存空间
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#75715e">// startrehash 会设置 rehashIdx = 0, 标志rehash的进度
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">startrehash</span>(<span style="color:#a6e22e">rehashGrowup</span>) 
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">isRehashing</span>() {
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// 如果在rehash过程中，则完成一部分任务: 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#75715e">// 根据rehash的进度rehashIdx，选择搬移 d.ht[0].table[rehashIdx]部分的数据，添加到d.ht[1]中
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">steprehash</span>()
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 上述工作完成之后，就可以考虑新增数据了
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">hashkey</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">hashkey</span>(<span style="color:#a6e22e">key</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">isRehashing</span>() {
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// 如果在rehash过程中，毋庸考虑，直接新增到d.ht[1]中
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">ht</span>[<span style="color:#ae81ff">1</span>].<span style="color:#a6e22e">insert</span>(<span style="color:#a6e22e">hashkey</span>, <span style="color:#a6e22e">newDictEntry</span>(<span style="color:#a6e22e">key</span>, <span style="color:#a6e22e">value</span>, <span style="color:#66d9ef">nil</span>))
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 反之，不在rehash过程中，则直接新增到d.ht[0]中
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">ht</span>[<span style="color:#ae81ff">0</span>].<span style="color:#a6e22e">insert</span>(<span style="color:#a6e22e">hashkey</span>, <span style="color:#a6e22e">newDictEntry</span>(<span style="color:#a6e22e">key</span>, <span style="color:#a6e22e">value</span>, <span style="color:#66d9ef">nil</span>))
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 渐进式rehash，根据rehashIdx确定，要搬移那一部分的数据。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">d</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">LinkedDict</span>) <span style="color:#a6e22e">steprehash</span>() {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">entry</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">ht</span>[<span style="color:#ae81ff">0</span>].<span style="color:#a6e22e">table</span>[<span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">rehashIdx</span>]
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 如果rehashIdx指向的侧链为空，则rehashIdx自增，直到找到有数据的侧链或者数据均搬移完成
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">entry</span> <span style="color:#f92672">==</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">rehashIdx</span><span style="color:#f92672">++</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">rehashIdx</span> &gt; <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">ht</span>[<span style="color:#ae81ff">0</span>].<span style="color:#a6e22e">sizemask</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">finishrehash</span>()
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">entry</span> = <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">ht</span>[<span style="color:#ae81ff">0</span>].<span style="color:#a6e22e">table</span>[<span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">rehashIdx</span>]
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 开始搬移动作
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 遍历链表，将所有数据，新增到d.ht[1]中
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">next</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">entry</span>.<span style="color:#a6e22e">next</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">entry</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">entry</span>.<span style="color:#a6e22e">next</span> = <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">ht</span>[<span style="color:#ae81ff">1</span>].<span style="color:#a6e22e">insert</span>(<span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">hashkey</span>(<span style="color:#a6e22e">entry</span>.<span style="color:#a6e22e">key</span>), <span style="color:#a6e22e">entry</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">next</span> <span style="color:#f92672">==</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">break</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">entry</span> = <span style="color:#a6e22e">next</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">next</span> = <span style="color:#a6e22e">next</span>.<span style="color:#a6e22e">next</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 释放d.ht[0].table[rehashIdx]链表：避免干扰查询；释放内存
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">ht</span>[<span style="color:#ae81ff">0</span>].<span style="color:#a6e22e">table</span>[<span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">rehashIdx</span>] = <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">rehashIdx</span><span style="color:#f92672">++</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">rehashIdx</span> &gt; <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">ht</span>[<span style="color:#ae81ff">0</span>].<span style="color:#a6e22e">sizemask</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// 是否已经结束，如果结束则：
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#75715e">// d.ht[0] = d.ht[1]
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#75715e">// d.ht[1] = newHashTable()
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#75715e">// rehashIdx = -1
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">finishrehash</span>()
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 新增一个元素到到存储桶：
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// 根据hash函数的结果(hashkey)对存储桶大小(size)取模得到结果(pos)；ht.table[pos]完成对链表的新增工作。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">ht</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">hashtable</span>) <span style="color:#a6e22e">insert</span>(<span style="color:#a6e22e">hashkey</span> <span style="color:#66d9ef">uint64</span>, <span style="color:#a6e22e">item</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">dictEntry</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">pos</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">hashkey</span> <span style="color:#f92672">%</span> uint64(<span style="color:#a6e22e">ht</span>.<span style="color:#a6e22e">size</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">entry</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">ht</span>.<span style="color:#a6e22e">table</span>[<span style="color:#a6e22e">pos</span>]
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">last</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">entry</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">entry</span> <span style="color:#f92672">==</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">ht</span>.<span style="color:#a6e22e">used</span><span style="color:#f92672">++</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">ht</span>.<span style="color:#a6e22e">table</span>[<span style="color:#a6e22e">pos</span>] = <span style="color:#a6e22e">item</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">entry</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">ht</span>.<span style="color:#a6e22e">keyCompare</span>(<span style="color:#a6e22e">entry</span>.<span style="color:#a6e22e">key</span>, <span style="color:#a6e22e">item</span>.<span style="color:#a6e22e">key</span>) {
+</span></span><span style="display:flex;"><span>			<span style="color:#75715e">// 如果key已经存在则覆盖旧值
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>			<span style="color:#a6e22e">entry</span>.<span style="color:#a6e22e">value</span> = <span style="color:#a6e22e">item</span>.<span style="color:#a6e22e">value</span>
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">last</span> = <span style="color:#a6e22e">entry</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">entry</span> = <span style="color:#a6e22e">entry</span>.<span style="color:#a6e22e">next</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ht</span>.<span style="color:#a6e22e">used</span><span style="color:#f92672">++</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">last</span>.<span style="color:#a6e22e">next</span> = <span style="color:#a6e22e">item</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>总结：</p>
+<ol>
+<li>rehashIdx 不仅用于标示hashtable是否在rehash过程中，也标示了rehash的进度；</li>
+<li>rehash过程中，新增元素直接新增到1号bucket中；</li>
+<li>非rehash状态，则新增到0号bucket中；</li>
+<li>侧链新增元素过程，需比较key值是否存在，如果存在则更新并返回；</li>
+<li>rehash过程中，rehashIdx不是只会增加1单位，而是根据侧链情况来更新；</li>
+</ol>
+<h5 id="get">
+  GET
+  <a class="anchor" href="#get">#</a>
+</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">d</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">LinkedDict</span>) <span style="color:#a6e22e">Get</span>(<span style="color:#a6e22e">key</span> <span style="color:#66d9ef">string</span>) (<span style="color:#a6e22e">v</span> <span style="color:#66d9ef">interface</span>{}, <span style="color:#a6e22e">ok</span> <span style="color:#66d9ef">bool</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 同上SET，不过多赘述
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">isRehashing</span>() {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">steprehash</span>()
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">hashkey</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">hashkey</span>(<span style="color:#a6e22e">key</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">v</span>, <span style="color:#a6e22e">ok</span> = <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">ht</span>[<span style="color:#ae81ff">0</span>].<span style="color:#a6e22e">lookup</span>(<span style="color:#a6e22e">hashkey</span>, <span style="color:#a6e22e">key</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">isRehashing</span>() {
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// 如果不在rehash过程中 d.ht[0]中检索的结果便是最终结果
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>	} <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">ok</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#75715e">// 如果在rehash过程中且命中，也返回结果
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">v</span>, <span style="color:#a6e22e">ok</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 反之 rehash过程中，但在d.ht[0]中没找到，却不代表该key真的不存在, 还需要在d.ht[1]中确定
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">v</span>, <span style="color:#a6e22e">ok</span> = <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">ht</span>[<span style="color:#ae81ff">1</span>].<span style="color:#a6e22e">lookup</span>(<span style="color:#a6e22e">hashkey</span>, <span style="color:#a6e22e">key</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>总结：</p>
+<ol>
+<li>渐进rehash过程与SET中一致</li>
+<li>查询动作也需要根据rehash状而定：在rehash中则需要检查ht[0]和ht[1]；反之只需要检查rehash[0]即可；</li>
+<li>这里省略了lookup部分的代码，是因为查询和新增在原理上是一致的：<strong>定位 -&gt; 遍历检查 -&gt; 比较key -&gt; 动作</strong>。</li>
+</ol>
+<h5 id="del">
+  DEL
+  <a class="anchor" href="#del">#</a>
+</h5>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// Del to delete an item in hashtable.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">d</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">LinkedDict</span>) <span style="color:#a6e22e">Del</span>(<span style="color:#a6e22e">key</span> <span style="color:#66d9ef">string</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">ht</span>[<span style="color:#ae81ff">0</span>].<span style="color:#a6e22e">used</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">&amp;&amp;</span> <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">ht</span>[<span style="color:#ae81ff">1</span>].<span style="color:#a6e22e">used</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 这里相比Set，区别在于：判定的内容不是是否需要扩容而是缩容
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 缩容判定：d.ht[0]的内存空间大于初始值4且“填充率”少于 10%
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// d.ht[0].size &gt; 4 &amp;&amp; (d.ht[0].used*100/d.ht[0].size) &lt; 10
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">isRehashing</span>() <span style="color:#f92672">&amp;&amp;</span> <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">needShrink</span>() {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">startrehash</span>(<span style="color:#a6e22e">rehashShrink</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">isRehashing</span>() {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">steprehash</span>()
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">hashkey</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">hashkey</span>(<span style="color:#a6e22e">key</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">ht</span>[<span style="color:#ae81ff">0</span>].<span style="color:#a6e22e">del</span>(<span style="color:#a6e22e">hashkey</span>, <span style="color:#a6e22e">key</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">isRehashing</span>() {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">d</span>.<span style="color:#a6e22e">ht</span>[<span style="color:#ae81ff">1</span>].<span style="color:#a6e22e">del</span>(<span style="color:#a6e22e">hashkey</span>, <span style="color:#a6e22e">key</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>总结：</p>
+<ol>
+<li>万变不离其宗，不管是SET，GET，DEL 都是先定位，再确定元素位置，再执行相应的动作；</li>
+<li>缩容判定中，填充率也等价于装载因子；</li>
+<li>代码中有个取巧：当使用率为0时则直接返回，避免了后续调用～</li>
+</ol>
+<h5 id="iter">
+  ITER
+  <a class="anchor" href="#iter">#</a>
+</h5>
+<ol>
+<li>此部分代码略去；</li>
+<li>遍历操作也需要视rehash情况而定；</li>
+</ol>
+<h3 id="测试">
+  测试
+  <a class="anchor" href="#%e6%b5%8b%e8%af%95">#</a>
+</h3>
+<p>这里我使用了golang内置的Map做了对比测试，结果如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>builtinMap_1000                  cost: 0ms
+</span></span><span style="display:flex;"><span>builtinLinkedDict_1000           cost: 0ms
+</span></span><span style="display:flex;"><span>getMap_1000                      cost: 0ms
+</span></span><span style="display:flex;"><span>getLinkedDict_1000               cost: 0ms
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>builtinMap_10000                 cost: 4ms
+</span></span><span style="display:flex;"><span>builtinLinkedDict_10000          cost: 6ms
+</span></span><span style="display:flex;"><span>getMap_10000                     cost: 2ms
+</span></span><span style="display:flex;"><span>getLinkedDict_10000              cost: 5ms
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>builtinMap_100000                cost: 76ms
+</span></span><span style="display:flex;"><span>builtinLinkedDict_100000         cost: 108ms
+</span></span><span style="display:flex;"><span>getMap_100000                    cost: 56ms
+</span></span><span style="display:flex;"><span>getLinkedDict_100000             cost: 131ms
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>builtinMap_1000000               cost: 1053ms
+</span></span><span style="display:flex;"><span>builtinLinkedDict_1000000        cost: 1230ms
+</span></span><span style="display:flex;"><span>getMap_1000000                   cost: 581ms
+</span></span><span style="display:flex;"><span>getLinkedDict_1000000            cost: 915ms
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>builtinMap_10000000              cost: 13520ms
+</span></span><span style="display:flex;"><span>builtinLinkedDict_10000000       cost: 17137ms
+</span></span><span style="display:flex;"><span>getMap_10000000                  cost: 8663ms
+</span></span><span style="display:flex;"><span>getLinkedDict_10000000           cost: 14271ms
+</span></span></code></pre></div><p>可见差距还是非常大的，这里大胆分析下导致这些差距的原因：</p>
+<ol>
+<li>Key类型，通过pprof分析，在<code>hashtable.keyCompare</code>上花费了较多时间，虽然已经通过<code>strings.Compare</code>来加速orz；相比下golang内置的Map使用了<code>unsafe.Pointer</code>**pointer to unsafe.ArbitraryType (int)**作为key，并针对不同的key类型来设计哈希算法。</li>
+<li>bucket（数据结构）的使用：在我的实现中只使用了2个bucket，常用的只有1个bucket，在定位上：hash后的结果使用取模的方法定位；相比之下，map采用了多个bucket，每个bucket只存放8个元素，在定位上：hash后用<code>low bits &amp; bucketMask</code>定位buckets和<code>high 8bits</code>找到对应的位置，效率更高；</li>
+</ol>
+<h3 id="总结">
+  总结
+  <a class="anchor" href="#%e6%80%bb%e7%bb%93">#</a>
+</h3>
+<ul>
+<li>实现一个hashtable并不难，难点在于：hash算法的选用（均匀分布）；如何降低hash冲突（rehash时机）；</li>
+<li>当完成上述工作的时候，我再去阅读go内置的<code>map</code>的实现会容易很多orz，仅相似部分；map比上述hashtable的实现要复杂得多；</li>
+<li>文中所有代码均在 <a href="https://github.com/yeqown/hashtable/blob/master/hashtable.go">https://github.com/yeqown/hashtable/blob/master/hashtable.go</a>；</li>
+<li>如果只是想要了解原理，参考资料中的<a href="https://redisbook.readthedocs.io/en/latest/internal-datastruct/dict.html">推荐</a>文档足以；</li>
+<li>已经实现的版本还可以继续优化，并考虑并发安全问题～</li>
+</ul>
+<h3 id="参考资料">
+  参考资料
+  <a class="anchor" href="#%e5%8f%82%e8%80%83%e8%b5%84%e6%96%99">#</a>
+</h3>
+<ul>
+<li><a href="https://en.wikipedia.org/wiki/Hash_table">https://en.wikipedia.org/wiki/Hash_table</a></li>
+<li><a href="http://redisbook.com/">http://redisbook.com/</a></li>
+<li><a href="https://redisbook.readthedocs.io/en/latest/internal-datastruct/dict.html">https://redisbook.readthedocs.io/en/latest/internal-datastruct/dict.html</a> 推荐</li>
+<li><a href="https://github.com/cch123/golang-notes/blob/master/map.md">https://github.com/cch123/golang-notes/blob/master/map.md</a> 推荐</li>
+<li><a href="https://github.com/yeqown/hashtable">https://github.com/yeqown/hashtable</a></li>
+</ul>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "hashtable-introduction-and-implementation", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#背景">背景</a></li>
+        <li><a href="#redis中hashtable的特点">redis中hashtable的特点</a></li>
+        <li><a href="#解析和实现">解析和实现</a></li>
+        <li><a href="#测试">测试</a></li>
+        <li><a href="#总结">总结</a></li>
+        <li><a href="#参考资料">参考资料</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

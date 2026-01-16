@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="记录在使用 ShardingSphere Proxy过程中遇到的使用笔记、思考、问题或解决方案">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2024/08/18/shardingsphere-proxy%E9%97%AE%E9%A2%98%E5%87%A0%E5%88%99/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="ShardingSphere-Proxy问题几则">
+  <meta property="og:description" content="记录在使用 ShardingSphere Proxy过程中遇到的使用笔记、思考、问题或解决方案">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-08-18T09:43:35+08:00">
+    <meta property="article:modified_time" content="2024-08-18T09:43:35+08:00">
+    <meta property="article:tag" content="Shardingsphere">
+    <meta property="article:tag" content="分库分表">
+    <meta property="article:tag" content="Mysql">
+    <meta property="article:tag" content="分布式">
+<title>ShardingSphere-Proxy问题几则 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2024/08/18/shardingsphere-proxy%E9%97%AE%E9%A2%98%E5%87%A0%E5%88%99/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>ShardingSphere-Proxy问题几则</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#问题概述">问题概述</a></li>
+        <li><a href="#0-常见的部署方式">0. 常见的部署方式</a></li>
+        <li><a href="#1-如何配置分库分表规则算法有哪些">1. 如何配置分库分表规则？算法有哪些？</a></li>
+        <li><a href="#2-分片数如何确定">2. 分片数如何确定？</a></li>
+        <li><a href="#3-分库分表后唯一索引的生效范围如何">3. 分库分表后唯一索引的生效范围如何？</a></li>
+        <li><a href="#4-分库分表后如何迁移数据">4. 分库分表后如何迁移数据？</a></li>
+        <li><a href="#5-如何确定实际执行的sql">5. 如何确定实际执行的SQL？</a></li>
+        <li><a href="#6-分库分表后怎么优化查询">6. 分库分表后怎么优化查询？</a></li>
+        <li><a href="#总结">总结</a></li>
+        <li><a href="#参考">参考</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    ShardingSphere-Proxy问题几则
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>August 18, 2024</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F/">分布式</a>, 
+      <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>, 
+      <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/">数据库</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/shardingsphere/">Shardingsphere</a>, 
+      <a href="/tags/%E5%88%86%E5%BA%93%E5%88%86%E8%A1%A8/">分库分表</a>, 
+      <a href="/tags/MySQL/">Mysql</a>, 
+      <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F/">分布式</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><p>ShardingSphere Proxy 是 Apache ShardingSphere 的一个子项目，是一个基于 MySQL 协议的数据库中间件，用于实现分库分表、读写分离等功能。在使用过程中，遇到了一些问题，记录如下。</p>
+<blockquote>
+<p>这里主要针对的是 分库分表 的使用场景。</p>
+</blockquote>
+<h3 id="问题概述">
+  问题概述
+  <a class="anchor" href="#%e9%97%ae%e9%a2%98%e6%a6%82%e8%bf%b0">#</a>
+</h3>
+<p>数据库往往是一个系统最容易出现瓶颈的点，当遇到数据库瓶颈时，我们可以通过数据拆分来缓解问题。数据拆分的方式通常分为横向拆分和纵向拆分，横向拆分即分库分表；纵向拆分即把一个库表中的字段拆分到不同的库表中去。这两种手段并不互斥，而是在实际情况中相辅相成。本文即是横向拆分相关内容。</p>
+<ul>
+<li>常见的部署方式有哪些？</li>
+<li>数据分片规则怎么配置？</li>
+<li>数据分片数应该怎么确定？</li>
+<li>数据分片后唯一索引还有用吗？</li>
+<li>数据分片后数据迁移？</li>
+<li>数据分片后如何确定实际执行 SQL 语句？</li>
+<li>数据分片后的查询优化？</li>
+</ul>
+<h3 id="0-常见的部署方式">
+  0. 常见的部署方式
+  <a class="anchor" href="#0-%e5%b8%b8%e8%a7%81%e7%9a%84%e9%83%a8%e7%bd%b2%e6%96%b9%e5%bc%8f">#</a>
+</h3>
+<p>官方提供了两种部署方式：</p>
+<ul>
+<li>单机部署：将 ShardingSphere Proxy 部署在单台服务器上，用于测试和开发环境。</li>
+<li>集群部署：将 ShardingSphere Proxy 部署在多台服务器上，用于生产环境。集群模式下使用 zookeeper 来存储元数据。</li>
+</ul>
+<blockquote>
+<p>关于元数据，元数据是 ShardingSphere Proxy 的核心，用于存储分库分表规则、读写分离规则等信息。
+官方建议使用集群模式部署 生产环境的 ShardingSphere Proxy</p>
+</blockquote>
+<p>如果不按照官方的指引，选择部署了多个 Standalone 模式的 ShardingSphere Proxy，那么需要注意“<em><strong>每个这样的 proxy 节点会有自己的元信息，他们之间并不互通</strong></em>”。在这些情况下会出现节点之间元数据不一致的问题，参看如下测试：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># 启动 3 个 standalone 模式的 ShardingSphere Proxy</span>
+</span></span><span style="display:flex;"><span>                                          +-------+
+</span></span><span style="display:flex;"><span>                                          |  LB   |
+</span></span><span style="display:flex;"><span>                                          +-------+
+</span></span><span style="display:flex;"><span>                                              |
+</span></span><span style="display:flex;"><span>                                |-------------|--------------|
+</span></span><span style="display:flex;"><span>                                |             |              |
+</span></span><span style="display:flex;"><span>                            +-------+     +-------+       +-------+
+</span></span><span style="display:flex;"><span>                            | Node1 |     | Node2 |       | Node3 |
+</span></span><span style="display:flex;"><span>                            +-------+     +-------+       +-------+
+</span></span></code></pre></div><p>初始表结构如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">TABLE</span> t_user (
+</span></span><span style="display:flex;"><span>    id BIGINT <span style="color:#66d9ef">NOT</span> <span style="color:#66d9ef">NULL</span> <span style="color:#66d9ef">comment</span> <span style="color:#e6db74">&#39;主键&#39;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* 主键 */</span>
+</span></span><span style="display:flex;"><span>    user_id BIGINT <span style="color:#66d9ef">NOT</span> <span style="color:#66d9ef">NULL</span> <span style="color:#66d9ef">unique</span> <span style="color:#66d9ef">comment</span> <span style="color:#e6db74">&#39;用户ID&#39;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* 用户ID, 分表 key */</span>
+</span></span><span style="display:flex;"><span>    mch_id BIGINT <span style="color:#66d9ef">NOT</span> <span style="color:#66d9ef">NULL</span> <span style="color:#66d9ef">comment</span> <span style="color:#e6db74">&#39;商户ID&#39;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/* 商户ID, 分库 key */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">PRIMARY</span> <span style="color:#66d9ef">KEY</span> (user_id)
+</span></span><span style="display:flex;"><span>) ENGINE <span style="color:#f92672">=</span> InnoDB <span style="color:#66d9ef">DEFAULT</span> CHARSET <span style="color:#f92672">=</span> utf8mb4;
+</span></span></code></pre></div><p>然后在任意一个 standalone 模式的 ShardingSphere Proxy 执行更新表结构的 SQL 语句：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">ALTER</span> <span style="color:#66d9ef">TABLE</span> t_user <span style="color:#66d9ef">ADD</span> <span style="color:#66d9ef">COLUMN</span> name VARCHAR(<span style="color:#ae81ff">255</span>) <span style="color:#66d9ef">NOT</span> <span style="color:#66d9ef">NULL</span> <span style="color:#66d9ef">DEFAULT</span> <span style="color:#e6db74">&#39;&#39;</span> <span style="color:#66d9ef">COMMENT</span> <span style="color:#e6db74">&#39;姓名&#39;</span>;
+</span></span></code></pre></div><p>这时候在另外一个 standalone 模式的 ShardingSphere Proxy 查询表结构 和 查询数据的语句：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">desc</span> t_user;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">select</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">from</span> t_user;
+</span></span></code></pre></div><p>会发现表结构描述已经是最新的，但是实际查询数据时，没有新增的字段，如下图：</p>
+<img src="/images/shardingsphere/proxy-metadata-inconsistency-1.png" alt="ShardingSphere Proxy 元数据不一致" />
+<img src="/images/shardingsphere/proxy-metadata-inconsistency-2.png" alt="ShardingSphere Proxy 元数据不一致" />
+<img src="/images/shardingsphere/proxy-metadata-inconsistency-3.png" alt="ShardingSphere Proxy 元数据不一致" />
+<p>这就是元数据不一致的问题，所以在生产环境中，建议使用集群模式部署 ShardingSphere Proxy。当然我们可以通过手动同步元数据的方式来解决这个问题，参考如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span>REFRESH <span style="color:#66d9ef">TABLE</span> METADATA
+</span></span></code></pre></div><p>这样操作后再查询数据，就能拿到新增的字段了, 如下图：</p>
+<img src="/images/shardingsphere/proxy-metadata-inconsistency-4.png" alt="ShardingSphere Proxy 元数据不一致" />
+<h3 id="1-如何配置分库分表规则算法有哪些">
+  1. 如何配置分库分表规则？算法有哪些？
+  <a class="anchor" href="#1-%e5%a6%82%e4%bd%95%e9%85%8d%e7%bd%ae%e5%88%86%e5%ba%93%e5%88%86%e8%a1%a8%e8%a7%84%e5%88%99%e7%ae%97%e6%b3%95%e6%9c%89%e5%93%aa%e4%ba%9b">#</a>
+</h3>
+<blockquote>
+<p>规则配置参考：https://shardingsphere.apache.org/document/current/cn/user-manual/shardingsphere-jdbc/yaml-config/rules/sharding/</p>
+</blockquote>
+<p>这个问题很好理解，分库分表的规则配置是整个数据分片的核心，也是最重要的一环。在配置文件中，可以通过 <code>shardingAlgorithms</code> 配置项指定分库分表算法，如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span>- !<span style="color:#ae81ff">SHARDING</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">tables</span>:                                             <span style="color:#75715e"># 分片表配置</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">t_user</span>:                                           <span style="color:#75715e"># 逻辑表名</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">actualDataNodes</span>: <span style="color:#ae81ff">ds_${0..1}.t_user_${0..1}     </span> <span style="color:#75715e"># 实际数据节点</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">databaseStrategy</span>:                               <span style="color:#75715e"># 分库策略</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">standard</span>:                                     <span style="color:#75715e"># 用于单分片键的分片策略</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">shardingColumn</span>: <span style="color:#ae81ff">mch_id                     </span> <span style="color:#75715e"># 分片键</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">shardingAlgorithmName</span>: <span style="color:#ae81ff">database_inline     </span> <span style="color:#75715e"># 分库算法</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">tableStrategy</span>:                                  <span style="color:#75715e"># 分表策略</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">standard</span>:                                     <span style="color:#75715e"># 用于单分片键的分片策略</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">shardingColumn</span>: <span style="color:#ae81ff">user_id                    </span> <span style="color:#75715e"># 分片键</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">shardingAlgorithmName</span>: <span style="color:#ae81ff">t_user_inline       </span> <span style="color:#75715e"># 分表算法</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">shardingAlgorithms</span>:                                <span style="color:#75715e"># 分片算法配置</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">database_inline</span>:                                  <span style="color:#75715e"># 算法1 - 分库算法</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">props</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">algorithm-expression</span>: <span style="color:#ae81ff">ds_${mch_id % 2}       </span> <span style="color:#75715e"># 分库算法表达式</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">t_user_inline</span>:                                    <span style="color:#75715e"># 算法2 - 分表算法</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">props</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">algorithm-expression</span>: <span style="color:#ae81ff">t_user_${user_id % 2}  </span> <span style="color:#75715e"># 分表算法表达式</span>
+</span></span></code></pre></div><p>在这个例子中，我们配置了一个 <code>t_user</code> 表，使用 <code>standard</code> 算法，分库分表的规则如下：</p>
+<ul>
+<li>分库规则：根据 <code>mch_id</code> 字段进行分库，分库算法为 <code>database_inline</code>，分库算法表达式为 <code>ds_${mch_id % 2}</code>。</li>
+<li>分表规则：根据 <code>user_id</code> 字段进行分表，分表算法为 <code>t_user_inline</code>，分表算法表达式为 <code>t_user_${user_id % 2}</code>。</li>
+</ul>
+<p>这里的分库分表算法都是基于 “取模” 的算法，这是一种简单的分片算法，适用于大部分场景。ShardingSphere Proxy 支持的分片算法如下：</p>
+<blockquote>
+<p><a href="https://shardingsphere.apache.org/document/current/cn/user-manual/common-config/builtin-algorithm/sharding/">https://shardingsphere.apache.org/document/current/cn/user-manual/common-config/builtin-algorithm/sharding/</a></p>
+</blockquote>
+<ul>
+<li>
+<p><em><strong>自动分片算法</strong></em></p>
+<blockquote>
+<p>需要注意的是，自动分片算法的分片逻辑由 ShardingSphere 自动管理，需要通过配置 autoTables 分片规则进行使用。</p>
+</blockquote>
+<p>自动分片算法又分为：</p>
+<ul>
+<li>
+<p>取模分片算法（MOD）：根据分片键（int）对分片数取模，然后路由到对应的分片上执行。</p>
+</li>
+<li>
+<p>Hash取模分片算法（HASH_MOD）：根据分片键（int）进行 Hash 计算，然后对分片数取模，然后路由到对应的分片上执行。</p>
+</li>
+<li>
+<p>基于分片容量的范围分片算法（VOLUME_RANGE）：配置分片键的范围上限（range-upper）和下限（range-lower），同时还需要配置分片容量（sharding-volume）。适用于数据增长趋势相对均匀，按分片容量将数据均匀地分布到不同的分片表中，可以有效避免数据倾斜问题；由于数据已经被按照范围进行分片，支持频繁进行范围查询场景。</p>
+</li>
+<li>
+<p>基于分片边界的范围分片算法（BOUNDARY_RANGE）：根据数据的取值范围进行分片，特别适合按数值范围频繁查询的场景，比如数据中如果包含 <code>date: 202408</code> 这种字段，可以按照 <code>date</code> 字段进行分片，在查询时可以直接根据 <code>date</code> 字段的范围进行查询。</p>
+</li>
+<li>
+<p>自动时间段分片算法（AUTO_INTERVAL）：配置分片的起始时间范围（datetime-lower）和结束时间范围（datetime-upper），同时还需要配置单一分片能承载的最大时间（sharding-seconds）。如下配置：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span>  <span style="color:#f92672">shardingAlgorithms</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">t_order_auto_interval</span>:
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">props</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">datetime-lower</span>: <span style="color:#e6db74">2024-08-01 00:00:00</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">datetime-upper</span>: <span style="color:#e6db74">2029-08-31 23:59:59</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">sharding-seconds</span>: <span style="color:#ae81ff">31536000</span> <span style="color:#75715e"># 1年</span>
+</span></span></code></pre></div><p>该配置表示，将数据按照时间范围进行分片，存储从 2024-08-01 到 2029-08-31 的数据，每个分片最多存储 1 年的数据。</p>
+</li>
+</ul>
+</li>
+<li>
+<p><em><strong>标准分片算法</strong></em></p>
+<p>ShardingSphere Proxy 实现的标准分片算法有：</p>
+<ul>
+<li>
+<p>行表达式分片算法（INLINE）：提供对 SQL 中的 <code>=</code> 和 <code>IN</code> 运算符的分片操作支持，只支持单分片键。</p>
+</li>
+<li>
+<p>时间范围分片算法（INTERVAL）：针对于时间字段（字符串类型）作为分片健的范围分片算法，适用于按照天、月、年这种固定区间的数据分片。举例如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span>  <span style="color:#f92672">shardingAlgorithms</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">t_order_interval</span>:
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">props</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">datetime-pattern</span>: <span style="color:#e6db74">&#34;yyyy-MM-dd HH:mm:ss&#34;</span>  <span style="color:#75715e"># 分片字段格式</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">datetime-lower</span>: <span style="color:#e6db74">&#34;2024-01-01 00:00:00&#34;</span>  <span style="color:#75715e"># 范围下限</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">datetime-upper</span>: <span style="color:#e6db74">&#34;2024-06-30 23:59:59&#34;</span>  <span style="color:#75715e"># 范围上限</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">sharding-suffix-pattern</span>: <span style="color:#e6db74">&#34;yyyyMM&#34;</span>  <span style="color:#75715e"># 分片名后缀，可以是MM，yyyyMMdd等。</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">datetime-interval-amount</span>: <span style="color:#ae81ff">1</span>  <span style="color:#75715e"># 分片间隔，这里指一个月</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">datetime-interval-unit</span>: <span style="color:#e6db74">&#34;MONTHS&#34;</span> <span style="color:#75715e"># 分片间隔单位</span>
+</span></span></code></pre></div><p>这里的配置表示，将数据按照时间范围进行分片，存储从 2024-01-01 到 2024-06-30 的数据，每个分片最多存储 1 个月的数据。数据分片后的表名后缀为 <code>yyyyMM</code>，即每个月一个分片。</p>
+</li>
+</ul>
+</li>
+<li>
+<p><em><strong>复合分片算法</strong></em></p>
+<ul>
+<li>
+<p>复合行表达式分片算法（COMPLEX_INLINE）：这个也是类似于 INLINE 算法，但是支持多分片键的场景。比如在单分片键的情况下，我们使用 <code>t_user.user_id</code> 来进行分片，现在我们需要使用 <code>t_user.mch_id</code> 和 <code>t_user.user_id</code> 来进行分片，这时候就可以使用 COMPLEX_INLINE 算法。如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span>- !<span style="color:#ae81ff">SHARDING</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">tables</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">t_user</span>:
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">actualDataNodes</span>: <span style="color:#ae81ff">ds_${0..1}.t_user_${0..1}</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">databaseStrategy</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">complex</span>:
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">shardingColumns</span>: <span style="color:#ae81ff">mch_id, user_id</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">shardingAlgorithmName</span>: <span style="color:#ae81ff">complex_inline</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">shardingAlgorithms</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">complex_inline</span>:
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">props</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">algorithm-expression</span>: <span style="color:#ae81ff">ds_${mch_id + user_id % 2}</span>
+</span></span></code></pre></div></li>
+</ul>
+</li>
+<li>
+<p><em><strong>Hint 分片算法</strong></em></p>
+<ul>
+<li>
+<p>Hint 行表达式分片算法（HINT_INLINE）：类似于 INLINE 算法，但是支持不依赖于 SQL 的分片键场景。java 可以直接使用 hint API 进行使用，其他语言可以通过 SQL 注释进行使用。如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span>HintManager hintManager <span style="color:#f92672">=</span> HintManager.<span style="color:#a6e22e">getInstance</span>();
+</span></span><span style="display:flex;"><span>hintManager.<span style="color:#a6e22e">addDatabaseShardingValue</span>(<span style="color:#e6db74">&#34;t_order&#34;</span>, 1);
+</span></span><span style="display:flex;"><span>hintManager.<span style="color:#a6e22e">addTableShardingValue</span>(<span style="color:#e6db74">&#34;t_order&#34;</span>, 1);
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#75715e">/* SHARDINGSPHERE_HINT: {key} = {value}, {key} = {value} */</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">FROM</span> t_user  <span style="color:#66d9ef">WHERE</span> id <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
+</span></span></code></pre></div><blockquote>
+<p>可以使用 keys 参见 <a href="https://shardingsphere.apache.org/document/5.5.0/cn/user-manual/common-config/sql-hint/">https://shardingsphere.apache.org/document/5.5.0/cn/user-manual/common-config/sql-hint/</a></p>
+</blockquote>
+<p>注意如果使用的是 shardingsphere-proxy 代理，需要在配置文件中开启 sqlCommentParseEnabled 开关。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#f92672">props</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">sql-show</span>: <span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">sqlParser</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">sqlCommentParseEnabled</span>: <span style="color:#66d9ef">true</span>
+</span></span></code></pre></div></li>
+</ul>
+</li>
+<li>
+<p><em><strong>自定义分片算法</strong></em></p>
+<ul>
+<li>自定义分片算法（CLASS_BASED）：用户自定义分片算法。</li>
+</ul>
+</li>
+</ul>
+<p>一般情况下，我们可以根据业务场景选择合适的分片算法，如果没有特殊需求，可以使用自动分片算法，这样可以减少配置的复杂度。</p>
+<h3 id="2-分片数如何确定">
+  2. 分片数如何确定？
+  <a class="anchor" href="#2-%e5%88%86%e7%89%87%e6%95%b0%e5%a6%82%e4%bd%95%e7%a1%ae%e5%ae%9a">#</a>
+</h3>
+<p>说到数据分片数，那么必须要问一下为什么要进行数据分片，不分片不行吗？大部分业务可能都用不上分库分表，考虑分库分表时我们面临的场景大部分都是：“单表数据超过一个界限导致性能受到严重影响”，这个界限现在说法比较多的是 500w - 2000w，但这并不是铁律，还是要以实际情况为准。</p>
+<p>在决定分片数时候，有几个考虑因素：</p>
+<ul>
+<li>数据量：根据数据量的大小来决定分片数。确保分片数能够降低单表的性能压力，同时为未来预留一定的增长空间。</li>
+<li>分片键的选择：选择合适的分片键非常重要，分片键的选择会直接影响到分片数。譬如说一个分片键的取值只有 A 和 B，那我们设置超过2个分片数也没有太大的意义。</li>
+<li>分片算法：选择 mod 和 range 两种分片算法时，分片数也会不一样。譬如，业务中根据时间分片，那么需要考虑是什么时间范围，按月还是年？而使用 mod 分片则需要考虑数据量和分片键。</li>
+<li>维护成本：分片数越多，需要的资源和维护成本就越高。</li>
+</ul>
+<blockquote>
+<p>这个当然需要结合具体情况具体分析，上述只是一个简单的分析办法，实际情况中我们还要考虑数据倾斜、数据增长和部署方式等因素。</p>
+</blockquote>
+<p>除掉上述的因素考虑外，选择的数值尽量是 2 的幂次。<strong>免责条款：纯个人经验，不保真</strong></p>
+<h3 id="3-分库分表后唯一索引的生效范围如何">
+  3. 分库分表后唯一索引的生效范围如何？
+  <a class="anchor" href="#3-%e5%88%86%e5%ba%93%e5%88%86%e8%a1%a8%e5%90%8e%e5%94%af%e4%b8%80%e7%b4%a2%e5%bc%95%e7%9a%84%e7%94%9f%e6%95%88%e8%8c%83%e5%9b%b4%e5%a6%82%e4%bd%95">#</a>
+</h3>
+<p>分库分表后，唯一索引的生效范围是一个比较棘手的问题。在分库分表的场景下，唯一索引的生效范围是在单个分片内，而不是整个分片集群内。这就意味着，如果要保证唯一索引的唯一性，需要在应用层进行处理。</p>
+<p>举个例子：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">TABLE</span> <span style="color:#f92672">`</span>t_order<span style="color:#f92672">`</span> (
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">`</span>order_id<span style="color:#f92672">`</span> BIGINT(<span style="color:#ae81ff">20</span>) <span style="color:#66d9ef">NOT</span> <span style="color:#66d9ef">NULL</span> AUTO_INCREMENT,
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">`</span>user_id<span style="color:#f92672">`</span> INT(<span style="color:#ae81ff">11</span>) <span style="color:#66d9ef">NOT</span> <span style="color:#66d9ef">NULL</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">`</span>status<span style="color:#f92672">`</span> VARCHAR(<span style="color:#ae81ff">45</span>) <span style="color:#66d9ef">NOT</span> <span style="color:#66d9ef">NULL</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">PRIMARY</span> <span style="color:#66d9ef">KEY</span> (<span style="color:#f92672">`</span>order_id<span style="color:#f92672">`</span>),
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">UNIQUE</span> <span style="color:#66d9ef">KEY</span> <span style="color:#f92672">`</span>uk_order_id<span style="color:#f92672">`</span> (<span style="color:#f92672">`</span>order_id<span style="color:#f92672">`</span>)
+</span></span><span style="display:flex;"><span>) ENGINE<span style="color:#f92672">=</span>InnoDB <span style="color:#66d9ef">DEFAULT</span> CHARSET<span style="color:#f92672">=</span>utf8;
+</span></span></code></pre></div><p>在这个例子中，<code>order_id</code> 字段是唯一索引，但是在分库分表的场景下，唯一索引的生效范围是在单个分片内，而不是整个分片集群内。这就意味着，如果要保证唯一索引的唯一性，需要在应用层进行处理。</p>
+<p>如下伪代码：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#75715e">// 生成订单号</span>
+</span></span><span style="display:flex;"><span>String orderId <span style="color:#f92672">=</span> generateOrderId();
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 根据订单号查询订单</span>
+</span></span><span style="display:flex;"><span>Order order <span style="color:#f92672">=</span> orderService.<span style="color:#a6e22e">findByOrderId</span>(orderId);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> (order <span style="color:#f92672">!=</span> <span style="color:#66d9ef">null</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 订单号已存在</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">throw</span> <span style="color:#66d9ef">new</span> OrderIdExistException();
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 保存订单</span>
+</span></span><span style="display:flex;"><span>orderService.<span style="color:#a6e22e">save</span>(order);
+</span></span></code></pre></div><p>在这个例子中，通过在应用层进行处理，可以保证唯一索引的唯一性。当然这里会存在并发问题，同样需要在应用层进行处理。可以考虑其他的解决方案，如分布式锁等，这里不再赘述。</p>
+<p>这里还引申出来另一个问题：<em><strong>分库分表后怎么生成全局唯一ID？</strong></em></p>
+<p>这个问题在 ShardingSphere 中可以通过设置 snowflake 算法来生成主键ID (<em>具体参考官方文档说明配置</em>)，如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#75715e"># 设置表的主键生成策略 </span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">your_table</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">keyGenerateStrategy</span>:
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">column</span>: <span style="color:#ae81ff">id</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">keyGeneratorName</span>: <span style="color:#ae81ff">snowflake</span>
+</span></span><span style="display:flex;"><span>  
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 设置主键生成器</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">keyGenerators</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">snowflake</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">type</span>: <span style="color:#ae81ff">SNOWFLAKE</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">props</span>:
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">worker-id</span>: <span style="color:#ae81ff">1</span>    <span style="color:#75715e"># 注意，如果有多台机器，这里需要设置不同的值。如果不理解，请熟读雪花算法</span>
+</span></span></code></pre></div><h3 id="4-分库分表后如何迁移数据">
+  4. 分库分表后如何迁移数据？
+  <a class="anchor" href="#4-%e5%88%86%e5%ba%93%e5%88%86%e8%a1%a8%e5%90%8e%e5%a6%82%e4%bd%95%e8%bf%81%e7%a7%bb%e6%95%b0%e6%8d%ae">#</a>
+</h3>
+<p>虽然在数据分片时已经提前预估了数据容量，但是难免会有数据增长超出预期，或者数据意外倾斜导致单个/某个数据分片数据量超出承载能力，这时候往往通过数据迁移来解决这个问题。</p>
+<blockquote>
+<p>有些情况可以通过删除无效数据来解决。譬如一些行为数据，历史数据 等等。</p>
+</blockquote>
+<p>ShardingSphere-Scaling 提供了数据迁移的功能，目前处于实验室阶段，可以用于数据迁移。参考：https://shardingsphere.apache.org/document/5.1.0/cn/user-manual/shardingsphere-scaling/</p>
+<p>除此之外，就是互联网中常用的迁移数据的方式，如：</p>
+<ul>
+<li>停机迁移：停止服务，将老数据依次应用新的分片规则写入到新的数据源中；执行切换；启动服务。</li>
+<li>不停机迁移：
+<ul>
+<li>编写迁移程序，将历史数据迁移到新的分片上；</li>
+<li>更新业务应用，添加双写/读写切换 功能。打开双写，</li>
+</ul>
+</li>
+</ul>
+<p>数据分片后迁移会非常麻烦，建议在设计分片规则时，尽量考虑到未来的数据增长情况，避免数据迁移（适当的增加分片数,分片键避免产生数据倾斜）。</p>
+<h3 id="5-如何确定实际执行的sql">
+  5. 如何确定实际执行的SQL？
+  <a class="anchor" href="#5-%e5%a6%82%e4%bd%95%e7%a1%ae%e5%ae%9a%e5%ae%9e%e9%99%85%e6%89%a7%e8%a1%8c%e7%9a%84sql">#</a>
+</h3>
+<p>ShardingSphere Proxy 提供了 <a href="https://shardingsphere.apache.org/document/current/cn/user-manual/shardingsphere-proxy/distsql/syntax/">DistSQL</a> 操作语言，分为：RDL、RQL、RAL 和 RUL，描述如下：</p>
+<table>
+  <thead>
+      <tr>
+          <th>操作语言</th>
+          <th>描述</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>RDL</td>
+          <td>Resource &amp; Rule Definition Language，负责资源和规则的创建、修改和删除。</td>
+      </tr>
+      <tr>
+          <td>RQL</td>
+          <td>Resource &amp; Rule Query Language，负责资源和规则的查询和展现。</td>
+      </tr>
+      <tr>
+          <td>RAL</td>
+          <td>Resource &amp; Rule Administration Language，负责强制路由、熔断、配置导入导出、数据迁移控制等管理功能。</td>
+      </tr>
+      <tr>
+          <td>RUL</td>
+          <td>Resource &amp; Rule Utility Language，负责 SQL 解析、SQL 格式化、执行计划预览等功能。</td>
+      </tr>
+  </tbody>
+</table>
+<p>如果我们要确定实际执行的 SQL 语句，可以通过 <code>RUL</code> 操作语言来实现，如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#75715e">-- 预览执行计划
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>PREVIEW <span style="color:#66d9ef">SELECT</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">FROM</span> t_user <span style="color:#66d9ef">WHERE</span> user_id <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;
+</span></span></code></pre></div><p>这里我们分别试验下，不同的查询条件的实际执行有什么异同。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">TABLE</span> t_user (
+</span></span><span style="display:flex;"><span>    id BIGINT <span style="color:#66d9ef">NOT</span> <span style="color:#66d9ef">NULL</span> <span style="color:#66d9ef">comment</span> <span style="color:#e6db74">&#39;主键&#39;</span>,               <span style="color:#75715e">/* 主键 */</span>
+</span></span><span style="display:flex;"><span>    user_id BIGINT <span style="color:#66d9ef">NOT</span> <span style="color:#66d9ef">NULL</span> <span style="color:#66d9ef">unique</span> <span style="color:#66d9ef">comment</span> <span style="color:#e6db74">&#39;用户ID&#39;</span>, <span style="color:#75715e">/* 用户ID, 分表 key */</span>
+</span></span><span style="display:flex;"><span>    mch_id BIGINT <span style="color:#66d9ef">NOT</span> <span style="color:#66d9ef">NULL</span> <span style="color:#66d9ef">comment</span> <span style="color:#e6db74">&#39;商户ID&#39;</span>,         <span style="color:#75715e">/* 商户ID, 分库 key */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">PRIMARY</span> <span style="color:#66d9ef">KEY</span> (user_id)
+</span></span><span style="display:flex;"><span>) ENGINE <span style="color:#f92672">=</span> InnoDB <span style="color:#66d9ef">DEFAULT</span> CHARSET <span style="color:#f92672">=</span> utf8mb4;
+</span></span></code></pre></div><h4 id="51-查询条件不是分片键">
+  5.1. 查询条件不是分片键
+  <a class="anchor" href="#51-%e6%9f%a5%e8%af%a2%e6%9d%a1%e4%bb%b6%e4%b8%8d%e6%98%af%e5%88%86%e7%89%87%e9%94%ae">#</a>
+</h4>
+<p>可以发现当查询条件中没有包含任何的分片键时，ShardingSphere Proxy 会将 SQL 语句发送到所有的分片节点（分库 &amp; 分表）上执行，然后将结果合并返回。</p>
+<img src="/images/shardingsphere/preview-sql-1.png" alt="ShardingSphere Proxy 预览 SQL" />
+<h4 id="52-查询条件是分片键分库键">
+  5.2. 查询条件是分片键（分库键）
+  <a class="anchor" href="#52-%e6%9f%a5%e8%af%a2%e6%9d%a1%e4%bb%b6%e6%98%af%e5%88%86%e7%89%87%e9%94%ae%e5%88%86%e5%ba%93%e9%94%ae">#</a>
+</h4>
+<p>当查询条件中包含分片键（分库键）时，ShardingSphere Proxy 会根据分片键的值，将 SQL 语句直接路由到对应的分库上执行，但是仍然要聚合分表的结果。</p>
+<img src="/images/shardingsphere/preview-sql-2.png" alt="ShardingSphere Proxy 预览 SQL" />
+<h4 id="53-查询条件是分片键分表键">
+  5.3. 查询条件是分片键（分表键）
+  <a class="anchor" href="#53-%e6%9f%a5%e8%af%a2%e6%9d%a1%e4%bb%b6%e6%98%af%e5%88%86%e7%89%87%e9%94%ae%e5%88%86%e8%a1%a8%e9%94%ae">#</a>
+</h4>
+<p>当查询条件中包含分片键（分表键）时，ShardingSphere Proxy 会根据分片键的值，还需要将 SQL 语句路由到所有的分库上执行，但是分表已经确定所以不需要聚合分表的结果。</p>
+<img src="/images/shardingsphere/preview-sql-3.png" alt="ShardingSphere Proxy 预览 SQL" />
+<h4 id="54-查询条件是分片键分库键和分表键">
+  5.4. 查询条件是分片键（分库键和分表键）
+  <a class="anchor" href="#54-%e6%9f%a5%e8%af%a2%e6%9d%a1%e4%bb%b6%e6%98%af%e5%88%86%e7%89%87%e9%94%ae%e5%88%86%e5%ba%93%e9%94%ae%e5%92%8c%e5%88%86%e8%a1%a8%e9%94%ae">#</a>
+</h4>
+<p>当查询条件中包含分片键（分库键和分表键）时，ShardingSphere Proxy 会根据分片键的值，已经能准确的确定到分库和分表，所以直接将 SQL 语句路由特定的数据分片上执行。</p>
+<img src="/images/shardingsphere/preview-sql-4.png" alt="ShardingSphere Proxy 预览 SQL" />
+<p>从上述测试结果，测试了 <code>RUL</code> 中的 <code>PREVIEW</code> 语句，可以看到 ShardingSphere Proxy 在执行 SQL 时，会根据 SQL 中的查询条件，将 SQL 语句路由到特定的数据分片上执行，这样可以减少不必要的数据传输和计算，提高查询效率。同时也提醒我们在使用分库分表时，需要选择合理的分片键，以提高查询效率。在编写 SQL 时，也要尽量包含分片键，以减少不必要的数据传输和计算。</p>
+<h3 id="6-分库分表后怎么优化查询">
+  6. 分库分表后怎么优化查询？
+  <a class="anchor" href="#6-%e5%88%86%e5%ba%93%e5%88%86%e8%a1%a8%e5%90%8e%e6%80%8e%e4%b9%88%e4%bc%98%e5%8c%96%e6%9f%a5%e8%af%a2">#</a>
+</h3>
+<p>想要优化 Shardingsphere Proxy 的查询，首先要了解 Shardingsphere Proxy 的查询过程。Shardingsphere Proxy 的查询过程如下：</p>
+<ol>
+<li>客户端发送 SQL 语句到 Shardingsphere Proxy。</li>
+<li>Shardingsphere Proxy 解析 SQL 语句，根据 SQL 语句中的分片键，将 SQL 语句路由到特定的数据分片上执行。</li>
+<li>数据分片执行 SQL 语句，返回结果。</li>
+<li>Shardingsphere Proxy 将结果聚合返回给客户端。</li>
+</ol>
+<p>其中第二步是最重要的一步，Shardingsphere Proxy 会根据 SQL 语句中的分片键，将 SQL 语句路由到特定的数据分片上执行。通过前面五个问题，我们也已经知道了使用 RUL 去分析 SQL 的实际执行计划，这样我们就可以知道 SQL 语句是如何执行的。我们能发现分片键在查询中会直接影响到 SQL 的执行计划，所以我们可以通过合理的使用分片键来优化查询。</p>
+<h4 id="61-shardingsphere-proxy-路由策略">
+  6.1 Shardingsphere Proxy 路由策略
+  <a class="anchor" href="#61-shardingsphere-proxy-%e8%b7%af%e7%94%b1%e7%ad%96%e7%95%a5">#</a>
+</h4>
+<p>这里针对 Shardingsphere Proxy 路由引擎展开一下，我们从第五个问题只能知道带不带分片键会影响到 SQL 的执行计划，但是具体的路由引擎是怎么路由的呢？参见下图：</p>
+<img src="/images/shardingsphere/proxy-route.png" alt="Shardingsphere Proxy 路由引擎" />
+<blockquote>
+<p><a href="https://shardingsphere.apache.org/document/5.1.1/cn/reference/sharding/route/">https://shardingsphere.apache.org/document/5.1.1/cn/reference/sharding/route/</a></p>
+</blockquote>
+<table>
+  <thead>
+      <tr>
+          <th>路由策略</th>
+          <th>分类</th>
+          <th>描述</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>直接路由</td>
+          <td>分片路由</td>
+          <td>直接路由到特定的数据分片上执行。如：<code>hintManager.setDatabaseShardingValue(3);</code></td>
+      </tr>
+      <tr>
+          <td>标准路由</td>
+          <td>分片路由</td>
+          <td>不包含关联查询或仅包含绑定表之间关联查询的 SQL，当分片运算符是等于号时，路由结果将落入单库（表），当分片运算符是 BETWEEN 或 IN 时，则路由结果不一定落入唯一的库（表）。</td>
+      </tr>
+      <tr>
+          <td>笛卡尔路由</td>
+          <td>分片路由</td>
+          <td>无法定位分片规则，表之间的关联查询需要拆解为笛卡尔积组合执行。如后文中的 <code>order</code> 和 <code>order_item</code> 表的关联查询 。</td>
+      </tr>
+      <tr>
+          <td>全库路由</td>
+          <td>广播路由</td>
+          <td>全库路由用于处理对数据库的操作，包括用于库设置的 SET 类型的数据库管理命令，以及 TCL 这样的事务控制语句。如：<code>SET autocommit=0;</code></td>
+      </tr>
+      <tr>
+          <td>全库表路由</td>
+          <td>广播路由</td>
+          <td>全库表路由用于处理对数据库中与其逻辑表相关的所有真实表的操作，主要包括不带分片键的 DQL 和 DML，以及 DDL 等。如 <code>SELECT * FROM t_order WHERE good_prority IN (1, 10);</code></td>
+      </tr>
+      <tr>
+          <td>全实例路由</td>
+          <td>广播路由</td>
+          <td>全实例路由用于 DCL 操作，授权语句针对的是数据库的实例。例如：<code>CREATE USER customer@127.0.0.1 identified BY '123';</code></td>
+      </tr>
+      <tr>
+          <td>单播路由</td>
+          <td>广播路由</td>
+          <td>单播路由用于获取某一真实表信息的场景，它仅需要从任意库中的任意真实表中获取数据即可。例如：<code>DESCRIBE t_order</code></td>
+      </tr>
+      <tr>
+          <td>阻断路由</td>
+          <td>广播路由</td>
+          <td>阻断路由用于屏蔽 SQL 对数据库的操作，例如：<code>USE order_db;</code> 不会在真实数据库中执行。</td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="62-绑定表">
+  6.2 绑定表
+  <a class="anchor" href="#62-%e7%bb%91%e5%ae%9a%e8%a1%a8">#</a>
+</h4>
+<blockquote>
+<p><a href="https://shardingsphere.apache.org/document/current/cn/features/sharding/concept/#%E7%BB%91%E5%AE%9A%E8%A1%A8">https://shardingsphere.apache.org/document/current/cn/features/sharding/concept/#%E7%BB%91%E5%AE%9A%E8%A1%A8</a></p>
+</blockquote>
+<p>指分片规则一致的一组分片表。 例如：t_order表和t_order_item表，均按照order_id分片，则此两张表互为绑定表关系。绑定表之间的多表关联查询不会出现笛卡尔积关联，关联查询效率将大大提升。举例说明，如果SQL为：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> i.<span style="color:#f92672">*</span> <span style="color:#66d9ef">FROM</span> t_order o <span style="color:#66d9ef">JOIN</span> t_order_item i <span style="color:#66d9ef">ON</span> o.order_id<span style="color:#f92672">=</span>i.order_id <span style="color:#66d9ef">WHERE</span> o.order_id <span style="color:#66d9ef">in</span> (<span style="color:#ae81ff">10</span>, <span style="color:#ae81ff">11</span>);
+</span></span></code></pre></div><p>在不配置绑定表关系时，假设分片键order_id将数值10路由至第0片，将数值11路由至第1片，那么路由后的SQL应该为4条，它们呈现为笛卡尔积：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> i.<span style="color:#f92672">*</span> <span style="color:#66d9ef">FROM</span> t_order_0 o <span style="color:#66d9ef">JOIN</span> t_order_item_0 i <span style="color:#66d9ef">ON</span> o.order_id<span style="color:#f92672">=</span>i.order_id <span style="color:#66d9ef">WHERE</span> o.order_id <span style="color:#66d9ef">in</span> (<span style="color:#ae81ff">10</span>, <span style="color:#ae81ff">11</span>);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> i.<span style="color:#f92672">*</span> <span style="color:#66d9ef">FROM</span> t_order_0 o <span style="color:#66d9ef">JOIN</span> t_order_item_1 i <span style="color:#66d9ef">ON</span> o.order_id<span style="color:#f92672">=</span>i.order_id <span style="color:#66d9ef">WHERE</span> o.order_id <span style="color:#66d9ef">in</span> (<span style="color:#ae81ff">10</span>, <span style="color:#ae81ff">11</span>);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> i.<span style="color:#f92672">*</span> <span style="color:#66d9ef">FROM</span> t_order_1 o <span style="color:#66d9ef">JOIN</span> t_order_item_0 i <span style="color:#66d9ef">ON</span> o.order_id<span style="color:#f92672">=</span>i.order_id <span style="color:#66d9ef">WHERE</span> o.order_id <span style="color:#66d9ef">in</span> (<span style="color:#ae81ff">10</span>, <span style="color:#ae81ff">11</span>);
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> i.<span style="color:#f92672">*</span> <span style="color:#66d9ef">FROM</span> t_order_1 o <span style="color:#66d9ef">JOIN</span> t_order_item_1 i <span style="color:#66d9ef">ON</span> o.order_id<span style="color:#f92672">=</span>i.order_id <span style="color:#66d9ef">WHERE</span> o.order_id <span style="color:#66d9ef">in</span> (<span style="color:#ae81ff">10</span>, <span style="color:#ae81ff">11</span>);
+</span></span></code></pre></div><p>如果配置了绑定表关系，那么路由后的SQL应该为2条，它们不再呈现为笛卡尔积：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> i.<span style="color:#f92672">*</span> <span style="color:#66d9ef">FROM</span> t_order_0 o <span style="color:#66d9ef">JOIN</span> t_order_item_0 i <span style="color:#66d9ef">ON</span> o.order_id<span style="color:#f92672">=</span>i.order_id <span style="color:#66d9ef">WHERE</span> o.order_id <span style="color:#66d9ef">in</span> (<span style="color:#ae81ff">10</span>, <span style="color:#ae81ff">11</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> i.<span style="color:#f92672">*</span> <span style="color:#66d9ef">FROM</span> t_order_1 o <span style="color:#66d9ef">JOIN</span> t_order_item_1 i <span style="color:#66d9ef">ON</span> o.order_id<span style="color:#f92672">=</span>i.order_id <span style="color:#66d9ef">WHERE</span> o.order_id <span style="color:#66d9ef">in</span> (<span style="color:#ae81ff">10</span>, <span style="color:#ae81ff">11</span>);
+</span></span></code></pre></div><p>绑定表配置需要在 ShardingSphere Proxy 的配置文件中配置，如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#f92672">rules</span>:
+</span></span><span style="display:flex;"><span>- !<span style="color:#ae81ff">SHARDING</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">tables</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">t_order</span>:
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">actualDataNodes</span>: <span style="color:#ae81ff">ds_${0..1}.t_order_${0..1}</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">t_order_item</span>:
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">actualDataNodes</span>: <span style="color:#ae81ff">ds_${0..1}.t_order_item_${0..1}</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">bindingTables</span>: <span style="color:#75715e"># 绑定表配置</span>
+</span></span><span style="display:flex;"><span>    - <span style="color:#ae81ff">t_order, t_order_item</span>
+</span></span></code></pre></div><h4 id="63-广播表">
+  6.3 广播表
+  <a class="anchor" href="#63-%e5%b9%bf%e6%92%ad%e8%a1%a8">#</a>
+</h4>
+<blockquote>
+<p><a href="https://shardingsphere.apache.org/document/5.4.1/cn/user-manual/shardingsphere-jdbc/yaml-config/rules/broadcast/">https://shardingsphere.apache.org/document/5.4.1/cn/user-manual/shardingsphere-jdbc/yaml-config/rules/broadcast/</a></p>
+</blockquote>
+<p>指所有的分片数据源中都存在的表，表结构和表中的数据在每个数据库中均完全一致。适用于数据量不大且需要与海量数据的表进行关联查询的场景，例如：字典表。</p>
+<p>广播表配置需要在 ShardingSphere Proxy 的配置文件中配置，如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#f92672">rules</span>:
+</span></span><span style="display:flex;"><span>- !<span style="color:#ae81ff">BROADCAST</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">tables</span>: <span style="color:#75715e"># 广播表规则列表</span>
+</span></span><span style="display:flex;"><span>    - <span style="color:#ae81ff">t_country</span>
+</span></span><span style="display:flex;"><span>    - <span style="color:#ae81ff">t_address</span>
+</span></span></code></pre></div><p>广播表有以下特点：</p>
+<ul>
+<li>插入、更新操作会实时在所有节点上执行，保持各个分片的数据一致性</li>
+<li>查询操作，只从一个节点获取</li>
+<li>可以跟任何一个表进行 JOIN 操作</li>
+</ul>
+<h4 id="64-总结">
+  6.4 总结
+  <a class="anchor" href="#64-%e6%80%bb%e7%bb%93">#</a>
+</h4>
+<p>通过前面的分析，我们大致可以得出以下几个优化查询的方法：</p>
+<ol>
+<li>合理选择和使用分片键，让 SQL 能够被路由到特定的数据分片上执行，避免数据聚合和笛卡尔积。</li>
+<li>可以通过配置绑定表来避免笛卡尔积。</li>
+<li>同样的，合理的识别并设置广播表，可以提高查询效率（避免跨 库/实例）。</li>
+<li>通过 DistSQL 的 <code>PREVIEW</code> 语句，可以预览 SQL 的执行计划，从而优化 SQL。</li>
+</ol>
+<p>在编写针对数据分片的 SQL 时，虽然 ShardingSphere Proxy 能做到大部分场景的透明化，但我们还是需要清晰的了解其路由策略和执行方式，这样才能了然于心，针对性的编写 SQL，提高查询效率。</p>
+<h3 id="总结">
+  总结
+  <a class="anchor" href="#%e6%80%bb%e7%bb%93">#</a>
+</h3>
+<p>当我们选择分库分表的方案时，我们需要决定 <strong>分片的量，分片的算法和分片键</strong>，而这一切都基于我们对业务的理解和对分库分表的认知。而最终决定这一切的都是业务的需求。在决策时，我们往往需要考虑数据分片后是否会出现：<strong>分布不均匀，出现热点数据？</strong> <strong>分片算法扩展性不足，导致扩展时需要数据迁移？</strong> <strong>数据分片键选择不合理，不符合业务中的查询模式，影响查询性能？</strong></p>
+<p>分库分表不是万能的，也不是完全无损的。分库之后一定会带来的问题是：事务；join 查询；排序；分页；group 分组；所以决定分片前一定要结合业务分析能不能分片。</p>
+<h3 id="参考">
+  参考
+  <a class="anchor" href="#%e5%8f%82%e8%80%83">#</a>
+</h3>
+<ul>
+<li><a href="https://www.cnblogs.com/chengxy-nds/p/18097298">https://www.cnblogs.com/chengxy-nds/p/18097298</a></li>
+<li><a href="https://shardingsphere.apache.org/document/current/en/overview/">https://shardingsphere.apache.org/document/current/en/overview/</a></li>
+</ul>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#问题概述">问题概述</a></li>
+        <li><a href="#0-常见的部署方式">0. 常见的部署方式</a></li>
+        <li><a href="#1-如何配置分库分表规则算法有哪些">1. 如何配置分库分表规则？算法有哪些？</a></li>
+        <li><a href="#2-分片数如何确定">2. 分片数如何确定？</a></li>
+        <li><a href="#3-分库分表后唯一索引的生效范围如何">3. 分库分表后唯一索引的生效范围如何？</a></li>
+        <li><a href="#4-分库分表后如何迁移数据">4. 分库分表后如何迁移数据？</a></li>
+        <li><a href="#5-如何确定实际执行的sql">5. 如何确定实际执行的SQL？</a></li>
+        <li><a href="#6-分库分表后怎么优化查询">6. 分库分表后怎么优化查询？</a></li>
+        <li><a href="#总结">总结</a></li>
+        <li><a href="#参考">参考</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

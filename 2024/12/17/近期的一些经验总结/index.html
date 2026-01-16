@@ -1,0 +1,1312 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="总结近期遇到的一些实际问题、排查思路和解决方案，涉及到 CDC 、DMS/DTS、Istio、APISIX, ShardingSphere Proxy 等软件的使用经验。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2024/12/17/%E8%BF%91%E6%9C%9F%E7%9A%84%E4%B8%80%E4%BA%9B%E7%BB%8F%E9%AA%8C%E6%80%BB%E7%BB%93/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="近期的一些经验总结">
+  <meta property="og:description" content="总结近期遇到的一些实际问题、排查思路和解决方案，涉及到 CDC 、DMS/DTS、Istio、APISIX, ShardingSphere Proxy 等软件的使用经验。">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-12-17T16:50:41+08:00">
+    <meta property="article:modified_time" content="2024-12-17T16:50:41+08:00">
+    <meta property="article:tag" content="CDC">
+    <meta property="article:tag" content="DMS">
+    <meta property="article:tag" content="Istio">
+    <meta property="article:tag" content="APISIX">
+    <meta property="article:tag" content="ShardingSphere Proxy">
+    <meta property="article:tag" content="Kafka">
+<title>近期的一些经验总结 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2024/12/17/%E8%BF%91%E6%9C%9F%E7%9A%84%E4%B8%80%E4%BA%9B%E7%BB%8F%E9%AA%8C%E6%80%BB%E7%BB%93/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>近期的一些经验总结</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#问题汇总">问题汇总</a></li>
+        <li><a href="#1-cdc-相关">1. CDC 相关</a></li>
+        <li><a href="#2-dms-数据同步相关">2. DMS 数据同步相关</a></li>
+        <li><a href="#3-istio-相关">3. Istio 相关</a></li>
+        <li><a href="#4-apisix-相关">4. APISIX 相关</a></li>
+        <li><a href="#5-shardingsphere-proxy">5. ShardingSphere Proxy</a></li>
+        <li><a href="#6-kafka-相关">6. Kafka 相关</a></li>
+        <li><a href="#7-pyroscope-相关">7. Pyroscope 相关</a></li>
+        <li><a href="#8-doris-相关">8. Doris 相关</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    近期的一些经验总结
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>December 17, 2024</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/CDC/">CDC</a>, 
+      <a href="/tags/DMS/">DMS</a>, 
+      <a href="/tags/Istio/">Istio</a>, 
+      <a href="/tags/APISIX/">APISIX</a>, 
+      <a href="/tags/ShardingSphere-Proxy/">ShardingSphere Proxy</a>, 
+      <a href="/tags/Kafka/">Kafka</a>, 
+      <a href="/tags/Kafka-Connect/">Kafka Connect</a>, 
+      <a href="/tags/Doris/">Doris</a>, 
+      <a href="/tags/Pyroscope/">Pyroscope</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><blockquote class="book-hint info">
+<p>这里不会过多的介绍软件的相关概念和架构，主要是针对实际问题的解决方案和思考。</p>
+</blockquote>
+<h3 id="问题汇总">
+  问题汇总
+  <a class="anchor" href="#%e9%97%ae%e9%a2%98%e6%b1%87%e6%80%bb">#</a>
+</h3>
+<ul>
+<li>
+<p>CDC 相关</p>
+<ul>
+<li><a href="#11-cdc-kafka-connect-mysql-sink-%e4%be%a7%e6%b6%88%e8%b4%b9%e7%a7%af%e5%8e%8b%e9%97%ae%e9%a2%98">CDC kafka-connect mysql sink 侧消费积压问题</a></li>
+<li><a href="#12-cdc-kafka-connect-mysql-source-%e4%be%a7%e5%88%a0%e9%99%a4%e4%ba%8b%e4%bb%b6%e6%8a%95%e9%80%92%e4%ba%86%e4%b8%a4%e6%9d%a1%e4%ba%8b%e4%bb%b6%e5%af%bc%e8%87%b4%e5%88%a0%e9%99%a4%e5%8a%a8%e4%bd%9c%e6%95%b0%e6%8d%ae%e9%87%8f%e8%a2%ab%e6%94%be%e5%a4%a7">CDC kafka-connect mysql source 侧删除事件投递了两条事件，导致删除动作数据量被放大</a></li>
+<li><a href="#13-cdc-kafka-connect-mongodb-%e6%95%b0%e6%8d%ae%e5%90%8c%e6%ad%a5%e4%bb%bb%e5%8a%a1%e5%bc%82%e5%b8%b8%e6%b6%88%e6%81%af%e8%b6%85%e8%bf%87-1mb-">CDC kafka-connect mongodb 数据同步任务异常（消息超过 1MB ）</a></li>
+</ul>
+<blockquote>
+<p>更新于: 2025-02-06</p>
+</blockquote>
+<ul>
+<li><a href="#14-cdc-elasticsearch-sink-%e6%80%8e%e4%b9%88%e8%87%aa%e5%ae%9a%e4%b9%89%e7%b4%a2%e5%bc%95%e5%90%8d%e7%a7%b0">CDC Elasticsearch sink 怎么自定义索引名称？</a></li>
+<li><a href="#15-%e8%87%aa%e5%ae%9a%e4%b9%89-messagetimestamprouter-%e5%ae%9e%e7%8e%b0%e5%8a%a8%e6%80%81%e7%b4%a2%e5%bc%95%e5%90%8d%e7%a7%b0">自定义 transform 实现自定义索引名称</a></li>
+</ul>
+<blockquote>
+<p>更新于：2025-10-11</p>
+</blockquote>
+<ul>
+<li><a href="#16-cdc-kafka-connect-mongodb-%e4%be%a7%e5%8f%8d%e5%a4%8d%e8%bf%9b%e8%a1%8c-%e5%bf%ab%e7%85%a7-%e5%af%bc%e8%87%b4%e6%95%b0%e6%8d%ae%e5%90%8c%e6%ad%a5%e5%bc%82%e5%b8%b8">CDC kafka-connect mongodb 侧反复进行 “快照” 导致数据同步异常</a></li>
+</ul>
+</li>
+<li>
+<p>DMS 数据同步相关</p>
+<ul>
+<li><a href="#21-%e6%95%b0%e6%8d%ae%e8%bf%81%e7%a7%bb%e5%ae%8c%e6%88%90%e5%90%8e%e6%80%8e%e4%b9%88%e5%af%b9%e6%af%94%e6%ba%90%e6%95%b0%e6%8d%ae%e5%92%8c%e7%9b%ae%e6%a0%87%e6%95%b0%e6%8d%ae%e6%98%af%e5%90%a6%e4%b8%80%e8%87%b4">数据迁移完成后，怎么对比源数据和目标数据是否一致？</a></li>
+<li><a href="#22-%e5%a6%82%e6%9e%9c%e4%b8%8d%e4%b8%80%e8%87%b4%e6%80%8e%e4%b9%88%e5%a4%84%e7%90%86">如果不一致怎么处理？</a></li>
+</ul>
+</li>
+<li>
+<p>Istio 相关</p>
+<ul>
+<li><a href="#31-istio-%e4%b8%ad%e5%a4%9a%e4%b8%aa-gateway-%e4%bd%bf%e7%94%a8%e7%9b%b8%e5%90%8c-hostanalyze-%e6%98%af%e6%8f%90%e7%a4%ba%e9%94%99%e8%af%af">Istio 中多个 gateway 使用相同 host，analyze 是提示错误</a></li>
+<li><a href="#32-istio-%e4%b8%ad%e4%b8%80%e4%b8%aa%e6%9c%8d%e5%8a%a1%e6%8f%90%e4%be%9b%e4%ba%86%e5%a4%9a%e4%b8%aa%e7%ab%af%e5%8f%a3%e7%9a%84%e6%9c%8d%e5%8a%a1%e6%80%8e%e4%b9%88%e9%85%8d%e7%bd%ae-virtual-service-">Istio 中一个服务提供了多个端口的服务，怎么配置 Virtual Service ？</a></li>
+</ul>
+</li>
+<li>
+<p>APISIX 相关</p>
+<ul>
+<li><a href="#41-%e4%bd%bf%e7%94%a8-apisix-%e4%bd%9c%e4%b8%ba%e7%bd%91%e5%85%b3%e6%80%8e%e4%b9%88%e8%bf%9b%e8%a1%8c%e6%9c%89%e6%9d%a1%e4%bb%b6%e7%9a%84%e5%93%8d%e5%ba%94%e9%87%8d%e5%86%99">使用 APISIX 作为网关，怎么进行有条件的响应重写？</a></li>
+<li><a href="#42-apisix-%e6%8f%92%e4%bb%b6%e7%9a%84%e6%89%a7%e8%a1%8c%e9%a1%ba%e5%ba%8f%e6%98%af%e6%80%8e%e4%b9%88%e6%a0%b7%e7%9a%84">APISIX 插件的执行顺序是怎么样的？</a></li>
+</ul>
+</li>
+<li>
+<p>ShardingSphere Proxy</p>
+<ul>
+<li><a href="#51-hint%e7%ad%96%e7%95%a5-%e5%9c%a8-shardingsphere-proxy-%e4%b8%ad%e7%9a%84%e4%bd%bf%e7%94%a8">HINT策略 在 ShardingSphere Proxy 中的使用</a></li>
+</ul>
+</li>
+<li>
+<p>Kafka 相关</p>
+<ul>
+<li><a href="#61-%e5%a6%82%e4%bd%95%e5%b0%86%e8%bf%81%e7%a7%bbkafka%e9%9b%86%e7%be%a4%e4%b8%ad%e7%9a%84%e6%95%b0%e6%8d%ae">如何将迁移kafka集群中的数据？</a></li>
+</ul>
+</li>
+<li>
+<p>Pyroscope 相关</p>
+<ul>
+<li><a href="#71-%e4%bd%bf%e7%94%a8-go-pull-%e6%a8%a1%e5%bc%8f%e9%87%87%e9%9b%86%e6%95%b0%e6%8d%ae%e6%97%b6%e4%b8%ba%e4%bb%80%e4%b9%88%e5%8f%aa%e6%9c%89-cpu--gourotines--cpu-samples-%e4%b8%89%e4%b8%aa%e6%8c%87%e6%a0%87">使用 Go Pull 模式采集数据时为什么只有 cpu + gourotines + cpu samples 三个指标？</a></li>
+</ul>
+</li>
+<li>
+<p>Doris 相关</p>
+<ul>
+<li><a href="#81-%e5%8a%a8%e6%80%81%e5%88%86%e5%8c%ba%e8%a1%a8%e6%8f%92%e5%85%a5%e6%95%b0%e6%8d%ae%e6%97%b6%e5%a4%b1%e8%b4%a5%e6%8f%90%e7%a4%ba-no-partition-for-this-tuple">动态分区表插入数据时失败，提示 &ldquo;no partition for this tuple&rdquo;</a></li>
+</ul>
+</li>
+</ul>
+<hr/>
+<h3 id="1-cdc-相关">
+  1. CDC 相关
+  <a class="anchor" href="#1-cdc-%e7%9b%b8%e5%85%b3">#</a>
+</h3>
+<p>CDC 是 Change Data Capture 的缩写，即变更数据捕获。CDC 是一种软件模式，用于捕获和跟踪数据库中的变更。CDC 通常用于复制数据、数据集成和数据仓库加载等场景。</p>
+<p>这里 CDC 的技术实现为使用 kafka-connect 连接 mysql 和 mongodb 将数据同步到异构系统中 elasticsearch。source 和 sink connector 使用的 debezium 插件。kafka-connect 是基于 kafka 构建的沟通数据系统的可靠工具，它最常用于将数据异构存储，以满足离线查询和分析、数据仓库、数据湖等需求。</p>
+<p>这里使用到 mysql source connector 的配置如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;name&#34;</span>: <span style="color:#e6db74">&#34;xxx&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;connector.class&#34;</span>: <span style="color:#e6db74">&#34;io.debezium.connector.mysql.MySqlConnector&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;include.schema.changes&#34;</span>: <span style="color:#e6db74">&#34;true&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;topic.prefix&#34;</span>: <span style="color:#e6db74">&#34;mysql-xxx&#34;</span>,
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 配置了 Reroute transform，将 真实表 归集到一个 逻辑表对应的 topic 中
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#f92672">&#34;transforms&#34;</span>: <span style="color:#e6db74">&#34;Reroute&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;transforms.Reroute.type&#34;</span>: <span style="color:#e6db74">&#34;io.debezium.transforms.ByLogicalTableRouter&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;transforms.Reroute.topic.regex&#34;</span>: <span style="color:#e6db74">&#34;xxx&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;transforms.Reroute.key.enforce.uniqueness&#34;</span>: <span style="color:#e6db74">&#34;false&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;transforms.Reroute.topic.replacement&#34;</span>: <span style="color:#e6db74">&#34;&lt;topic_prefix&gt;&#34;</span>,
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;schema.history.internal.kafka.topic&#34;</span>: <span style="color:#e6db74">&#34;mysql-connector.schemahistory.xxx&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;schema.history.internal.kafka.bootstrap.servers&#34;</span>: <span style="color:#e6db74">&#34;&lt;kafka_server&gt;&#34;</span>,
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;database.include.list&#34;</span>: <span style="color:#e6db74">&#34;&lt;database_name or regex&gt;&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;database.port&#34;</span>: <span style="color:#e6db74">&#34;&lt;mysql_port&gt;&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;database.hostname&#34;</span>: <span style="color:#e6db74">&#34;&lt;mysql_host&gt;&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;database.password&#34;</span>: <span style="color:#e6db74">&#34;&lt;mysql_pass&gt;&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;database.user&#34;</span>: <span style="color:#e6db74">&#34;&lt;mysql_user&gt;&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;table.exclude.list&#34;</span>: <span style="color:#e6db74">&#34;&lt;table_name or regex&gt;&#34;</span>,
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>mysql sink connector 的配置如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;name&#34;</span>: <span style="color:#e6db74">&#34;&lt;connector name&gt;&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;connector.class&#34;</span>: <span style="color:#e6db74">&#34;io.confluent.connect.elasticsearch.ElasticsearchSinkConnector&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;behavior.on.null.values&#34;</span>: <span style="color:#e6db74">&#34;DELETE&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;tasks.max&#34;</span>: <span style="color:#e6db74">&#34;1&#34;</span>, <span style="color:#75715e">// 任务数对应 consumer group 的消费者实例数
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#f92672">&#34;key.ignore&#34;</span>: <span style="color:#e6db74">&#34;false&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;write.method&#34;</span>: <span style="color:#e6db74">&#34;UPSERT&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;connection.url&#34;</span>: <span style="color:#e6db74">&#34;&lt;es_addr&gt;&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;topics.regex&#34;</span>: <span style="color:#e6db74">&#34;&lt;topic_regex&gt;&#34;</span>,
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;transforms&#34;</span>: <span style="color:#e6db74">&#34;unwrap,key&#34;</span>,
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// unwrap tranform 配置，处理删除事件：将删除事件的 value 设置为 null
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#f92672">&#34;transforms.unwrap.type&#34;</span>: <span style="color:#e6db74">&#34;io.debezium.transforms.ExtractNewRecordState&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;transforms.unwrap.delete.handling.mode&#34;</span>: <span style="color:#e6db74">&#34;none&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;transforms.unwrap.drop.tombstones&#34;</span>: <span style="color:#e6db74">&#34;false&#34;</span>,
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// key tranform 配置，设置 ES 的 docID 为 mysql 数据表中的id (主键)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#f92672">&#34;transforms.key.field&#34;</span>: <span style="color:#e6db74">&#34;id&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;transforms.key.type&#34;</span>: <span style="color:#e6db74">&#34;org.apache.kafka.connect.transforms.ExtractField$Key&#34;</span>,
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h4 id="11-cdc-kafka-connect-mysql-sink-侧消费积压问题">
+  1.1 CDC kafka-connect mysql sink 侧消费积压问题
+  <a class="anchor" href="#11-cdc-kafka-connect-mysql-sink-%e4%be%a7%e6%b6%88%e8%b4%b9%e7%a7%af%e5%8e%8b%e9%97%ae%e9%a2%98">#</a>
+</h4>
+<p>积压的原因，针对 mysql source / sink connector 只使用了一个分区。众所周知 topic 分区数会直接影响到消费的并发度，如果只有一个分区，那么只有一个消费者可以消费，消费者的消费速度就会受到限制。解决方案是增加分区数，增加消费者的并发度。</p>
+<p><strong>这里存在的疑惑是：</strong></p>
+<ul>
+<li>mysql 相关的 connector 是否只能使用一个分区？还能否保证顺序消费？</li>
+<li>有人反馈的的只能使用一个分区的 topic 是指的这部分吗？</li>
+<li>增加 topic 数之后，source connector 和 sink connector 都能够增加并行的任务吗？</li>
+</ul>
+<p><strong>文档查阅和实验：</strong></p>
+<p>在最开始使用时，当时确定为只有一个分区是由于文档中提及了：</p>
+<blockquote>
+<p><a href="https://debezium.io/documentation/reference/stable/connectors/mysql.html#mysql-schema-change-topic">https://debezium.io/documentation/reference/stable/connectors/mysql.html#mysql-schema-change-topic</a></p>
+<p><em><strong>Never partition the database schema history topic</strong>. For the database schema history topic to function correctly, it must maintain a consistent, global order of the event records that the connector emits to it.</em></p>
+<p><em>To ensure that the topic is not split among partitions, set the partition count for the topic by using one of the following methods:</em></p>
+<p><em>If you create the database schema history topic manually, specify a partition count of 1.</em></p>
+<p><em>If you use the Apache Kafka broker to create the database schema history topic automatically, the topic is created, set the value of the Kafka num.partitions &gt; configuration option to 1.</em></p>
+</blockquote>
+<p>但是实际上看来，这里的意思是指的 schema history topic 而不是其他的 topic。唯一找到限制是 mysql source connector task 只能为 1 如下所示：</p>
+<blockquote>
+<p><em><strong><a href="https://debezium.io/documentation/reference/stable/connectors/mysql.html#mysql-property-tasks-max">tasks.max</a></strong></em></p>
+<p>Default value: 1</p>
+<p><em>The maximum number of tasks to create for this connector. Because the MySQL connector <em><strong>always uses a single task, changing the default value has no effect.</strong></em></em></p>
+</blockquote>
+<p>因此分区数为 1 只是“历史”问题，实际上可以增加分区数，以增加消费侧并发度。</p>
+<p>另外文档中也说明了 source connector 投递消息的 <a href="https://debezium.io/documentation/reference/stable/connectors/mysql.html#mysql-property-message-key-columns">message key</a> 可以自定义 key, 其默认值为数据库表的主键，这样可以保证同一条数据的变更事件被投递到同一个分区中，从而保证了顺序性。</p>
+<p>如下是真实环境中一条数据的变更事件的 message key 示例：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;schema&#34;</span>: {
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;type&#34;</span>: <span style="color:#e6db74">&#34;struct&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;fields&#34;</span>: [
+</span></span><span style="display:flex;"><span>      {
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&#34;type&#34;</span>: <span style="color:#e6db74">&#34;int64&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&#34;optional&#34;</span>: <span style="color:#66d9ef">false</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&#34;field&#34;</span>: <span style="color:#e6db74">&#34;id&#34;</span>
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>    ],
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;optional&#34;</span>: <span style="color:#66d9ef">false</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;name&#34;</span>: <span style="color:#e6db74">&#34;$connectorName.$dbName.$tblName.Key&#34;</span>
+</span></span><span style="display:flex;"><span>  },
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;payload&#34;</span>: {
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;id&#34;</span>: <span style="color:#ae81ff">1075966706511257600</span> <span style="color:#75715e">// 唯一的变量，即主键列的值
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>  }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p><strong>处理手段：</strong></p>
+<ol>
+<li>调整 mysql sink connector 的 topic 分区数，增加并发度。</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./kafka-topics.sh --bootstrap-server &lt;kafka_server&gt; --alter --topic &lt;topic_name&gt; --partitions &lt;new_partition_num&gt;
+</span></span></code></pre></div><ol start="2">
+<li>调整 mysql sink connector 的任务数与分区数一致（这里20为示例），以保证每个任务都能够消费到数据。</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-diff" data-lang="diff"><span style="display:flex;"><span><span style="color:#f92672">- “tasks.max”: &#34;1&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#f92672"></span><span style="color:#a6e22e">+ “tasks.max”: &#34;20&#34;
+</span></span></span></code></pre></div><blockquote>
+<p>注意：增加分区数，大概率会导致某些消息从之前的分区被投递到新的分区，这样会导致消息的顺序性被打乱，因此要谨慎处理，要么能够容忍这种异常，要么事后恢复最终一致，也可以先停止生产等消费完毕后再行调整。</p>
+</blockquote>
+<h4 id="12-cdc-kafka-connect-mysql-source-侧删除事件投递了两条事件导致删除动作数据量被放大">
+  1.2 CDC kafka-connect mysql source 侧删除事件投递了两条事件，导致删除动作数据量被放大
+  <a class="anchor" href="#12-cdc-kafka-connect-mysql-source-%e4%be%a7%e5%88%a0%e9%99%a4%e4%ba%8b%e4%bb%b6%e6%8a%95%e9%80%92%e4%ba%86%e4%b8%a4%e6%9d%a1%e4%ba%8b%e4%bb%b6%e5%af%bc%e8%87%b4%e5%88%a0%e9%99%a4%e5%8a%a8%e4%bd%9c%e6%95%b0%e6%8d%ae%e9%87%8f%e8%a2%ab%e6%94%be%e5%a4%a7">#</a>
+</h4>
+<p>这个问题的背景是，mysql 部分表数据量极大，个别单表超过 100 million 条数据，且日增量极大，因此会定期删除。定期删除一开始选择的是使用 mysql Event Scheduler 定时任务 + Procedure 删除，但这种方式对于运维人员的要求较高，且不够灵活（分库分表场景下），其次在业务高峰期删除操作会影响到业务的正常运行。因此另外选择了自行实现一个定时任务，定时删除数据，以避开业务高峰。</p>
+<p>但是部署上线时发现一个问题：删除的数据量大概是 20 Million 条，但是 kafka 中的消息数量是 40 Million 条，且每条消息都是删除操作。</p>
+<p>演示如下图中所示，针对同一条数据的删除操作，source connector 投递了两条消息，导致数据量被放大。</p>
+<p><img src="/images/202412-arch/cdc-delete_event_double.jpg" alt="delete_event_double" /></p>
+<p><strong>文档查阅：</strong></p>
+<ul>
+<li><a href="https://debezium.io/documentation/reference/stable/connectors/mysql.html#mysql-delete-events">Debezium/Source Connector/Mysql#delete events</a></li>
+<li><a href="https://debezium.io/documentation/reference/stable/connectors/mysql.html#mysql-tombstone-events">Debezium/Source Connector/Mysql#tombstone events</a></li>
+</ul>
+<blockquote>
+<p><em>When a row is deleted, the delete event value still works with log compaction, because Kafka can remove all earlier messages that have that same key. However, for Kafka to remove all messages that have that same key, the message value must be null. To make this possible, after the Debezium MySQL connector emits a delete event, the connector emits a special tombstone event that has the same key but a null value.</em></p>
+</blockquote>
+<p>这意味着当一条数据被删除时，source connector 会先投递一条删除事件，然后再投递一条 tombstone 事件。这样做的目的是为了保证 kafka 的 log compaction 机制能够正常工作，即如果一条数据被删除后，当 log compaction 开启时，kafka 可以删除所有之前的消息，只保留最新的消息（即被删除的状态），当其他系统消费时，只需要关注最新的状态即可。</p>
+<blockquote>
+<p><em>Kafka Log Compaction 参考：<a href="https://kafka.apache.org/documentation/#compaction">Kafka Log Compaction</a></em></p>
+</blockquote>
+<p>但在我们的实际场景中，Log Compaction 机制并不适用也没有开启，因此不需要 tombstone 事件，只需要删除事件即可。不适用的原因在于，当数据被删除时离它的创建时间已经过去了很久，同时 kafka 中也只保留 7d 的数据，因此 tombstone 事件对我们来说没有意义。</p>
+<p><strong>处理手段：</strong></p>
+<ol>
+<li>调整 source connecor 配置，增加 unwrap tranform 以删除不必要的删除事件。</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-diff" data-lang="diff"><span style="display:flex;"><span><span style="color:#f92672">- &#34;transforms&#34;: &#34;Reroute&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#f92672"></span><span style="color:#a6e22e">+ &#34;transforms&#34;: &#34;Reroute,unwrap&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+ &#34;transforms.unwrap.type&#34;: &#34;io.debezium.transforms.ExtractNewRecordState&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+ &#34;transforms.unwrap.delete.handling.mode&#34;: &#34;none&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+ &#34;transforms.unwrap.delete.tomstones.handling.mode&#34;: &#34;tomstone&#34;,
+</span></span></span></code></pre></div><p><strong>调整后的效果如下图所示：</strong></p>
+<p><img src="/images/202412-arch/cdc-delete_event_single.jpeg" alt="delete_event_single" /></p>
+<ol start="2">
+<li>还可以直接调整 source connector 的配置，不产生任何的删除事件，从而减少消息量。</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-diff" data-lang="diff"><span style="display:flex;"><span><span style="color:#f92672">- &#34;transforms&#34;: &#34;Reroute&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#f92672"></span><span style="color:#a6e22e">+ &#34;transforms&#34;: &#34;Reroute,unwrap&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+ &#34;transforms.unwrap.type&#34;: &#34;io.debezium.transforms.ExtractNewRecordState&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+ &#34;transforms.unwrap.drop.tombstones&#34;: &#34;true&#34;,
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e">+ &#34;transforms.unwrap.delete.handling.mode&#34;: &#34;drop&#34;
+</span></span></span></code></pre></div><h4 id="13-cdc-kafka-connect-mongodb-数据同步任务异常消息超过-1mb-">
+  1.3 CDC kafka-connect mongodb 数据同步任务异常（消息超过 1MB ）
+  <a class="anchor" href="#13-cdc-kafka-connect-mongodb-%e6%95%b0%e6%8d%ae%e5%90%8c%e6%ad%a5%e4%bb%bb%e5%8a%a1%e5%bc%82%e5%b8%b8%e6%b6%88%e6%81%af%e8%b6%85%e8%bf%87-1mb-">#</a>
+</h4>
+<p>这个问题是偶然发现 mongodb source connector 异常，查看日志发现如下异常：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>org.apache.kafka.connect.errors.ConnectException: Unrecoverable exception from producer send callback
+</span></span><span style="display:flex;"><span>	at org.apache.kafka.connect.runtime.WorkerSourceTask.maybeThrowProducerSendException<span style="color:#f92672">(</span>WorkerSourceTask.java:334<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>	at org.apache.kafka.connect.runtime.WorkerSourceTask.prepareToSendRecord<span style="color:#f92672">(</span>WorkerSourceTask.java:128<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>	at org.apache.kafka.connect.runtime.AbstractWorkerSourceTask.sendRecords<span style="color:#f92672">(</span>AbstractWorkerSourceTask.java:404<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>	at org.apache.kafka.connect.runtime.AbstractWorkerSourceTask.execute<span style="color:#f92672">(</span>AbstractWorkerSourceTask.java:361<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>	at org.apache.kafka.connect.runtime.WorkerTask.doRun<span style="color:#f92672">(</span>WorkerTask.java:204<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>	at org.apache.kafka.connect.runtime.WorkerTask.run<span style="color:#f92672">(</span>WorkerTask.java:259<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>	at org.apache.kafka.connect.runtime.AbstractWorkerSourceTask.run<span style="color:#f92672">(</span>AbstractWorkerSourceTask.java:75<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>	at org.apache.kafka.connect.runtime.isolation.Plugins.lambda$withClassLoader$1<span style="color:#f92672">(</span>Plugins.java:181<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>	at java.base/java.util.concurrent.Executors$RunnableAdapter.call<span style="color:#f92672">(</span>Executors.java:515<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>	at java.base/java.util.concurrent.FutureTask.run<span style="color:#f92672">(</span>FutureTask.java:264<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker<span style="color:#f92672">(</span>ThreadPoolExecutor.java:1128<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run<span style="color:#f92672">(</span>ThreadPoolExecutor.java:628<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>	at java.base/java.lang.Thread.run<span style="color:#f92672">(</span>Thread.java:829<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>Caused by: org.apache.kafka.common.errors.RecordTooLargeException: The message is <span style="color:#ae81ff">1096354</span> bytes when serialized which is larger than 1048576, which is the value of the max.request.size configuration.
+</span></span></code></pre></div><p>如果是熟悉 java + kafka 开发的同学，应该一眼就能看出来是消息超过了 kafka 的 <code>max.request.size</code> 配置，导致消息发送失败。</p>
+<p><strong>文档查阅：</strong></p>
+<blockquote>
+<p>这里走了“弯路”去翻了文档，是因为对 java + kafka 开发不熟悉，只是大致猜测是消息尺寸超过了 kafka 的限制，因此查阅了 kafka 的文档。</p>
+</blockquote>
+<ul>
+<li><a href="https://kafka.apache.org/documentation/#producerconfigs_max.request.size">Apache Kafka Producer Config#max.request.size</a></li>
+<li><a href="https://kafka.apache.org/documentation/#brokerconfigs_message.max.bytes">Apache Kafka Broker Config#message.max.bytes</a></li>
+</ul>
+<p><strong>处理手段：</strong></p>
+<ol>
+<li>
+<p>调整 kafka broker 的 <code>message.max.bytes</code> 配置，增加消息的最大尺寸。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./kafka-configs.sh --zookeeper &lt;zookeeper&gt; --entity-type brokers --entity-name &lt;broker_id&gt; --alter --add-config message.max.bytes<span style="color:#f92672">=</span><span style="color:#ae81ff">10485760</span>
+</span></span></code></pre></div></li>
+<li>
+<p>调整 kafka connect 的配置，增加 <code>producer.max.request.size</code> 配置。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-diff" data-lang="diff"><span style="display:flex;"><span><span style="color:#a6e22e">+ producer.max.request.size=10485760 // 10MB
+</span></span></span></code></pre></div></li>
+</ol>
+<h4 id="14-cdc-elasticsearch-sink-怎么自定义索引名称">
+  1.4 CDC Elasticsearch sink 怎么自定义索引名称？
+  <a class="anchor" href="#14-cdc-elasticsearch-sink-%e6%80%8e%e4%b9%88%e8%87%aa%e5%ae%9a%e4%b9%89%e7%b4%a2%e5%bc%95%e5%90%8d%e7%a7%b0">#</a>
+</h4>
+<p><em><strong>背景：</strong></em> 通过 CDC 将数据异构到 Elasticsearch 中， MySQL 的逻辑表 跟 ES 索引一一对应。随着业务增长，数据量不断增长，索引数量也在不断增加，直到超过了 Elasticsearch 的限制 <em><strong>单一分片的文档数量不能超过 2^31 - 1 约为 21亿个文档</strong></em>。</p>
+<p>该数据为流水数据，其业务特性为：<em><strong>只写不改，保存3个月</strong></em>，因此这里的解决思路有两种：</p>
+<ol>
+<li>调整索引的分片数（之前为 1）</li>
+<li>根据日期分别索引，比如：<code>index_name_20240101</code>，<code>index_name_20240102</code>，以此类推。</li>
+</ol>
+<p>两种方案有其各自的优缺点：</p>
+<blockquote>
+<p>ES 会尽量让分片分散保存在不同的节点上，降低单个节点故障时的影响。分片的分配策略主要考量两个因素：</p>
+<p><em><strong>分片数量</strong></em>：大多数搜索会命中多个分片，每个分片的搜索会占用搜索线程和其他资源。ES 默认单个节点最多 1000 分片。</p>
+<p><em><strong>分片大小</strong></em>: 分片合理的大小为 10-50GB。一个节点可以容纳的分片数量与节点的堆内存成正比，小于20分片/每GB堆内存；</p>
+<p><strong>适当增加分片数会增加系统的吞吐量，提高利用率；但是分片数过多会导致系统的性能下降，增加系统的负担。</strong></p>
+</blockquote>
+<ul>
+<li>
+<p>方案一：调整分片数 （如：1 =&gt; 3）</p>
+<ul>
+<li>优点：
+<ul>
+<li>业务无感，不需要修改业务代码</li>
+<li>可以提高吞吐量</li>
+</ul>
+</li>
+<li>缺点：
+<ul>
+<li>分片数调整不灵活，当数据增量再次超限制时，还需要再来一次（重建成本更高）。</li>
+<li>需要重建索引，在数据量非常大的情况下需要慎重操作，避免长时间降低集群性能</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p>方案二：根据日期分别索引，业务中使用 alias 指向全部的索引</p>
+<ul>
+<li>优点：
+<ul>
+<li>可以灵活的删除索引数据</li>
+<li>可以提高查询性能</li>
+</ul>
+</li>
+<li>缺点：
+<ul>
+<li>索引数量，分片数量增加较多，需要考虑集群的性能</li>
+<li>需要&quot;重建&quot;索引</li>
+<li>ES Sink Connector 需要按照日期索引的能力</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>The Kafka <strong>source topic name</strong> is used to create the destination <strong>index name</strong> in Elasticsearch. You <strong>can change</strong> this name prior to it being used as the index name with a Single Message Transformation (SMT)–RegexRouter or TimeStampRouter–only when the <code>flush.synchronously</code> configuration property is set to <code>true</code>.</p>
+<p><a href="https://docs.confluent.io/kafka-connectors/elasticsearch/current/overview.html">https://docs.confluent.io/kafka-connectors/elasticsearch/current/overview.html</a></p>
+</blockquote>
+<p>这里综合实际情况，选择了方案二。但问题也随之而来，ES Sink Connector 默认使用的 <code>index = topic</code> 也就是 <code>cdc.dbname.tablename</code> 这种形式, 而我们想要的是 <code>index = cdc.dbname.tablename-yyyyMMdd</code> 这种形式。</p>
+<p><strong>文档查阅：</strong></p>
+<ul>
+<li><a href="https://docs.confluent.io/kafka-connectors/elasticsearch/current/overview.html">Confluent/Elasticsearch Sink Connector#index</a></li>
+<li><a href="https://docs.confluent.io/kafka-connectors/transforms/current/regexrouter.html">Confluent/SMT/RegexRouter</a></li>
+<li><a href="https://docs.confluent.io/kafka-connectors/transforms/current/timestamprouter.html">Confluent/SMT/TimestampRouter</a></li>
+</ul>
+<p>经过查阅文档，发现可以使用 SMT 来实现自定义索引名称，其中 RegexRouter 和 TimestampRouter 都是可以的，但是符合我们的场景的是 TimestampRouter。</p>
+<p>在 ES Sink Connector 中增加如下配置：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-properties" data-lang="properties"><span style="display:flex;"><span><span style="color:#a6e22e">&#34;transforms&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;TimestampRouter&#34;,</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">&#34;transforms.TimestampRouter.type&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;org.apache.kafka.connect.transforms.TimestampRouter&#34;,</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">&#34;transforms.TimestampRouter.topic.format&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;foo-${topic}-${timestamp}&#34;,</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">&#34;transforms.TimestampRouter.timestamp.format&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;YYYYMM&#34;</span>
+</span></span></code></pre></div><p>这样就可以实现自定义索引名称了 <code>ordersTopic</code> 经过上述配置后: <code>foo-ordersTopic-202401</code>。但是这里需要注意 <code>timestamp</code> 的来源是 kafka <code>message.timestamp</code>，而不是 <code>message.key/value</code> 中的 <code>timestamp</code> 字段。</p>
+<p>一般来说流水这种记录场景是够用的，可能会存在日期偏移的情况。比如：record 的实际创建时间为 <code>2024-01-01 23:59:59</code>，但是实际写入 kafka 的时间为 <code>2024-01-02 00:00:00</code>，这样该条记录会被路由到 <code>foo-ordersTopic-20240201</code> 索引中。</p>
+<p><strong>处理手段：</strong></p>
+<p>参考 TimestampRouter 的设计和代码，我们自定义一个 transform，实现根据 message.value 中的 <code>field</code> 字段来生成时间戳, 再组装 ES index 名。具体实现参见 <a href="#15-%e8%87%aa%e5%ae%9a%e4%b9%89-messagetimestamprouter-%e5%ae%9e%e7%8e%b0%e5%8a%a8%e6%80%81%e7%b4%a2%e5%bc%95%e5%90%8d%e7%a7%b0">#1.5 自定义 MessageTimestampRouter</a>。</p>
+<h4 id="15-自定义-messagetimestamprouter-实现动态索引名称">
+  1.5 自定义 MessageTimestampRouter 实现动态索引名称
+  <a class="anchor" href="#15-%e8%87%aa%e5%ae%9a%e4%b9%89-messagetimestamprouter-%e5%ae%9e%e7%8e%b0%e5%8a%a8%e6%80%81%e7%b4%a2%e5%bc%95%e5%90%8d%e7%a7%b0">#</a>
+</h4>
+<p>预期的使用效果是：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;transforms.TimestampRouter.type&#34;</span>: <span style="color:#e6db74">&#34;com.custom.kafka.connect.transforms.MessageTimestampRouter&#34;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;transforms.TimestampRouter.topic.format&#34;</span>: <span style="color:#e6db74">&#34;${topic}-${timestamp}&#34;</span>, 
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;transforms.TimestampRouter.timestamp.format&#34;</span>: <span style="color:#e6db74">&#34;yyyyMMdd&#34;</span>,
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">&#34;transforms.TimestampRouter.message.timestamp.field&#34;</span>: <span style="color:#e6db74">&#34;created_at&#34;</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>messageValue        : <span style="color:#f92672">{</span><span style="color:#e6db74">&#34;created_at&#34;</span>: <span style="color:#e6db74">&#34;2024-01-01 00:00:00&#34;</span>, <span style="color:#e6db74">&#34;id&#34;</span>: 1<span style="color:#f92672">}</span>
+</span></span><span style="display:flex;"><span>sourceTopicName     : ordersTopic
+</span></span><span style="display:flex;"><span>destinationIndexName: ordersTopic-20240101
+</span></span></code></pre></div><p><strong>文档查阅：</strong></p>
+<ul>
+<li><a href="https://github.com/apache/kafka/blob/trunk/connect/transforms/src/main/java/org/apache/kafka/connect/transforms/TimestampRouter.java">github/kafka/org.apache.kafka.connect.transforms.TimestampRouter</a></li>
+<li><a href="https://docs.confluent.io/platform/current/connect/transforms/custom.html">Custom Kafka Connect Single Message Transforms</a></li>
+</ul>
+<p><strong>处理手段：</strong></p>
+<ol>
+<li>新建一个 java 工程，创建一个 class 继承 <code>org.apache.kafka.connect.transforms.Transformation</code> 接口。</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#75715e">/**
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * Single message transformation for Kafka Connect record types.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * &lt;p&gt;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * Connectors can be configured with transformations to make lightweight message-at-a-time modifications.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * &lt;p&gt;Kafka Connect may discover implementations of this interface using the Java {@link java.util.ServiceLoader} mechanism.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * To support this, implementations of this interface should also contain a service provider configuration file in
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * {@code META-INF/services/org.apache.kafka.connect.transforms.Transformation}.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> *
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * @param &lt;R&gt; The type of record (must be an implementation of {@link ConnectRecord})
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> */</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">interface</span> <span style="color:#a6e22e">Transformation</span><span style="color:#f92672">&lt;</span>R <span style="color:#66d9ef">extends</span> ConnectRecord<span style="color:#f92672">&lt;</span>R<span style="color:#f92672">&gt;&gt;</span> <span style="color:#66d9ef">extends</span> Configurable, Closeable {
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/**
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * Apply transformation to the {@code record} and return another record object (which may be {@code record} itself)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * or {@code null}, corresponding to a map or filter operation respectively.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * &lt;p&gt;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * A transformation must not mutate objects reachable from the given {@code record}
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * (including, but not limited to, {@link org.apache.kafka.connect.header.Headers Headers},
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * {@link org.apache.kafka.connect.data.Struct Structs}, {@code Lists}, and {@code Maps}).
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * If such objects need to be changed, a new {@link ConnectRecord} should be created and returned.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * &lt;p&gt;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * The implementation must be thread-safe.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     *
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * @param record the record to be transformed; may not be null
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * @return the transformed record; may be null to indicate that the record should be dropped
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
+</span></span><span style="display:flex;"><span>    R <span style="color:#a6e22e">apply</span>(R record);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/** Configuration specification for this transformation. */</span>
+</span></span><span style="display:flex;"><span>    ConfigDef <span style="color:#a6e22e">config</span>();
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/** Signal that this transformation instance will no longer will be used. */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@Override</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">close</span>();
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><ol start="2">
+<li>定义 ConfigDef 配置项，用于配置 transformation。</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span>  <span style="color:#75715e">/**
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">   * 配置参数
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">   * message.timestamp.field: 时间戳字段名
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">   * topic.format: 主题格式
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">   * timestamp.format: 时间戳处理格式化
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">   */</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">public</span> <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">final</span> ConfigDef CONFIG_DEF <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> ConfigDef()
+</span></span><span style="display:flex;"><span>      .<span style="color:#a6e22e">define</span>(ConfigName.<span style="color:#a6e22e">MESSAGE_TIMESTAMP_FIELD</span>, ConfigDef.<span style="color:#a6e22e">Type</span>.<span style="color:#a6e22e">STRING</span>, <span style="color:#e6db74">&#34;created_at&#34;</span>, ConfigDef.<span style="color:#a6e22e">Importance</span>.<span style="color:#a6e22e">HIGH</span>, <span style="color:#e6db74">&#34;时间戳字段名&#34;</span>)
+</span></span><span style="display:flex;"><span>      .<span style="color:#a6e22e">define</span>(ConfigName.<span style="color:#a6e22e">TOPIC_FORMAT</span>, ConfigDef.<span style="color:#a6e22e">Type</span>.<span style="color:#a6e22e">STRING</span>, <span style="color:#e6db74">&#34;${topic}-${timestamp}&#34;</span>, ConfigDef.<span style="color:#a6e22e">Importance</span>.<span style="color:#a6e22e">HIGH</span>, <span style="color:#e6db74">&#34;主题格式&#34;</span>)
+</span></span><span style="display:flex;"><span>          .<span style="color:#a6e22e">define</span>(ConfigName.<span style="color:#a6e22e">TIMESTAMP_FORMAT</span>, ConfigDef.<span style="color:#a6e22e">Type</span>.<span style="color:#a6e22e">STRING</span>, <span style="color:#e6db74">&#34;yyyyMMdd&#34;</span>, ConfigDef.<span style="color:#a6e22e">Importance</span>.<span style="color:#a6e22e">HIGH</span>, <span style="color:#e6db74">&#34;时间戳处理格式&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">@Override</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">public</span> ConfigDef <span style="color:#a6e22e">config</span>() {
+</span></span><span style="display:flex;"><span>      <span style="color:#66d9ef">return</span> CONFIG_DEF;
+</span></span><span style="display:flex;"><span>  }
+</span></span></code></pre></div><ol start="3">
+<li>实现 apply 方法，用于按照需求处理 record 的 topic。</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span>  <span style="color:#a6e22e">@Override</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">public</span> R <span style="color:#a6e22e">apply</span>(R record) {
+</span></span><span style="display:flex;"><span>      Long timestamp <span style="color:#f92672">=</span> <span style="color:#66d9ef">null</span>;
+</span></span><span style="display:flex;"><span>      
+</span></span><span style="display:flex;"><span>      <span style="color:#75715e">// 尝试从记录值中获取时间戳</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#66d9ef">if</span> (record.<span style="color:#a6e22e">value</span>() <span style="color:#66d9ef">instanceof</span> Struct) {
+</span></span><span style="display:flex;"><span>          Struct value <span style="color:#f92672">=</span> (Struct) record.<span style="color:#a6e22e">value</span>();
+</span></span><span style="display:flex;"><span>          <span style="color:#66d9ef">try</span> {
+</span></span><span style="display:flex;"><span>              Field field <span style="color:#f92672">=</span> value.<span style="color:#a6e22e">schema</span>().<span style="color:#a6e22e">field</span>(messageTimestampField);
+</span></span><span style="display:flex;"><span>              <span style="color:#66d9ef">if</span> (field <span style="color:#f92672">!=</span> <span style="color:#66d9ef">null</span>) {
+</span></span><span style="display:flex;"><span>                  timestamp <span style="color:#f92672">=</span> value.<span style="color:#a6e22e">getInt64</span>(messageTimestampField);
+</span></span><span style="display:flex;"><span>              }
+</span></span><span style="display:flex;"><span>          } <span style="color:#66d9ef">catch</span> (Exception e) {
+</span></span><span style="display:flex;"><span>              log.<span style="color:#a6e22e">warn</span>(<span style="color:#e6db74">&#34;Failed to extract timestamp from field {}: {}&#34;</span>, messageTimestampField, e.<span style="color:#a6e22e">getMessage</span>());
+</span></span><span style="display:flex;"><span>          }
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>      <span style="color:#75715e">// 如果无法从字段获取时间戳，则使用记录的时间戳</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#66d9ef">if</span> (timestamp <span style="color:#f92672">==</span> <span style="color:#66d9ef">null</span>) {
+</span></span><span style="display:flex;"><span>          log.<span style="color:#a6e22e">warn</span>(<span style="color:#e6db74">&#34;No timestamp found in record.value {}, trying record.timestamp&#34;</span>, messageTimestampField);
+</span></span><span style="display:flex;"><span>          timestamp <span style="color:#f92672">=</span> record.<span style="color:#a6e22e">timestamp</span>();
+</span></span><span style="display:flex;"><span>          <span style="color:#66d9ef">if</span> (timestamp <span style="color:#f92672">==</span> <span style="color:#66d9ef">null</span>) {
+</span></span><span style="display:flex;"><span>              log.<span style="color:#a6e22e">warn</span>(<span style="color:#e6db74">&#34;No timestamp found in record, using current time&#34;</span>);
+</span></span><span style="display:flex;"><span>              timestamp <span style="color:#f92672">=</span> System.<span style="color:#a6e22e">currentTimeMillis</span>();
+</span></span><span style="display:flex;"><span>          }
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>      <span style="color:#75715e">// 格式化时间戳</span>
+</span></span><span style="display:flex;"><span>      String formattedTimestamp <span style="color:#f92672">=</span> timestampFormat.<span style="color:#a6e22e">get</span>().<span style="color:#a6e22e">format</span>(<span style="color:#66d9ef">new</span> Date(timestamp));
+</span></span><span style="display:flex;"><span>      
+</span></span><span style="display:flex;"><span>      <span style="color:#75715e">// 替换主题格式中的变量</span>
+</span></span><span style="display:flex;"><span>      String updatedTopic <span style="color:#f92672">=</span> topicFormat
+</span></span><span style="display:flex;"><span>          .<span style="color:#a6e22e">replace</span>(<span style="color:#e6db74">&#34;${topic}&#34;</span>, record.<span style="color:#a6e22e">topic</span>())
+</span></span><span style="display:flex;"><span>          .<span style="color:#a6e22e">replace</span>(<span style="color:#e6db74">&#34;${timestamp}&#34;</span>, formattedTimestamp);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>      <span style="color:#75715e">// log.info(&#34;Updated topic: {}&#34;, updatedTopic);</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>      <span style="color:#75715e">// 创建新记录</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#66d9ef">return</span> record.<span style="color:#a6e22e">newRecord</span>(
+</span></span><span style="display:flex;"><span>          updatedTopic,
+</span></span><span style="display:flex;"><span>          <span style="color:#66d9ef">record</span><span style="color:#960050;background-color:#1e0010">.</span><span style="color:#a6e22e">kafkaPartition</span>(),
+</span></span><span style="display:flex;"><span>          <span style="color:#66d9ef">record</span><span style="color:#960050;background-color:#1e0010">.</span><span style="color:#a6e22e">keySchema</span>(),
+</span></span><span style="display:flex;"><span>          <span style="color:#66d9ef">record</span><span style="color:#960050;background-color:#1e0010">.</span><span style="color:#a6e22e">key</span>(),
+</span></span><span style="display:flex;"><span>          <span style="color:#66d9ef">record</span><span style="color:#960050;background-color:#1e0010">.</span><span style="color:#a6e22e">valueSchema</span>(),
+</span></span><span style="display:flex;"><span>          <span style="color:#66d9ef">record</span><span style="color:#960050;background-color:#1e0010">.</span><span style="color:#a6e22e">value</span>(),
+</span></span><span style="display:flex;"><span>          <span style="color:#66d9ef">record</span><span style="color:#960050;background-color:#1e0010">.</span><span style="color:#a6e22e">timestamp</span>()
+</span></span><span style="display:flex;"><span>      );
+</span></span><span style="display:flex;"><span>  }
+</span></span></code></pre></div><h4 id="16-cdc-kafka-connect-mongodb-侧反复进行-快照-导致数据同步异常">
+  1.6 CDC kafka-connect mongodb 侧反复进行 “快照” 导致数据同步异常
+  <a class="anchor" href="#16-cdc-kafka-connect-mongodb-%e4%be%a7%e5%8f%8d%e5%a4%8d%e8%bf%9b%e8%a1%8c-%e5%bf%ab%e7%85%a7-%e5%af%bc%e8%87%b4%e6%95%b0%e6%8d%ae%e5%90%8c%e6%ad%a5%e5%bc%82%e5%b8%b8">#</a>
+</h4>
+<p>导致这个现象的起始原因是，mongodb 数据库中有多个集合，其中拥有非常多的过期数据，超过 8000w 条，导致了明显的慢查询，因此开发增加了 TTL 索引来自动删除过期数据。当然这两个集合配置在了 mongodb source connector 中，需要同步变更。</p>
+<p>但是在实际运行中，发现 mongodb source connector 反复进行“快照”，mongodb source connector 的生产速率监控如下：</p>
+<figure>
+  <img src="/images/202412-arch/cdc-mongodb-source-production-rate.png" alt="mongodb source connector production rate" />
+  <figcaption>某一个 collection 生产速率</figcaption>
+</figure>
+<p>该集合正常生产的速率约为 20条/s，图中的速率已经达到 2000条/s，且反复出现。</p>
+<p><strong>文档查阅：</strong></p>
+<ul>
+<li><a href="https://debezium.io/documentation/reference/stable/connectors/mongodb.html#mongodb-performing-a-snapshot">Debezium/Source Connector/Mongodb#performing-a-snapshot</a></li>
+</ul>
+<blockquote>
+<p><em>However, if no offset is found, or if the oplog no longer contains that position, the task must first obtain the current state of the replica set contents by performing a snapshot.</em></p>
+<p>如果没有找到 offset，或者 oplog 中不再包含该位置，则任务必须首先通过执行快照来获取副本集内容的当前状态。</p>
+</blockquote>
+<p>总结一下，Mongodb source connector 会在以下情况下执行快照：</p>
+<ul>
+<li>初次启动 connector 时，找不到保存的偏移量</li>
+<li>偏移量过期，oplog 中不再包含该位置</li>
+</ul>
+<p>这里遇到的情况属于第二种情况，即偏移量过期，oplog 中不再包含该位置。由于删除的数据量非常大，导致 oplog 滚动非常快，mongodb source connector 保存的偏移量很快就过期了，因此会触发快照。</p>
+<p>而导致反复快照的原因也类似，执行快照的集合中有非常大的集合超过 100 million 条数据，导致快照时间非常长，快照过程中，oplog 继续滚动，导致快照结束后，保存的偏移量已经过期，因此会再次触发快照。陷入了一个死循环。</p>
+<p><strong>处理手段：</strong></p>
+<p>这里优化的方向有两个：</p>
+<ol>
+<li>缩短快照持续时间</li>
+<li>增大 oplog 的大小</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-javascript" data-lang="javascript"><span style="display:flex;"><span><span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">oplog</span>.<span style="color:#a6e22e">rs</span>.<span style="color:#a6e22e">stats</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 其中 maxSize 字段表示 oplog 的最大大小，单位为 B
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>{
+</span></span><span style="display:flex;"><span>  <span style="color:#a6e22e">maxSize</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">10632303360</span> <span style="color:#75715e">// 约 10GB
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div><p>缩短快照可以 <em><strong>增加快照线程数</strong></em> 来提高并发度：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-diff" data-lang="diff"><span style="display:flex;"><span><span style="color:#a6e22e">+ &#34;snapshot.max.threads&#34;: 6 // 默认值为 1
+</span></span></span></code></pre></div><p>还可以 <em><strong>拆分成多个 connector</strong></em> 来增加并发度。</p>
+<blockquote>
+<p>个人经验: 采用 include 这种显式包含的方式来指定需要同步的集合，而不是 exclude 排除的方式。</p>
+</blockquote>
+<p>至于是调大 oplog ，则需要根据实际情况来定。可以通过查看 oplog 的使用情况来判断是否需要调大 oplog 的大小：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-javascript" data-lang="javascript"><span style="display:flex;"><span><span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">rs</span>.<span style="color:#a6e22e">printReplicationInfo</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">actual</span> <span style="color:#a6e22e">oplog</span> <span style="color:#a6e22e">size</span>
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#39;10139.754638671875 MB&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">---</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">configured</span> <span style="color:#a6e22e">oplog</span> <span style="color:#a6e22e">size</span>
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#39;10139.754638671875 MB&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">---</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">log</span> <span style="color:#a6e22e">length</span> <span style="color:#a6e22e">start</span> <span style="color:#a6e22e">to</span> <span style="color:#a6e22e">end</span>
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">&#39;5012612 secs (1392.39 hrs)&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">---</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 其他
+</span></span></span></code></pre></div><p>如果确实需要调大 oplog 的大小，可以参考如下文档：</p>
+<ul>
+<li><a href="https://www.mongodb.com/docs/manual/core/replica-set-oplog/#oplog-size">MongoDB/Replication/Oplog Size</a></li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-javascript" data-lang="javascript"><span style="display:flex;"><span><span style="color:#a6e22e">db</span>.<span style="color:#a6e22e">adminCommand</span>(
+</span></span><span style="display:flex;"><span>  { 
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">replSetResizeOplog</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">1</span>, 
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">size</span><span style="color:#f92672">:</span> <span style="color:#f92672">&lt;</span><span style="color:#66d9ef">double</span><span style="color:#f92672">&gt;</span>,           <span style="color:#75715e">// 以 MB 为单位
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">minRetainHours</span><span style="color:#f92672">:</span> <span style="color:#f92672">&lt;</span><span style="color:#66d9ef">double</span><span style="color:#f92672">&gt;</span>  <span style="color:#75715e">// 可选，最小保留时间，单位为小时, 如 1.5 代表 1h30m
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>  }
+</span></span><span style="display:flex;"><span>)
+</span></span></code></pre></div><p>另外文档中还提到了，<em><strong><a href="https://debezium.io/documentation/reference/stable/connectors/mongodb.html#debezium-mongodb-incremental-snapshots">增量快照</a></strong></em> 的方式来解决大数据量的快照问题：</p>
+<ol>
+<li>增量快照的含义就是不会一次性快照完数据库的完整状态，而是分批（块）的快照每个集合（可以自定义集合和块大小）。</li>
+<li>增量快照运行是, oplog stream change 应用也会同步进行，而不用等待快照完成后</li>
+<li>增量快照停止后恢复也不会从头开始，而是从上次快照的地方继续</li>
+<li>由于增量快照是基于信号触发的（向 数据库信号集合 插入新数据 / 发布Kafka 信号消息），因此可以随时触发快照</li>
+</ol>
+<blockquote>
+<p>小结：增量快照可以很好规避的大数据量快照的问题，只是会增加使用成本。</p>
+</blockquote>
+<p><strong>经验总结：</strong></p>
+<ul>
+<li>如果存在超大数据量的集合，建议使用增量快照</li>
+<li>Mongodb source connector 的快照线程默认为 1，对于大数据量的集合，建议增加快照线程数</li>
+<li>如果 oplog 滚动过快，建议增大 oplog 的大小</li>
+</ul>
+<h3 id="2-dms-数据同步相关">
+  2. DMS 数据同步相关
+  <a class="anchor" href="#2-dms-%e6%95%b0%e6%8d%ae%e5%90%8c%e6%ad%a5%e7%9b%b8%e5%85%b3">#</a>
+</h3>
+<p>DMS 是 Data Migration Service 的缩写，即数据迁移服务。DMS 是一种数据迁移服务，用于将数据从一个地方迁移到另一个地方。DMS 通常用于数据迁移、数据备份、数据恢复等场景。</p>
+<h4 id="21-数据迁移完成后怎么对比源数据和目标数据是否一致">
+  2.1 数据迁移完成后，怎么对比源数据和目标数据是否一致？
+  <a class="anchor" href="#21-%e6%95%b0%e6%8d%ae%e8%bf%81%e7%a7%bb%e5%ae%8c%e6%88%90%e5%90%8e%e6%80%8e%e4%b9%88%e5%af%b9%e6%af%94%e6%ba%90%e6%95%b0%e6%8d%ae%e5%92%8c%e7%9b%ae%e6%a0%87%e6%95%b0%e6%8d%ae%e6%98%af%e5%90%a6%e4%b8%80%e8%87%b4">#</a>
+</h4>
+<p>在实际场景中，可能会有数据迁移的需求，比如说将数据从一个数据库迁移到另一个数据库，或者将数据从一个表迁移到另一个表。在迁移完成后，我们需要对比源数据和目标数据是否一致，以保证数据的一致性。</p>
+<p>这里记录下在检索中出来可以使用的一些工具：</p>
+<ul>
+<li><a href="https://github.com/pingcap/tidb-tools/tree/master/sync_diff_inspector">tidb-tools/sync_diff_inspector</a>: 是一个可以对比两个数据库并且输出差异的工具，支持 MySQL 和 TiDB 数据库。使用文档参考：<a href="https://docs.pingcap.com/zh/tidb/stable/sync-diff-inspector-overview#%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E8%AF%B4%E6%98%8E">sync_diff_inspector#usage</a></li>
+<li><a href="https://www.percona.com/doc/percona-toolkit/LATEST/pt-table-checksum.html">pt-table-checksum</a>: 是 Percona Toolkit 中的一个工具，用于检查 MySQL 复制的一致性。</li>
+<li><a href="https://www.percona.com/doc/percona-toolkit/LATEST/pt-table-sync.html">pt-table-sync</a>: 是 Percona Toolkit 中的一个工具，用于同步两个表的数据。</li>
+</ul>
+<h4 id="22-如果不一致怎么处理">
+  2.2 如果不一致怎么处理？
+  <a class="anchor" href="#22-%e5%a6%82%e6%9e%9c%e4%b8%8d%e4%b8%80%e8%87%b4%e6%80%8e%e4%b9%88%e5%a4%84%e7%90%86">#</a>
+</h4>
+<p>tidb-tools/sync_diff_inspector 可以输出修复SQL。Percona Toolkit 中的 pt-table-sync 也可以用于同步两个表的数据。</p>
+<h3 id="3-istio-相关">
+  3. Istio 相关
+  <a class="anchor" href="#3-istio-%e7%9b%b8%e5%85%b3">#</a>
+</h3>
+<h4 id="31-istio-中多个-gateway-使用相同-hostanalyze-是提示错误">
+  3.1 Istio 中多个 gateway 使用相同 host，analyze 是提示错误
+  <a class="anchor" href="#31-istio-%e4%b8%ad%e5%a4%9a%e4%b8%aa-gateway-%e4%bd%bf%e7%94%a8%e7%9b%b8%e5%90%8c-hostanalyze-%e6%98%af%e6%8f%90%e7%a4%ba%e9%94%99%e8%af%af">#</a>
+</h4>
+<p>在 Istio 中，gateway 是一个虚拟服务，用于将流量路由到对应的服务。gateway 有一个 host 字段，用于指定域名。在实际场景中，可能会有多个 gateway 使用相同的 host，这样就会导致 analyze 时提示错误。</p>
+<h4 id="32-istio-中一个服务提供了多个端口的服务怎么配置-virtual-service-">
+  3.2 Istio 中一个服务提供了多个端口的服务，怎么配置 Virtual Service ？
+  <a class="anchor" href="#32-istio-%e4%b8%ad%e4%b8%80%e4%b8%aa%e6%9c%8d%e5%8a%a1%e6%8f%90%e4%be%9b%e4%ba%86%e5%a4%9a%e4%b8%aa%e7%ab%af%e5%8f%a3%e7%9a%84%e6%9c%8d%e5%8a%a1%e6%80%8e%e4%b9%88%e9%85%8d%e7%bd%ae-virtual-service-">#</a>
+</h4>
+<p>我们有一个短信服务，它同时提供了 HTTP 和 gRPC 服务，分别使用了 8000 和 50051 端口。在没有使用 istio 去路由流量的时候，在 k8s 中配置这个服务其实很简单，只需要在 Service 中配置多个端口即可。如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">v1</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">kind</span>: <span style="color:#ae81ff">Service</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">sms-service</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">spec</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">selector</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">app</span>: <span style="color:#ae81ff">sms-service</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">ports</span>:
+</span></span><span style="display:flex;"><span>    - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">http</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">port</span>: <span style="color:#ae81ff">8000</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">targetPort</span>: <span style="color:#ae81ff">8000</span>
+</span></span><span style="display:flex;"><span>    - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">grpc</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">port</span>: <span style="color:#ae81ff">50051</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">targetPort</span>: <span style="color:#ae81ff">50051</span>
+</span></span></code></pre></div><p>但是在使用 istio 时，需要配置 Virtual Service 来路由流量，那么如何配置 Virtual Service 来支持多个端口的服务呢？</p>
+<p><strong>文档查阅：</strong></p>
+<ul>
+<li><a href="https://istio.io/latest/docs/reference/config/networking/virtual-service/#HTTPRoute">Istio Virtual Service#HTTPRoute</a></li>
+</ul>
+<blockquote>
+<p><em><strong>HTTPRoute</strong></em></p>
+<p><em>Describes match conditions and actions for routing HTTP/1.1, HTTP2, and gRPC traffic. See VirtualService for usage examples.</em></p>
+<p><em><strong>http[].match.port</strong></em> (Optional) uint32</p>
+<p><em>Specifies the ports on the host that is being addressed. Many services only expose a single port or label ports with the protocols they support, in these cases it is not required to explicitly select the port.</em></p>
+</blockquote>
+<p>从这一节文档，我们得知 HTTPRoute 可以用于路由 HTTP/1.1、HTTP2 和 gRPC 流量，因此我们可以使用 HTTPRoute 来配置 Virtual Service。match 匹配条件中的 port 字段可以用于指定端口，专门用于单个服务提供多端口的场景。需要注意的是 port 代表的是访问地址中的端口，而不是服务暴露的端口。</p>
+<p><strong>处理手段：</strong></p>
+<ul>
+<li>在 Virtual Service 配置中，新增多个 httpRoute 来路由到不同的端口。</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">networking.istio.io/v1alpha3</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">kind</span>: <span style="color:#ae81ff">VirtualService</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">sms-service</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">spec</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">hosts</span>:
+</span></span><span style="display:flex;"><span>    - <span style="color:#ae81ff">api.my</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">http</span>:
+</span></span><span style="display:flex;"><span>    - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">http</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">match</span>:
+</span></span><span style="display:flex;"><span>        - <span style="color:#f92672">uri</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">prefix</span>: <span style="color:#ae81ff">/</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">port</span>: <span style="color:#ae81ff">80</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">route</span>:
+</span></span><span style="display:flex;"><span>        - <span style="color:#f92672">destination</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">host</span>: <span style="color:#ae81ff">sms-service</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">port</span>:
+</span></span><span style="display:flex;"><span>              <span style="color:#f92672">number</span>: <span style="color:#ae81ff">8000</span>
+</span></span><span style="display:flex;"><span>    - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">grpc</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">match</span>:
+</span></span><span style="display:flex;"><span>        - <span style="color:#f92672">port</span>: <span style="color:#ae81ff">50051</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">route</span>:
+</span></span><span style="display:flex;"><span>        - <span style="color:#f92672">destination</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">host</span>: <span style="color:#ae81ff">sms-service</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">port</span>:
+</span></span><span style="display:flex;"><span>              <span style="color:#f92672">number</span>: <span style="color:#ae81ff">50051</span>
+</span></span></code></pre></div><h3 id="4-apisix-相关">
+  4. APISIX 相关
+  <a class="anchor" href="#4-apisix-%e7%9b%b8%e5%85%b3">#</a>
+</h3>
+<h4 id="41-使用-apisix-作为网关怎么进行有条件的响应重写">
+  4.1 使用 APISIX 作为网关，怎么进行有条件的响应重写？
+  <a class="anchor" href="#41-%e4%bd%bf%e7%94%a8-apisix-%e4%bd%9c%e4%b8%ba%e7%bd%91%e5%85%b3%e6%80%8e%e4%b9%88%e8%bf%9b%e8%a1%8c%e6%9c%89%e6%9d%a1%e4%bb%b6%e7%9a%84%e5%93%8d%e5%ba%94%e9%87%8d%e5%86%99">#</a>
+</h4>
+<p>响应重写属于网关的基本功能，APISIX 作为一个开源的网关，也支持响应重写。但是在实际场景中，可能会有一些特殊的需求，比如说只有满足一定条件时才进行响应重写。举个实际的例子：</p>
+<p>当服务器要进行停机维护的时候，我们希望所有的请求，不论是客户端还是第三方请求的请求，都响应 503 状态码，并且返回一个提示信息 “服务器正在维护中，预计维护时间为 2024-12-17 00:00:00 - 2024-12-17 06:00:00”，同时还有另外一个要求当服务器恢复时，可以允许特定的请求通过，比如说只有来自公司内部的请求才可以通过。</p>
+<blockquote>
+<p>这里默认客户端是支持展示这种响应的，因此不考虑客户端展示问题。</p>
+</blockquote>
+<p><strong>文档查阅：</strong></p>
+<ul>
+<li><a href="https://apisix.apache.org/docs/apisix/plugins/response-rewrite/">APISIX#Response-Rewrite</a></li>
+<li><a href="https://apisix.apache.org/docs/apisix/plugins/response-rewrite/#attributes">APISIX#Response-Rewrite Attributes</a></li>
+<li><a href="https://github.com/apache/apisix/blob/master/apisix/plugins/response-rewrite.lua">APISIX#Response-Rewrite GITHUB</a></li>
+</ul>
+<p>这里关注该插件的以下几个属性：</p>
+<ul>
+<li>status_code: 响应状态码</li>
+<li>body: 响应体，可以是字符串或者 base64 编码的字符串。！！！注意 body 和 filters 不能同时使用。</li>
+<li>body_base64: 用于指示 body 是否 base64 编码</li>
+<li>vars: 用于匹配条件，支持多个匹配条件。
+<ul>
+<li>变量列表参考：
+<ul>
+<li>Nginx 变量：https://nginx.org/en/docs/varindex.html</li>
+<li>APISIX 变量：https://apisix.apache.org/docs/apisix/apisix-variable/</li>
+</ul>
+</li>
+<li>操作符参考：https://github.com/api7/lua-resty-expr#operator-list</li>
+</ul>
+</li>
+<li>filters: 对 body 内容进行正则匹配并替换。</li>
+</ul>
+<p>vars 配置举例：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#75715e"># 匹配所有查询参数带有 pkg=com.company.io 的请求</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">vars</span>:
+</span></span><span style="display:flex;"><span>  - - <span style="color:#ae81ff">arg_pkg</span>
+</span></span><span style="display:flex;"><span>    - <span style="color:#ae81ff">~=</span>
+</span></span><span style="display:flex;"><span>    - <span style="color:#e6db74">&#34;com.company.io&#34;</span>
+</span></span></code></pre></div><p>filter 配置举例：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#75715e"># 这个配置会将响应体中的所有 Example 替换为 Example-Replaced</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">filters</span>:
+</span></span><span style="display:flex;"><span>  - <span style="color:#f92672">regex</span>: <span style="color:#ae81ff">Example</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">scope</span>: <span style="color:#ae81ff">global</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">replace</span>: <span style="color:#ae81ff">Example-Replaced</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">options</span>: <span style="color:#e6db74">&#34;jo&#34;</span> <span style="color:#75715e"># 正则匹配选项，参见 https://github.com/openresty/lua-nginx-module#ngxrematch </span>
+</span></span></code></pre></div><p><strong>处理手段：</strong></p>
+<p>在 ApisixRoute 配置中，配置 response-rewrite 插件，设置 body 为维护提示信息，设置 vars 为特定请求的匹配条件。</p>
+<details open><summary>代码片段</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">apisix.apache.org/v2</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">kind</span>: <span style="color:#ae81ff">ApisixRoute</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">account-api</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">spec</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">http</span>:
+</span></span><span style="display:flex;"><span>    - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">account-api</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">backends</span>:
+</span></span><span style="display:flex;"><span>        - <span style="color:#f92672">serviceName</span>: <span style="color:#ae81ff">account-api</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">servicePort</span>: <span style="color:#ae81ff">8000</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">match</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">hosts</span>:
+</span></span><span style="display:flex;"><span>          - <span style="color:#ae81ff">api.example.com</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">paths</span>:
+</span></span><span style="display:flex;"><span>          - <span style="color:#ae81ff">/account/*</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">plugins</span>:
+</span></span><span style="display:flex;"><span>        - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">cors</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">enable</span>: <span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span>        - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">response-rewrite</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">enable</span>: <span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">body</span>: &gt;-<span style="color:#e6db74">
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">            {
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">              &#34;code&#34;: 503,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">              &#34;message&#34;: &#34;服务器正在维护中，预计维护时间为 2024-12-17 00:00:00 - 2024-12-17 06:00:00&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">            }</span>            
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">body_base64</span>: <span style="color:#66d9ef">false</span> <span style="color:#75715e"># 是否 body base64，适用于二进制数据</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">vars</span>:
+</span></span><span style="display:flex;"><span>            - - <span style="color:#ae81ff">arg_pkg</span>
+</span></span><span style="display:flex;"><span>              - <span style="color:#ae81ff">~=</span>
+</span></span><span style="display:flex;"><span>              - <span style="color:#e6db74">&#34;com.company.io&#34;</span>
+</span></span></code></pre></div>  </div>
+</details>
+<h4 id="42-apisix-插件的执行顺序是怎么样的">
+  4.2 APISIX 插件的执行顺序是怎么样的？
+  <a class="anchor" href="#42-apisix-%e6%8f%92%e4%bb%b6%e7%9a%84%e6%89%a7%e8%a1%8c%e9%a1%ba%e5%ba%8f%e6%98%af%e6%80%8e%e4%b9%88%e6%a0%b7%e7%9a%84">#</a>
+</h4>
+<p>APISIX 会优先执行全局的插件，然后再执行路由级别的插件。每个插件内部定义了一个优先级 priority，优先级越高的插件越先执行。</p>
+<p><img src="/images/202412-arch/apisix-plugin-priority.jpeg" alt="APISIX Plugin priority" /></p>
+<p>如果想要调整插件的顺序，可以配置 <code>_meta</code> 字段, 参见 <a href="https://apisix.apache.org/docs/apisix/terminology/plugin/#custom-plugin-priority">APISIX#Plugin Custom priority</a></p>
+<h3 id="5-shardingsphere-proxy">
+  5. ShardingSphere Proxy
+  <a class="anchor" href="#5-shardingsphere-proxy">#</a>
+</h3>
+<h4 id="51-hint策略-在-shardingsphere-proxy-中的使用">
+  5.1 HINT策略 在 ShardingSphere Proxy 中的使用
+  <a class="anchor" href="#51-hint%e7%ad%96%e7%95%a5-%e5%9c%a8-shardingsphere-proxy-%e4%b8%ad%e7%9a%84%e4%bd%bf%e7%94%a8">#</a>
+</h4>
+<p>在前文 <a href="https://yeqown.xyz/2024/08/18/shardingsphere-proxy%E9%97%AE%E9%A2%98%E5%87%A0%E5%88%99/">ShardingSphere Proxy 问题几则</a> 中提到了 Shardingsphere 支持 HINT 策略，即通过 SQL Hint 来指定路由规则。</p>
+<p>这里的场景是针对已经使用了标准分片算法中 Inline 策略的场景，但是个别场景没有办法使用分片键进行路由，因此需要使用 HINT 策略。比如说有一个 t_order 表，进行了数据分片，分库分表的策略是：根据 mch_id 取模分为 2 个库，根据 user_id 取模分为 2 个表。</p>
+<p><img src="/images/202412-arch/ss-sharding_rule_desc.jpeg" alt="Shardingsphere Proxy Sharding Strategy" /></p>
+<p>现在要针对这个表清理数据。最简单的想法就是直接执行 <code>DELETE FROM t_order WHERE created_at &lt; 'yyyy-MM-dd'</code> 来清理数据，但是很明显直接删除会导致性能问题。可以考虑使用批量删除的方式，例如：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">DELETE</span> <span style="color:#66d9ef">FROM</span> t_order <span style="color:#66d9ef">WHERE</span> created_at <span style="color:#f92672">&lt;</span> <span style="color:#e6db74">&#39;yyyy-MM-dd&#39;</span> <span style="color:#66d9ef">limit</span> <span style="color:#ae81ff">1000</span>;
+</span></span></code></pre></div><p>但是这样的方式不被 Shardingsphere Proxy 支持，因为这样的 SQL 语句没有分片键会导致全路由，Shardingsphere Proxy 并不支持。</p>
+<p><img src="/images/202412-arch/ss-delete_limit_failed.jpeg" alt="Shardingsphere Proxy delete error" /></p>
+<p><strong>文档查阅：</strong></p>
+<ul>
+<li><a href="https://shardingsphere.apache.org/document/5.5.0/cn/user-manual/common-config/sql-hint/">ShardingSphere Proxy#SQL HINT</a></li>
+</ul>
+<p>这里需要提前开启 sqlCommentParseEnable 选项，以支持 sql comment 解析。</p>
+<p><strong>处理手段：</strong></p>
+<p>想要让这样的删除语句可以落到特定的分片上去，那么我们可以使用 HINT 策略，即在 SQL 语句中添加 Hint 来指定路由规则，如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#75715e">/* ShardingSphere hint: dataSourceName=sharding_db_0 */</span> <span style="color:#66d9ef">delete</span> <span style="color:#66d9ef">from</span> t_order_0 <span style="color:#66d9ef">where</span> created_at <span style="color:#f92672">&lt;</span> <span style="color:#e6db74">&#39;yyyy-MM-dd&#39;</span> <span style="color:#66d9ef">limit</span> <span style="color:#ae81ff">1000</span>;
+</span></span></code></pre></div><p><img src="/images/202412-arch/ss-delete_hint_success.jpeg" alt="Shardingsphere Proxy delete success" /></p>
+<h3 id="6-kafka-相关">
+  6. Kafka 相关
+  <a class="anchor" href="#6-kafka-%e7%9b%b8%e5%85%b3">#</a>
+</h3>
+<h4 id="61-如何将迁移kafka集群中的数据">
+  6.1 如何将迁移kafka集群中的数据？
+  <a class="anchor" href="#61-%e5%a6%82%e4%bd%95%e5%b0%86%e8%bf%81%e7%a7%bbkafka%e9%9b%86%e7%be%a4%e4%b8%ad%e7%9a%84%e6%95%b0%e6%8d%ae">#</a>
+</h4>
+<p>在实际场景中，可能会有迁移 kafka 集群的需求，比如说迁移到新的集群，或者迁移到新的版本等。这里的迁移是指迁移数据，而不是迁移集群。一般说来，kafka 数据迁移分为两种：</p>
+<ul>
+<li>集群内迁移：比如新增一个 broker, 需要将现有的数据重新分布，已实现负载均衡。<code>bin/kafka-reassign-partitions.sh</code> 脚本可以用于迁移数据, 参见 <a href="https://kafka.apache.org/documentation/#basic_ops_automigrate">Kafka#automigrate</a></li>
+<li>集群间迁移：比如将 cluster-ea 中的 topic-demo 整体迁移到 cluster-eu 中。</li>
+</ul>
+<p><strong>查阅文档/思路总结：</strong></p>
+<p>跨集群迁移的思路是：</p>
+<ol>
+<li>使用 mirror-maker 先将数据从 cluster-ea 中复制到 cluster-eu 中。</li>
+<li>迁移所有的消费者到 cluster-eu 中</li>
+<li>迁移所有的生产者到 cluster-eu 中</li>
+</ol>
+<p><strong>处理手段：</strong></p>
+<blockquote class="book-hint info">
+<p>以下命令仅供参考，具体的参数需要根据实际情况调整。</p>
+</blockquote>
+<ol>
+<li>
+<p>使用 mirror-maker 复制数据</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>./kafka-mirror-maker.sh --consumer.config consumer.properties --producer.config producer.properties --whitelist <span style="color:#e6db74">&#34;topic-demo&#34;</span>
+</span></span></code></pre></div></li>
+<li>
+<p>迁移消费者</p>
+<p>修改消费者配置文件中的 bootstrap.servers 为新的集群地址</p>
+</li>
+<li>
+<p>迁移生产者</p>
+<p>修改生产者配置文件中的 bootstrap.servers 为新的集群地址</p>
+</li>
+<li>
+<p>停止 mirror-maker</p>
+</li>
+</ol>
+<h3 id="7-pyroscope-相关">
+  7. Pyroscope 相关
+  <a class="anchor" href="#7-pyroscope-%e7%9b%b8%e5%85%b3">#</a>
+</h3>
+<p>Pyroscope 是一个开源的性能监控工具，支持多种语言 SDK，支持多种采集模式。Pyroscope 有两种采集模式：</p>
+<ul>
+<li>Pull 模式：Pyroscope 会定时从应用程序中拉取数据。程序需要主动暴露相应的端口，参见：<a href="https://github.com/grafana/alloy/blob/2b42ec43b639a83376b2dd1c4a5ac43117637f8f/docs/sources/reference/components/pyroscope/pyroscope.scrape.md#L158-L210">Pyroscope#Scrape</a></li>
+<li>Push 模式：应用程序通过内置 SDK 主动推送数据到 Pyroscope，参见：<a href="https://grafana.com/docs/pyroscope/latest/configure-client/#about-instrumentation-with-pyroscope-sdks">Pyroscope#Push</a></li>
+</ul>
+<p>如下：</p>
+<p><img src="/images/202412-arch/pyroscope-client_server_diagram.png" alt="Pyroscope Pull/Push Mode" /></p>
+<h4 id="71-使用-go-pull-模式采集数据时为什么只有-cpu--gourotines--cpu-samples-三个指标">
+  7.1 使用 Go Pull 模式采集数据时为什么只有 cpu + gourotines + cpu samples 三个指标？
+  <a class="anchor" href="#71-%e4%bd%bf%e7%94%a8-go-pull-%e6%a8%a1%e5%bc%8f%e9%87%87%e9%9b%86%e6%95%b0%e6%8d%ae%e6%97%b6%e4%b8%ba%e4%bb%80%e4%b9%88%e5%8f%aa%e6%9c%89-cpu--gourotines--cpu-samples-%e4%b8%89%e4%b8%aa%e6%8c%87%e6%a0%87">#</a>
+</h4>
+<p>按照官方文档配置好 Alloy 服务，并在应用上暴露 <code>/debug/pprof/*</code> 等端口之后（使用标准库的 pprof），发现在 Pyroscope 中只有 cpu + gourotines + cpu samples 三个指标，而没有其他的指标。如下图：</p>
+<p><img src="/images/202412-arch/pyroscope-go_pull_mode_issue.jpeg" alt="Pyroscope Go Pull Mode Issue" /></p>
+<p>此时使用的 alloy scrape 配置如下：</p>
+<details open><summary>代码片段</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-alloy" data-lang="alloy"><span style="display:flex;"><span>pyroscope<span style="color:#f92672">.</span>scrape <span style="color:#e6db74">&#34;scrape_job_name&#34;</span> <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 这部分仅作演示</span>
+</span></span><span style="display:flex;"><span>        targets    <span style="color:#f92672">=</span> <span style="color:#f92672">[{</span><span style="color:#e6db74">&#34;__address__&#34;</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;localhost:4040&#34;</span>, <span style="color:#e6db74">&#34;service_name&#34;</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;example_service&#34;</span><span style="color:#f92672">}]</span>
+</span></span><span style="display:flex;"><span>        forward_to <span style="color:#f92672">=</span> <span style="color:#f92672">[</span>pyroscope<span style="color:#f92672">.</span>write<span style="color:#f92672">.</span>write_job_name<span style="color:#f92672">.</span>receiver<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 关注这部分配置</span>
+</span></span><span style="display:flex;"><span>        profiling_config <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>                profile<span style="color:#f92672">.</span>process_cpu <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>                        enabled <span style="color:#f92672">=</span> true
+</span></span><span style="display:flex;"><span>                <span style="color:#f92672">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>                profile<span style="color:#f92672">.</span>godeltaprof_memory <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>                        enabled <span style="color:#f92672">=</span> true
+</span></span><span style="display:flex;"><span>                <span style="color:#f92672">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>                profile<span style="color:#f92672">.</span>memory <span style="color:#f92672">{</span> <span style="color:#75715e">// disable memory, use godeltaprof_memory instead</span>
+</span></span><span style="display:flex;"><span>                        enabled <span style="color:#f92672">=</span> false
+</span></span><span style="display:flex;"><span>                <span style="color:#f92672">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>                profile<span style="color:#f92672">.</span>godeltaprof_mutex <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>                        enabled <span style="color:#f92672">=</span> true
+</span></span><span style="display:flex;"><span>                <span style="color:#f92672">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>                profile<span style="color:#f92672">.</span>mutex <span style="color:#f92672">{</span> <span style="color:#75715e">// disable mutex, use godeltaprof_mutex instead</span>
+</span></span><span style="display:flex;"><span>                        enabled <span style="color:#f92672">=</span> false
+</span></span><span style="display:flex;"><span>                <span style="color:#f92672">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>                profile<span style="color:#f92672">.</span>godeltaprof_block <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>                        enabled <span style="color:#f92672">=</span> true
+</span></span><span style="display:flex;"><span>                <span style="color:#f92672">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>                profile<span style="color:#f92672">.</span>block <span style="color:#f92672">{</span> <span style="color:#75715e">// disable block, use godeltaprof_block instead</span>
+</span></span><span style="display:flex;"><span>                        enabled <span style="color:#f92672">=</span> false
+</span></span><span style="display:flex;"><span>                <span style="color:#f92672">}</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>                profile<span style="color:#f92672">.</span>goroutine <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>                        enabled <span style="color:#f92672">=</span> true
+</span></span><span style="display:flex;"><span>                <span style="color:#f92672">}</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">}</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">}</span>
+</span></span></code></pre></div>  </div>
+</details>
+<p><strong>文档查阅：</strong></p>
+<ul>
+<li><a href="https://github.com/grafana/alloy/blob/2b42ec43b639a83376b2dd1c4a5ac43117637f8f/docs/sources/reference/components/pyroscope/pyroscope.scrape.md#L158-L210">Pyroscope#Scrape</a></li>
+</ul>
+<p>通过文档就很明了了，因为 alloy scrape 任务配置的 memory、mutex、block 等指标都都指向了 godeltaprof_memory、godeltaprof_mutex、godeltaprof_block 等指标，其访问路径期望是 <code>/debug/pprof/delta_heap</code> 而不是应用实际暴露的 <code>/debug/pprof/allocs</code>，所以才有没有 memory 相关的指标。</p>
+<p>而 <code>delta_heap</code> 等指标是在应用程序中通过 <a href="https://github.com/grafana/pyroscope-go/tree/main/godeltaprof">SDK</a> 新增的指标，对于 Go 标准库中的 pprof 并不包含。</p>
+<blockquote>
+<p>关于 godeltaprof 这个包，是 runtime/pprof 的一个 fork 版本：减少了内存分配，相应的GC压力更小；同时支持惰性采样，采样更加高效（样本尺寸更小）。</p>
+</blockquote>
+<p><strong>处理手段1：</strong></p>
+<p>在应用程序中使用 pyroscope SDK，新增 <code>godeltaprof</code> 指标。</p>
+<p><strong>处理手段2：</strong></p>
+<p>继续在应用程序中使用标准库的 pprof，调整 scrape 配置，将 memory、mutex、block 等指标指向标准库的 pprof。</p>
+<details open><summary>代码片段</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-diff" data-lang="diff"><span style="display:flex;"><span>                profile.godeltaprof_memory {
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-                        enabled = true
+</span></span></span><span style="display:flex;"><span><span style="color:#f92672"></span><span style="color:#a6e22e">+                        enabled = false
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e"></span>                }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>                profile.memory { // disable memory, use godeltaprof_memory instead
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-                        enabled = false
+</span></span></span><span style="display:flex;"><span><span style="color:#f92672"></span><span style="color:#a6e22e">+                        enabled = true
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e"></span>                }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>                profile.godeltaprof_mutex {
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-                        enabled = true
+</span></span></span><span style="display:flex;"><span><span style="color:#f92672"></span><span style="color:#a6e22e">+                        enabled = false
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e"></span>                }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>                profile.mutex { // disable mutex, use godeltaprof_mutex instead
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-                        enabled = false
+</span></span></span><span style="display:flex;"><span><span style="color:#f92672"></span><span style="color:#a6e22e">+                        enabled = true
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e"></span>                }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>                profile.godeltaprof_block {
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-                        enabled = true
+</span></span></span><span style="display:flex;"><span><span style="color:#f92672"></span><span style="color:#a6e22e">+                        enabled = false
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e"></span>                }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>                profile.block { // disable block, use godeltaprof_block instead
+</span></span><span style="display:flex;"><span><span style="color:#f92672">-                        enabled = false
+</span></span></span><span style="display:flex;"><span><span style="color:#f92672"></span><span style="color:#a6e22e">+                        enabled = true
+</span></span></span><span style="display:flex;"><span><span style="color:#a6e22e"></span>                }
+</span></span></code></pre></div>  </div>
+</details>
+<p><strong>效果展示：</strong></p>
+<p>调整后的效果如下图所示，已经正常展示：</p>
+<p><img src="/images/202412-arch/pyroscope-go_pull_mode_success.jpeg" alt="Pyroscope Go Pull Mode Success" /></p>
+<h3 id="8-doris-相关">
+  8. Doris 相关
+  <a class="anchor" href="#8-doris-%e7%9b%b8%e5%85%b3">#</a>
+</h3>
+<h4 id="81-动态分区表插入数据时失败提示-no-partition-for-this-tuple">
+  8.1 动态分区表插入数据时失败，提示 &ldquo;no partition for this tuple&rdquo;
+  <a class="anchor" href="#81-%e5%8a%a8%e6%80%81%e5%88%86%e5%8c%ba%e8%a1%a8%e6%8f%92%e5%85%a5%e6%95%b0%e6%8d%ae%e6%97%b6%e5%a4%b1%e8%b4%a5%e6%8f%90%e7%a4%ba-no-partition-for-this-tuple">#</a>
+</h4>
+<p>存在这么一个动态分区表 根据 <code>day</code> 字段动态分区，其 DDL 如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">create</span> <span style="color:#66d9ef">table</span> <span style="color:#66d9ef">if</span> <span style="color:#66d9ef">not</span> <span style="color:#66d9ef">exists</span> a_daily_tbl (
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">`</span>mch_id<span style="color:#f92672">`</span> INT <span style="color:#66d9ef">not</span> <span style="color:#66d9ef">null</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">`</span>user_id<span style="color:#f92672">`</span> BIGINT <span style="color:#66d9ef">not</span> <span style="color:#66d9ef">null</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">`</span><span style="color:#66d9ef">day</span><span style="color:#f92672">`</span> DATE <span style="color:#66d9ef">not</span> <span style="color:#66d9ef">null</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">`</span><span style="color:#66d9ef">type</span><span style="color:#f92672">`</span> VARCHAR(<span style="color:#ae81ff">64</span>) <span style="color:#66d9ef">not</span> <span style="color:#66d9ef">null</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">`</span><span style="color:#66d9ef">count</span><span style="color:#f92672">`</span> INT <span style="color:#66d9ef">SUM</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">`</span>total<span style="color:#f92672">`</span> BIGINT <span style="color:#66d9ef">SUM</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">`</span>add_total<span style="color:#f92672">`</span> BIGINT <span style="color:#66d9ef">SUM</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">`</span>updated_at<span style="color:#f92672">`</span> DATETIME <span style="color:#66d9ef">MAX</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">AGGREGATE</span> <span style="color:#66d9ef">KEY</span>(<span style="color:#f92672">`</span>mch_id<span style="color:#f92672">`</span>, <span style="color:#f92672">`</span>user_id<span style="color:#f92672">`</span>, <span style="color:#f92672">`</span><span style="color:#66d9ef">day</span><span style="color:#f92672">`</span>,<span style="color:#f92672">`</span><span style="color:#66d9ef">type</span><span style="color:#f92672">`</span>)
+</span></span><span style="display:flex;"><span>PARTITION <span style="color:#66d9ef">BY</span> range (<span style="color:#f92672">`</span><span style="color:#66d9ef">day</span><span style="color:#f92672">`</span>) ()
+</span></span><span style="display:flex;"><span>DISTRIBUTED <span style="color:#66d9ef">BY</span> HASH(<span style="color:#f92672">`</span>mch_id<span style="color:#f92672">`</span>, <span style="color:#f92672">`</span>user_id<span style="color:#f92672">`</span>) BUCKETS AUTO
+</span></span><span style="display:flex;"><span>PROPERTIES (
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;replication_allocation&#34;</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;tag.location.default: 3&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;dynamic_partition.enable&#34;</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;true&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;dynamic_partition.time_unit&#34;</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;DAY&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;dynamic_partition.start&#34;</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;-90&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;dynamic_partition.end&#34;</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;1&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;dynamic_partition.prefix&#34;</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;a_daily_tbl_prefix&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;dynamic_partition.buckets&#34;</span><span style="color:#f92672">=</span><span style="color:#e6db74">&#34;2&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;dynamic_partition.create_history_partition&#34;</span><span style="color:#f92672">=</span><span style="color:#e6db74">&#34;true&#34;</span>
+</span></span><span style="display:flex;"><span>);
+</span></span></code></pre></div><p>当某一天如 2024-12-31 这一天的数据想要插入未来的一条数据，执行如下 SQL 语句：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">INSERT</span> <span style="color:#66d9ef">INTO</span> a_daily_tbl <span style="color:#66d9ef">values</span> (<span style="color:#ae81ff">101</span>, <span style="color:#ae81ff">101743183</span>, <span style="color:#e6db74">&#39;2025-01-02&#39;</span>, <span style="color:#e6db74">&#39;type_1&#39;</span>, <span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">5000000</span>, <span style="color:#ae81ff">5000000</span>, <span style="color:#e6db74">&#39;2025-01-02 02:40:16&#39;</span>);
+</span></span></code></pre></div><p>提示错误：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>errCode <span style="color:#f92672">=</span> 2, detailMessage <span style="color:#f92672">=</span> Insert has filtered data in strict mode. url: http://HOST:PORT/api/_load_error_log?file<span style="color:#f92672">=</span>__shard_3/error_log_insert_stmt_16be9eb83cde44be-a0ecc5687c9ead8e_16be9eb83cde44be_a0ecc5687c9ead8e
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 链接中的内容如下：</span>
+</span></span><span style="display:flex;"><span>Reason: no partition <span style="color:#66d9ef">for</span> this tuple. tuple<span style="color:#f92672">=</span>
+</span></span><span style="display:flex;"><span>+---------------+---------------+---------------+---------------+-----------------+-----------------+-----------------+----------------------+
+</span></span><span style="display:flex;"><span>|<span style="color:#f92672">(</span>Int32<span style="color:#f92672">)</span>        |<span style="color:#f92672">(</span>Int64<span style="color:#f92672">)</span>        |<span style="color:#f92672">(</span>DateV2<span style="color:#f92672">)</span>       |<span style="color:#f92672">(</span>String<span style="color:#f92672">)</span>       |<span style="color:#f92672">(</span>Nullable<span style="color:#f92672">(</span>Int32<span style="color:#f92672">))</span>|<span style="color:#f92672">(</span>Nullable<span style="color:#f92672">(</span>Int64<span style="color:#f92672">))</span>|<span style="color:#f92672">(</span>Nullable<span style="color:#f92672">(</span>Int64<span style="color:#f92672">))</span>|<span style="color:#f92672">(</span>Nullable<span style="color:#f92672">(</span>DateTimeV2<span style="color:#f92672">))</span>|
+</span></span><span style="display:flex;"><span>+---------------+---------------+---------------+---------------+-----------------+-----------------+-----------------+----------------------+
+</span></span><span style="display:flex;"><span>|            101|      101743183|     2025-01-02|           type_1|                1|          5000000|          5000000|   2025-01-02 02:40:16|
+</span></span><span style="display:flex;"><span>+---------------+---------------+---------------+---------------+-----------------+-----------------+-----------------+----------------------+
+</span></span><span style="display:flex;"><span>. src line <span style="color:#f92672">[]</span>; 
+</span></span></code></pre></div><p><strong>文档查阅：</strong></p>
+<ul>
+<li><a href="https://doris.apache.org/docs/3.0/table-design/data-partitioning/dynamic-partitioning?_highlight=dynamic">Doris#Dynamic Partition</a></li>
+<li><a href="https://doris.apache.org/zh-CN/docs/1.2/sql-manual/sql-reference/Data-Definition-Statements/Alter/ALTER-TABLE-PROPERTY">Doris#Alter Table Property</a></li>
+</ul>
+<p>根据文档，动态分区表的分区范围是在 <code>dynamic_partition.start</code> 和 <code>dynamic_partition.end</code> 之间的，如果插入的数据超出了这个范围，就会提示 &ldquo;no partition for this tuple&rdquo;。</p>
+<blockquote>
+<p><strong>dynamic_partition.start</strong></p>
+<p>The starting offset of the dynamic partition, usually a negative number. Depending on the time_unit attribute, based on the current day (week / month), the partitions with a partition range before this offset will be deleted. If not filled, the default is -2147483648, that is, the history partition will not be deleted.</p>
+<p>代表动态分区的起始偏移量，通常是一个负数。根据 time_unit 属性的不同，基于当前的天（周/月），在这个偏移量之前的分区范围的分区将被删除。如果未填写，则默认为 -2147483648，即历史分区不会被删除。</p>
+<p><strong>dynamic_partition.end</strong></p>
+<p>The end offset of the dynamic partition, usually a positive number. According to the difference of the time_unit attribute, the partition of the corresponding range is created in advance based on the current day (week / month).</p>
+<p>代表动态分区的结束偏移量，通常是一个正数。根据 time_unit 属性的不同，基于当前的天（周/月），提前创建对应范围的分区。</p>
+</blockquote>
+<p><strong>处理手段：</strong></p>
+<p>因此从 DDL 中可以看出，这个表的动态分区范围是从 -90 天到 1 天，因此当我们在 2024-12-31 这一天插入 2025-01-02 (cur + 2) 这一天的数据时，超出了动态分区的范围，因此提示分区不存在。</p>
+<p>那么解决办法要么就是调整插入数据的时间，要么就是调整动态分区的范围。</p>
+<ul>
+<li>
+<p>调整动态分区的范围，将 <code>dynamic_partition.end</code> 调整为 2 天。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">ALTER</span> <span style="color:#66d9ef">TABLE</span> a_daily_tbl <span style="color:#66d9ef">SET</span> (<span style="color:#e6db74">&#34;dynamic_partition.end&#34;</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;2&#34;</span>);
+</span></span></code></pre></div><p>然后稍等片刻，确认分区已经创建 <code>show partitions from a_daily_tbl</code>，然后再插入数据就可以了。</p>
+</li>
+</ul>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#问题汇总">问题汇总</a></li>
+        <li><a href="#1-cdc-相关">1. CDC 相关</a></li>
+        <li><a href="#2-dms-数据同步相关">2. DMS 数据同步相关</a></li>
+        <li><a href="#3-istio-相关">3. Istio 相关</a></li>
+        <li><a href="#4-apisix-相关">4. APISIX 相关</a></li>
+        <li><a href="#5-shardingsphere-proxy">5. ShardingSphere Proxy</a></li>
+        <li><a href="#6-kafka-相关">6. Kafka 相关</a></li>
+        <li><a href="#7-pyroscope-相关">7. Pyroscope 相关</a></li>
+        <li><a href="#8-doris-相关">8. Doris 相关</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

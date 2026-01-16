@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="讲述配置ReactNative的心酸历程">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2018/01/11/RN%E5%8E%86%E9%99%A9%E8%AE%B0/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="RN历险记">
+  <meta property="og:description" content="讲述配置ReactNative的心酸历程">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2018-01-11T18:11:23+00:00">
+    <meta property="article:modified_time" content="2018-01-11T18:11:23+00:00">
+    <meta property="article:tag" content="RN">
+<title>RN历险记 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2018/01/11/RN%E5%8E%86%E9%99%A9%E8%AE%B0/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>RN历险记</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#程序猿长征第一步">程序猿长征第一步</a></li>
+        <li><a href="#错误一build-fail">错误一：Build Fail</a></li>
+        <li><a href="#错误二cfbundleidentifier-not-found">错误二：CFBundleIdentifier not Found</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    RN历险记
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>January 11, 2018</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/RN/">RN</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><p>讲述配置ReactNative的心酸历程</p>
+<!-- more -->
+<h3 id="程序猿长征第一步">
+  程序猿长征第一步
+  <a class="anchor" href="#%e7%a8%8b%e5%ba%8f%e7%8c%bf%e9%95%bf%e5%be%81%e7%ac%ac%e4%b8%80%e6%ad%a5">#</a>
+</h3>
+<p>根据官方文档来安装RN, 以及巨大无比的<code>Xcode Ver9.0.0</code></p>
+<h3 id="错误一build-fail">
+  错误一：Build Fail
+  <a class="anchor" href="#%e9%94%99%e8%af%af%e4%b8%80build-fail">#</a>
+</h3>
+<p>可能描述不太一致, 但是原因都差不多, 文件缺失。
+菜鸟想必看到这些个报错, 两眼一懵逼, 啥子情况, 怎么和官方的描述不一致, 一个及其简单的RN-Demo, 我就是想跑一下的喂！</p>
+<p>我遇到的情况, 分为两种：</p>
+<blockquote>
+<p>其一是安装很慢, 之后失败
+其二是安装很快, 然后失败</p>
+</blockquote>
+<p>经过反复的“瞎子”调整, 在多次更换react, react-native版本, 求助Google大叔无果之后。我开始了阅读输出日志的漫漫长路, 终于发现了build失败的元凶, <code>boost/xxx.hpp not found</code>为啥找不到呢, 去文件夹一看, 才发现这些文件真的不存在&hellip;&hellip;</p>
+<p>好了知道错误, 就再Google下咯（其实我还去改过这些<code>#includ&lt;boost/config/user.hpp&gt;</code> 0&lt;~&gt;0）这里就直接给出我找的结果吧: <a href="http://cdn2.jianshu.io/p/2ef019a7e82a">http://cdn2.jianshu.io/p/2ef019a7e82a</a></p>
+<p><strong>总的说来, 就是自动下载的的第三方库是残缺的</strong></p>
+<h3 id="错误二cfbundleidentifier-not-found">
+  错误二：CFBundleIdentifier not Found
+  <a class="anchor" href="#%e9%94%99%e8%af%af%e4%ba%8ccfbundleidentifier-not-found">#</a>
+</h3>
+<p>第二错误也是困扰了比较多人, 我遇到的只是导致这个情况的其中之一</p>
+<p>通过查看输出日志, 并没有发现什么有用的信息, 提示的是<code>Command Fail , balabala…</code>
+手动搜索了一下<code>PlistBuddy</code>, 了解了下用法,  然后我手动执行了下命令, 居然可以！！！！什么情况, 那为什么提示错误信息？果断进入到文件夹中查看,果然文件是存在的那么为啥一个可以, 一个不可以呢？到这里, 大致猜到原因了, <code>没有找到文件</code></p>
+<p>再次以此为点求助Google大叔:
+<a href="http://blog.csdn.net/ohyeahhhh/article/details/54691512">http://blog.csdn.net/ohyeahhhh/article/details/54691512</a></p>
+<p>这个坑就是, Xcode编译保存的路径和react-native-cli寻找的路径不一致, 通过修改路径就OK啦, 还有其他原因导致的这个fail 请参阅链接, 先搞清楚<code>react-native run-ios</code>做了啥事.</p>
+<p>中间更多细节”虐“去~~~~, 感谢预先踩坑的前辈, 最终项目成功运行啦！</p>
+<p>心得：</p>
+<pre tabindex="0"><code>~不要怕麻烦, 先看错误日志, 定位错误, 那样检索的时候更有方向, 范围更小
+~对于报错不清楚的command fail, 尽量自己去执行, 明确错误（结合查看文件判断）
+~好好用Google
+~笑着活下去
+</code></pre><table>
+  <thead>
+      <tr>
+          <th>配置</th>
+          <th>参数</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>OS</td>
+          <td>MacPro 10.13.1</td>
+      </tr>
+      <tr>
+          <td>Node</td>
+          <td>v8.3.0</td>
+      </tr>
+      <tr>
+          <td>Npm</td>
+          <td>v5.6.0</td>
+      </tr>
+      <tr>
+          <td>React-native</td>
+          <td>0.46.4</td>
+      </tr>
+      <tr>
+          <td>React-native-cli</td>
+          <td>0.2.1</td>
+      </tr>
+  </tbody>
+</table>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "rn-exploration", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#程序猿长征第一步">程序猿长征第一步</a></li>
+        <li><a href="#错误一build-fail">错误一：Build Fail</a></li>
+        <li><a href="#错误二cfbundleidentifier-not-found">错误二：CFBundleIdentifier not Found</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

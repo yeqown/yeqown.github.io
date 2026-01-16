@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="使用Go来实现WebSocket协议">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2020/09/27/WebSocket-Implemention-With-Go/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="WebSocket Implemention With Go">
+  <meta property="og:description" content="使用Go来实现WebSocket协议">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2020-09-27T11:32:15+08:00">
+    <meta property="article:modified_time" content="2020-09-27T11:32:15+08:00">
+    <meta property="article:tag" content="Golang">
+    <meta property="article:tag" content="Tools">
+<title>WebSocket Implemention With Go | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2020/09/27/WebSocket-Implemention-With-Go/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>WebSocket Implemention With Go</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#什么是ws协议">什么是WS协议</a></li>
+        <li><a href="#为什么要用ws协议">为什么要用WS协议</a></li>
+        <li><a href="#实现">实现</a></li>
+        <li><a href="#总结">总结</a></li>
+        <li><a href="#参考资料">参考资料</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    WebSocket Implemention With Go
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>September 27, 2020</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Golang/">Golang</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/Tools/">Tools</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><h3 id="什么是ws协议">
+  什么是WS协议
+  <a class="anchor" href="#%e4%bb%80%e4%b9%88%e6%98%afws%e5%8d%8f%e8%ae%ae">#</a>
+</h3>
+<blockquote>
+<p>The WebSocket Protocol enables two-way communication between a client
+running untrusted code in a controlled environment to a remote host
+that has opted-in to communications from that code.  The security
+model used for this is the origin-based security model commonly used
+by web browsers.  The protocol consists of an opening handshake
+followed by basic message framing, layered over TCP.</p>
+</blockquote>
+<blockquote>
+<p>The goal of this technology is to provide a mechanism for browser-based
+applications that need two-way communication with servers that does
+not rely on opening multiple HTTP connections (e.g., using XMLHttpRequest or <code>&lt;iframe&gt;</code>s and long.polling). -  摘自 RFC6455 Abstract.</p>
+</blockquote>
+<p>用大白话就是： “基于TCP传输协议构建的全双工，用于Web浏览器和服务端进行通信的应用层协议”。那么同属于应用层协议，WebSocket和HTTP之间有何异同？</p>
+<table>
+  <thead>
+      <tr>
+          <th>特点</th>
+          <th>HTTP</th>
+          <th>WebSocket</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>OSI Layer</td>
+          <td>7</td>
+          <td>7</td>
+      </tr>
+      <tr>
+          <td>通信模式</td>
+          <td>单工/半双工/全双工，取决于HTTP版本</td>
+          <td>全双工</td>
+      </tr>
+      <tr>
+          <td>工作端口</td>
+          <td>80/443</td>
+          <td>80/443作为默认，但不限于</td>
+      </tr>
+      <tr>
+          <td>是否支持SSL</td>
+          <td>是</td>
+          <td>是</td>
+      </tr>
+      <tr>
+          <td>传输协议</td>
+          <td>TCP</td>
+          <td>TCP</td>
+      </tr>
+      <tr>
+          <td>数据格式</td>
+          <td>JSON / TEXT / Binary Stream 等</td>
+          <td>JSON / TEXT / Binary Stream 等</td>
+      </tr>
+      <tr>
+          <td>协议Schema</td>
+          <td>http/https</td>
+          <td>ws/wss</td>
+      </tr>
+      <tr>
+          <td>最新版本</td>
+          <td>3</td>
+          <td>13</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="为什么要用ws协议">
+  为什么要用WS协议
+  <a class="anchor" href="#%e4%b8%ba%e4%bb%80%e4%b9%88%e8%a6%81%e7%94%a8ws%e5%8d%8f%e8%ae%ae">#</a>
+</h3>
+<p>想一下，自己会在什么场景下考虑WebSocket而不是HTTP协议就明白了。在没有 WebSocket 之前，了实现即时通信有以下几种方案：</p>
+<ul>
+<li>Short Polling</li>
+<li>Long Polling</li>
+<li>Streaming</li>
+<li>SSE (Server Sent Event)</li>
+</ul>
+<p>这部分的演进可以阅读 <a href="https://halfrost.com/websocket/">https://halfrost.com/websocket/</a> 本文也多有参考。</p>
+<h3 id="实现">
+  实现
+  <a class="anchor" href="#%e5%ae%9e%e7%8e%b0">#</a>
+</h3>
+<p>本文的主要目标是为了介绍如何使用Go实现WebSocket协议，因此最好是具备以下能力：</p>
+<ul>
+<li>会使用 Wireshark 或者 tcpdump</li>
+<li>熟练使用 Go 语言开发</li>
+<li>能读懂RFC6455的英语能力，当然你用翻译也可以，至少别因为翻译错误而无法继续～</li>
+<li>对TCP有一定理解</li>
+</ul>
+<p><em><strong>阅读RFC6455，阅读RFC6455，阅读RFC6455！！！</strong></em> 这是一切的起点，没必要急于动手。</p>
+<h4 id="1-理解websocket的协议帧和工作流程">
+  1. 理解WebSocket的协议帧和工作流程
+  <a class="anchor" href="#1-%e7%90%86%e8%a7%a3websocket%e7%9a%84%e5%8d%8f%e8%ae%ae%e5%b8%a7%e5%92%8c%e5%b7%a5%e4%bd%9c%e6%b5%81%e7%a8%8b">#</a>
+</h4>
+<p>整体流程：</p>
+<img src="/images/websocket-process.svg" height="400px"/>
+<p>时序图：</p>
+<img src="/images/websocket-seq.svg" height="400px"/>
+<p>协议帧：</p>
+<img src="/images/websocket-frame.svg" height="400px"/>
+<p><em><strong><a href="https://tools.ietf.org/html/rfc6455#section-5.2">协议帧</a></strong></em> 是最重要的部分，理解了协议帧就相当于完成了50%，余下的就是撸代码了&hellip; 协议帧主要包括了以下几个部分：</p>
+<ul>
+<li><em><strong>头部</strong></em>
+<ul>
+<li>FIN       [1bit] 指示该帧是不是消息<em><strong>分片</strong></em>的最后一帧。<a href="https://tools.ietf.org/html/rfc6455#section-5.4">分片-传送门</a></li>
+<li>RSV 保留位 [3bit]</li>
+<li>MASK 是否使用掩码 [1bit]</li>
+<li>PAYLOAD LEN 数据部分的长度 [7bit] 如果等于 126/127（7bit=128-1）则说明启用 PAYLOAD LEN EXT（1/2） 部分来表明数据部分的长度。</li>
+<li>PAYLOAD LEN EXT 仅当 PAYLOAD LEN 无法表示数据部分的长度时启用 [16bit/64bit]</li>
+<li>MASKING KEY 掩码 [0/32bit] 取决是MASK是否设置。<a href="https://tools.ietf.org/html/rfc6455#section-5.4">掩码-传送们</a></li>
+</ul>
+</li>
+<li><em><strong>数据</strong></em>, 长度等于 Payload Len或者Payload Len Ext，请忽略图中一个bit一个字符&hellip;</li>
+</ul>
+<p><em><strong>如果认真看图的话和看过RFC6455之后，你就会发现数据部分的真实长度，其实分为三种情况：</strong></em></p>
+<ul>
+<li>Payload Len 的值，小于 126时，没有扩展的Payload Len Ext部分，值本身表达数据部分的长度</li>
+<li>Payload Len 的值，等于 126时，Payload Len Ext1 启用，长度16bit</li>
+<li>Payload Len 的值，等于 127时，Payload Len Ext2 启用，长度64bit</li>
+</ul>
+<hr/>
+<h4 id="2-协议帧frame的基本处理">
+  2. 协议帧frame的基本处理
+  <a class="anchor" href="#2-%e5%8d%8f%e8%ae%ae%e5%b8%a7frame%e7%9a%84%e5%9f%ba%e6%9c%ac%e5%a4%84%e7%90%86">#</a>
+</h4>
+<p>看过协议帧之后，接下来就是数据帧的处理，这部分需要的就是编码知识了。那么在Go里面如何去表达一个帧呢？一个帧在TCP眼里就是字节流，发送的时候是，接收的时候也是，因此帧的主要工作就是：将协议数据按照指定的格式塞到字节流里面去，亦或者是从字节流中解析到我们用于表达的数据结构中去。就像一个翻译官，按照特定的语法来回翻译。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// Frame 这里使用uint16来承载，只是因为统一，方便计算移位，因为整个头部最重要的部分就是16bit的长度。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Frame</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Fin</span>    <span style="color:#66d9ef">uint16</span> <span style="color:#75715e">// 1 bit
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">RSV1</span>   <span style="color:#66d9ef">uint16</span> <span style="color:#75715e">// 1 bit, 0
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">RSV2</span>   <span style="color:#66d9ef">uint16</span> <span style="color:#75715e">// 1 bit, 0
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">RSV3</span>   <span style="color:#66d9ef">uint16</span> <span style="color:#75715e">// 1 bit, 0
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">OpCode</span> <span style="color:#a6e22e">OpCode</span> <span style="color:#75715e">// 4 bits
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">Mask</span>   <span style="color:#66d9ef">uint16</span> <span style="color:#75715e">// 1 bit
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// Payload length:  7 bits, 7+16 bits, or 7+64 bits
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// if PayloadLen = 0 - 125, actual_payload_length = PayloadLen
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// if PayloadLen = 126, 	actual_payload_length = PayloadExtendLen[:16]
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// if PayloadLen = 127, 	actual_payload_length = PayloadExtendLen[:]
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">PayloadLen</span>       <span style="color:#66d9ef">uint16</span> <span style="color:#75715e">// 7 bits
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">PayloadExtendLen</span> <span style="color:#66d9ef">uint64</span> <span style="color:#75715e">// 64 bits
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">MaskingKey</span> <span style="color:#66d9ef">uint32</span> <span style="color:#75715e">// 32 bits
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">Payload</span>    []<span style="color:#66d9ef">byte</span> <span style="color:#75715e">// no limit by RFC6455
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div><p>翻译的部分代码如下：</p>
+<blockquote>
+<p>这里对于 <a href="https://www.ruanyifeng.com/blog/2016/11/byte-order.html">“大小端序”</a> 没有概念的，可以先自行查阅资料。</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// 将帧翻译到字节流
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">encodeFrameTo</span>(<span style="color:#a6e22e">frm</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Frame</span>) []<span style="color:#66d9ef">byte</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">buf</span> <span style="color:#f92672">:=</span> make([]<span style="color:#66d9ef">byte</span>, <span style="color:#ae81ff">2</span>, <span style="color:#a6e22e">minFrameHeaderSize</span><span style="color:#f92672">+</span><span style="color:#ae81ff">8</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">var</span> (
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">part1</span> <span style="color:#66d9ef">uint16</span> <span style="color:#75715e">// from FIN to PayloadLen
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    )
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">part1</span> <span style="color:#f92672">|=</span> <span style="color:#a6e22e">frm</span>.<span style="color:#a6e22e">Fin</span> <span style="color:#f92672">&lt;&lt;</span> <span style="color:#a6e22e">finOffset</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">part1</span> <span style="color:#f92672">|=</span> <span style="color:#a6e22e">frm</span>.<span style="color:#a6e22e">RSV1</span> <span style="color:#f92672">&lt;&lt;</span> <span style="color:#a6e22e">rsv1Offset</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">part1</span> <span style="color:#f92672">|=</span> <span style="color:#a6e22e">frm</span>.<span style="color:#a6e22e">RSV2</span> <span style="color:#f92672">&lt;&lt;</span> <span style="color:#a6e22e">rsv2Offset</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">part1</span> <span style="color:#f92672">|=</span> <span style="color:#a6e22e">frm</span>.<span style="color:#a6e22e">RSV3</span> <span style="color:#f92672">&lt;&lt;</span> <span style="color:#a6e22e">rsv3Offset</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">part1</span> <span style="color:#f92672">|=</span> uint16(<span style="color:#a6e22e">frm</span>.<span style="color:#a6e22e">OpCode</span>) <span style="color:#f92672">&lt;&lt;</span> <span style="color:#a6e22e">opcodeOffset</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">part1</span> <span style="color:#f92672">|=</span> <span style="color:#a6e22e">frm</span>.<span style="color:#a6e22e">Mask</span> <span style="color:#f92672">&lt;&lt;</span> <span style="color:#a6e22e">maskOffset</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">part1</span> <span style="color:#f92672">|=</span> <span style="color:#a6e22e">frm</span>.<span style="color:#a6e22e">PayloadLen</span> <span style="color:#f92672">&lt;&lt;</span> <span style="color:#a6e22e">payloadLenOffset</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// start from 0th byte
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// fill part1 into 2 byte
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">BigEndian</span>.<span style="color:#a6e22e">PutUint16</span>(<span style="color:#a6e22e">buf</span>[:<span style="color:#ae81ff">2</span>], <span style="color:#a6e22e">part1</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// FIXED: fill payloadExtendLen into 8 byte
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">switch</span> <span style="color:#a6e22e">frm</span>.<span style="color:#a6e22e">PayloadLen</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">case</span> <span style="color:#ae81ff">126</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">payloadExtendBuf</span> <span style="color:#f92672">:=</span> make([]<span style="color:#66d9ef">byte</span>, <span style="color:#ae81ff">2</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">BigEndian</span>.<span style="color:#a6e22e">PutUint16</span>(<span style="color:#a6e22e">payloadExtendBuf</span>[:<span style="color:#ae81ff">2</span>], uint16(<span style="color:#a6e22e">frm</span>.<span style="color:#a6e22e">PayloadExtendLen</span>))
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">buf</span> = append(<span style="color:#a6e22e">buf</span>, <span style="color:#a6e22e">payloadExtendBuf</span><span style="color:#f92672">...</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">case</span> <span style="color:#ae81ff">127</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">payloadExtendBuf</span> <span style="color:#f92672">:=</span> make([]<span style="color:#66d9ef">byte</span>, <span style="color:#ae81ff">8</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">BigEndian</span>.<span style="color:#a6e22e">PutUint64</span>(<span style="color:#a6e22e">payloadExtendBuf</span>[:<span style="color:#ae81ff">8</span>], <span style="color:#a6e22e">frm</span>.<span style="color:#a6e22e">PayloadExtendLen</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">buf</span> = append(<span style="color:#a6e22e">buf</span>, <span style="color:#a6e22e">payloadExtendBuf</span><span style="color:#f92672">...</span>)
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// FIXED: if not mask, then no set masking key
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">frm</span>.<span style="color:#a6e22e">Mask</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// fill fmtMaskingKey into 4 byte
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">maskingKeyBuf</span> <span style="color:#f92672">:=</span> make([]<span style="color:#66d9ef">byte</span>, <span style="color:#ae81ff">4</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">BigEndian</span>.<span style="color:#a6e22e">PutUint32</span>(<span style="color:#a6e22e">maskingKeyBuf</span>[:<span style="color:#ae81ff">4</span>], <span style="color:#a6e22e">frm</span>.<span style="color:#a6e22e">MaskingKey</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">buf</span> = append(<span style="color:#a6e22e">buf</span>, <span style="color:#a6e22e">maskingKeyBuf</span><span style="color:#f92672">...</span>)
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// header done, start writing body
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">buf</span> = append(<span style="color:#a6e22e">buf</span>, <span style="color:#a6e22e">frm</span>.<span style="color:#a6e22e">Payload</span><span style="color:#f92672">...</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">buf</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 解析帧的头部（16bit）信息，因为WebSocket协议帧中：PayloadLen 是变长，
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// MaskingKey 也是有或者没有，但是都可以通过16bit的数据来获得准确的结果。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// 解析过程也就是写入的逆向操作。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">parseFrameHeader</span>(<span style="color:#a6e22e">header</span> []<span style="color:#66d9ef">byte</span>) <span style="color:#f92672">*</span><span style="color:#a6e22e">Frame</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">var</span> (
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">frm</span>   = new(<span style="color:#a6e22e">Frame</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">part1</span> = <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">BigEndian</span>.<span style="color:#a6e22e">Uint16</span>(<span style="color:#a6e22e">header</span>[:<span style="color:#ae81ff">2</span>])
+</span></span><span style="display:flex;"><span>    )
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">frm</span>.<span style="color:#a6e22e">Fin</span> = (<span style="color:#a6e22e">part1</span> <span style="color:#f92672">&amp;</span> <span style="color:#a6e22e">finMask</span>) <span style="color:#f92672">&gt;&gt;</span> <span style="color:#a6e22e">finOffset</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">frm</span>.<span style="color:#a6e22e">RSV1</span> = (<span style="color:#a6e22e">part1</span> <span style="color:#f92672">&amp;</span> <span style="color:#a6e22e">rsv1Mask</span>) <span style="color:#f92672">&gt;&gt;</span> <span style="color:#a6e22e">rsv1Offset</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">frm</span>.<span style="color:#a6e22e">RSV2</span> = (<span style="color:#a6e22e">part1</span> <span style="color:#f92672">&amp;</span> <span style="color:#a6e22e">rsv2Mask</span>) <span style="color:#f92672">&gt;&gt;</span> <span style="color:#a6e22e">rsv2Offset</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">frm</span>.<span style="color:#a6e22e">RSV3</span> = (<span style="color:#a6e22e">part1</span> <span style="color:#f92672">&amp;</span> <span style="color:#a6e22e">rsv3Mask</span>) <span style="color:#f92672">&gt;&gt;</span> <span style="color:#a6e22e">rsv3Offset</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">frm</span>.<span style="color:#a6e22e">OpCode</span> = <span style="color:#a6e22e">OpCode</span>((<span style="color:#a6e22e">part1</span> <span style="color:#f92672">&amp;</span> <span style="color:#a6e22e">opcodeMask</span>) <span style="color:#f92672">&gt;&gt;</span> <span style="color:#a6e22e">opcodeOffset</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">frm</span>.<span style="color:#a6e22e">Mask</span> = (<span style="color:#a6e22e">part1</span> <span style="color:#f92672">&amp;</span> <span style="color:#a6e22e">maskMask</span>) <span style="color:#f92672">&gt;&gt;</span> <span style="color:#a6e22e">maskOffset</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">frm</span>.<span style="color:#a6e22e">PayloadLen</span> = (<span style="color:#a6e22e">part1</span> <span style="color:#f92672">&amp;</span> <span style="color:#a6e22e">payloadLenMask</span>) <span style="color:#f92672">&gt;&gt;</span> <span style="color:#a6e22e">payloadLenOffset</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">frm</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><hr />
+<h4 id="3-websocket链接的定义">
+  3. WebSocket链接的定义
+  <a class="anchor" href="#3-websocket%e9%93%be%e6%8e%a5%e7%9a%84%e5%ae%9a%e4%b9%89">#</a>
+</h4>
+<p><code>Conn</code> 是对TCP链接的封装再配合上协议，来对客户端和服务端的提供功能。其中我个人觉得最重要的功能是：如何从TCP字节流中读到一个完整的WebSocket消息 <code>Conn.ReadMessage()</code>。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Conn</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">conn</span>  <span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">Conn</span>       <span style="color:#75715e">// 底层TCP链接
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">bufRD</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">bufio</span>.<span style="color:#a6e22e">Reader</span>  <span style="color:#75715e">// 读
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">bufWR</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">bufio</span>.<span style="color:#a6e22e">Writer</span>  <span style="color:#75715e">// 写
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// 省略部分不是特别重要的字段
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 构造websocket.Conn
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">newConn</span>(<span style="color:#a6e22e">netconn</span> <span style="color:#a6e22e">net</span>.<span style="color:#a6e22e">Conn</span>, <span style="color:#a6e22e">isServer</span> <span style="color:#66d9ef">bool</span>) (<span style="color:#f92672">*</span><span style="color:#a6e22e">Conn</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">c</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">Conn</span>{
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">conn</span>:   <span style="color:#a6e22e">netconn</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">bufRD</span>:  <span style="color:#a6e22e">bufio</span>.<span style="color:#a6e22e">NewReaderSize</span>(<span style="color:#a6e22e">netconn</span>, <span style="color:#ae81ff">65535</span>), <span style="color:#75715e">// 65535B = 64KB
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">bufWR</span>:  <span style="color:#a6e22e">bufio</span>.<span style="color:#a6e22e">NewWriter</span>(<span style="color:#a6e22e">netconn</span>),
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">c</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// ReadMessage . it will block to read message
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Conn</span>) <span style="color:#a6e22e">ReadMessage</span>() (<span style="color:#a6e22e">mt</span> <span style="color:#a6e22e">MessageType</span>, <span style="color:#a6e22e">msg</span> []<span style="color:#66d9ef">byte</span>, <span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">frm</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">readFrame</span>()
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">debugErrorf</span>(<span style="color:#e6db74">&#34;Conn.ReadMessage failed to c.readFrame, err=%v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">NoFrame</span>, <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">mt</span> = <span style="color:#a6e22e">MessageType</span>(<span style="color:#a6e22e">frm</span>.<span style="color:#a6e22e">OpCode</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 根据读到的帧判断是否还有后续的帧，如果有分片，那就读完将payload组装到一起。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">buf</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">bytes</span>.<span style="color:#a6e22e">NewBuffer</span>(<span style="color:#66d9ef">nil</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">Write</span>(<span style="color:#a6e22e">frm</span>.<span style="color:#a6e22e">Payload</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> !<span style="color:#a6e22e">frm</span>.<span style="color:#a6e22e">isFinal</span>() {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">frm</span>, <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">readFrame</span>(); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">debugErrorf</span>(<span style="color:#e6db74">&#34;Conn.ReadMessage failed to c.readFrame, err=%v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">NoFrame</span>, <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">Write</span>(<span style="color:#a6e22e">frm</span>.<span style="color:#a6e22e">Payload</span>)
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">msg</span> = <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">Bytes</span>()
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 从缓冲区读取指定字节数量的数据
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Conn</span>) <span style="color:#a6e22e">read</span>(<span style="color:#a6e22e">n</span> <span style="color:#66d9ef">int</span>) ([]<span style="color:#66d9ef">byte</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">p</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">bufRD</span>.<span style="color:#a6e22e">Peek</span>(<span style="color:#a6e22e">n</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">==</span> <span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">EOF</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">ErrUnexpectedEOF</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">_</span> = <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">bufRD</span>.<span style="color:#a6e22e">Discard</span>(len(<span style="color:#a6e22e">p</span>))
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">p</span>, <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Conn</span>) <span style="color:#a6e22e">readFrame</span>() (<span style="color:#f92672">*</span><span style="color:#a6e22e">Frame</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 阻塞地读2Byte的数据
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">p</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">read</span>(<span style="color:#ae81ff">2</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">debugErrorf</span>(<span style="color:#e6db74">&#34;Conn.readFrame failed to c.read(header), err=%v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 解析WebSocket帧头部
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">frmWithoutPayload</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">parseFrameHeader</span>(<span style="color:#a6e22e">p</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">Debugf</span>(<span style="color:#e6db74">&#34;Conn.readFrame got frmWithoutPayload=%+v&#34;</span>, <span style="color:#a6e22e">frmWithoutPayload</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">var</span> (
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">payloadExtendLen</span> <span style="color:#66d9ef">uint64</span> <span style="color:#75715e">// this could be non exist
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">remaining</span>        <span style="color:#66d9ef">uint64</span>
+</span></span><span style="display:flex;"><span>    )
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 根据PayloadLen来读取不同字节数的扩展长度
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// 126 -&gt; 2B
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// 127 -&gt; 8B
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">switch</span> <span style="color:#a6e22e">frmWithoutPayload</span>.<span style="color:#a6e22e">PayloadLen</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">case</span> <span style="color:#ae81ff">126</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// has 16bit + 32bit = 6B
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">p</span>, <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">read</span>(<span style="color:#ae81ff">2</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">debugErrorf</span>(<span style="color:#e6db74">&#34;Conn.readFrame failed to c.read(2) payloadlen with 16bit, err=%v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">payloadExtendLen</span> = uint64(<span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">BigEndian</span>.<span style="color:#a6e22e">Uint16</span>(<span style="color:#a6e22e">p</span>[:<span style="color:#ae81ff">2</span>]))
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">remaining</span> = <span style="color:#a6e22e">payloadExtendLen</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">case</span> <span style="color:#ae81ff">127</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// has 64bit + 32bit = 12B
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">p</span>, <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">read</span>(<span style="color:#ae81ff">8</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">debugErrorf</span>(<span style="color:#e6db74">&#34;Conn.readFrame failed to c.read(8) payloadlen with 16bit, err=%v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">payloadExtendLen</span> = <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">BigEndian</span>.<span style="color:#a6e22e">Uint64</span>(<span style="color:#a6e22e">p</span>[:<span style="color:#ae81ff">8</span>])
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">remaining</span> = <span style="color:#a6e22e">payloadExtendLen</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">default</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">remaining</span> = uint64(<span style="color:#a6e22e">frmWithoutPayload</span>.<span style="color:#a6e22e">PayloadLen</span>)
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">frmWithoutPayload</span>.<span style="color:#a6e22e">PayloadExtendLen</span> = <span style="color:#a6e22e">payloadExtendLen</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// get masking key
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">frmWithoutPayload</span>.<span style="color:#a6e22e">Mask</span> <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// only 32bit masking key to read
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">p</span>, <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">read</span>(<span style="color:#ae81ff">4</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">debugErrorf</span>(<span style="color:#e6db74">&#34;Conn.readFrame failed to c.read(header), err=%v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">frmWithoutPayload</span>.<span style="color:#a6e22e">MaskingKey</span> = <span style="color:#a6e22e">binary</span>.<span style="color:#a6e22e">BigEndian</span>.<span style="color:#a6e22e">Uint32</span>(<span style="color:#a6e22e">p</span>)
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 省略frame校验过程
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// 读取payload数据并填充到frame中去
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">var</span> (
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">payload</span> = make([]<span style="color:#66d9ef">byte</span>, <span style="color:#ae81ff">0</span>, <span style="color:#a6e22e">remaining</span>)
+</span></span><span style="display:flex;"><span>    )
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">Debugf</span>(<span style="color:#e6db74">&#34;Conn.readFrame c.read(%d) into payload data&#34;</span>, <span style="color:#a6e22e">remaining</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> <span style="color:#a6e22e">remaining</span> &gt; <span style="color:#ae81ff">65535</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// true: bufio.Reader can read 65535 byte as most at once
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#a6e22e">p</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">read</span>(<span style="color:#ae81ff">65535</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">debugErrorf</span>(<span style="color:#e6db74">&#34;Conn.readFrame failed to c.read(payload), err=%v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">payload</span> = append(<span style="color:#a6e22e">payload</span>, <span style="color:#a6e22e">p</span><span style="color:#f92672">...</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">remaining</span> <span style="color:#f92672">-=</span> <span style="color:#ae81ff">65535</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 读取剩余部分的payload
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">p</span>, <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">read</span>(int(<span style="color:#a6e22e">remaining</span>))
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">debugErrorf</span>(<span style="color:#e6db74">&#34;Conn.readFrame failed to c.read(payload), err=%v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">payload</span> = append(<span style="color:#a6e22e">payload</span>, <span style="color:#a6e22e">p</span><span style="color:#f92672">...</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">frmWithoutPayload</span>.<span style="color:#a6e22e">setPayload</span>(<span style="color:#a6e22e">payload</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 处理ping pong close 帧
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">switch</span> <span style="color:#a6e22e">frmWithoutPayload</span>.<span style="color:#a6e22e">OpCode</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">case</span> <span style="color:#a6e22e">opCodeText</span>, <span style="color:#a6e22e">opCodeBinary</span>, <span style="color:#a6e22e">opCodeContinuation</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// pass
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">case</span> <span style="color:#a6e22e">opCodePing</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">replyPing</span>(<span style="color:#a6e22e">frmWithoutPayload</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">case</span> <span style="color:#a6e22e">opCodePong</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">replyPong</span>(<span style="color:#a6e22e">frmWithoutPayload</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">case</span> <span style="color:#a6e22e">opCodeClose</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">handleClose</span>(<span style="color:#a6e22e">frmWithoutPayload</span>)
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">frmWithoutPayload</span>, <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><hr />
+<h4 id="4-服务端和客户端的定义">
+  4. 服务端和客户端的定义
+  <a class="anchor" href="#4-%e6%9c%8d%e5%8a%a1%e7%ab%af%e5%92%8c%e5%ae%a2%e6%88%b7%e7%ab%af%e7%9a%84%e5%ae%9a%e4%b9%89">#</a>
+</h4>
+<p>到这一步，已经把底层的工作都完成了：<code>定义协议帧</code>，<code>协议帧翻译</code>，<code>Conn约定和封装</code>等工作。现在可以开始设计和实现顶层API了。
+服务端API，我参考了<a href="https://github.com/gorilla/websocket">gorilla/websocket</a>，定义了一个 <code>Upgrader</code> 来将HTTP升级到 <code>Websocket</code>。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// Upgrader std.HTTP / fasthttp / gin etc
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Upgrader</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">CheckOrigin</span> <span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">req</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">Request</span>) <span style="color:#66d9ef">bool</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Timeout</span> <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Duration</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 升级协议。如果遇到了hijack错误，可以看这里的连接，希望有所帮助
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// https://stackoverflow.com/questions/32657603/why-do-i-get-the-error-message-http-response-write-on-hijacked-connection
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">ug</span> <span style="color:#a6e22e">Upgrader</span>) <span style="color:#a6e22e">Upgrade</span>(<span style="color:#a6e22e">w</span> <span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">ResponseWriter</span>, <span style="color:#a6e22e">req</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">Request</span>, <span style="color:#a6e22e">fn</span> <span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">conn</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Conn</span>)) <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 设置超时上下文
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">cancel</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">WithTimeout</span>(<span style="color:#a6e22e">req</span>.<span style="color:#a6e22e">Context</span>(), <span style="color:#a6e22e">timeout</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">req</span> = <span style="color:#a6e22e">req</span>.<span style="color:#a6e22e">WithContext</span>(<span style="color:#a6e22e">ctx</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">cancel</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// RFC6455 完成握手检查
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// almost checking is about headers
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">ug</span>.<span style="color:#a6e22e">handshakeCheck</span>(<span style="color:#a6e22e">w</span>, <span style="color:#a6e22e">req</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">debugErrorf</span>(<span style="color:#e6db74">&#34;Upgrader.Upgrade failed to ug.handshakeCheck, err=%v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">ug</span>.<span style="color:#a6e22e">returnError</span>(<span style="color:#a6e22e">w</span>, <span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">StatusBadRequest</span>, <span style="color:#a6e22e">err</span>.<span style="color:#a6e22e">Error</span>())
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// !!! 重要，获取HTTP对应的底层TCP链接
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">h</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">w</span>.(<span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">Hijacker</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">netconn</span>, <span style="color:#a6e22e">brw</span>, <span style="color:#a6e22e">err</span> = .<span style="color:#a6e22e">Hijack</span>()
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">debugErrorf</span>(<span style="color:#e6db74">&#34;Upgrader.Upgrade failed to h.Hijack, err=%v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">_</span> = <span style="color:#a6e22e">ug</span>.<span style="color:#a6e22e">returnError</span>(<span style="color:#a6e22e">w</span>, <span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">StatusInternalServerError</span>, <span style="color:#a6e22e">err</span>.<span style="color:#a6e22e">Error</span>())
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 省略请求头处理 ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 发送HTTP响应
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">hackHandshakeResponse</span>(<span style="color:#a6e22e">brw</span>.<span style="color:#a6e22e">Writer</span>, <span style="color:#a6e22e">respHeaders</span>, <span style="color:#e6db74">&#34;101&#34;</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 启动一个goroutine来处理该链接的消息，ConnPool / Reactor 的实现，可以在这里调整
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">conn</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">newConn</span>(<span style="color:#a6e22e">netconn</span>, <span style="color:#66d9ef">true</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">go</span> <span style="color:#66d9ef">func</span>() {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">defer</span> <span style="color:#66d9ef">func</span>() {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> recover().(<span style="color:#66d9ef">error</span>); <span style="color:#a6e22e">ok</span> {
+</span></span><span style="display:flex;"><span>                <span style="color:#a6e22e">logger</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;Upgrader.Upgrade fn panic: err=%v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>                <span style="color:#a6e22e">debug</span>.<span style="color:#a6e22e">PrintStack</span>()
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>        }()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">fn</span>(<span style="color:#a6e22e">conn</span>)
+</span></span><span style="display:flex;"><span>    }()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>客户端的话就更简单了，建立一个TCP连接，向服务端发起<code>HTTP</code>升级到<code>Websocket</code>的请求，等握手通过那么连接就建立完成了，就可以对<code>websocket.Conn</code>进行读写操作了。</p>
+<hr />
+<h4 id="5-建链和握手">
+  5. 建链和握手
+  <a class="anchor" href="#5-%e5%bb%ba%e9%93%be%e5%92%8c%e6%8f%a1%e6%89%8b">#</a>
+</h4>
+<p>在上一小节已经带过了这部分，这里重点想要介绍下<code>http</code>请求到<code>websocket</code>的升级过程。服务端例子如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">HandleFunc</span>(<span style="color:#e6db74">&#34;/echo&#34;</span>, <span style="color:#a6e22e">echo</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">ListenAndServe</span>(<span style="color:#e6db74">&#34;:8080&#34;</span>, <span style="color:#66d9ef">nil</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatal</span>(<span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">echo</span>(<span style="color:#a6e22e">w</span> <span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">ResponseWriter</span>, <span style="color:#a6e22e">req</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">Request</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">websocketHdl</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">conn</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">websocket</span>.<span style="color:#a6e22e">Conn</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">// 读消息
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#a6e22e">mt</span>, <span style="color:#a6e22e">message</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">conn</span>.<span style="color:#a6e22e">ReadMessage</span>()
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">// 发送消息
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>            <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">conn</span>.<span style="color:#a6e22e">SendMessage</span>(string(<span style="color:#a6e22e">message</span>))
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Info</span>(<span style="color:#e6db74">&#34;conn finished&#34;</span>)
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 调用 upgrader 升级，并调用连接处理方法 - goroutine 保持
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">upgrader</span>.<span style="color:#a6e22e">Upgrade</span>(<span style="color:#a6e22e">w</span>, <span style="color:#a6e22e">req</span>, <span style="color:#a6e22e">websocketHdl</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;upgrade error, err=%v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Infof</span>(<span style="color:#e6db74">&#34;conn upgrade done&#34;</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>由上述代码我们可以明白，所谓的升级过程是使用<code>HTTP</code>协议来完成，对于服务端更友好，很容易在现有的HTTP服务中加上一个<code>WebSocket</code>服务。<a href="https://tools.ietf.org/html/rfc6455#section-4">握手 - 传送门</a>。用大白话描述就是：</p>
+<ol>
+<li>客户端通过 <code>schema://host:port/path/to/websocket</code> 这样一个地址找到服务端 [建立TCP连接]</li>
+<li>客户端发起一个HTTP请求（携带特殊的请求头）[客户端发起握手]</li>
+<li>服务端通过验证后将该连接转换为websocket连接保持在服务端 [服务端握手检查和升级]</li>
+<li>服务端握手完成后，同时向客户端发送一个HTTP响应（成功或失败）[服务端发送响应]</li>
+<li>客户端根据服务端的响应处理该连接 [客户端处理响应]</li>
+<li>握手完成</li>
+</ol>
+<hr />
+<h4 id="6-完善细节">
+  6. 完善细节
+  <a class="anchor" href="#6-%e5%ae%8c%e5%96%84%e7%bb%86%e8%8a%82">#</a>
+</h4>
+<p>前面几步完成，WebSocket的框架就已经成型了，剩下的工作就是根据协议完善。比如对关闭帧的处理，Ping/Pong帧的处理等等。这里简单举例说明 Ping / Pong 的处理。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Conn</span>) <span style="color:#a6e22e">readFrame</span>() (<span style="color:#f92672">*</span><span style="color:#a6e22e">Frame</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ignore cases
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// handle with close, ping, pong frame
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">switch</span> <span style="color:#a6e22e">frmWithoutPayload</span>.<span style="color:#a6e22e">OpCode</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// ignore cases ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">case</span> <span style="color:#a6e22e">opCodePing</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">replyPing</span>(<span style="color:#a6e22e">frmWithoutPayload</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">case</span> <span style="color:#a6e22e">opCodePong</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">replyPong</span>(<span style="color:#a6e22e">frmWithoutPayload</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// ignore some cases ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">frmWithoutPayload</span>, <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// Ping conn send a ping packet to another side.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Conn</span>) <span style="color:#a6e22e">Ping</span>() (<span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">sendControlFrame</span>(<span style="color:#a6e22e">opCodePing</span>, []byte(<span style="color:#e6db74">&#34;ping&#34;</span>))
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// replyPing work for Conn to reply ping packet. frame MUST contains 125 Byte or-
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// less payload.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Conn</span>) <span style="color:#a6e22e">replyPing</span>(<span style="color:#a6e22e">frm</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Frame</span>) (<span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">pong</span>(<span style="color:#a6e22e">frm</span>.<span style="color:#a6e22e">Payload</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// pong .
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Conn</span>) <span style="color:#a6e22e">pong</span>(<span style="color:#a6e22e">pingPayload</span> []<span style="color:#66d9ef">byte</span>) (<span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">sendControlFrame</span>(<span style="color:#a6e22e">opCodePong</span>, <span style="color:#a6e22e">pingPayload</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// replyPong frame MUST contains same payload with PING frame payload
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Conn</span>) <span style="color:#a6e22e">replyPong</span>(<span style="color:#a6e22e">frm</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Frame</span>) (<span style="color:#a6e22e">err</span> <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// if receive pong frame, try to call pongHandler
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">pongHandler</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">pongHandler</span>(string(<span style="color:#a6e22e">frm</span>.<span style="color:#a6e22e">Payload</span>))
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><hr />
+<h3 id="总结">
+  总结
+  <a class="anchor" href="#%e6%80%bb%e7%bb%93">#</a>
+</h3>
+<p>实现WebSocket协议并没有什么难点，只要你读完RFC6455就行了，动手去实现只是为了加深认识，尤其是对于网络和协议的认识。实现起来简单另外一个原因是因为毕竟是应用层协议，基于TCP可靠传输。传输层协议对我们屏蔽了大量的网络细节问题～，如果想要挑战自己，可以尝试实现TCP或者UDP🐶。</p>
+<blockquote>
+<p>水平有限，如有错误，欢迎勘误指正🙏。</p>
+</blockquote>
+<h3 id="参考资料">
+  参考资料
+  <a class="anchor" href="#%e5%8f%82%e8%80%83%e8%b5%84%e6%96%99">#</a>
+</h3>
+<ul>
+<li><a href="https://tools.ietf.org/html/rfc6455">https://tools.ietf.org/html/rfc6455</a></li>
+<li><a href="https://halfrost.com/websocket/">https://halfrost.com/websocket/</a></li>
+<li><a href="https://github.com/yeqown/websocket">https://github.com/yeqown/websocket</a></li>
+</ul>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "WebSocket-Implemention-With-Go", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#什么是ws协议">什么是WS协议</a></li>
+        <li><a href="#为什么要用ws协议">为什么要用WS协议</a></li>
+        <li><a href="#实现">实现</a></li>
+        <li><a href="#总结">总结</a></li>
+        <li><a href="#参考资料">参考资料</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

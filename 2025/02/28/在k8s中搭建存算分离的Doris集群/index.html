@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="记录在 K8S 中部署存算分离 Doris 集群的过程，包括 FoundationDB、Doris Operator 的部署，以及遇到的问题和解决方案。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2025/02/28/%E5%9C%A8k8s%E4%B8%AD%E6%90%AD%E5%BB%BA%E5%AD%98%E7%AE%97%E5%88%86%E7%A6%BB%E7%9A%84Doris%E9%9B%86%E7%BE%A4/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="在 K8S 中部署存算分离 Doris 集群">
+  <meta property="og:description" content="记录在 K8S 中部署存算分离 Doris 集群的过程，包括 FoundationDB、Doris Operator 的部署，以及遇到的问题和解决方案。">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2025-02-28T16:50:41+08:00">
+    <meta property="article:modified_time" content="2025-02-28T16:50:41+08:00">
+    <meta property="article:tag" content="Doris">
+    <meta property="article:tag" content="Kubernetes">
+    <meta property="article:tag" content="存算分离">
+    <meta property="article:tag" content="FoundationDB">
+<title>在 K8S 中部署存算分离 Doris 集群 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2025/02/28/%E5%9C%A8k8s%E4%B8%AD%E6%90%AD%E5%BB%BA%E5%AD%98%E7%AE%97%E5%88%86%E7%A6%BB%E7%9A%84Doris%E9%9B%86%E7%BE%A4/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>在 K8S 中部署存算分离 Doris 集群</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#0-环境信息">0. 环境信息</a></li>
+        <li><a href="#1-安装-foundationdb">1. 安装 FoundationDB</a></li>
+        <li><a href="#2-安装-doris-operator">2. 安装 Doris Operator</a></li>
+        <li><a href="#3-部署存算分离集群">3. 部署存算分离集群</a></li>
+        <li><a href="#4-测试集群">4. 测试集群</a></li>
+        <li><a href="#5-部署期间遇到的问题和解决办法">5. 部署期间遇到的问题和解决办法</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    在 K8S 中部署存算分离 Doris 集群
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>February 28, 2025</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Doris/">Doris</a>, 
+      <a href="/tags/Kubernetes/">Kubernetes</a>, 
+      <a href="/tags/%E5%AD%98%E7%AE%97%E5%88%86%E7%A6%BB/">存算分离</a>, 
+      <a href="/tags/FoundationDB/">FoundationDB</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><blockquote class="book-hint info">
+<p>本文记录了在 ubuntu 22.04 上配合 minikube 搭建的 k8s 集群，搭建 doris 存算分离集群的过程。</p>
+</blockquote>
+<h3 id="0-环境信息">
+  0. 环境信息
+  <a class="anchor" href="#0-%e7%8e%af%e5%a2%83%e4%bf%a1%e6%81%af">#</a>
+</h3>
+<table>
+  <thead>
+      <tr>
+          <th>软件</th>
+          <th>版本</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>OS</td>
+          <td>Ubuntu 24.04.1 LTS x86_64</td>
+      </tr>
+      <tr>
+          <td>kernel</td>
+          <td>6.8.0-52-generic</td>
+      </tr>
+      <tr>
+          <td>minikube</td>
+          <td>v1.35.0</td>
+      </tr>
+      <tr>
+          <td>kubernetes</td>
+          <td>v1.32.0</td>
+      </tr>
+      <tr>
+          <td>doris</td>
+          <td>v3.0.3</td>
+      </tr>
+  </tbody>
+</table>
+<p>这里默认已经准备好了基础的 kubernetes 集群，所以也不再阐述如何通过 minikube 或者其他方式搭建 kubernetes 集群。</p>
+<h3 id="1-安装-foundationdb">
+  1. 安装 FoundationDB
+  <a class="anchor" href="#1-%e5%ae%89%e8%a3%85-foundationdb">#</a>
+</h3>
+<blockquote>
+<p>参考文档：https://doris.apache.org/zh-CN/docs/3.0/install/deploy-on-kubernetes/separating-storage-compute/install-fdb</p>
+</blockquote>
+<h4 id="11-安装-foundationdb-crd-资源">
+  1.1 安装 FoundationDB CRD 资源
+  <a class="anchor" href="#11-%e5%ae%89%e8%a3%85-foundationdb-crd-%e8%b5%84%e6%ba%90">#</a>
+</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>kubectl apply -f https://raw.githubusercontent.com/FoundationDB/fdb-kubernetes-operator/main/config/crd/bases/apps.foundationdb.org_foundationdbclusters.yaml
+</span></span><span style="display:flex;"><span>kubectl apply -f https://raw.githubusercontent.com/FoundationDB/fdb-kubernetes-operator/main/config/crd/bases/apps.foundationdb.org_foundationdbbackups.yaml
+</span></span><span style="display:flex;"><span>kubectl apply -f https://raw.githubusercontent.com/FoundationDB/fdb-kubernetes-operator/main/config/crd/bases/apps.foundationdb.org_foundationdbrestores.yaml
+</span></span></code></pre></div><h4 id="12-部署-foundationdb-operator">
+  1.2 部署 FoundationDB Operator
+  <a class="anchor" href="#12-%e9%83%a8%e7%bd%b2-foundationdb-operator">#</a>
+</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>wget https://raw.githubusercontent.com/apache/doris-operator/master/config/operator/fdb-operator.yaml
+</span></span><span style="display:flex;"><span>kubectl apply -f fdb-operator.yaml
+</span></span></code></pre></div><h4 id="13-部署-foundationdb-集群">
+  1.3 部署 FoundationDB 集群
+  <a class="anchor" href="#13-%e9%83%a8%e7%bd%b2-foundationdb-%e9%9b%86%e7%be%a4">#</a>
+</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>wget https://raw.githubusercontent.com/foundationdb/fdb-kubernetes-operator/main/config/samples/cluster.yaml -O fdb-cluster.yaml
+</span></span><span style="display:flex;"><span>kubectl apply -f fdb-cluster.yaml
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 查看集群状态</span>
+</span></span><span style="display:flex;"><span>kubectl get fdb
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 预期输出（启动需要时间，需要等待几分钟）</span>
+</span></span><span style="display:flex;"><span>NAME           GENERATION   RECONCILED   AVAILABLE   FULLREPLICATION   VERSION   AGE
+</span></span><span style="display:flex;"><span>test-cluster   <span style="color:#ae81ff">1</span>            <span style="color:#ae81ff">1</span>            true        true              7.1.26    3m30s
+</span></span></code></pre></div><h3 id="2-安装-doris-operator">
+  2. 安装 Doris Operator
+  <a class="anchor" href="#2-%e5%ae%89%e8%a3%85-doris-operator">#</a>
+</h3>
+<h4 id="21-安装-crd-部署-doris-相关资源定义">
+  2.1 安装 CRD 部署 Doris 相关资源定义
+  <a class="anchor" href="#21-%e5%ae%89%e8%a3%85-crd-%e9%83%a8%e7%bd%b2-doris-%e7%9b%b8%e5%85%b3%e8%b5%84%e6%ba%90%e5%ae%9a%e4%b9%89">#</a>
+</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl create -f https://raw.githubusercontent.com/apache/doris-operator/master/config/crd/bases/crds.yaml
+</span></span></code></pre></div><h4 id="22-部署-doris-operator">
+  2.2 部署 Doris Operator
+  <a class="anchor" href="#22-%e9%83%a8%e7%bd%b2-doris-operator">#</a>
+</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>wget https://raw.githubusercontent.com/apache/doris-operator/master/config/operator/disaggregated-operator.yaml -O disaggregated-operator.yaml
+</span></span><span style="display:flex;"><span>kubectl apply -f disaggregated-operator.yaml
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 查看部署状态</span>
+</span></span><span style="display:flex;"><span>kubectl get pod -n doris
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 预期输出</span>
+</span></span><span style="display:flex;"><span>NAME                              READY   STATUS    RESTARTS   AGE
+</span></span><span style="display:flex;"><span>doris-operator-5fd65d8d69-rgqlk   1/1     Running   <span style="color:#ae81ff">0</span>          79s
+</span></span></code></pre></div><h3 id="3-部署存算分离集群">
+  3. 部署存算分离集群
+  <a class="anchor" href="#3-%e9%83%a8%e7%bd%b2%e5%ad%98%e7%ae%97%e5%88%86%e7%a6%bb%e9%9b%86%e7%be%a4">#</a>
+</h3>
+<h4 id="31-下载示例配置">
+  3.1 下载示例配置
+  <a class="anchor" href="#31-%e4%b8%8b%e8%bd%bd%e7%a4%ba%e4%be%8b%e9%85%8d%e7%bd%ae">#</a>
+</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>wget https://raw.githubusercontent.com/apache/doris-operator/master/doc/examples/disaggregated/cluster/ddc-sample.yaml -O ddc-sample.yaml
+</span></span></code></pre></div><h4 id="32-配置-configmap">
+  3.2 配置 ConfigMap
+  <a class="anchor" href="#32-%e9%85%8d%e7%bd%ae-configmap">#</a>
+</h4>
+<p>对于 ddc-sample.yaml 配置进行调整配置。这三个都需要分别配置 ConfigMap 并修改集群中的配置挂载。</p>
+<ul>
+<li>配置元数据 <a href="https://doris.apache.org/zh-CN/docs/3.0/install/deploy-on-kubernetes/separating-storage-compute/config-ms">https://doris.apache.org/zh-CN/docs/3.0/install/deploy-on-kubernetes/separating-storage-compute/config-ms</a></li>
+<li>配置 FE 集群 <a href="https://doris.apache.org/zh-CN/docs/3.0/install/deploy-on-kubernetes/separating-storage-compute/config-fe">https://doris.apache.org/zh-CN/docs/3.0/install/deploy-on-kubernetes/separating-storage-compute/config-fe</a></li>
+<li>配置计算资源组 <a href="https://doris.apache.org/zh-CN/docs/3.0/install/deploy-on-kubernetes/separating-storage-compute/config-cg">https://doris.apache.org/zh-CN/docs/3.0/install/deploy-on-kubernetes/separating-storage-compute/config-cg</a></li>
+</ul>
+<details open><summary>ConfigMap 配置</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">v1</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">data</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">doris_cloud.conf</span>: |<span style="color:#e6db74">
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    # // meta_service
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    brpc_listen_port = 5000
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    brpc_num_threads = -1
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    brpc_idle_timeout_sec = 30
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    http_token = greedisgood9999
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    # // doris txn config
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    label_keep_max_second = 259200
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    expired_txn_scan_key_nums = 1000
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    # // logging
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    log_dir = ./log/
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    # info warn error
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    log_level = info
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    log_size_mb = 1024
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    log_filenum_quota = 10
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    log_immediate_flush = false
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    log_verbose_modules = *
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    # //max stage num
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    max_num_stages = 40</span>    
+</span></span><span style="display:flex;"><span><span style="color:#f92672">kind</span>: <span style="color:#ae81ff">ConfigMap</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">doris-metaservice</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">namespace</span>: <span style="color:#ae81ff">default</span>
+</span></span><span style="display:flex;"><span>---
+</span></span><span style="display:flex;"><span><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">v1</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">kind</span>: <span style="color:#ae81ff">ConfigMap</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">fe-configmap</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">namespace</span>: <span style="color:#ae81ff">default</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">labels</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">app.kubernetes.io/component</span>: <span style="color:#ae81ff">fe</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">data</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">fe.conf</span>: |<span style="color:#e6db74">
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    CUR_DATE=`date +%Y%m%d-%H%M%S`
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    # Log dir
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    LOG_DIR = ${DORIS_HOME}/log
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    # For jdk 17, this JAVA_OPTS will be used as default JVM options
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    JAVA_OPTS_FOR_JDK_17=&#34;-Djavax.security.auth.useSubjectCredsOnly=false -Xmx8192m -Xms8192m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=$LOG_DIR -Xlog:gc*:$LOG_DIR/fe.gc.log.$CUR_DATE:time,uptime:filecount=10,filesize=50M --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens java.base/jdk.internal.ref=ALL-UNNAMED&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    # INFO, WARN, ERROR, FATAL
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    sys_log_level = INFO
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    # NORMAL, BRIEF, ASYNC
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    sys_log_mode = NORMAL
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    # Default dirs to put jdbc drivers,default value is ${DORIS_HOME}/jdbc_drivers
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    # jdbc_drivers_dir = ${DORIS_HOME}/jdbc_drivers
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    http_port = 8030
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    rpc_port = 9020
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    query_port = 9030
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    edit_log_port = 9010
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    enable_fqdn_mode=true</span>    
+</span></span><span style="display:flex;"><span>---
+</span></span><span style="display:flex;"><span><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">v1</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">kind</span>: <span style="color:#ae81ff">ConfigMap</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">be-configmap</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">labels</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">app.kubernetes.io/component</span>: <span style="color:#ae81ff">be</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">data</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">be.conf</span>: |<span style="color:#e6db74">
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    # For jdk 17, this JAVA_OPTS will be used as default JVM options
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    JAVA_OPTS_FOR_JDK_17=&#34;-Xmx1024m -DlogPath=$LOG_DIR/jni.log -Xlog:gc*:$LOG_DIR/be.gc.log.$CUR_DATE:time,uptime:filecount=10,filesize=50M -Djavax.security.auth.useSubjectCredsOnly=false -Dsun.security.krb5.debug=true -Dsun.java.command=DorisBE -XX:-CriticalJNINatives -XX:+IgnoreUnrecognizedVMOptions --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.util.concurrent=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/sun.nio.cs=ALL-UNNAMED --add-opens=java.base/sun.security.action=ALL-UNNAMED --add-opens=java.base/sun.util.calendar=ALL-UNNAMED --add-opens=java.security.jgss/sun.security.krb5=ALL-UNNAMED --add-opens=java.management/sun.management=ALL-UNNAMED&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    file_cache_path = [{&#34;path&#34;:&#34;/mnt/disk1/doris_cloud/file_cache&#34;,&#34;total_size&#34;:107374182400,&#34;query_limit&#34;:107374182400}]
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    deploy_mode = cloud</span>    
+</span></span></code></pre></div>  </div>
+</details>
+<h4 id="33-启动集群">
+  3.3 启动集群
+  <a class="anchor" href="#33-%e5%90%af%e5%8a%a8%e9%9b%86%e7%be%a4">#</a>
+</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># 部署集群</span>
+</span></span><span style="display:flex;"><span>kubectl apply -f ddc-sample.yaml
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 查看集群状态</span>
+</span></span><span style="display:flex;"><span>kubectl get ddc
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 预期输出</span>
+</span></span><span style="display:flex;"><span>NAME                         CLUSTERHEALTH   MSPHASE   FEPHASE   CGCOUNT   CGAVAILABLECOUNT   CGFULLAVAILABLECOUNT
+</span></span><span style="display:flex;"><span>test-disaggregated-cluster   green           Ready     Ready     <span style="color:#ae81ff">2</span>         <span style="color:#ae81ff">2</span>                  <span style="color:#ae81ff">2</span>
+</span></span></code></pre></div><h4 id="34-创建远程存储后端">
+  3.4 创建远程存储后端
+  <a class="anchor" href="#34-%e5%88%9b%e5%bb%ba%e8%bf%9c%e7%a8%8b%e5%ad%98%e5%82%a8%e5%90%8e%e7%ab%af">#</a>
+</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl get svc
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># test-disaggregated-cluster-fe            ClusterIP   10.104.79.145    &lt;none&gt;        8030/TCP,9020/TCP,9030/TCP,9010/TCP   35m</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># MySQL 客户端启动</span>
+</span></span><span style="display:flex;"><span>kubectl run mysql-client --image<span style="color:#f92672">=</span>mysql:5.7 -it --rm --restart<span style="color:#f92672">=</span>Never -- /bin/bash
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 连接 Doris FE</span>
+</span></span><span style="display:flex;"><span>mysql -uroot -P9030 -h test-disaggregated-cluster-fe
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># MYSQL 命令执行：S3 Storage Vault </span>
+</span></span><span style="display:flex;"><span>CREATE STORAGE VAULT IF NOT EXISTS s3_vault
+</span></span><span style="display:flex;"><span>    PROPERTIES <span style="color:#f92672">(</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;type&#34;</span><span style="color:#f92672">=</span><span style="color:#e6db74">&#34;S3&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;s3.endpoint&#34;</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;oss-cn-beijing.aliyuncs.com&#34;</span>, 
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;s3.region&#34;</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;bj&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;s3.bucket&#34;</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;bucket&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;s3.root.path&#34;</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;big/data/prefix&#34;</span>, 
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;s3.access_key&#34;</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;your-ak&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;s3.secret_key&#34;</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;your-sk&#34;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;provider&#34;</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;OSS&#34;</span> 
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">)</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># MYSQL 命令执行：设置默认数据后端</span>
+</span></span><span style="display:flex;"><span>SET s3_vault AS DEFAULT STORAGE VAULT;
+</span></span></code></pre></div><h3 id="4-测试集群">
+  4. 测试集群
+  <a class="anchor" href="#4-%e6%b5%8b%e8%af%95%e9%9b%86%e7%be%a4">#</a>
+</h3>
+<h4 id="41-启动-mysql-客户端">
+  4.1 启动 MySQL 客户端
+  <a class="anchor" href="#41-%e5%90%af%e5%8a%a8-mysql-%e5%ae%a2%e6%88%b7%e7%ab%af">#</a>
+</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># 创建一个临时的 MySQL 客户端 Pod</span>
+</span></span><span style="display:flex;"><span>kubectl run mysql-client --image<span style="color:#f92672">=</span>mysql:5.7 -it --rm --restart<span style="color:#f92672">=</span>Never -- mysql -h test-disaggregated-cluster-fe -P9030 -uroot
+</span></span></code></pre></div><h4 id="42-测试基本操作">
+  4.2 测试基本操作
+  <a class="anchor" href="#42-%e6%b5%8b%e8%af%95%e5%9f%ba%e6%9c%ac%e6%93%8d%e4%bd%9c">#</a>
+</h4>
+<p>执行一些查询语句和初始化测试表数据，验证集群是否正常工作。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#75715e">-- 查看 FE 节点状态
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">SHOW</span> FRONTENDS;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-- 查看 BE 节点状态
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">SHOW</span> BACKENDS;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-- 创建测试数据库
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">DATABASE</span> test_db;
+</span></span><span style="display:flex;"><span>USE test_db;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-- 创建测试表
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">TABLE</span> test_tbl
+</span></span><span style="display:flex;"><span>(
+</span></span><span style="display:flex;"><span>    id INT,
+</span></span><span style="display:flex;"><span>    name VARCHAR(<span style="color:#ae81ff">50</span>),
+</span></span><span style="display:flex;"><span>    score DECIMAL(<span style="color:#ae81ff">10</span>,<span style="color:#ae81ff">2</span>)
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">UNIQUE</span> <span style="color:#66d9ef">KEY</span>(id)
+</span></span><span style="display:flex;"><span>DISTRIBUTED <span style="color:#66d9ef">BY</span> HASH(id) BUCKETS <span style="color:#ae81ff">3</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-- 插入测试数据
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">INSERT</span> <span style="color:#66d9ef">INTO</span> test_tbl <span style="color:#66d9ef">VALUES</span> 
+</span></span><span style="display:flex;"><span>(<span style="color:#ae81ff">1</span>, <span style="color:#e6db74">&#39;Tom&#39;</span>, <span style="color:#ae81ff">89</span>.<span style="color:#ae81ff">5</span>),
+</span></span><span style="display:flex;"><span>(<span style="color:#ae81ff">2</span>, <span style="color:#e6db74">&#39;Jerry&#39;</span>, <span style="color:#ae81ff">92</span>.<span style="color:#ae81ff">0</span>),
+</span></span><span style="display:flex;"><span>(<span style="color:#ae81ff">3</span>, <span style="color:#e6db74">&#39;Jack&#39;</span>, <span style="color:#ae81ff">85</span>.<span style="color:#ae81ff">5</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-- 查询数据
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">SELECT</span> <span style="color:#f92672">*</span> <span style="color:#66d9ef">FROM</span> test_tbl;
+</span></span></code></pre></div><h4 id="43-验证存算分离">
+  4.3 验证存算分离
+  <a class="anchor" href="#43-%e9%aa%8c%e8%af%81%e5%ad%98%e7%ae%97%e5%88%86%e7%a6%bb">#</a>
+</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#75715e">-- 查看存储后端状态
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">SHOW</span> <span style="color:#66d9ef">STORAGE</span> VAULTS;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">-- 查看表的存储位置
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">SHOW</span> <span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">TABLE</span> test_db.test_tbl;
+</span></span></code></pre></div><h3 id="5-部署期间遇到的问题和解决办法">
+  5. 部署期间遇到的问题和解决办法
+  <a class="anchor" href="#5-%e9%83%a8%e7%bd%b2%e6%9c%9f%e9%97%b4%e9%81%87%e5%88%b0%e7%9a%84%e9%97%ae%e9%a2%98%e5%92%8c%e8%a7%a3%e5%86%b3%e5%8a%9e%e6%b3%95">#</a>
+</h3>
+<h4 id="51-coupute-group-be-无法启动">
+  5.1 Coupute Group (BE) 无法启动
+  <a class="anchor" href="#51-coupute-group-be-%e6%97%a0%e6%b3%95%e5%90%af%e5%8a%a8">#</a>
+</h4>
+<p><strong>问题现象：</strong></p>
+<p>Be 启动时输出如下日志：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>Defaulted container <span style="color:#e6db74">&#34;compute&#34;</span> out of: compute, default-init <span style="color:#f92672">(</span>init<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>Fri Feb <span style="color:#ae81ff">28</span> 02:56:24 UTC 2025<span style="color:#f92672">]</span> <span style="color:#f92672">[</span>info<span style="color:#f92672">]</span> Process conf file be.conf ...
+</span></span><span style="display:flex;"><span>/opt/apache-doris/be_disaggregated_entrypoint.sh: line 73: /opt/apache-doris/be/conf/: Is a directory
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>Fri Feb <span style="color:#ae81ff">28</span> 02:56:24 UTC 2025<span style="color:#f92672">]</span> <span style="color:#f92672">[</span>info<span style="color:#f92672">]</span> use root no password show backends result 10221	test-disaggregated-cluster-cg1-1.test-disaggregated-cluster-cg1.default.svc.cluster.local	9050	-1	-1	-1	-1	NULL	NULL	false	false	0	0.000 	0.000 	1.000 B	0.000 	0.00 %	0.00 %	0.000 	<span style="color:#f92672">{</span><span style="color:#e6db74">&#34;cloud_unique_id&#34;</span> : <span style="color:#e6db74">&#34;1:1751150972:t1Ws6Mrv&#34;</span>, <span style="color:#e6db74">&#34;compute_group_status&#34;</span> : <span style="color:#e6db74">&#34;NORMAL&#34;</span>, <span style="color:#e6db74">&#34;private_endpoint&#34;</span> : <span style="color:#e6db74">&#34;&#34;</span>, <span style="color:#e6db74">&#34;compute_group_name&#34;</span> : <span style="color:#e6db74">&#34;cg1&#34;</span>, <span style="color:#e6db74">&#34;location&#34;</span> : <span style="color:#e6db74">&#34;default&#34;</span>, <span style="color:#e6db74">&#34;public_endpoint&#34;</span> : <span style="color:#e6db74">&#34;&#34;</span>, <span style="color:#e6db74">&#34;compute_group_id&#34;</span> : <span style="color:#e6db74">&#34;ZNES_zRC&#34;</span><span style="color:#f92672">}</span>	java.net.UnknownHostException: test-disaggregated-cluster-cg1-1.test-disaggregated-cluster-cg1.default.svc.cluster.local		<span style="color:#f92672">{</span><span style="color:#e6db74">&#34;lastStreamLoadTime&#34;</span>:-1,<span style="color:#e6db74">&#34;isQueryDisabled&#34;</span>:false,<span style="color:#e6db74">&#34;isLoadDisabled&#34;</span>:false,<span style="color:#e6db74">&#34;isActive&#34;</span>:true,<span style="color:#e6db74">&#34;currentFragmentNum&#34;</span>:0,<span style="color:#e6db74">&#34;lastFragmentUpdateTime&#34;</span>:0<span style="color:#f92672">}</span>	287		1	0.00
+</span></span><span style="display:flex;"><span>10222	test-disaggregated-cluster-cg1-0.test-disaggregated-cluster-cg1.default.svc.cluster.local	9050	-1	-1	-1	-1	NULL	NULL	false	false	0	0.000 	0.000 	1.000 B	0.000 	0.00 %	0.00 %	0.000 <span style="color:#f92672">{</span><span style="color:#e6db74">&#34;cloud_unique_id&#34;</span> : <span style="color:#e6db74">&#34;1:1751150972:YA6LXvvg&#34;</span>, <span style="color:#e6db74">&#34;compute_group_status&#34;</span> : <span style="color:#e6db74">&#34;NORMAL&#34;</span>, <span style="color:#e6db74">&#34;private_endpoint&#34;</span> : <span style="color:#e6db74">&#34;&#34;</span>, <span style="color:#e6db74">&#34;compute_group_name&#34;</span> : <span style="color:#e6db74">&#34;cg1&#34;</span>, <span style="color:#e6db74">&#34;location&#34;</span> : <span style="color:#e6db74">&#34;default&#34;</span>, <span style="color:#e6db74">&#34;public_endpoint&#34;</span> : <span style="color:#e6db74">&#34;&#34;</span>, <span style="color:#e6db74">&#34;compute_group_id&#34;</span> : <span style="color:#e6db74">&#34;ZNES_zRC&#34;</span><span style="color:#f92672">}</span>	java.net.UnknownHostException: test-disaggregated-cluster-cg1-0.test-disaggregated-cluster-cg1.default.svc.cluster.local		<span style="color:#f92672">{</span><span style="color:#e6db74">&#34;lastStreamLoadTime&#34;</span>:-1,<span style="color:#e6db74">&#34;isQueryDisabled&#34;</span>:false,<span style="color:#e6db74">&#34;isLoadDisabled&#34;</span>:false,<span style="color:#e6db74">&#34;isActive&#34;</span>:true,<span style="color:#e6db74">&#34;currentFragmentNum&#34;</span>:0,<span style="color:#e6db74">&#34;lastFragmentUpdateTime&#34;</span>:0<span style="color:#f92672">}</span>	287		1	0.00
+</span></span><span style="display:flex;"><span>10223	test-disaggregated-cluster-cg1-2.test-disaggregated-cluster-cg1.default.svc.cluster.local	9050	-1	-1	-1	-1	NULL	NULL	false	false	0	0.000 	0.000 	1.000 B	0.000 	0.00 %	0.00 %	0.000 <span style="color:#f92672">{</span><span style="color:#e6db74">&#34;cloud_unique_id&#34;</span> : <span style="color:#e6db74">&#34;1:1751150972:Ox_RJuee&#34;</span>, <span style="color:#e6db74">&#34;compute_group_status&#34;</span> : <span style="color:#e6db74">&#34;NORMAL&#34;</span>, <span style="color:#e6db74">&#34;private_endpoint&#34;</span> : <span style="color:#e6db74">&#34;&#34;</span>, <span style="color:#e6db74">&#34;compute_group_name&#34;</span> : <span style="color:#e6db74">&#34;cg1&#34;</span>, <span style="color:#e6db74">&#34;location&#34;</span> : <span style="color:#e6db74">&#34;default&#34;</span>, <span style="color:#e6db74">&#34;public_endpoint&#34;</span> : <span style="color:#e6db74">&#34;&#34;</span>, <span style="color:#e6db74">&#34;compute_group_id&#34;</span> : <span style="color:#e6db74">&#34;ZNES_zRC&#34;</span><span style="color:#f92672">}</span>	java.net.UnknownHostException: test-disaggregated-cluster-cg1-2.test-disaggregated-cluster-cg1.default.svc.cluster.local		<span style="color:#f92672">{</span><span style="color:#e6db74">&#34;lastStreamLoadTime&#34;</span>:-1,<span style="color:#e6db74">&#34;isQueryDisabled&#34;</span>:false,<span style="color:#e6db74">&#34;isLoadDisabled&#34;</span>:false,<span style="color:#e6db74">&#34;isActive&#34;</span>:true,<span style="color:#e6db74">&#34;currentFragmentNum&#34;</span>:0,<span style="color:#e6db74">&#34;lastFragmentUpdateTime&#34;</span>:0<span style="color:#f92672">}</span>	287		1	0.00
+</span></span><span style="display:flex;"><span>10224	test-disaggregated-cluster-cg2-0.test-disaggregated-cluster-cg2.default.svc.cluster.local	9050	-1	-1	-1	-1	NULL	NULL	false	false	0	0.000 	0.000 	1.000 B	0.000 	0.00 %	0.00 %	0.000 <span style="color:#f92672">{</span><span style="color:#e6db74">&#34;cloud_unique_id&#34;</span> : <span style="color:#e6db74">&#34;1:1751150972:E_SJoMU8&#34;</span>, <span style="color:#e6db74">&#34;compute_group_status&#34;</span> : <span style="color:#e6db74">&#34;NORMAL&#34;</span>, <span style="color:#e6db74">&#34;private_endpoint&#34;</span> : <span style="color:#e6db74">&#34;&#34;</span>, <span style="color:#e6db74">&#34;compute_group_name&#34;</span> : <span style="color:#e6db74">&#34;cg2&#34;</span>, <span style="color:#e6db74">&#34;location&#34;</span> : <span style="color:#e6db74">&#34;default&#34;</span>, <span style="color:#e6db74">&#34;public_endpoint&#34;</span> : <span style="color:#e6db74">&#34;&#34;</span>, <span style="color:#e6db74">&#34;compute_group_id&#34;</span> : <span style="color:#e6db74">&#34;oZ2gH5Ml&#34;</span><span style="color:#f92672">}</span>	java.net.UnknownHostException: test-disaggregated-cluster-cg2-0.test-disaggregated-cluster-cg2.default.svc.cluster.local		<span style="color:#f92672">{</span><span style="color:#e6db74">&#34;lastStreamLoadTime&#34;</span>:-1,<span style="color:#e6db74">&#34;isQueryDisabled&#34;</span>:false,<span style="color:#e6db74">&#34;isLoadDisabled&#34;</span>:false,<span style="color:#e6db74">&#34;isActive&#34;</span>:true,<span style="color:#e6db74">&#34;currentFragmentNum&#34;</span>:0,<span style="color:#e6db74">&#34;lastFragmentUpdateTime&#34;</span>:0<span style="color:#f92672">}</span>	287		1	0.00
+</span></span><span style="display:flex;"><span>10251	test-disaggregated-cluster-cg2-1.test-disaggregated-cluster-cg2.default.svc.cluster.local	9050	-1	-1	-1	-1	NULL	NULL	false	false	0	0.000 	0.000 	1.000 B	0.000 	0.00 %	0.00 %	0.000 <span style="color:#f92672">{</span><span style="color:#e6db74">&#34;cloud_unique_id&#34;</span> : <span style="color:#e6db74">&#34;1:1751150972:B_h0m9vp&#34;</span>, <span style="color:#e6db74">&#34;compute_group_status&#34;</span> : <span style="color:#e6db74">&#34;NORMAL&#34;</span>, <span style="color:#e6db74">&#34;private_endpoint&#34;</span> : <span style="color:#e6db74">&#34;&#34;</span>, <span style="color:#e6db74">&#34;compute_group_name&#34;</span> : <span style="color:#e6db74">&#34;cg2&#34;</span>, <span style="color:#e6db74">&#34;location&#34;</span> : <span style="color:#e6db74">&#34;default&#34;</span>, <span style="color:#e6db74">&#34;public_endpoint&#34;</span> : <span style="color:#e6db74">&#34;&#34;</span>, <span style="color:#e6db74">&#34;compute_group_id&#34;</span> : <span style="color:#e6db74">&#34;oZ2gH5Ml&#34;</span><span style="color:#f92672">}</span>	java.net.UnknownHostException: test-disaggregated-cluster-cg2-1.test-disaggregated-cluster-cg2.default.svc.cluster.local		<span style="color:#f92672">{</span><span style="color:#e6db74">&#34;lastStreamLoadTime&#34;</span>:-1,<span style="color:#e6db74">&#34;isQueryDisabled&#34;</span>:false,<span style="color:#e6db74">&#34;isLoadDisabled&#34;</span>:false,<span style="color:#e6db74">&#34;isActive&#34;</span>:true,<span style="color:#e6db74">&#34;currentFragmentNum&#34;</span>:0,<span style="color:#e6db74">&#34;lastFragmentUpdateTime&#34;</span>:0<span style="color:#f92672">}</span>	287		1	0.00
+</span></span><span style="display:flex;"><span>10252	test-disaggregated-cluster-cg2-2.test-disaggregated-cluster-cg2.default.svc.cluster.local	9050	-1	-1	-1	-1	NULL	NULL	false	false	0	0.000 	0.000 	1.000 B	0.000 	0.00 %	0.00 %	0.000 <span style="color:#f92672">{</span><span style="color:#e6db74">&#34;cloud_unique_id&#34;</span> : <span style="color:#e6db74">&#34;1:1751150972:nmt5aHJC&#34;</span>, <span style="color:#e6db74">&#34;compute_group_status&#34;</span> : <span style="color:#e6db74">&#34;NORMAL&#34;</span>, <span style="color:#e6db74">&#34;private_endpoint&#34;</span> : <span style="color:#e6db74">&#34;&#34;</span>, <span style="color:#e6db74">&#34;compute_group_name&#34;</span> : <span style="color:#e6db74">&#34;cg2&#34;</span>, <span style="color:#e6db74">&#34;location&#34;</span> : <span style="color:#e6db74">&#34;default&#34;</span>, <span style="color:#e6db74">&#34;public_endpoint&#34;</span> : <span style="color:#e6db74">&#34;&#34;</span>, <span style="color:#e6db74">&#34;compute_group_id&#34;</span> : <span style="color:#e6db74">&#34;oZ2gH5Ml&#34;</span><span style="color:#f92672">}</span>	java.net.UnknownHostException: test-disaggregated-cluster-cg2-2.test-disaggregated-cluster-cg2.default.svc.cluster.local		<span style="color:#f92672">{</span><span style="color:#e6db74">&#34;lastStreamLoadTime&#34;</span>:-1,<span style="color:#e6db74">&#34;isQueryDisabled&#34;</span>:false,<span style="color:#e6db74">&#34;isLoadDisabled&#34;</span>:false,<span style="color:#e6db74">&#34;isActive&#34;</span>:true,<span style="color:#e6db74">&#34;currentFragmentNum&#34;</span>:0,<span style="color:#e6db74">&#34;lastFragmentUpdateTime&#34;</span>:0<span style="color:#f92672">}</span>	287		1	0.00  .
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>Fri Feb <span style="color:#ae81ff">28</span> 02:56:24 UTC 2025<span style="color:#f92672">]</span> <span style="color:#f92672">[</span>info<span style="color:#f92672">]</span> Check myself <span style="color:#f92672">(</span>test-disaggregated-cluster-cg1-0.test-disaggregated-cluster-cg1.default.svc.cluster.local:9050<span style="color:#f92672">)</span> exist in FE, start be directly ...
+</span></span><span style="display:flex;"><span>/etc/podinfo/annotationsis not exists.
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>Fri Feb <span style="color:#ae81ff">28</span> 02:56:24 UTC 2025<span style="color:#f92672">]</span> run start_be.sh
+</span></span><span style="display:flex;"><span>Disable swap memory before starting be
+</span></span></code></pre></div><p><strong>问题分析：</strong></p>
+<p>问题详情参见： <a href="https://github.com/apache/doris/issues/48460">https://github.com/apache/doris/issues/48460</a> 。一开始关注了 <code>/opt/apache-doris/be_disaggregated_entrypoint.sh: line 73: /opt/apache-doris/be/conf/: Is a directory</code> 以为是脚本 <code>be_disaggregated_entrypoint.sh</code> 有问题, 经过自己修改重新打包后发现问题依旧。重新检查日志和脚本发现在 <code>start_be.sh</code> 中, 检查了交换内存的命令，如果发现交换内存启用，就会退出。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># start_be.sh line 193</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> <span style="color:#f92672">[[</span> <span style="color:#e6db74">&#34;</span><span style="color:#66d9ef">$(</span>swapon -s | wc -l<span style="color:#66d9ef">)</span><span style="color:#e6db74">&#34;</span> -gt <span style="color:#ae81ff">1</span> <span style="color:#f92672">]]</span>; <span style="color:#66d9ef">then</span>
+</span></span><span style="display:flex;"><span>    echo <span style="color:#e6db74">&#34;Disable swap memory before starting be&#34;</span>
+</span></span><span style="display:flex;"><span>    exit <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">fi</span>
+</span></span></code></pre></div><p><strong>解决办法：</strong></p>
+<p>通过在宿主机上执行 <code>sudo swapoff -a</code> 关闭交换内存后，Be 就可以正常启动了。</p>
+<h4 id="52-fe-或者-ms-无法启动">
+  5.2 FE 或者 MS 无法启动
+  <a class="anchor" href="#52-fe-%e6%88%96%e8%80%85-ms-%e6%97%a0%e6%b3%95%e5%90%af%e5%8a%a8">#</a>
+</h4>
+<p><strong>问题现象：</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>RuntimeLogger 2025-02-28 06:38:51,460 WARN <span style="color:#f92672">(</span>main|1<span style="color:#f92672">)</span> <span style="color:#f92672">[</span>CloudEnv.getLocalTypeFromMetaService<span style="color:#f92672">()</span>:165<span style="color:#f92672">]</span> failed to get cloud cluster due to incomplete response, cloud_unique_id<span style="color:#f92672">=</span>1:1751150972:fe, clusterId<span style="color:#f92672">=</span>RESERVED_CLUSTER_ID_FOR_SQL_SERVER, response<span style="color:#f92672">=</span>status <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>code: INVALID_ARGUMENT
+</span></span><span style="display:flex;"><span>msg: <span style="color:#e6db74">&#34;empty instance_id&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">}</span>
+</span></span></code></pre></div><p><strong>问题分析：</strong></p>
+<p>这个问题没有找到原因，在 issue 中有相同问题：https://github.com/apache/doris/issues/47678</p>
+<p><strong>解决办法：</strong></p>
+<p>通过重新搭建 fdb + doris 集群解决。</p>
+<h4 id="53-数据写入失败">
+  5.3 数据写入失败
+  <a class="anchor" href="#53-%e6%95%b0%e6%8d%ae%e5%86%99%e5%85%a5%e5%a4%b1%e8%b4%a5">#</a>
+</h4>
+<p>doris 集群和 Storage Vault 都部署成功后，通过 mysql 客户端连接到 FE 创建 test_db, test_tbl 并插入数据。插入数据时卡顿，且最终失败：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">INSERT</span> <span style="color:#66d9ef">INTO</span> test_tbl <span style="color:#66d9ef">VALUES</span> 
+</span></span><span style="display:flex;"><span>(<span style="color:#ae81ff">1</span>, <span style="color:#e6db74">&#39;Tom&#39;</span>, <span style="color:#ae81ff">89</span>.<span style="color:#ae81ff">5</span>),
+</span></span><span style="display:flex;"><span>(<span style="color:#ae81ff">2</span>, <span style="color:#e6db74">&#39;Jerry&#39;</span>, <span style="color:#ae81ff">92</span>.<span style="color:#ae81ff">0</span>),
+</span></span><span style="display:flex;"><span>(<span style="color:#ae81ff">3</span>, <span style="color:#e6db74">&#39;Jack&#39;</span>, <span style="color:#ae81ff">85</span>.<span style="color:#ae81ff">5</span>);
+</span></span><span style="display:flex;"><span><span style="color:#f92672">&gt;</span> 
+</span></span><span style="display:flex;"><span>ERROR <span style="color:#ae81ff">1105</span> (HY000): errCode <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>, detailMessage <span style="color:#f92672">=</span> Backend Backend [id<span style="color:#f92672">=</span><span style="color:#ae81ff">10262</span>, <span style="color:#66d9ef">host</span><span style="color:#f92672">=</span>test<span style="color:#f92672">-</span>disaggregated<span style="color:#f92672">-</span><span style="color:#66d9ef">cluster</span><span style="color:#f92672">-</span>cg1<span style="color:#f92672">-</span><span style="color:#ae81ff">2</span>.test<span style="color:#f92672">-</span>disaggregated<span style="color:#f92672">-</span><span style="color:#66d9ef">cluster</span><span style="color:#f92672">-</span>cg1.<span style="color:#66d9ef">default</span>.svc.<span style="color:#66d9ef">cluster</span>.<span style="color:#66d9ef">local</span>, heartbeatPort<span style="color:#f92672">=</span><span style="color:#ae81ff">9050</span>, alive<span style="color:#f92672">=</span><span style="color:#66d9ef">false</span>, lastStartTime<span style="color:#f92672">=</span><span style="color:#ae81ff">2025</span><span style="color:#f92672">-</span><span style="color:#ae81ff">02</span><span style="color:#f92672">-</span><span style="color:#ae81ff">28</span> <span style="color:#ae81ff">08</span>:<span style="color:#ae81ff">46</span>:<span style="color:#ae81ff">45</span>, process epoch<span style="color:#f92672">=</span><span style="color:#ae81ff">1740732405712</span>, isDecommissioned<span style="color:#f92672">=</span><span style="color:#66d9ef">false</span>, tags: <span style="color:#960050;background-color:#1e0010">{</span>cloud_cluster_id<span style="color:#f92672">=</span>Ppt5BJ3g, cloud_unique_id<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>:<span style="color:#ae81ff">1751150972</span>:JxbgZEBP, cloud_cluster_status<span style="color:#f92672">=</span>NORMAL, cloud_cluster_name<span style="color:#f92672">=</span>cg1, <span style="color:#66d9ef">location</span><span style="color:#f92672">=</span><span style="color:#66d9ef">default</span>, cloud_cluster_private_endpoint<span style="color:#f92672">=</span>, cloud_cluster_public_endpoint<span style="color:#f92672">=</span><span style="color:#960050;background-color:#1e0010">}</span>], backendStatus: [lastSuccess
+</span></span></code></pre></div><p>与此同时 cg1 整体都触发了重启，查看日志发现：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>RuntimeLogger F20250228 09:32:36.952682   <span style="color:#ae81ff">878</span> storage_engine.cpp:120<span style="color:#f92672">]</span> Check failed: _type <span style="color:#f92672">==</span> Type::CLOUD <span style="color:#f92672">(</span> vs. <span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>*** Check failure stack trace: ***
+</span></span><span style="display:flex;"><span>RuntimeLogger I20250228 09:32:36.955466  <span style="color:#ae81ff">1376</span> workload_group_manager.cpp:200<span style="color:#f92672">]</span>
+</span></span><span style="display:flex;"><span>Process Memory Summary: process memory used 856.95 MB<span style="color:#f92672">(=</span> 935.89 MB<span style="color:#f92672">[</span>vm/rss<span style="color:#f92672">]</span> - 78.94 MB<span style="color:#f92672">[</span>tc/jemalloc_cache<span style="color:#f92672">]</span> + 0<span style="color:#f92672">[</span>reserved<span style="color:#f92672">]</span> + 0B<span style="color:#f92672">[</span>waiting_refresh<span style="color:#f92672">])</span>, sys available memory 37.77 GB<span style="color:#f92672">(=</span> 37.77 GB<span style="color:#f92672">[</span>proc/available<span style="color:#f92672">]</span> - 0<span style="color:#f92672">[</span>reserved<span style="color:#f92672">]</span> - 0B<span style="color:#f92672">[</span>waiting_refresh<span style="color:#f92672">])</span>, all workload groups memory usage: 384.00 B, weighted_memory_limit_ratio: 0.9851607626358986
+</span></span><span style="display:flex;"><span>@     0x5f7414439556  google::LogMessage::SendToLog<span style="color:#f92672">()</span>
+</span></span><span style="display:flex;"><span>@     0x5f7414435fa0  google::LogMessage::Flush<span style="color:#f92672">()</span>
+</span></span><span style="display:flex;"><span>@     0x5f7414439d99  google::LogMessageFatal::~LogMessageFatal<span style="color:#f92672">()</span>
+</span></span><span style="display:flex;"><span>@     0x5f7409adbc3a  doris::BaseStorageEngine::to_cloud<span style="color:#f92672">()</span>
+</span></span><span style="display:flex;"><span>@     0x5f7409d600a7  doris::LoadChannel::open<span style="color:#f92672">()</span>
+</span></span><span style="display:flex;"><span>@     0x5f7409d5ab0a  doris::LoadChannelMgr::open<span style="color:#f92672">()</span>
+</span></span><span style="display:flex;"><span>@     0x5f7409eaa68d  std::_Function_handler&lt;&gt;::_M_invoke<span style="color:#f92672">()</span>
+</span></span><span style="display:flex;"><span>@     0x5f7409ec4ebb  doris::WorkThreadPool&lt;&gt;::work_thread<span style="color:#f92672">()</span>
+</span></span><span style="display:flex;"><span>@     0x5f74173d1b20  execute_native_thread_routine
+</span></span><span style="display:flex;"><span>@     0x7ce578024ac3  <span style="color:#f92672">(</span>unknown<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>@     0x7ce5780b6850  <span style="color:#f92672">(</span>unknown<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>@              <span style="color:#f92672">(</span>nil<span style="color:#f92672">)</span>  <span style="color:#f92672">(</span>unknown<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>*** Query id: 66dcfbe890a240d8-b45c17c9fa19c124 ***
+</span></span><span style="display:flex;"><span>*** is nereids: <span style="color:#ae81ff">0</span> ***
+</span></span><span style="display:flex;"><span>*** tablet id: <span style="color:#ae81ff">0</span> ***
+</span></span><span style="display:flex;"><span>*** Aborted at <span style="color:#ae81ff">1740735157</span> <span style="color:#f92672">(</span>unix time<span style="color:#f92672">)</span> try <span style="color:#e6db74">&#34;date -d @1740735157&#34;</span> <span style="color:#66d9ef">if</span> you are using GNU date ***
+</span></span><span style="display:flex;"><span>*** Current BE git commitID: 62a58bff4c ***
+</span></span><span style="display:flex;"><span>*** SIGABRT unknown detail explain <span style="color:#f92672">(</span>@0x86<span style="color:#f92672">)</span> received by PID <span style="color:#ae81ff">134</span> <span style="color:#f92672">(</span>TID <span style="color:#ae81ff">878</span> OR 0x7ce39d600640<span style="color:#f92672">)</span> from PID 134; stack trace: ***
+</span></span><span style="display:flex;"><span>RuntimeLogger I20250228 09:32:37.674818   <span style="color:#ae81ff">463</span> wal_manager.cpp:485<span style="color:#f92672">]</span> Scheduled<span style="color:#f92672">(</span>every 10s<span style="color:#f92672">)</span> WAL info: <span style="color:#f92672">[</span>/opt/apache-doris/be/storage/wal: limit <span style="color:#ae81ff">3993782272</span> Bytes, used <span style="color:#ae81ff">0</span> Bytes, estimated wal bytes <span style="color:#ae81ff">0</span> Bytes, available <span style="color:#ae81ff">3993782272</span> Bytes.<span style="color:#f92672">]</span>;
+</span></span><span style="display:flex;"><span>RuntimeLogger I20250228 09:32:37.726341  <span style="color:#ae81ff">1376</span> daemon.cpp:239<span style="color:#f92672">]</span> os physical memory 62.66 GB. process memory used 1.12 GB<span style="color:#f92672">(=</span> 1.20 GB<span style="color:#f92672">[</span>vm/rss<span style="color:#f92672">]</span> - 79.15 MB<span style="color:#f92672">[</span>tc/jemalloc_cache<span style="color:#f92672">]</span> + 0<span style="color:#f92672">[</span>reserved<span style="color:#f92672">]</span> + 0B<span style="color:#f92672">[</span>waiting_refresh<span style="color:#f92672">])</span>, limit 56.40 GB, soft limit 50.76 GB. sys available memory 37.55 GB<span style="color:#f92672">(=</span> 37.55 GB<span style="color:#f92672">[</span>proc/available<span style="color:#f92672">]</span> - 0<span style="color:#f92672">[</span>reserved<span style="color:#f92672">]</span> - 0B<span style="color:#f92672">[</span>waiting_refresh<span style="color:#f92672">])</span>, low water mark 3.13 GB, warning water mark 6.27 GB.
+</span></span><span style="display:flex;"><span>0# doris::signal::<span style="color:#f92672">(</span>anonymous namespace<span style="color:#f92672">)</span>::FailureSignalHandler<span style="color:#f92672">(</span>int, siginfo_t*, void*<span style="color:#f92672">)</span> at /home/zcp/repo_center/doris_release/doris/be/src/common/signal_handler.h:421
+</span></span><span style="display:flex;"><span>1# 0x00007CE577FD2520 in /lib/x86_64-linux-gnu/libc.so.6
+</span></span><span style="display:flex;"><span>2# pthread_kill in /lib/x86_64-linux-gnu/libc.so.6
+</span></span><span style="display:flex;"><span>3# raise in /lib/x86_64-linux-gnu/libc.so.6
+</span></span><span style="display:flex;"><span>4# abort in /lib/x86_64-linux-gnu/libc.so.6
+</span></span><span style="display:flex;"><span>5# 0x00005F7414443E2D in /opt/apache-doris/be/lib/doris_be
+</span></span><span style="display:flex;"><span>6# 0x00005F741443646A in /opt/apache-doris/be/lib/doris_be
+</span></span><span style="display:flex;"><span>7# google::LogMessage::SendToLog<span style="color:#f92672">()</span> in /opt/apache-doris/be/lib/doris_be
+</span></span><span style="display:flex;"><span>8# google::LogMessage::Flush<span style="color:#f92672">()</span> in /opt/apache-doris/be/lib/doris_be
+</span></span><span style="display:flex;"><span>9# google::LogMessageFatal::~LogMessageFatal<span style="color:#f92672">()</span> in /opt/apache-doris/be/lib/doris_be
+</span></span><span style="display:flex;"><span>10# doris::BaseStorageEngine::to_cloud<span style="color:#f92672">()</span> in /opt/apache-doris/be/lib/doris_be
+</span></span><span style="display:flex;"><span>11# doris::LoadChannel::open<span style="color:#f92672">(</span>doris::PTabletWriterOpenRequest const&amp;<span style="color:#f92672">)</span> at /home/zcp/repo_center/doris_release/doris/be/src/runtime/load_channel.cpp:131
+</span></span><span style="display:flex;"><span>12# doris::LoadChannelMgr::open<span style="color:#f92672">(</span>doris::PTabletWriterOpenRequest const&amp;<span style="color:#f92672">)</span> at /home/zcp/repo_center/doris_release/doris/be/src/runtime/load_channel_mgr.cpp:108
+</span></span><span style="display:flex;"><span>13# std::_Function_handler&lt;void <span style="color:#f92672">()</span>, doris::PInternalService::tablet_writer_open<span style="color:#f92672">(</span>google::protobuf::RpcController*, doris::PTabletWriterOpenRequest const*, doris::PTabletWriterOpenResult*, google::protobuf::Closure*<span style="color:#f92672">)</span>::$_0&gt;::_M_invoke<span style="color:#f92672">(</span>std::_Any_data const&amp;<span style="color:#f92672">)</span> at /var/local/ldb-toolchain/bin/../lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/bits/std_function.h:291
+</span></span><span style="display:flex;"><span>14# doris::WorkThreadPool&lt;false&gt;::work_thread<span style="color:#f92672">(</span>int<span style="color:#f92672">)</span> at /home/zcp/repo_center/doris_release/doris/be/src/util/work_thread_pool.hpp:159
+</span></span><span style="display:flex;"><span>15# execute_native_thread_routine at ../../../../../libstdc++-v3/src/c++11/thread.cc:84
+</span></span><span style="display:flex;"><span>16# 0x00007CE578024AC3 in /lib/x86_64-linux-gnu/libc.so.6
+</span></span><span style="display:flex;"><span>17# 0x00007CE5780B6850 in /lib/x86_64-linux-gnu/libc.so.6
+</span></span><span style="display:flex;"><span>/opt/apache-doris/be/bin/start_be.sh: line 433:   <span style="color:#ae81ff">134</span> Aborted                 <span style="color:#f92672">(</span>core dumped<span style="color:#f92672">)</span> <span style="color:#e6db74">${</span>LIMIT:+<span style="color:#e6db74">${</span>LIMIT<span style="color:#e6db74">}}</span> <span style="color:#e6db74">&#34;</span><span style="color:#e6db74">${</span>DORIS_HOME<span style="color:#e6db74">}</span><span style="color:#e6db74">/lib/doris_be&#34;</span> <span style="color:#e6db74">&#34;</span>$@<span style="color:#e6db74">&#34;</span> 2&gt;&amp;<span style="color:#ae81ff">1</span> &lt; /dev/null
+</span></span></code></pre></div><p><strong>问题分析：</strong></p>
+<p>根据堆栈找到 storage_engine.cpp 中的 120 行：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-cpp" data-lang="cpp"><span style="display:flex;"><span>StorageEngine<span style="color:#f92672">&amp;</span> BaseStorageEngine<span style="color:#f92672">::</span>to_local() {
+</span></span><span style="display:flex;"><span>    CHECK_EQ(_type, Type<span style="color:#f92672">::</span>LOCAL);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#f92672">*</span><span style="color:#66d9ef">static_cast</span><span style="color:#f92672">&lt;</span>StorageEngine<span style="color:#f92672">*&gt;</span>(<span style="color:#66d9ef">this</span>);
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>CloudStorageEngine<span style="color:#f92672">&amp;</span> BaseStorageEngine<span style="color:#f92672">::</span>to_cloud() {
+</span></span><span style="display:flex;"><span>    CHECK_EQ(_type, Type<span style="color:#f92672">::</span>CLOUD);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#f92672">*</span><span style="color:#66d9ef">static_cast</span><span style="color:#f92672">&lt;</span>CloudStorageEngine<span style="color:#f92672">*&gt;</span>(<span style="color:#66d9ef">this</span>);
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// CHECK_EQ 是 glog 的一个宏，用于检查表达式是否为真。如果表达式为假，则会打印错误消息并终止程序。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// https://github.com/google/glog/blob/master/src/glog/logging.h#L688
+</span></span></span></code></pre></div><p>从这里可以得知 <code>CHECK_EQ(_type, Type::CLOUD);</code> 这个检查失败，导致 BE 重启。</p>
+<p><strong>解决办法：</strong></p>
+<p>将 BE 的存储引擎模式设置为 <code>cloud</code>。参见 <a href="https://doris.apache.org/zh-CN/docs/3.0/compute-storage-decoupled/compilation-and-deployment#541-%E9%85%8D%E7%BD%AE-beconf">https://doris.apache.org/zh-CN/docs/3.0/compute-storage-decoupled/compilation-and-deployment#541-%E9%85%8D%E7%BD%AE-beconf</a></p>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#0-环境信息">0. 环境信息</a></li>
+        <li><a href="#1-安装-foundationdb">1. 安装 FoundationDB</a></li>
+        <li><a href="#2-安装-doris-operator">2. 安装 Doris Operator</a></li>
+        <li><a href="#3-部署存算分离集群">3. 部署存算分离集群</a></li>
+        <li><a href="#4-测试集群">4. 测试集群</a></li>
+        <li><a href="#5-部署期间遇到的问题和解决办法">5. 部署期间遇到的问题和解决办法</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

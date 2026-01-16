@@ -1,0 +1,1499 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="分析 nats 的设计和实现，理解其中的关键流程，并记录阅读 nats 源码中的关键函数。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2024/02/26/nats%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%AE%9E%E7%8E%B0/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="Nats设计与实现">
+  <meta property="og:description" content="分析 nats 的设计和实现，理解其中的关键流程，并记录阅读 nats 源码中的关键函数。">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-02-26T21:30:08+08:00">
+    <meta property="article:modified_time" content="2024-02-26T21:30:08+08:00">
+    <meta property="article:tag" content="Nats">
+    <meta property="article:tag" content="Golang">
+    <meta property="article:tag" content="MQ">
+    <meta property="article:tag" content="Raft">
+    <meta property="article:tag" content="Multi-Raft">
+<title>Nats设计与实现 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2024/02/26/nats%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%AE%9E%E7%8E%B0/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>Nats设计与实现</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#nats设计与实现">NATS设计与实现</a></li>
+        <li><a href="#1-核心概念">1. 核心概念</a></li>
+        <li><a href="#2-软件架构集群模式">2. 软件架构（集群模式）</a></li>
+        <li><a href="#3-nats-客户端协议">3. Nats 客户端协议</a></li>
+        <li><a href="#4-nats-server-配置解析">4. NATS-Server 配置解析</a></li>
+        <li><a href="#5-jetstream-配置解析">5. JetStream 配置解析</a></li>
+        <li><a href="#6-关键流程">6. 关键流程</a></li>
+        <li><a href="#7-扩展">7. 扩展</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    Nats设计与实现
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>February 26, 2024</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F/">分布式</a>, 
+      <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/nats/">Nats</a>, 
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/MQ/">MQ</a>, 
+      <a href="/tags/raft/">Raft</a>, 
+      <a href="/tags/multi-raft/">Multi-Raft</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><h3 id="nats设计与实现">
+  NATS设计与实现
+  <a class="anchor" href="#nats%e8%ae%be%e8%ae%a1%e4%b8%8e%e5%ae%9e%e7%8e%b0">#</a>
+</h3>
+<blockquote>
+<p><a href="https://github.com/nats-io/nats-sevrer">https://github.com/nats-io/nats-sevrer</a></p>
+</blockquote>
+<p>NATS 就是一个消息中间件，提供了 Pub/Sub 核心数据流，并基于此构建了 Request/Reply API 和 JetStream 用来提供可靠的分布式存储能力，和更高的 QoS（至少一次 + ACK）。</p>
+<img src="/images/nats/Pasted%20image%2020240219151629.png" style="width: 50%" />
+<h3 id="1-核心概念">
+  1. 核心概念
+  <a class="anchor" href="#1-%e6%a0%b8%e5%bf%83%e6%a6%82%e5%bf%b5">#</a>
+</h3>
+<table>
+  <thead>
+      <tr>
+          <th><em><strong>序号</strong></em></th>
+          <th><em><strong>名词（ENG）</strong></em></th>
+          <th><em><strong>名词（zh-CN）</strong></em></th>
+          <th><em><strong>解释</strong></em></th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><em><strong>1</strong></em></td>
+          <td>Publish</td>
+          <td>发布</td>
+          <td>发布动作，往 subject 中投递一条消息<br><img src="/images/nats/Pasted%20image%2020240219151722.png" alt="" /></td>
+      </tr>
+      <tr>
+          <td><em><strong>2</strong></em></td>
+          <td>Subscribe</td>
+          <td>订阅</td>
+          <td>订阅动作，表示想要接受发布相应 subject 的消息</td>
+      </tr>
+      <tr>
+          <td><em><strong>3</strong></em></td>
+          <td>Subject</td>
+          <td>主题</td>
+          <td>唯一标识，用于标识一种或者一类事件的概念。<em>订阅时，可以使用 nats 约定的通匹配符来接收一类 subjects，如 orders.&gt; 。</em></td>
+      </tr>
+      <tr>
+          <td><strong>4</strong></td>
+          <td>Core Nats</td>
+          <td>NATS 核心</td>
+          <td>CORE NATS 提供了以下能力：<br><br>- PUB / SUB <a href="https://docs.nats.io/nats-concepts/core-nats/pubsub">https://docs.nats.io/nats-concepts/core-nats/pubsub</a><br>    <br>- Request / Reply <a href="https://docs.nats.io/nats-concepts/core-nats/reqreply">https://docs.nats.io/nats-concepts/core-nats/reqreply</a><br>    <br>- Queue Groups <a href="https://docs.nats.io/nats-concepts/core-nats/queue">https://docs.nats.io/nats-concepts/core-nats/queue</a><br>    <br><br>提供 <em><strong>最多一次</strong></em> 的消息传递保证</td>
+      </tr>
+      <tr>
+          <td><strong>5</strong></td>
+          <td>Request / Reply</td>
+          <td>请求 / 回复</td>
+          <td>NATS 基于 PUB / SUB 实现的对 request 异步回复的功能，依赖于消息中的 reply 字段。reply 是内置实现，随机生成一个 “inbox” subject。<br><br><img src="/images/nats/Pasted%20image%2020240219151811.png" alt="" /><br><br>订阅者中间也是存在 Queue Group 概念的。<br><br><em><strong>注意：发起 request 如果没有reply，那么服务端会返回 No Responders 消息。</strong></em></td>
+      </tr>
+      <tr>
+          <td><strong>6</strong></td>
+          <td>Queue groups</td>
+          <td>队列组</td>
+          <td>订阅者使用同一个队列名称，它们就会成为一个队列组。每次队列组接收到消息时，只有队列组中_<strong>随机选择</strong>_的一个订阅者会消费一条消息，内置的负载均衡。</td>
+      </tr>
+      <tr>
+          <td><strong>7</strong></td>
+          <td>Message</td>
+          <td>消息 or 事件</td>
+          <td>一条消息包含了以下内容：<br><br>- Subject.<br>    <br>- A payload in the form of a byte array.<br>    <br>- Any number of header fields.<br>    <br>- An <em><strong>optional</strong></em> &lsquo;reply&rsquo; address field.</td>
+      </tr>
+      <tr>
+          <td><strong>8</strong></td>
+          <td>Subject wildcards<br><br><a href="https://docs.nats.io/nats-concepts/subjects#wildcards">https://docs.nats.io/nats-concepts/subjects#wildcards</a></td>
+          <td>主题通配符</td>
+          <td>订阅者可以使用这些通配符_<strong>通过单个订阅收听多个主题。</strong>_<br><br><em>注意：但发布者将始终使用完全指定的主题，而不使用通配符。</em></td>
+      </tr>
+      <tr>
+          <td><strong>9</strong></td>
+          <td>JetStream<br><br><a href="https://docs.nats.io/nats-concepts/jetstream">https://docs.nats.io/nats-concepts/jetstream</a></td>
+          <td>无 / 流</td>
+          <td>NATS 中一个功能特性，它是一个内置的分布式存储，在 CORE nats 的基础上扩展了更多的功能和更高的 QoS。功能上：<br><br>- <strong>Stream</strong>：将 NATS 消息存储在流中，提供多种保留策略、限制、丢弃策略和主题映射功能。<br>    <br>- <strong>Consumer</strong>: 让客户端应用订阅或拉取流中的消息，支持多种重放策略、确认机制和流控功能<br>    <br>- <strong>Persistence:</strong> 将流的数据复制到多个 NATS 服务器，提供容错能力和加密存储功能<br>    <br>- <strong>KV Store:</strong> 可以将消息与键关联，提供存储、检索、删除和监听键值变化的功能。<br>    <br>- <strong>Object Store:</strong> JetStream 可以存储任意大小的对象（如文件），提供分块、校验和、元数据等功能。<br>    <br><br>其中最核心（开发常用）的概念就是：stream 和 consumer。</td>
+      </tr>
+      <tr>
+          <td><em><strong>10</strong></em></td>
+          <td>Stream<br><br><a href="https://docs.nats.io/nats-concepts/jetstream/streams">https://docs.nats.io/nats-concepts/jetstream/streams</a></td>
+          <td>流</td>
+          <td>流即是消息存储，它定义了消息的存储方式以及保留的限制。<br><br>更具体的内容参见 <em><strong>#5.1 Stream 配置解析</strong></em></td>
+      </tr>
+      <tr>
+          <td><em><strong>11</strong></em></td>
+          <td>Consumer</td>
+          <td>消费者</td>
+          <td>消费者作为客户端的接口，使用存储在流中的消息，跟踪客户端传递和确认的消息。Nats 同时支持 <em><strong>pull</strong></em> 和 <em><strong>push</strong></em> 两种消费模式；consumer 还提供了 durable 配置，用于持久化 consumer 消费信息（除非设置了 InactiveThreshold）<br><br>更具体的内容参见 <em><strong>#5.2 Consumer 配置解析</strong></em></td>
+      </tr>
+      <tr>
+          <td><em><strong>12</strong></em></td>
+          <td>Replay / Redelivery</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><em><strong>13</strong></em></td>
+          <td>Raft Group<br><br>  <br><br><a href="https://docs.nats.io/running-a-nats-service/configuration/clustering/jetstream_clustering">https://docs.nats.io/running-a-nats-service/configuration/clustering/jetstream_clustering</a></td>
+          <td>RAFT 组</td>
+          <td>对于特定内容达成一致的分组，nats 中有 meta, stream, consumer 几种组。<br><br>Meta: 全部节点都是组成员。<strong>负责：JetStream API + 集群管理。</strong><br><br><img src="/images/nats/Pasted%20image%2020240219151827.png" alt="" /><br><br>Stream: (根据 replicas 配置选择组内的服务器成员)。<strong>负责：stream 数据</strong><br><br><img src="/images/nats/Pasted%20image%2020240219151839.png" alt="" /><br><br>Consumer: （根据 stream group的成员来确定消费者组内的成员）。<strong>负责：消费者状态</strong><br><br><img src="/images/nats/Pasted%20image%2020240219151902.png" alt="" /></td>
+      </tr>
+      <tr>
+          <td><em><strong>14</strong></em></td>
+          <td>KV Store</td>
+          <td>键值存储</td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><em><strong>15</strong></em></td>
+          <td>Object Store</td>
+          <td>对象存储</td>
+          <td></td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="2-软件架构集群模式">
+  2. 软件架构（集群模式）
+  <a class="anchor" href="#2-%e8%bd%af%e4%bb%b6%e6%9e%b6%e6%9e%84%e9%9b%86%e7%be%a4%e6%a8%a1%e5%bc%8f">#</a>
+</h3>
+<p>Nats 自身是提供了多种运行方式:</p>
+<ul>
+<li>
+<p>单机
+只运行了一个 nats 实例。</p>
+</li>
+<li>
+<p>普通集群：
+运行了 3 / 5 个实例，其中一个为集群 leader，此时集群如下：</p>
+  <img src="/images/nats/Pasted%20image%2020240219151432.png"/>
+</li>
+<li>
+<p>超级集群：
+存在多个集群，集群之间可以通过 <em><strong>网关</strong></em> 来传播消息_<strong>。</strong>_网关提供了三种传播机制：<em>这里 A / B 分别代表两个集群。</em></p>
+<ul>
+<li><strong>Optimistic Mode 乐观模式</strong></li>
+</ul>
+<p>   当 A 中的发布者发布“foo”时，A 网关将检查集群 B 是否已注册对“foo”没有兴趣。如果没有，则将“foo”转发给B。如果B收到“foo”后，在“foo”上没有订阅者，则B将向A发送一条网关协议消息，表示它对“foo”没有兴趣，从而阻止将来的消息关于“foo”被转发。</p>
+<p>    当后续 B 中有订阅者关注 &ldquo;foo&rdquo;, 那么 B 会发送一条网关协议，用来取消对 &ldquo;foo&rdquo; 没兴趣的设置。</p>
+<ul>
+<li><strong>Interest-only Mode 兴趣（关注）模式</strong></li>
+</ul>
+<p>    当 A 上的网关发送许多关于 B 不感兴趣的各种主题的消息时。 B 发送一条网关协议消息，要求 A 乐观地停止发送，如果已知对该主题感兴趣，则发送。随着 B 上的订阅不断增多，B 将向 A 更新其主题兴趣。</p>
+<ul>
+<li><strong>Queue Subscriptions 队列订阅模式</strong></li>
+</ul>
+<p>    服务器将始终首先尝试为本地队列订阅者提供服务，并且仅在未找到本地队列订阅者时进行故障转移。服务器将选择 RTT 最低的集群。</p>
+</li>
+<li>
+<p>叶子结点/集群（代理模式）：</p>
+<p><img src="/images/nats/Pasted%20image%2020240219151344.png" alt="" />
+<em>透明地从本地客户端路由消息到一个或多个远程 NATS 系统。叶子结点采用本地的认证进行认证，连接远程 NATS 结点时，采用远程 NATS 系统的认证。通常用来降低 local 服务的延迟和流量。</em>
+注意：如果集群中一个节点配置为叶子结点，那么其余结点也要配置为叶子结点。</p>
+</li>
+</ul>
+<p>一般场景下最常用的就是集群模式。</p>
+<p>Qs:</p>
+<p>运维时怎么保证集群各节点的负载均衡？怎么保证集群的高可用？</p>
+<h3 id="3-nats-客户端协议">
+  3. Nats 客户端协议
+  <a class="anchor" href="#3-nats-%e5%ae%a2%e6%88%b7%e7%ab%af%e5%8d%8f%e8%ae%ae">#</a>
+</h3>
+<p><a href="https://docs.nats.io/reference/reference-protocols/nats-protocol">https://docs.nats.io/reference/reference-protocols/nats-protocol</a></p>
+<p>Nats 协议是一个_<strong>文本协议</strong>_ 这意味着，我们通过 telnet 就可以与之交互，通过抓包工具也可以很轻松的分析客户端和服务器之间的交互行为</p>
+<table>
+  <thead>
+      <tr>
+          <th>Op 操作</th>
+          <th>发送方</th>
+          <th>操作场景描述</th>
+          <th>注意事项</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>INFO</td>
+          <td>服务器</td>
+          <td>当客户端建立连接时，或者服务器集群拓扑发生变化时，服务器发送自身的信息，配置和安全要求给客户端</td>
+          <td></td>
+      </tr>
+      <tr>
+          <td>CONNECT</td>
+          <td>客户端</td>
+          <td>当客户端收到服务器的 INFO 消息后，客户端发送自身的信息和安全信息给服务器，以完成连接</td>
+          <td>verbose 字段默认为 false，表示服务器不会对每个消息回复 +OK</td>
+      </tr>
+      <tr>
+          <td>PUB</td>
+          <td>客户端</td>
+          <td>当客户端想要发布一个消息给指定的主题时，客户端发送 PUB 消息，可选地提供一个回复主题</td>
+          <td>消息内容是可选的，如果没有内容，需要把内容大小设置为 0，并且仍然需要第二个 CRLF</td>
+      </tr>
+      <tr>
+          <td>HPUB</td>
+          <td>客户端</td>
+          <td>和 PUB 相同，但是消息内容包含了 NATS 头部信息</td>
+          <td>消息内容是可选的，如果没有内容，需要把总消息大小设置为头部大小，并且仍然需要第二个 CRLF</td>
+      </tr>
+      <tr>
+          <td>SUB</td>
+          <td>客户端</td>
+          <td>当客户端想要订阅一个主题时，客户端发送 SUB 消息，可选地加入一个分布式队列组</td>
+          <td>主题名称必须是合法的，不能包含空格或者分隔符</td>
+      </tr>
+      <tr>
+          <td>UNSUB</td>
+          <td>客户端</td>
+          <td>当客户端想要取消订阅一个主题时，客户端发送 UNSUB 消息，可选地指定一个消息数量，达到后自动取消订阅</td>
+          <td></td>
+      </tr>
+      <tr>
+          <td>MSG</td>
+          <td>服务器</td>
+          <td>当服务器向客户端发送一个应用消息时，服务器发送 MSG 消息，包含主题，sid，可选的回复主题和内容</td>
+          <td></td>
+      </tr>
+      <tr>
+          <td>HMSG</td>
+          <td>服务器</td>
+          <td>和 MSG 相同，但是消息内容包含了 NATS 头部信息</td>
+          <td></td>
+      </tr>
+      <tr>
+          <td>PING</td>
+          <td>服务器或客户端</td>
+          <td>当服务器或客户端想要检测对方是否存活时，发送 PING 消息</td>
+          <td>服务器会定期发送 PING 消息给客户端，如果客户端没有及时回复 PONG，服务器会断开连接</td>
+      </tr>
+      <tr>
+          <td>PONG</td>
+          <td>服务器或客户端</td>
+          <td>当服务器或客户端收到 PING 消息时，回复 PONG 消息</td>
+          <td>服务器会把正常的流量当作 PING/PONG 的代理，所以如果客户端有消息流动，可能不会收到服务器的 PING</td>
+      </tr>
+      <tr>
+          <td>+OK</td>
+          <td>服务器</td>
+          <td>当服务器收到客户端的合法消息时，如果 verbose 字段为 true，服务器回复 +OK 消息</td>
+          <td>大多数客户端会把 verbose 字段设置为 false</td>
+      </tr>
+      <tr>
+          <td>-ERR</td>
+          <td>服务器</td>
+          <td>当服务器遇到协议错误，授权错误，或者其他运行时错误时，服务器发送 -ERR 消息给客户端</td>
+          <td>大多数这些错误会导致服务器关闭连接，客户端需要异步处理这些错误</td>
+      </tr>
+  </tbody>
+</table>
+<p>从表里没有看到 Request 对不对？那是因为 Request 是基于 Pub / Sub 实现的 API，因此不在通信协议中，属于应用层的功能。
+<img src="/images/nats/Pasted%20image%2020240223184745.png" alt="" /></p>
+<p>另外也没有看到 JetStream 相关的 Op 对不对？翻下代码就可以发现，它是基于 Request 机制实现的 pub，但通过前面的介绍，我们已经知道 CORE Nats 的 Reply 其实是 Subscriber 回复的，而 JetStream 是提供可靠存储的 ACK 并不能依赖于 Consumer ，所以这里服务器一定是有特殊处理。我们在 <strong>#6.5 JetStream 消息的投递和消费</strong> 一节中再详细展开。</p>
+<p><img src="/images/nats/Pasted%20image%2020240223184756.png" alt="" /></p>
+<h3 id="4-nats-server-配置解析">
+  4. NATS-Server 配置解析
+  <a class="anchor" href="#4-nats-server-%e9%85%8d%e7%bd%ae%e8%a7%a3%e6%9e%90">#</a>
+</h3>
+<p><a href="https://docs.nats.io/running-a-nats-service/configuration">https://docs.nats.io/running-a-nats-service/configuration</a></p>
+<p>Nats 端口列表</p>
+<table>
+  <thead>
+      <tr>
+          <th></th>
+          <th></th>
+          <th></th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><em><strong>默认端口号</strong></em></td>
+          <td><em><strong>作用</strong></em></td>
+          <td><em><strong>补充说明</strong></em></td>
+      </tr>
+      <tr>
+          <td>443</td>
+          <td>WebSocket 协议端口，通过 websocket 来进行交互</td>
+          <td></td>
+      </tr>
+      <tr>
+          <td>1883</td>
+          <td>MQTT 协议支持</td>
+          <td></td>
+      </tr>
+      <tr>
+          <td>4222</td>
+          <td>NATS 自身端口</td>
+          <td></td>
+      </tr>
+      <tr>
+          <td>4111</td>
+          <td>叶节点允许本地客户端通过端口 4111 连接，且不需要任何认证</td>
+          <td></td>
+      </tr>
+      <tr>
+          <td>6222</td>
+          <td>集群路由监听端口</td>
+          <td></td>
+      </tr>
+      <tr>
+          <td>7222</td>
+          <td>网关监听端口</td>
+          <td></td>
+      </tr>
+      <tr>
+          <td>7422</td>
+          <td>叶子结点监听端口</td>
+          <td></td>
+      </tr>
+      <tr>
+          <td>8222</td>
+          <td>监控服务端口</td>
+          <td></td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="5-jetstream-配置解析">
+  5. JetStream 配置解析
+  <a class="anchor" href="#5-jetstream-%e9%85%8d%e7%bd%ae%e8%a7%a3%e6%9e%90">#</a>
+</h3>
+<p>Nats 的 jetstream 是通过 raft 来解决分布式一致性问题，以此实现 stream 相关的功能。</p>
+<p><img src="/images/nats/Pasted%20image%2020240219152619.png" alt="" /></p>
+<p>上图中展示了 jetstream 的一些关键点：</p>
+<ul>
+<li><em>Stream 可以存储多个 subject的消息。</em></li>
+<li><em>消费者有多种消费模式（pull/push），还可以过滤stream 中的 subject 进行消费。</em></li>
+<li><em>消费有多种确认模式（ack）</em></li>
+</ul>
+<h4 id="51-stream-配置清单">
+  5.1 Stream 配置清单
+  <a class="anchor" href="#51-stream-%e9%85%8d%e7%bd%ae%e6%b8%85%e5%8d%95">#</a>
+</h4>
+<p><a href="https://docs.nats.io/nats-concepts/jetstream/streams#configuration">https://docs.nats.io/nats-concepts/jetstream/streams#configuration</a></p>
+<p>我们当前使用的 nats 版本对应 <em><strong>2.9.21</strong></em> 下表配置中，Metadata，compression, FirstSeq 和 SubjectTransform 暂不可用。</p>
+<table>
+  <thead>
+      <tr>
+          <th></th>
+          <th></th>
+          <th></th>
+          <th></th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>配置选项</td>
+          <td>描述</td>
+          <td>版本</td>
+          <td>可编辑</td>
+      </tr>
+      <tr>
+          <td>Name</td>
+          <td>流的名称，必须是唯一的</td>
+          <td>2.2.0</td>
+          <td>❌</td>
+      </tr>
+      <tr>
+          <td>Storage</td>
+          <td>流的存储类型，可以是 File（默认）或 Memory</td>
+          <td>2.2.0</td>
+          <td>❌</td>
+      </tr>
+      <tr>
+          <td>Subjects</td>
+          <td>流订阅的主题列表，可以使用通配符</td>
+          <td>2.2.0</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td>Replicas</td>
+          <td>流的副本数量，必须大于等于 1</td>
+          <td>2.2.0</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td>Retention</td>
+          <td>流的保留策略，决定了何时删除消息</td>
+          <td>2.2.0</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td>MaxAge</td>
+          <td>流允许的最大消息存活时间，0 表示无限制</td>
+          <td>2.2.0</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td>MaxBytes</td>
+          <td>流允许的最大字节数，-1 表示无限制</td>
+          <td>2.2.0</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td>MaxMsgs</td>
+          <td>流允许的最大消息数量，-1 表示无限制</td>
+          <td>2.2.0</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td>MaxMsgSize</td>
+          <td>流允许接收的最大消息体</td>
+          <td>2.2.0</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td>MaxConsumers</td>
+          <td>流允许的最大消费者数量，-1 表示无限制</td>
+          <td>2.2.0</td>
+          <td>❌</td>
+      </tr>
+      <tr>
+          <td>NoAck</td>
+          <td>流是否禁用确认机制，如果为 true，则不需要消费者确认消息。</td>
+          <td>2.2.0</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td>Retention</td>
+          <td>声明流的保留策略</td>
+          <td>2.2.0</td>
+          <td>❌</td>
+      </tr>
+      <tr>
+          <td>Discard</td>
+          <td>流达到限制时的丢弃策略，可以是 DiscardOld（默认）、DiscardNew 或 DiscardNewPerSubject</td>
+          <td>2.2.0</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td>DuplicateWindow</td>
+          <td>流的去重窗口，用于检测和删除重复的消息，0 表示禁用去重</td>
+          <td>2.2.0</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td>Placement</td>
+          <td>流的放置选项，可以指定集群和标签</td>
+          <td>2.2.0</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td>Mirror</td>
+          <td>流的镜像选项，可以指定源流和过滤条件</td>
+          <td>2.2.0</td>
+          <td>已设置不可修改</td>
+      </tr>
+      <tr>
+          <td>Sources</td>
+          <td>流的源选项，可以指定一个或多个源流和过滤条件</td>
+          <td>2.2.0</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td>MaxMsgsPerSubject</td>
+          <td>流允许的每个主题的最大消息数量，0 表示无限制</td>
+          <td>2.3.0</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td>Description</td>
+          <td>描述信息</td>
+          <td>2.3.3</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td>Sealed</td>
+          <td>stream 封存，不允许删除。</td>
+          <td>2.6.2</td>
+          <td>可修改一次</td>
+      </tr>
+      <tr>
+          <td>DenyDelete</td>
+          <td>限制通过 API 从 stream 中删除消息。</td>
+          <td>2.6.2</td>
+          <td>❌</td>
+      </tr>
+      <tr>
+          <td>DenyPurge</td>
+          <td>限制通过 API 从 stream 中清除消息。</td>
+          <td>2.6.2</td>
+          <td>❌</td>
+      </tr>
+      <tr>
+          <td>AllowRollup</td>
+          <td>流是否允许滚动更新，如果为 true，则可以使用 Nats-Rollup 头部删除旧的消息</td>
+          <td>2.6.2</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td>RePublish</td>
+          <td>存储在 stream 会马上重新往配置的 subject 发布消息</td>
+          <td>2.8.3</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td>AllowDirect</td>
+          <td>？？？</td>
+          <td></td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td>MirroDirect</td>
+          <td>？？？</td>
+          <td>2.9.0</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td>DiscardNewPerSubject</td>
+          <td>如果为 true, 丢弃策略为 DiscardNew 时，则丢弃每个 subject 新来的消息。</td>
+          <td>2.9.0</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td>Metadata</td>
+          <td>????</td>
+          <td>2.10.0</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td>Compression</td>
+          <td>文件存储压缩算法，s2 = snappy</td>
+          <td>2.10.0</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td>FirstSeq</td>
+          <td>指定 stream 的初始序列号</td>
+          <td>2.10.0</td>
+          <td>❌</td>
+      </tr>
+      <tr>
+          <td>SubjectTransform</td>
+          <td>流的主题转换选项，可以指定源主题和目标主题，用于在存储消息时修改主题</td>
+          <td>2.10.0</td>
+          <td>✅</td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="52-consumer-配置清单">
+  5.2 Consumer 配置清单
+  <a class="anchor" href="#52-consumer-%e9%85%8d%e7%bd%ae%e6%b8%85%e5%8d%95">#</a>
+</h4>
+<p><a href="https://docs.nats.io/nats-concepts/jetstream/consumers">https://docs.nats.io/nats-concepts/jetstream/consumers</a></p>
+<h5 id="521-通用配置">
+  5.2.1 通用配置
+  <a class="anchor" href="#521-%e9%80%9a%e7%94%a8%e9%85%8d%e7%bd%ae">#</a>
+</h5>
+<table>
+  <thead>
+      <tr>
+          <th></th>
+          <th></th>
+          <th></th>
+          <th></th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><em><strong>配置选项</strong></em></td>
+          <td><em><strong>描述</strong></em></td>
+          <td><em><strong>版本</strong></em></td>
+          <td><em><strong>是否可编辑</strong></em></td>
+      </tr>
+      <tr>
+          <td><em><strong>Durable</strong></em></td>
+          <td><em>订阅绑定到使用者，直到被显示删除</em></td>
+          <td>2.2.0</td>
+          <td>❌</td>
+      </tr>
+      <tr>
+          <td><em><strong>FilterSubject</strong></em></td>
+          <td><em>过滤 consumer 消费的主题，不能和 FilterSubjects 同时使用</em></td>
+          <td>2.2.0</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td><em><strong>AckPolicy</strong></em></td>
+          <td><em>客户端确认策略：</em><br><br><em><code>AckExplicit</code></em>: 默认策略，每条消息单独确认。<em><br><br></em><code>AckNone</code><em>: 不缺人任何消息，服务器发送时即确认。</em><br><br><em><code>AckAll</code></em>：收到系列消息，只需要确认最后一条。</td>
+          <td>2.2.0</td>
+          <td>❌</td>
+      </tr>
+      <tr>
+          <td><em><strong>AckWait</strong></em></td>
+          <td><em>一旦任何单个消息被传递给消费者，服务器将等待其确认的持续时间。如果没有及时收到确认，消息将被重新发送。</em></td>
+          <td>2.2.0</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td><em><strong>DeliverPolicy</strong></em></td>
+          <td>消费者接受消息的策略：<br><br><code>DeliverAll</code>：<em>默认策略，将从最早可用的消息开始消费</em><br><br><code>DeliverLast</code>: 开始消费后，消费加入到 stream 中的最新一条消息（如果过滤，则是匹配的最后一条）<br><br><code>DeliverNew</code>: 开始消费后，<em>只会开始接收在消费者创建之后创建的消息。</em><br><br><code>DeliverByStartSequence</code>: 匹配序列号的第一条或者下一条<code>seq &gt;= OptStartSeq</code><br><br><code>DeliverByStartTime</code>: 匹配时间的第一条或者下一条 <code>time &gt;= OptStartTime</code><br><br><code>DeliverLastPerSubject</code>: 开始消费后，消费（匹配的）每个 subject 的最新一条消息。</td>
+          <td>2.2.0</td>
+          <td>❌</td>
+      </tr>
+      <tr>
+          <td><em><strong>OptStartSeq</strong></em></td>
+          <td><code>DeliverByStartSequence</code> 配合使用</td>
+          <td>2.2.0</td>
+          <td>❌</td>
+      </tr>
+      <tr>
+          <td><em><strong>OptStartTime</strong></em></td>
+          <td><code>DeliverByStartTime</code> 配合使用</td>
+          <td>2.2.0</td>
+          <td>❌</td>
+      </tr>
+      <tr>
+          <td><em><strong>Description</strong></em></td>
+          <td>消费者描述</td>
+          <td></td>
+          <td></td>
+      </tr>
+      <tr>
+          <td><em><strong>InactiveThreshold</strong></em></td>
+          <td>Consumer 超过这个时间未活动会被清理，在 2.9 以前仅对 临时消费者生效。</td>
+          <td>2.2.0</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td><em><strong>MaxAckPending</strong></em></td>
+          <td>定义为确认的消息的最大数量，一旦到达这个限制，那么将暂定投递消息。</td>
+          <td>2.2.0</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td><em><strong>MaxDeliver</strong></em></td>
+          <td>尝试传送消息的最大次数。消费者未确认（NAck或者未发送确认）时会重新传递。</td>
+          <td>2.2.0</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td><em><strong>ReplayPolicy</strong></em></td>
+          <td><code>ReplayOriginal</code>：模拟接收到消息的时间向 consumer 推送。<br><br><code>ReplayInstant</code>：消息将尽快推送到客户端。</td>
+          <td>2.2.0</td>
+          <td>❌</td>
+      </tr>
+      <tr>
+          <td><em><strong>Replicas</strong></em></td>
+          <td>设置 consumer group 的副本数，默认继承 stream。</td>
+          <td>2.8.3</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td><em><strong>MemoryStorage</strong></em></td>
+          <td>设置将 Consumer 的状态保留在内存中，而不是继承 stream 的存储类型。</td>
+          <td>2.8.3</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td><em><strong>SampleFrequency</strong></em></td>
+          <td>采样率：？？？</td>
+          <td>2.2.0</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td><em><strong>Metadata</strong></em></td>
+          <td><em>用于关联消费者的元数据</em></td>
+          <td>2.10.0</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td><em><strong>FilterSubjects</strong></em></td>
+          <td><em>类似于 FilterSubject，但是多个</em></td>
+          <td>2.10.0</td>
+          <td>✅</td>
+      </tr>
+  </tbody>
+</table>
+<h5 id="522-拉模式---专属配置">
+  5.2.2   拉模式 - 专属配置
+  <a class="anchor" href="#522-%e6%8b%89%e6%a8%a1%e5%bc%8f---%e4%b8%93%e5%b1%9e%e9%85%8d%e7%bd%ae">#</a>
+</h5>
+<table>
+  <thead>
+      <tr>
+          <th></th>
+          <th></th>
+          <th></th>
+          <th></th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><em><strong>配置选项</strong></em></td>
+          <td><em><strong>描述</strong></em></td>
+          <td><em><strong>版本</strong></em></td>
+          <td><em><strong>是否可编辑</strong></em></td>
+      </tr>
+      <tr>
+          <td><em><strong>MaxWaiting</strong></em></td>
+          <td>最大拉取请求数</td>
+          <td>2.2.0</td>
+          <td>❌</td>
+      </tr>
+      <tr>
+          <td><em><strong>MaxRequestExpires</strong></em></td>
+          <td>单个拉取请求等待消息可供拉取的最长时间</td>
+          <td>2.2.0</td>
+          <td>❌</td>
+      </tr>
+      <tr>
+          <td><em><strong>MaxRequestBatch</strong></em></td>
+          <td>单个请求的最大数量 (<em>MaxRequestMaxBytes 共同作用，先到先限制</em>)</td>
+          <td>2.7.0</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td><em><strong>MaxRequestMaxBytes</strong></em></td>
+          <td>单个请求的最大字节数</td>
+          <td>2.8.3</td>
+          <td>✅</td>
+      </tr>
+  </tbody>
+</table>
+<h5 id="523-推模式---专属配置">
+  5.2.3   推模式 - 专属配置
+  <a class="anchor" href="#523-%e6%8e%a8%e6%a8%a1%e5%bc%8f---%e4%b8%93%e5%b1%9e%e9%85%8d%e7%bd%ae">#</a>
+</h5>
+<table>
+  <thead>
+      <tr>
+          <th></th>
+          <th></th>
+          <th></th>
+          <th></th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><em><strong>配置选项</strong></em></td>
+          <td><em><strong>描述</strong></em></td>
+          <td><em><strong>版本</strong></em></td>
+          <td><em><strong>是否可编辑</strong></em></td>
+      </tr>
+      <tr>
+          <td><em><strong>DeliverSubject</strong></em></td>
+          <td>设置服务器推送的主题，将隐式的设置消费者是基于推送。</td>
+          <td>2.2.0</td>
+          <td>❌</td>
+      </tr>
+      <tr>
+          <td><em><strong>DeliverGroup</strong></em></td>
+          <td>类似于 queue group</td>
+          <td>2.2.0</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td><em><strong>FlowControl</strong></em></td>
+          <td>启用滑动窗口协议（服务端和客户端通信交换），用于控制服务器向客户端推送多少消息。</td>
+          <td>2.2.0</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td><em><strong>IdleHeartbeat</strong></em></td>
+          <td>服务器定时向客户端发送状态消息（在心跳周期内没有新消息发送），客户端可以感知到服务器的状态。</td>
+          <td>2.2.0</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td><em><strong>RateLimit</strong></em></td>
+          <td>限制向消费者发送消息的的速率 bits Per Second</td>
+          <td>2.2.0</td>
+          <td>✅</td>
+      </tr>
+      <tr>
+          <td><em><strong>HeadersOnly</strong></em></td>
+          <td>仅传送流中的消息标头，而不传送正文。其中会携带 Nats-Msg-Size 来标识负载的大小。</td>
+          <td>2.6.2</td>
+          <td>✅</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="6-关键流程">
+  6. 关键流程
+  <a class="anchor" href="#6-%e5%85%b3%e9%94%ae%e6%b5%81%e7%a8%8b">#</a>
+</h3>
+<p>这里梳理了一些 Nats 的关键流程，用来理解 nats 中的设计和实现原理。</p>
+<h4 id="61-服务启动--集群">
+  6.1  服务启动 / 集群
+  <a class="anchor" href="#61-%e6%9c%8d%e5%8a%a1%e5%90%af%e5%8a%a8--%e9%9b%86%e7%be%a4">#</a>
+</h4>
+<p> 集群 gossip 流程示意图：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-Go" data-lang="Go"><span style="display:flex;"><span><span style="color:#a6e22e">nats</span><span style="color:#f92672">-</span><span style="color:#a6e22e">server</span> <span style="color:#f92672">-</span><span style="color:#a6e22e">D</span> <span style="color:#f92672">-</span><span style="color:#a6e22e">p</span> <span style="color:#ae81ff">4222</span> <span style="color:#f92672">-</span><span style="color:#a6e22e">cluster</span> <span style="color:#a6e22e">nats</span>:<span style="color:#75715e">//localhost:6222
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">nats</span><span style="color:#f92672">-</span><span style="color:#a6e22e">server</span> <span style="color:#f92672">-</span><span style="color:#a6e22e">D</span> <span style="color:#f92672">-</span><span style="color:#a6e22e">p</span> <span style="color:#ae81ff">4333</span> <span style="color:#f92672">-</span><span style="color:#a6e22e">cluster</span> <span style="color:#a6e22e">nats</span>:<span style="color:#75715e">//localhost:6333 -routes nats://localhost:6222
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">nats</span><span style="color:#f92672">-</span><span style="color:#a6e22e">server</span> <span style="color:#f92672">-</span><span style="color:#a6e22e">D</span> <span style="color:#f92672">-</span><span style="color:#a6e22e">p</span> <span style="color:#ae81ff">4444</span> <span style="color:#f92672">-</span><span style="color:#a6e22e">cluster</span> <span style="color:#a6e22e">nats</span>:<span style="color:#75715e">//localhost:6444 -routes nats://localhost:6333
+</span></span></span></code></pre></div><p><img src="/images/nats/Pasted%20image%2020240219152033.png" alt="" /></p>
+<p>  流程解释说明：</p>
+<ul>
+<li>nats-1 启动</li>
+<li>nats-2 连接到 nats-1, nats-1 回复 INFO 消息，并将 nats-2 添加到自己的路由，同时建立到 nats-2 的连接。</li>
+<li>nats-3 连接到 nats-2, nats-2 回复 INFO 消息，并将 nats-3 添加到自己的路由，同时建立到 nats-3 的连接。这里 nats-2 会将新路由（ nats-3 ）传播（INFO 消息）到自己已知的服务节点，也就是 nats-1, 而 nats-1 收到 INFO 消息后，会向 nats-3 建立连接，与前面的流程类似。</li>
+</ul>
+<h4 id="62--pub--sub">
+  6.2  PUB / SUB
+  <a class="anchor" href="#62--pub--sub">#</a>
+</h4>
+<p>  整体流程概览如下：</p>
+<p><img src="/images/nats/Pasted%20image%2020240219114807.png" alt="" /></p>
+<h5 id="621sub">
+  6.2.1  SUB
+  <a class="anchor" href="#621sub">#</a>
+</h5>
+<p>  当客户端新增订阅时，会向服务器发送一条 SUB 消息，服务器则会更新客户端（及对应账户）的订阅关系，同时向其余集群中的 route (服务节点) 发送 RS+ （集群通讯协议）消息以更新订阅。</p>
+<h5 id="622pub">
+   6.2.2 PUB
+  <a class="anchor" href="#622pub">#</a>
+</h5>
+<p>  客户端发布一条消息，服务器内部匹配（有缓存设计以提高匹配效率）相关订阅客户端。将消息加入到客户端的发送缓冲区（注意：订阅中区分 普通订阅和 队列，队列模式则需要随机选中一个客户端），当相应的 route 节点收到消息后，会再从本地的订阅列表中匹配当前节点中的客户端推送消息。</p>
+<h4 id="63-request--reply">
+  6.3  Request / Reply
+  <a class="anchor" href="#63-request--reply">#</a>
+</h4>
+<p>从 Nats 设计的协议已经知道，Request 和 Reply 两个 API 是基于 PUB / SUB 机制。PUB 参数中可以携带一个 reply 参数，该 reply 参数是发布时自动创建的一个 _INBOX subject。服务端在推送消息时，会将 reply 放到 MSG 消息头传递给订阅者。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// This processes the sublist results for a given message.  
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// Returns if the message was delivered to at least target and queue filters.  
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">c</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">client</span>) <span style="color:#a6e22e">processMsgResults</span>(<span style="color:#a6e22e">acc</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Account</span>, <span style="color:#a6e22e">r</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">SublistResult</span>, <span style="color:#a6e22e">msg</span>, <span style="color:#a6e22e">deliver</span>, <span style="color:#a6e22e">subject</span>, <span style="color:#a6e22e">reply</span> []<span style="color:#66d9ef">byte</span>, <span style="color:#a6e22e">flags</span> <span style="color:#66d9ef">int</span>) (<span style="color:#66d9ef">bool</span>, [][]<span style="color:#66d9ef">byte</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">creply</span> = <span style="color:#a6e22e">reply</span>
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Loop over all normal subscriptions that match.  
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">sub</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">r</span>.<span style="color:#a6e22e">psubs</span> {  
+</span></span><span style="display:flex;"><span>		<span style="color:#f92672">...</span>
+</span></span><span style="display:flex;"><span>		
+</span></span><span style="display:flex;"><span>	    <span style="color:#75715e">// Normal delivery  
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	    <span style="color:#a6e22e">mh</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">msgHeader</span>(<span style="color:#a6e22e">dsubj</span>, <span style="color:#a6e22e">creply</span>, <span style="color:#a6e22e">sub</span>)  
+</span></span><span style="display:flex;"><span>	    <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">deliverMsg</span>(<span style="color:#a6e22e">prodIsMQTT</span>, <span style="color:#a6e22e">sub</span>, <span style="color:#a6e22e">acc</span>, <span style="color:#a6e22e">dsubj</span>, <span style="color:#a6e22e">creply</span>, <span style="color:#a6e22e">mh</span>, <span style="color:#a6e22e">msg</span>, <span style="color:#a6e22e">rplyHasGWPrefix</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h4 id="64-新建-jetstream">
+  6.4  新建 jetstream
+  <a class="anchor" href="#64-%e6%96%b0%e5%bb%ba-jetstream">#</a>
+</h4>
+<p>在开始之前，我们需要对 multi-raft 有个大致的概念，示意图如下：
+<img src="/images/nats/Pasted%20image%2020240220113150.png" alt="" /></p>
+<p>stream raft group 就对应上图中的一个 raft group。与此同时，集群中所有开启 jetstream 功能的节点还会组成一个 meta raft group, 用来管理 jestream API  的执行和 jetstream 集群拓扑（节点上线离线）。</p>
+<p>从 nats-cli 的源码入手，我们可以找到：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// NewStreamFromDefault creates a new stream based on a supplied template and optionsfunc (m *Manager) NewStreamFromDefault(name string, dflt api.StreamConfig, opts ...StreamOption) (stream *Stream, err error) {  
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">var</span> <span style="color:#a6e22e">resp</span> <span style="color:#a6e22e">api</span>.<span style="color:#a6e22e">JSApiStreamCreateResponse</span>  
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">m</span>.<span style="color:#a6e22e">jsonRequest</span>(<span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Sprintf</span>(<span style="color:#a6e22e">api</span>.<span style="color:#a6e22e">JSApiStreamCreateT</span>, <span style="color:#a6e22e">name</span>), <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">cfg</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">resp</span>)  
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {  
+</span></span><span style="display:flex;"><span>       <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>  
+</span></span><span style="display:flex;"><span>    }  
+</span></span><span style="display:flex;"><span>  
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">m</span>.<span style="color:#a6e22e">streamFromConfig</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">resp</span>.<span style="color:#a6e22e">Config</span>, <span style="color:#a6e22e">resp</span>.<span style="color:#a6e22e">StreamInfo</span>), <span style="color:#66d9ef">nil</span>  
+</span></span><span style="display:flex;"><span>} 
+</span></span></code></pre></div><p>Manager 的含义是 JetStreamManager，代表与服务端 JS API 交互，其中 <code>api. JSApiStreamCreateT string = &quot;$JS.API.STREAM.CREATE.%s&quot;</code> 可以发现底层还是通过 PUB / SUB 机制实现的交互。</p>
+<p>在 nats-server 中检索可以发现，在 nats-server 内部定义了 JetStream 相关API 的 msgHandler。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">s</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Server</span>) <span style="color:#a6e22e">setJetStreamExportSubs</span>() <span style="color:#66d9ef">error</span> {  
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// Start the go routine that will process API requests received by the  
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#75715e">// subscription below when they are coming from routes, etc..    s.jsAPIRoutedReqs = newIPQueue[*jsAPIRoutedReq](s, &#34;Routed JS API Requests&#34;)  
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">startGoRoutine</span>(<span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">processJSAPIRoutedRequests</span>)  
+</span></span><span style="display:flex;"><span>  
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// This is the catch all now for all JetStream API calls.  
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">sysSubscribe</span>(<span style="color:#a6e22e">jsAllAPI</span>, <span style="color:#a6e22e">js</span>.<span style="color:#a6e22e">apiDispatch</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {  
+</span></span><span style="display:flex;"><span>       <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>  
+</span></span><span style="display:flex;"><span>    }  
+</span></span><span style="display:flex;"><span>  
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>  
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// API handles themselves.  
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#a6e22e">pairs</span> <span style="color:#f92672">:=</span> []<span style="color:#66d9ef">struct</span> {  
+</span></span><span style="display:flex;"><span>       <span style="color:#a6e22e">subject</span> <span style="color:#66d9ef">string</span>  
+</span></span><span style="display:flex;"><span>       <span style="color:#a6e22e">handler</span> <span style="color:#a6e22e">msgHandler</span>  
+</span></span><span style="display:flex;"><span>    }{  
+</span></span><span style="display:flex;"><span>       {<span style="color:#a6e22e">JSApiAccountInfo</span>, <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">jsAccountInfoRequest</span>},  
+</span></span><span style="display:flex;"><span>       {<span style="color:#a6e22e">JSApiTemplateCreate</span>, <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">jsTemplateCreateRequest</span>},  
+</span></span><span style="display:flex;"><span>       {<span style="color:#a6e22e">JSApiTemplates</span>, <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">jsTemplateNamesRequest</span>},  
+</span></span><span style="display:flex;"><span>       {<span style="color:#a6e22e">JSApiTemplateInfo</span>, <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">jsTemplateInfoRequest</span>},  
+</span></span><span style="display:flex;"><span>       {<span style="color:#a6e22e">JSApiTemplateDelete</span>, <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">jsTemplateDeleteRequest</span>},  
+</span></span><span style="display:flex;"><span>       {<span style="color:#a6e22e">JSApiStreamCreate</span>, <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">jsStreamCreateRequest</span>},  
+</span></span><span style="display:flex;"><span>       {<span style="color:#a6e22e">JSApiStreamUpdate</span>, <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">jsStreamUpdateRequest</span>},  
+</span></span><span style="display:flex;"><span>       {<span style="color:#a6e22e">JSApiStreams</span>, <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">jsStreamNamesRequest</span>},  
+</span></span><span style="display:flex;"><span>       {<span style="color:#a6e22e">JSApiStreamList</span>, <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">jsStreamListRequest</span>},  
+</span></span><span style="display:flex;"><span>       {<span style="color:#a6e22e">JSApiStreamInfo</span>, <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">jsStreamInfoRequest</span>},  
+</span></span><span style="display:flex;"><span>       {<span style="color:#a6e22e">JSApiStreamDelete</span>, <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">jsStreamDeleteRequest</span>},  
+</span></span><span style="display:flex;"><span>       {<span style="color:#a6e22e">JSApiStreamPurge</span>, <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">jsStreamPurgeRequest</span>},  
+</span></span><span style="display:flex;"><span>       {<span style="color:#a6e22e">JSApiStreamSnapshot</span>, <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">jsStreamSnapshotRequest</span>},  
+</span></span><span style="display:flex;"><span>       {<span style="color:#a6e22e">JSApiStreamRestore</span>, <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">jsStreamRestoreRequest</span>},  
+</span></span><span style="display:flex;"><span>       {<span style="color:#a6e22e">JSApiStreamRemovePeer</span>, <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">jsStreamRemovePeerRequest</span>},  
+</span></span><span style="display:flex;"><span>       {<span style="color:#a6e22e">JSApiStreamLeaderStepDown</span>, <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">jsStreamLeaderStepDownRequest</span>},  
+</span></span><span style="display:flex;"><span>       {<span style="color:#a6e22e">JSApiConsumerLeaderStepDown</span>, <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">jsConsumerLeaderStepDownRequest</span>},  
+</span></span><span style="display:flex;"><span>       {<span style="color:#a6e22e">JSApiMsgDelete</span>, <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">jsMsgDeleteRequest</span>},  
+</span></span><span style="display:flex;"><span>       {<span style="color:#a6e22e">JSApiMsgGet</span>, <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">jsMsgGetRequest</span>},  
+</span></span><span style="display:flex;"><span>       {<span style="color:#a6e22e">JSApiConsumerCreateEx</span>, <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">jsConsumerCreateRequest</span>},  
+</span></span><span style="display:flex;"><span>       {<span style="color:#a6e22e">JSApiConsumerCreate</span>, <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">jsConsumerCreateRequest</span>},  
+</span></span><span style="display:flex;"><span>       {<span style="color:#a6e22e">JSApiDurableCreate</span>, <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">jsConsumerCreateRequest</span>},  
+</span></span><span style="display:flex;"><span>       {<span style="color:#a6e22e">JSApiConsumers</span>, <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">jsConsumerNamesRequest</span>},  
+</span></span><span style="display:flex;"><span>       {<span style="color:#a6e22e">JSApiConsumerList</span>, <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">jsConsumerListRequest</span>},  
+</span></span><span style="display:flex;"><span>       {<span style="color:#a6e22e">JSApiConsumerInfo</span>, <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">jsConsumerInfoRequest</span>},  
+</span></span><span style="display:flex;"><span>       {<span style="color:#a6e22e">JSApiConsumerDelete</span>, <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">jsConsumerDeleteRequest</span>},  
+</span></span><span style="display:flex;"><span>    }  
+</span></span><span style="display:flex;"><span>  
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">js</span>.<span style="color:#a6e22e">mu</span>.<span style="color:#a6e22e">Lock</span>()  
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">js</span>.<span style="color:#a6e22e">mu</span>.<span style="color:#a6e22e">Unlock</span>()  
+</span></span><span style="display:flex;"><span>  
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">p</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">pairs</span> {  
+</span></span><span style="display:flex;"><span>       <span style="color:#a6e22e">sub</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">subscription</span>{<span style="color:#a6e22e">subject</span>: []byte(<span style="color:#a6e22e">p</span>.<span style="color:#a6e22e">subject</span>), <span style="color:#a6e22e">icb</span>: <span style="color:#a6e22e">p</span>.<span style="color:#a6e22e">handler</span>}  
+</span></span><span style="display:flex;"><span>       <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">js</span>.<span style="color:#a6e22e">apiSubs</span>.<span style="color:#a6e22e">Insert</span>(<span style="color:#a6e22e">sub</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {  
+</span></span><span style="display:flex;"><span>          <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>  
+</span></span><span style="display:flex;"><span>       }  
+</span></span><span style="display:flex;"><span>    }  
+</span></span><span style="display:flex;"><span>  
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>  
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>在 client 消息分发(deliverMsg) 的逻辑中会对匹配的 subscription 执行 icb (msgHandler)。</p>
+<blockquote>
+<p>在集群模式下，这些 JetStream API 的订阅也是会通过 route 客户端传导到集群中的每个节点。相当于每个节点都订阅/处理，JS API 的消息，但是只有 leader 节点可以处理。</p>
+</blockquote>
+<p><code>jsStreamCreateRequest</code> 后续代码逻辑（<em><strong>集群模式下</strong></em>, 单机只需要在本地操作即可）:</p>
+<blockquote>
+<p>jsStreamCluster(jetstream meta group) 的启动路径：
+<em><strong>Reload / Start -&gt; enableJetStream -&gt; enableJetStreamClustering -&gt; startRaftNode/setupMetaGroup -&gt; monitorCluster</strong></em></p>
+</blockquote>
+<ul>
+<li>通过 meta raft group 提交一条新增 stream 的日志消息（其中已经设置 raftgroup 的基本信息）参见 <code>jsClusteredStreamRequest</code> 函数
+<img src="/images/nats/Pasted%20image%2020240219183926.png" alt="" /></li>
+<li>jetstream 集群中的节点接收到该日志后（monitorCluster），会执行（applyMetaEntries）其中的操作 （assignStreamOp）添加 stream 执行逻辑参见 processStreamAssignment -&gt; processClusterCreateStream
+<ul>
+<li>新建一个 stream raft group 启动 raft 节点</li>
+<li>内部创建一个 stream 数据结构（mset= stream）</li>
+<li>启动监视协程 monitorStream，处理 raft group 中的事件（快照，领导者变更，日志应用）</li>
+</ul>
+</li>
+</ul>
+<h4 id="65-jetstream-消息的投递和消费">
+  6.5  JetStream 消息的投递和消费
+  <a class="anchor" href="#65-jetstream-%e6%b6%88%e6%81%af%e7%9a%84%e6%8a%95%e9%80%92%e5%92%8c%e6%b6%88%e8%b4%b9">#</a>
+</h4>
+<p>最简单的开始使用 JetStream 消费者的代码如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// connect to nats server
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">nc</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">nats</span>.<span style="color:#a6e22e">Connect</span>(<span style="color:#a6e22e">nats</span>.<span style="color:#a6e22e">DefaultURL</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// create jetstream context from nats connection
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">js</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">jetstream</span>.<span style="color:#a6e22e">New</span>(<span style="color:#a6e22e">nc</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">cancel</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">WithTimeout</span>(<span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Background</span>(), <span style="color:#ae81ff">30</span><span style="color:#f92672">*</span><span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Second</span>)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">cancel</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// get existing stream handle
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">stream</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">js</span>.<span style="color:#a6e22e">Stream</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#e6db74">&#34;foo&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// retrieve consumer handle from a stream
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">cons</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">stream</span>.<span style="color:#a6e22e">Consumer</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#e6db74">&#34;cons&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// consume messages from the consumer in callback
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">cc</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">cons</span>.<span style="color:#a6e22e">Consume</span>(<span style="color:#66d9ef">func</span>(<span style="color:#a6e22e">msg</span> <span style="color:#a6e22e">jetstream</span>.<span style="color:#a6e22e">Msg</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;Received jetstream message: &#34;</span>, string(<span style="color:#a6e22e">msg</span>.<span style="color:#a6e22e">Data</span>()))
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">msg</span>.<span style="color:#a6e22e">Ack</span>()
+</span></span><span style="display:flex;"><span>})
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">cc</span>.<span style="color:#a6e22e">Stop</span>()
+</span></span></code></pre></div><h5 id="651-消费者创建">
+  6.5.1 消费者创建
+  <a class="anchor" href="#651-%e6%b6%88%e8%b4%b9%e8%80%85%e5%88%9b%e5%bb%ba">#</a>
+</h5>
+<p>消费者可以显式或者隐式的创建，如果隐式创建往往都代表临时，也就是如果消费者不活跃则会被服务端删除。之后，客户端开始订阅消费者下发消息的 subject，push 方式等服务端推送，而 pull 模式则需要定时往服务端发送一条消息，触发消息下推。</p>
+<p>从 nats.go 的源码出发，StreamConsumerManager 接口定义了一个 JetStream 中 Consumer 的相关操作。我们首先看下 consumer 的创建，同样的客户端是通过 JS API 来完成调用：
+<img src="/images/nats/Pasted%20image%2020240220141151.png" alt="" /></p>
+<p>服务端统一使用了 jsConsumerCreateRequest 进行处理，其中逻辑与添加 stream 类似：jetstream集群模式下会创建一个raft group 设置好 leader, 并通过 meta group 来提交新增 consumer 的日志，每个节点会处理该消息（<em>processConsumerAssignment-&gt;processClusterCreateConsumer</em>）：</p>
+<ul>
+<li>获取到流</li>
+<li>通过 addConsumerWithAssignment 添加一个 consumer</li>
+<li>（leader）发送响应</li>
+</ul>
+<blockquote>
+<p>这个操作会在 stream raft group 的 部分/全部（取决于 consumer 配置的 Replicas）节点中创建一个 raft group (consumer) 用来保存 consumer 的相关信息（消费点位）。同时在 stream 对应的节点中添加 consumer 实例。</p>
+</blockquote>
+<p>再回到客户端，consumer 创建（查询）后，获取到 consume 的信息，从中获取到 delivery subject（代表 consumer 消费的消息会从这个 subject 推送出来），后续客户端会订阅这个这个 subject。</p>
+<p><img src="/images/nats/Pasted%20image%2020240223112520.png" alt="" /></p>
+<p><em>这里可以说明服务端 consumer 和 客户端 consumer 没有必然的的联系，后续另外的客户端使用同一个 consumer 信息时，也只是共享 consumer 的配置，订阅相同的 subject，回到了 CORE NATS 提供的数据模型。</em></p>
+<h5 id="652-消息消费">
+  6.5.2 消息消费
+  <a class="anchor" href="#652-%e6%b6%88%e6%81%af%e6%b6%88%e8%b4%b9">#</a>
+</h5>
+<p>consumer 提供了两种模式 pull (PullSubscribe) 和 push(Subscribe) 模式，虽然叫做 pull 和 push，但是这两种机制的底层实现还是基于 nats 的 pub / sub 机制。push 等价于 subscribe，服务端会将消息直接推送到客户端；pull 则是客户端主动调用 JS API ”请求“，服务端 “响应” 数据给客户端消费。参见下图抓包数据分析截图（提前创建了 stream 和 consumer，指定了拉模式）</p>
+<p><img src="/images/nats/Pasted%20image%2020240223143951.png" alt="" /></p>
+<blockquote>
+<p>nats.go 的 jetstream 包针对 pull consumer 提供了丰富的API（尤其是 Consume）让 pull consumer 可以和 push consumer 用相似的方式来持续的处理消息。</p>
+</blockquote>
+<h6 id="6521-pull-模式">
+  6.5.2.1 pull 模式
+  <a class="anchor" href="#6521-pull-%e6%a8%a1%e5%bc%8f">#</a>
+</h6>
+<p>pullConsumer Consume 方法实现如下（已精简），与 PullSubscribe.Fetch 的原理类似（请求 JS API），区别在于 API 的形式表现不同：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">p</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">pullConsumer</span>) <span style="color:#a6e22e">Consume</span>(<span style="color:#a6e22e">handler</span> <span style="color:#a6e22e">MessageHandler</span>, <span style="color:#a6e22e">opts</span> <span style="color:#f92672">...</span><span style="color:#a6e22e">PullConsumeOpt</span>) (<span style="color:#a6e22e">ConsumeContext</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 解析消费选项
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">consumeOpts</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">parseConsumeOpts</span>(<span style="color:#66d9ef">false</span>, <span style="color:#a6e22e">opts</span><span style="color:#f92672">...</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;%w: %s&#34;</span>, <span style="color:#a6e22e">ErrInvalidOption</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// pull subject 是 JS.API 下的一个 subject 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// apiRequestNextT string = &#34;CONSUMER.MSG.NEXT.%s.%s&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">subject</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">apiSubj</span>(<span style="color:#a6e22e">p</span>.<span style="color:#a6e22e">jetStream</span>.<span style="color:#a6e22e">apiPrefix</span>, <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Sprintf</span>(<span style="color:#a6e22e">apiRequestNextT</span>, <span style="color:#a6e22e">p</span>.<span style="color:#a6e22e">stream</span>, <span style="color:#a6e22e">p</span>.<span style="color:#a6e22e">name</span>))
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">sub</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">pullSubscription</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">consumer</span>:    <span style="color:#a6e22e">p</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">errs</span>:        make(<span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">error</span>, <span style="color:#ae81ff">1</span>),
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">done</span>:        make(<span style="color:#66d9ef">chan</span> <span style="color:#66d9ef">struct</span>{}, <span style="color:#ae81ff">1</span>),
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">fetchNext</span>:   make(<span style="color:#66d9ef">chan</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">pullRequest</span>, <span style="color:#ae81ff">1</span>),
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">consumeOpts</span>: <span style="color:#a6e22e">consumeOpts</span>,
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 创建一个 inbox subject 作为 pull 请求的 reply，internalHandler 就是 MsgHandler
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">inbox</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">p</span>.<span style="color:#a6e22e">jetStream</span>.<span style="color:#a6e22e">conn</span>.<span style="color:#a6e22e">NewInbox</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">sub</span>.<span style="color:#a6e22e">subscription</span>, <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">p</span>.<span style="color:#a6e22e">jetStream</span>.<span style="color:#a6e22e">conn</span>.<span style="color:#a6e22e">Subscribe</span>(<span style="color:#a6e22e">inbox</span>, <span style="color:#a6e22e">internalHandler</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">err</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">go</span> <span style="color:#66d9ef">func</span>() {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">for</span> {
+</span></span><span style="display:flex;"><span>			<span style="color:#66d9ef">select</span> {
+</span></span><span style="display:flex;"><span>				<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">status</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">sub</span>.<span style="color:#a6e22e">connStatusChanged</span>:
+</span></span><span style="display:flex;"><span>				<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">sub</span>.<span style="color:#a6e22e">errs</span>:
+</span></span><span style="display:flex;"><span>					<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">errors</span>.<span style="color:#a6e22e">Is</span>(<span style="color:#a6e22e">err</span>, <span style="color:#a6e22e">ErrNoHeartbeat</span>) {
+</span></span><span style="display:flex;"><span>						  <span style="color:#a6e22e">sub</span>.<span style="color:#a6e22e">fetchNext</span> <span style="color:#f92672">&lt;-</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">pullRequest</span>{  
+</span></span><span style="display:flex;"><span>						    <span style="color:#a6e22e">Expires</span>:   <span style="color:#a6e22e">sub</span>.<span style="color:#a6e22e">consumeOpts</span>.<span style="color:#a6e22e">Expires</span>,  
+</span></span><span style="display:flex;"><span>						    <span style="color:#a6e22e">Batch</span>:     <span style="color:#a6e22e">batchSize</span>,  
+</span></span><span style="display:flex;"><span>						    <span style="color:#a6e22e">MaxBytes</span>:  <span style="color:#a6e22e">sub</span>.<span style="color:#a6e22e">consumeOpts</span>.<span style="color:#a6e22e">MaxBytes</span>,  
+</span></span><span style="display:flex;"><span>						    <span style="color:#a6e22e">Heartbeat</span>: <span style="color:#a6e22e">sub</span>.<span style="color:#a6e22e">consumeOpts</span>.<span style="color:#a6e22e">Heartbeat</span>,  
+</span></span><span style="display:flex;"><span>						  }
+</span></span><span style="display:flex;"><span>					}
+</span></span><span style="display:flex;"><span>			}
+</span></span><span style="display:flex;"><span>		}
+</span></span><span style="display:flex;"><span>	}()
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 根据 fetchNext 通知向服务端发送 pull 请求
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// fetchNext 是由一个 consumeOpts 的心跳设置的一个 timer 触发 ErrNoHeartbeat 来激活
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">go</span> <span style="color:#a6e22e">sub</span>.<span style="color:#a6e22e">pullMessages</span>(<span style="color:#a6e22e">subject</span>)
+</span></span><span style="display:flex;"><span>	
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">sub</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h6 id="6522-push-模式">
+  6.5.2.2 push 模式
+  <a class="anchor" href="#6522-push-%e6%a8%a1%e5%bc%8f">#</a>
+</h6>
+<p>使用 DeliverSubject (没有设置会自动生成一个) 来设置消费者订阅的主题，同时创建一个对该主题的订阅，用于接收处理消息。push 模式同样会在服务器创建消费者。</p>
+<p>小结：对于客户端来说消费 stream 中的消息，其实就是产生一个订阅主题，客户端会如同普通的 SUB 客户端一样消费这里的消息。但在此之前，需要根据场景和选项在服务器创建一个 consumer，告诉服务端自己的消费场景（是否持久化，关注stream中的哪些 subject, 消息的分发策略 等等）</p>
+<h5 id="653-消息投递推送">
+  6.5.3 消息投递推送
+  <a class="anchor" href="#653-%e6%b6%88%e6%81%af%e6%8a%95%e9%80%92%e6%8e%a8%e9%80%81">#</a>
+</h5>
+<p><img src="/images/nats/Pasted%20image%2020240223120135.png" alt="" /></p>
+<p>通过前面的消息消费我们可以知道，pullConsumer 拉取消息时会往一个形如 <em>CONSUMER.MSG.NEXT</em> 的主题中发起请求，通过在服务端代码检索可以发现，consumer 结构内保存了这么一个 subject, 并关联了对应的 icb（processNextMsgReq），而这个动作是在 consumer 创建时，在 leader 节点上设置的（consumer.setLeader）。</p>
+<blockquote>
+<p>这里要注意，这个请求只能被 consumer group 中的 leader 处理。</p>
+</blockquote>
+<p><img src="/images/nats/Pasted%20image%2020240222101314.png" alt="" />
+<img src="/images/nats/Pasted%20image%2020240222101407.png" alt="" /></p>
+<p>与此同时 consumer leader 节点还设置了（与消费相关的操作）:</p>
+<ul>
+<li>ack订阅、请求订阅 和 流控订阅等</li>
+<li>如果消费者是推模式，那么会注册“兴趣通知”</li>
+<li>同时会启动定时器来清除不活跃的消费者</li>
+<li>启动消息推送的 loopAndGatherMsgs 逻辑，往 consumer.outq -&gt; stream.outq 发送消息, stream.outq 在 stream.internalLoop 中执行往客户端推送的逻辑（通过 stream 的内部客户端往 subject 推送一条消息，与 pub 流程类似再由 CORE NATS 完成消息的分发）。</li>
+</ul>
+<p><img src="/images/nats/Pasted%20image%2020240222102438.png" alt="" /></p>
+<p>到这里总结下这个环节的问题：</p>
+<ul>
+<li>jetstream publish 的消息经过了什么样的流程？
+<ul>
+<li><em>消息到服务端后会检查 subject 相关的订阅，而 stream(leader)设置时已经配置了一个内部订阅</em>。<strong>订阅会传播到集群中</strong>。
+<img src="/images/nats/Pasted%20image%2020240223103443.png" alt="" />
+processInboundJetStreamMsg 的目的就是将将消息提交到 raft group, 最终通过 processJetStreamMsg 执行。</li>
+<li><em>stream 组提交后，各个副本保存，同时通知相关的 consumer</em></li>
+<li><em>server consumer（leader） 通过 loopAndGatherMsgs 往 subject 中推送消息</em></li>
+<li><em>server consumer 订阅了客户端 ack 消息，用于更新消费者位点等数据</em></li>
+</ul>
+</li>
+<li>是先保存还是先推送？
+<em>在stream 组内部提交保存后推送</em></li>
+<li>consumer 的消息是从 leader 来还是可以从 follower 直接读取？
+<em>leader</em></li>
+<li>服务端中 stream 和 consumer 这两个结构在其中承担什么样的职责？
+<ul>
+<li>stream 代表 stream （包括 store / raft group / stream config)
+<ul>
+<li>负责 jetstream 相关API的请求处理</li>
+<li>stream 消息 复制/存储</li>
+<li>通知/唤醒等待的 consumer</li>
+</ul>
+</li>
+<li>consumer  代表 消费者（包括消费配置 / raft group ） 注意它不等于客户端实例
+<ul>
+<li>consumer 组内的数据保存（raft group）</li>
+<li>API 处理（拉消费的 API）</li>
+<li>消息推送</li>
+<li>消费确认处理</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p>JetStream 消息投递API 也是基于 PUB / SUB 机制实现的，但是存在的区别是： JetStream 是存在确认机制的，而 Core Nats 的 Publish API 并没有。因此要严格保证消息发布到 stream 中，需要使用 JetStream 的 API 来发送。</p>
+<h3 id="7-扩展">
+  7. 扩展
+  <a class="anchor" href="#7-%e6%89%a9%e5%b1%95">#</a>
+</h3>
+<h4 id="71-raft-consensus-protocolhttpsraftgithubio">
+  7.1 <a href="https://raft.github.io/">RAFT Consensus Protocol</a>
+  <a class="anchor" href="#71-raft-consensus-protocolhttpsraftgithubio">#</a>
+</h4>
+<blockquote>
+<p>Consensus is a fundamental problem in fault-tolerant distributed systems. Consensus involves multiple servers agreeing on values. Once they reach a decision on a value, that decision is final.</p>
+</blockquote>
+<p>共识问题是分布式系统容错中的基础性问题，它描述的是：<em><strong>在多个服务节点间对某个值达成一致，一旦达成一致那么这个值就是最终的结果</strong></em>。RAFT 就是解决共识问题的一种算法，它以简单著名。</p>
+<p>常见的一种实现是，通过 <em><strong>复制/多副本</strong></em> 的方式来解决分布式问题中的 <strong>可靠性</strong> 问题。常见的，我们的系统提供了3个副本，当其中一个节点宕机时，也不影响系统对外提供服务。而 RAFT 则提供相应的机制（<em>通过当选的领导者达成共识</em>）来解决 复制/多副本 过程中的一致性问题。</p>
+<p>Raft 可视化介绍：<a href="https://thesecretlivesofdata.com/raft/">https://thesecretlivesofdata.com/raft/</a></p>
+<p>它其中有几个概念：</p>
+<ul>
+<li>Leader Election（选举）<em>产生唯一的一个 leader 角色。</em>
+<ul>
+<li>Leader</li>
+<li>Candidate</li>
+<li>Follower</li>
+<li>Vote</li>
+<li>Term</li>
+</ul>
+</li>
+<li>Log Replication（日志复制）<em>用于服务器之间保持一致要素。</em></li>
+<li>Replicated State Machine（复制状态机）_每个服务器存储一个包含一系列指令的日志，并且按顺序执行指令。由于日志都包含相同顺序的指令，状态机会按照相同的顺序执行指令，由于状态机是确定的（deterministic），因此状态机会产生相同的结果。</li>
+</ul>
+<h4 id="72-gossip-protocol">
+  7.2   Gossip Protocol
+  <a class="anchor" href="#72-gossip-protocol">#</a>
+</h4>
+<p>它基于流行病传播方式的节点或者进程之间信息交换的协议。以给定的频率，每台计算机随机选择另一台计算机，并共享任何消息。</p>
+<p>它的定义如下：</p>
+<ul>
+<li>如果有某一项信息需要在整个网络中所有节点中传播，那从信息源开始，选择一个固定的传播周期（譬如 1 秒），随机选择它相连接的 k 个节点（称为 Fan-Out）来传播消息。</li>
+<li>每一个节点收到消息后，如果这个消息是它之前没有收到过的，将在下一个周期内，选择除了发送消息给它的那个节点外的其他相邻 k 个节点发送相同的消息，直到最终网络中所有节点都收到了消息，尽管这个过程需要一定时间，但是理论上最终网络的所有节点都会拥有相同的消息。</li>
+</ul>
+<p>它对网络节点的 <em><strong>连通性和稳定性</strong></em> 几乎没有任何要求，它一开始就将网络某些节点只能与一部分节点_<strong>部分连通</strong><em>（Partially Connected Network）而不是以</em><strong>全连通网络</strong>_（Fully Connected Network）作为前提；没有任何中心化节点或者主节点的概念。</p>
+<p>相应的它的缺点是：无法准确地预计到需要多长时间才能达成全网一致；也存在重复传播的概率，消息在网路中冗余。</p>
+<p>由此，Gossip 设计了两种可能的消息传播模式：反熵（Anti-Entropy）和传谣（Rumor-Mongering）：</p>
+<ul>
+<li>反熵：会同步节点的全部数据，以消除各节点之间的差异，目标是整个网络各节点完全的一致。</li>
+<li>传谣：仅仅发送新到达节点的数据，即只对外发送变更信息。</li>
+</ul>
+<p>在 Nats 中，gossip 被用于实现 <strong>集群服务发现</strong> <strong><a href="https://docs.nats.io/reference/reference-protocols/nats-server-protocol">https://docs.nats.io/reference/reference-protocols/nats-server-protocol</a></strong>。routes 里指定了一个种子服务器，新启动的服务器连接上种子服务器后，就可以获取到全部的服务器列表。在服务器的配置里，可以不用知道所有的节点，而只用配置一个即可，但通常为了配置简单，会统一使用一个种子服务器。如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-Go" data-lang="Go"><span style="display:flex;"><span><span style="color:#a6e22e">nats</span><span style="color:#f92672">-</span><span style="color:#a6e22e">server</span> <span style="color:#f92672">-</span><span style="color:#a6e22e">D</span> <span style="color:#f92672">-</span><span style="color:#a6e22e">p</span> <span style="color:#ae81ff">4222</span> <span style="color:#f92672">-</span><span style="color:#a6e22e">cluster</span> <span style="color:#a6e22e">nats</span>:<span style="color:#75715e">//localhost:6222
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">nats</span><span style="color:#f92672">-</span><span style="color:#a6e22e">server</span> <span style="color:#f92672">-</span><span style="color:#a6e22e">D</span> <span style="color:#f92672">-</span><span style="color:#a6e22e">p</span> <span style="color:#ae81ff">4333</span> <span style="color:#f92672">-</span><span style="color:#a6e22e">cluster</span> <span style="color:#a6e22e">nats</span>:<span style="color:#75715e">//localhost:6333 -routes nats://localhost:6222
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">nats</span><span style="color:#f92672">-</span><span style="color:#a6e22e">server</span> <span style="color:#f92672">-</span><span style="color:#a6e22e">D</span> <span style="color:#f92672">-</span><span style="color:#a6e22e">p</span> <span style="color:#ae81ff">4444</span> <span style="color:#f92672">-</span><span style="color:#a6e22e">cluster</span> <span style="color:#a6e22e">nats</span>:<span style="color:#75715e">//localhost:6444 -routes nats://localhost:6222
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// 使用下面的命令启动也是可行的
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#a6e22e">nats</span><span style="color:#f92672">-</span><span style="color:#a6e22e">server</span> <span style="color:#f92672">-</span><span style="color:#a6e22e">D</span> <span style="color:#f92672">-</span><span style="color:#a6e22e">p</span> <span style="color:#ae81ff">4444</span> <span style="color:#f92672">-</span><span style="color:#a6e22e">cluster</span> <span style="color:#a6e22e">nats</span>:<span style="color:#75715e">//localhost:6444 -routes nats://localhost:6333 
+</span></span></span></code></pre></div><p>可以参见服务启动 / 集群的流程。</p>
+<h4 id="73-zero-allocation-byte-parser">
+  7.3   Zero allocation byte parser
+  <a class="anchor" href="#73-zero-allocation-byte-parser">#</a>
+</h4>
+<p><a href="https://www.youtube.com/watch?v=ylRKac5kSOk&amp;t=646s">https://www.youtube.com/watch?v=ylRKac5kSOk&t=646s</a>
+<em><strong>零分配</strong></em> 的含义是：nats 在解析协议时，避免不必要的内存分配：</p>
+<ul>
+<li>
+<p>使用局部变量，在栈上分配</p>
+<p><img src="/images/nats/Pasted%20image%2020240219152404.png" alt="" /></p>
+</li>
+<li>
+<p>使用 slice 复用底层数组</p>
+<p><img src="/images/nats/Pasted%20image%2020240219152417.png" alt="" /></p>
+</li>
+<li>
+<p>采用状态机来解析协议的各个部分，而不是构建临时对象来存储中间状态。如:
+一般情况下解析如下协议时，最常规的思路就是，先把 Command(PUB) 读出来，然后根据这个command 决定要后面的操作，这里再读去两个参数 subject, payload length, 有了 length 之后再读去 payload，这样我们就创建了_<strong>4个临时变量</strong>_在表示下面的命令。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-Go" data-lang="Go"><span style="display:flex;"><span><span style="color:#a6e22e">PUB</span> <span style="color:#a6e22e">foo</span>.<span style="color:#a6e22e">bar</span> <span style="color:#ae81ff">7</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">goodbye</span>
+</span></span></code></pre></div><p><img src="/images/nats/Pasted%20image%2020240219152439.png" alt="" />
+在 nats 中则是通过状态机，一步一步的解析中间没有使用临时变量来存储命令中的数据。</p>
+<p><img src="/images/nats/Pasted%20image%2020240219152449.png" alt="" /></p>
+</li>
+<li>
+<p>避免使用字符串，网络IO场景中，操作的对象几乎都是字节，因此 nats parser 也避免使用字符串以减少内存分配和拷贝。</p>
+</li>
+</ul>
+<h4 id="74nats-cli">
+  7.4  Nats CLI
+  <a class="anchor" href="#74nats-cli">#</a>
+</h4>
+<p><a href="https://docs.nats.io/using-nats/nats-tools/nats_cli">https://docs.nats.io/using-nats/nats-tools/nats_cli</a> 能方便快捷的与 nats 交互 / 模拟 / 测试。</p></div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#nats设计与实现">NATS设计与实现</a></li>
+        <li><a href="#1-核心概念">1. 核心概念</a></li>
+        <li><a href="#2-软件架构集群模式">2. 软件架构（集群模式）</a></li>
+        <li><a href="#3-nats-客户端协议">3. Nats 客户端协议</a></li>
+        <li><a href="#4-nats-server-配置解析">4. NATS-Server 配置解析</a></li>
+        <li><a href="#5-jetstream-配置解析">5. JetStream 配置解析</a></li>
+        <li><a href="#6-关键流程">6. 关键流程</a></li>
+        <li><a href="#7-扩展">7. 扩展</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

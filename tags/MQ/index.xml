@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>MQ on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/MQ/</link>
+    <description>Recent content in MQ on Yeqown</description>
+    <generator>Hugo</generator>
+    <language>en</language>
+    <lastBuildDate>Mon, 26 Feb 2024 21:30:08 +0800</lastBuildDate>
+    <atom:link href="https://www.yeqown.xyz/tags/MQ/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Nats设计与实现</title>
+      <link>https://www.yeqown.xyz/2024/02/26/nats%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%AE%9E%E7%8E%B0/</link>
+      <pubDate>Mon, 26 Feb 2024 21:30:08 +0800</pubDate>
+      <guid>https://www.yeqown.xyz/2024/02/26/nats%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%AE%9E%E7%8E%B0/</guid>
+      <description>&lt;h3 id=&#34;nats设计与实现&#34;&gt;&#xA;  NATS设计与实现&#xA;  &lt;a class=&#34;anchor&#34; href=&#34;#nats%e8%ae%be%e8%ae%a1%e4%b8%8e%e5%ae%9e%e7%8e%b0&#34;&gt;#&lt;/a&gt;&#xA;&lt;/h3&gt;&#xA;&lt;blockquote&gt;&#xA;&lt;p&gt;&lt;a href=&#34;https://github.com/nats-io/nats-sevrer&#34;&gt;https://github.com/nats-io/nats-sevrer&lt;/a&gt;&lt;/p&gt;&#xA;&lt;/blockquote&gt;&#xA;&lt;p&gt;NATS 就是一个消息中间件，提供了 Pub/Sub 核心数据流，并基于此构建了 Request/Reply API 和 JetStream 用来提供可靠的分布式存储能力，和更高的 QoS（至少一次 + ACK）。&lt;/p&gt;&#xA;&lt;img src=&#34;https://www.yeqown.xyz/images/nats/Pasted%20image%2020240219151629.png&#34; style=&#34;width: 50%&#34; /&gt;</description>
+    </item>
+  </channel>
+</rss>

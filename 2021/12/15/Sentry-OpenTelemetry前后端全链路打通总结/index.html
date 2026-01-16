@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Sentry&#43;OpenTelemetry前后端全链路打通, 从后端的角度去思考链路的构建，为 otel-collector 实现定制的 trace exporter。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2021/12/15/Sentry-OpenTelemetry%E5%89%8D%E5%90%8E%E7%AB%AF%E5%85%A8%E9%93%BE%E8%B7%AF%E6%89%93%E9%80%9A%E6%80%BB%E7%BB%93/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="Sentry&#43;OpenTelemetry前后端全链路打通总结">
+  <meta property="og:description" content="Sentry&#43;OpenTelemetry前后端全链路打通, 从后端的角度去思考链路的构建，为 otel-collector 实现定制的 trace exporter。">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2021-12-15T16:16:05+08:00">
+    <meta property="article:modified_time" content="2021-12-15T16:16:05+08:00">
+    <meta property="article:tag" content="Golang">
+    <meta property="article:tag" content="Sentry">
+    <meta property="article:tag" content="OpenTelemetry">
+<title>Sentry&#43;OpenTelemetry前后端全链路打通总结 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2021/12/15/Sentry-OpenTelemetry%E5%89%8D%E5%90%8E%E7%AB%AF%E5%85%A8%E9%93%BE%E8%B7%AF%E6%89%93%E9%80%9A%E6%80%BB%E7%BB%93/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>Sentry&#43;OpenTelemetry前后端全链路打通总结</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#效果预览">效果预览</a></li>
+        <li><a href="#背景">背景</a></li>
+        <li><a href="#方案描述">方案描述</a></li>
+        <li><a href="#期间遇到的问题">期间遇到的问题</a></li>
+        <li><a href="#附录">附录</a></li>
+        <li><a href="#总结">总结</a></li>
+        <li><a href="#参考">参考</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    Sentry&#43;OpenTelemetry前后端全链路打通总结
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>December 15, 2021</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>, 
+      <a href="/categories/Tracing/">Tracing</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/Sentry/">Sentry</a>, 
+      <a href="/tags/OpenTelemetry/">OpenTelemetry</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><p>自从微服务大行其道，容器化和k8s编排一统天下之后，&ldquo;可观测性&rdquo; 便被提出来。这个概念是指，对于应用或者容器的运行状况的掌控程度，其中分为了三个模块：<code>Metrics</code>、<code>Tracing</code>、<code>Logging</code>。Metrics 指应用采集的指标；Tracing 指应用的追踪；Logging 指应用的日志。</p>
+<p>日志自不用多说，这是最原始的调试和数据采集能力。Metrics 比较火的方案就是 Prometheus + Grafana，思路就是通过应用内埋入SDK，选择 Pull 或者 Push 的方式将数据收集到 prometheus 中，然后通过 Grafana 实现可视化，当然这不是本文的重点就此略过。</p>
+<p>Tracing 也并不是可观测性提出后才诞生的概念，在微服务化的进程中就已经有Google的Dapper落地实践，并慢慢形成 OpenTracing 规范，这一规范又被多家第三方框架所支持，如 Jaeger、Zipkin 等。OpenTelemetry 就是结合了 OpenTracing + OpenCensus 规范，约定并提供完成的可观测性套件，只是目前（2021-12-15）稳定下来的只有 Tracing 这一部分而已。对 OpenTelemetry 发展历史感兴趣的可以自行了解。</p>
+<h3 id="效果预览">
+  效果预览
+  <a class="anchor" href="#%e6%95%88%e6%9e%9c%e9%a2%84%e8%a7%88">#</a>
+</h3>
+<p>链路总览，包含了前端页面的生命周期 + 整个了链路采集到的Span聚合。</p>
+<img src="https://pic4.zhimg.com/80/v2-7e517e59dc62fa60651234cda0b957ab_1440w.jpg" width="100%">
+<p>前端页面指标采集概览，包含了该页面生命周期内的动作和日志等。</p>
+<img src="https://pic3.zhimg.com/80/v2-5933ba9c680ae7acb11710228c50d6d2_1440w.jpg" width="100%">
+<p>服务端链路细节，包含了服务端链路采集的标签和日志（事件）等信息。</p>
+<img src="https://pic4.zhimg.com/80/v2-8bf65bad9e1b91d6f151d6786459ae77_1440w.jpg" width="100%">
+<p>propagation兼容jaeger效果，保证jaeger侧链路完整，使用一致的 traceId检索。因为服务侧 sentry 是渐进更新的，因此没有接入的应用并不会展示在sentry侧， 等到完全更新后就会完整。</p>
+<img src="https://pic3.zhimg.com/80/v2-4af53ee3436b5c7876fbb807a5124676_1440w.jpg" width="100%">
+<img src="https://pic1.zhimg.com/80/v2-f09a4d174ae96f8f4ddc52799421e914_1440w.jpg" width="100%">
+<h3 id="背景">
+  背景
+  <a class="anchor" href="#%e8%83%8c%e6%99%af">#</a>
+</h3>
+<p>目前运行中的链路追踪组件是采用 opentracing + jaeger 实现，这套方案唯二的不足就是：</p>
+<ul>
+<li>opentracing 已经被 opentelemetry 兼容，且 opentelemetry 在可观测性上更全面，更灵活。</li>
+<li>浏览器侧支持不完善（可以参见 <a href="https://github.com/jaegertracing/jaeger-client-javascript">https://github.com/jaegertracing/jaeger-client-javascript</a> ）【恰恰我司有这方面的需求 🤪】。</li>
+</ul>
+<p>前端采用 sentry 来采集前端页面数据（APP + WEB 都支持很好），因此才有了这么一个 前后端链路打通的需求。</p>
+<blockquote>
+<p>经过调研，我发现 sentry 也并不完美，详情参见 <a href="#sentry%e4%bd%9c%e4%b8%ba%e9%93%be%e8%b7%af%e9%87%87%e9%9b%86%e7%bb%84%e4%bb%b6%e7%9a%84%e4%bc%98%e7%bc%ba%e7%82%b9">附录/sentry作为链路采集组件的优缺点</a></p>
+</blockquote>
+<p>最开始的需求目标是后端相关 Tracing SDK 全部使用sentry替换，但是结合上述对于sentry的调研，发现直接接入sentry并不是一个好的选择：</p>
+<ol>
+<li>相关的 Tracing 概念没有被我个人和社区接受，社区内主流的还是 OpenTracing 和 OpenTeletemetry 规范，而且这两个规范都是相互兼容的（个人认为：OpenTelemetry 大有一统可观测性的趋势，他们立项也是朝着这个方向前进）。</li>
+<li>官方go-SDK活跃度低乎想象，参见 <a href="https://github.com/getsentry/sentry-go/issues/387">https://github.com/getsentry/sentry-go/issues/387</a> 截止本文时（since 2021-10-22）仍然没有任何回复，进一步阻止我直接使用sentry。</li>
+<li>调研 OpenTelemetry 在研究它的架构设计时，发现其设计中包含了一个 Collector（详细介绍参见 <a href="#OpenTelemetry%e4%b8%ad%e7%9a%84%e6%a6%82%e5%bf%b5">附录/OpenTelemetry中的概念</a>）
+。从示意图我们也可以看出，它的作用近似于 Jaeger Collector / Agent，但是相比于 Jaeger 它更开放，支持多种 Vendor (Jaeger / Zipkin 等等)，更加灵活。
+<img src="https://raw.github.com/open-telemetry/opentelemetry.io/main/iconography/Reference_Architecture.svg"></li>
+<li>如果替换了 sentry 加入是不是以后还可能更换新的采集组件，服务这么多再来换一遍还是费时费力</li>
+</ol>
+<h3 id="方案描述">
+  方案描述
+  <a class="anchor" href="#%e6%96%b9%e6%a1%88%e6%8f%8f%e8%bf%b0">#</a>
+</h3>
+<img src="/images/otel-sentry-architecture.svg" width="100%">
+<p>那么基于以上的考虑，设计了如下的改造方案（也可以理解为新的实施方案，毕竟出了兼容也不会考虑以前怎么用的🤪）：</p>
+<ol>
+<li>在应用侧 Tracing SDK 全部替换为 otel SDK（后面经过考虑，还是自己做了一个防腐的 Tracing API封装）。
+<ul>
+<li>为了保证渐进更新服务端链路采集的同时，在Jaeger Dashborad中的链路不断，在 propagator 实现 otel 到 jaeger 的转换。</li>
+</ul>
+</li>
+<li>自己实现一个 Sentry Trace Exporter, 将客户端上报的链路，再投递到 sentry。</li>
+<li>Collector 配置 exporter 时，同时上报到 sentry 和 jaeger</li>
+</ol>
+<p>相应的实践，我已经放了一份在 github 上，请查看：<a href="https://github.com/yeqown/opentelemetry-quake">https://github.com/yeqown/opentelemetry-quake</a></p>
+<h3 id="期间遇到的问题">
+  期间遇到的问题
+  <a class="anchor" href="#%e6%9c%9f%e9%97%b4%e9%81%87%e5%88%b0%e7%9a%84%e9%97%ae%e9%a2%98">#</a>
+</h3>
+<ol start="0">
+<li>
+<p>怎么调研，产出方案？</p>
+<p>刚开始接到需求，我第一时间在质疑需求的必要性，现在的链路采集好好的为啥非要换成另一种？也没有好的想法，毕竟对于 sentry 和 opentelemetry 认知都不够。通过查看官方文档，尤其是 opentelemetry 的设计，才找到了这么一个现阶段很满意的解决方案。</p>
+<p><strong><em>调研</em></strong> = 多看文档和别人的最佳实践。只有你了解够多，你才能站得更高，更容易考虑问题。<br>
+<strong><em>方案</em></strong> = 你需要的是什么，就用现成的工具来组合，如果实在没有那么是不是可以自己实现？</p>
+</li>
+<li>
+<p>怎么定制自己的 Trace Exporter？</p>
+<p>主要还是参考 <a href="https://github.com/open-telemetry/opentelemetry-collector-contrib">https://github.com/open-telemetry/opentelemetry-collector-contrib</a> 仓库中的实现。Collector 设计时已经考虑了用户自定义，所以按照官方的约定开发即可，至于 sentryexporter 在官方仓库已经存在了，所以我只是定制化了一下。（为了加深理解，我其实又从头撸了一遍 🤓）</p>
+<p>这里值得注意的是，如果你的collector需要使用特定的插件，那么需要使用官方的 <a href="https://github.com/open-telemetry/opentelemetry-collector/tree/main/cmd/builder">github.com/open-telemetry/opentelemetry-collector/cmd/builder</a> 来自己定制编译 collector, 这一点也可以在我提供的实践代码中找到。</p>
+</li>
+<li>
+<p>Collector 和 Agent 的差异？</p>
+<p>可以简单理解为：中心化和分布式部署的区别，在实现上并没有区别。至于你应该使用哪种部署方式，当然视你的集群规模而定，如果只有不到100个服务实例，个人觉得仅仅collector足以，直到不足以承载。反之，如果你集群中节点众多，服务实例也众多，那么最好一开始就上agent。</p>
+</li>
+<li>
+<p>k8s 中如何以 agent 方式部署 collector？</p>
+<p>官方也已经提供了样例代码，可以参考 <a href="https://github.com/open-telemetry/opentelemetry-collector/blob/main/examples/k8s/otel-config.yaml">github.com/open-telemetry/opentelemetry-collector/examples/k8s/otel-config.yaml</a>。大致思路为：通过DaemonSet 在每个节点上运行一个 Collector 实例。这里需要注意的是，如果想要配置 <code>NODE_IP:PORT</code> 的方式让该节点上的服务直连 agent，那么需要在 <code>otel-config.yaml</code> 中添加如下配置：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">apps/v1</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># ....</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">template</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">metadata</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">labels</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">app</span>: <span style="color:#ae81ff">opentelemetry</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">component</span>: <span style="color:#ae81ff">otel-agent</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">spec</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">hostNetwork</span>: <span style="color:#66d9ef">true</span>                  <span style="color:#75715e"># 增加这一行</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">dnsPolicy</span>: <span style="color:#ae81ff">ClusterFirstWithHostNet</span> <span style="color:#75715e"># 增加这一行</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">containers</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e"># ...</span>
+</span></span></code></pre></div><p>当然不止这么一种方式，比如还可以使用 <code>hostPort</code>, 视你的k8s集群配置而定。</p>
+</li>
+</ol>
+<h3 id="附录">
+  附录
+  <a class="anchor" href="#%e9%99%84%e5%bd%95">#</a>
+</h3>
+<h5 id="sentry作为链路采集组件的优缺点">
+  sentry作为链路采集组件的优缺点
+  <a class="anchor" href="#sentry%e4%bd%9c%e4%b8%ba%e9%93%be%e8%b7%af%e9%87%87%e9%9b%86%e7%bb%84%e4%bb%b6%e7%9a%84%e4%bc%98%e7%bc%ba%e7%82%b9">#</a>
+</h5>
+<blockquote>
+<p>仅代表个人看法，可能对于 sentry 理解不到位，请自行按照自己的理解来看。</p>
+</blockquote>
+<p><strong><em>缺点</em></strong>:</p>
+<p>sentry 的主要场景并不是在于链路采集，而是在于前端页面采集（页面加载/路径/日志），包括页面异常数据；主要根据在于它独有（或许）的链路采集概念。其中常见的如下：</p>
+<table>
+  <thead>
+      <tr>
+          <th>概念</th>
+          <th>定义</th>
+          <th>OpenTracing中的映射</th>
+          <th>存在的问题</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Trace</td>
+          <td>可以通过 TraceId 标识的一条链路</td>
+          <td>Trace</td>
+          <td>前端 Trace/Page 与 Trace/Req 出入</td>
+      </tr>
+      <tr>
+          <td>Span</td>
+          <td>可以通过 SpanId 标识的一个单元</td>
+          <td>Span</td>
+          <td>-</td>
+      </tr>
+      <tr>
+          <td>Trasnaction</td>
+          <td>Trace 在进程内 Span 的集合</td>
+          <td>-</td>
+          <td>独有的概念</td>
+      </tr>
+      <tr>
+          <td>Scope</td>
+          <td>Trace 的上下文 (包含用户，Request等)</td>
+          <td>只能用 SpanContext 【并不准确】</td>
+          <td>相比 SpanContext 包含的信息过于太多了</td>
+      </tr>
+      <tr>
+          <td>Hub</td>
+          <td>应用侧 Tracer</td>
+          <td>Tracer</td>
+          <td>-</td>
+      </tr>
+  </tbody>
+</table>
+<blockquote>
+<p>个人觉得，正是 sentry 自己的定位并不着重于后端服务的链路采集，才会如此设计。</p>
+</blockquote>
+<p><strong><em>优点</em></strong>:</p>
+<ul>
+<li>已经支持前后端链路打通，集成展示前端页面上发生的一切行为。</li>
+<li>单独对异常进行采集和展示。</li>
+</ul>
+<h5 id="opentelemetry中的概念">
+  OpenTelemetry中的概念
+  <a class="anchor" href="#opentelemetry%e4%b8%ad%e7%9a%84%e6%a6%82%e5%bf%b5">#</a>
+</h5>
+<blockquote>
+<p>链路采集基本的概念就不多介绍了，了解过 OpenTracing 之后，会发现大同小异</p>
+</blockquote>
+<img src="/images/opentelemetry-architecture.svg">
+<p>这里只是罗列了 Tracing 相关的概念：</p>
+<table>
+  <thead>
+      <tr>
+          <th>概念</th>
+          <th>定义</th>
+          <th>功能</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>TracerProvider</td>
+          <td>Tracer 注册中心</td>
+          <td>可以用于区分不同 Lib</td>
+      </tr>
+      <tr>
+          <td>Propagator</td>
+          <td>负责解析和注入 trace header</td>
+          <td>跨进程传递</td>
+      </tr>
+      <tr>
+          <td>otel SDK</td>
+          <td>OpenTelemetry 客户端 SDK</td>
+          <td>语言相关的API，负责链路的采集和上报</td>
+      </tr>
+      <tr>
+          <td>otel Collector</td>
+          <td>链路采集后端组件</td>
+          <td>收集客户端上报的链路信息</td>
+      </tr>
+      <tr>
+          <td>otel Agent</td>
+          <td>与Collector相同，只是以Agent模式部署</td>
+          <td>k8s 中采用 DaemonSet 部署方式，增加部署容错能力，减少上报时延</td>
+      </tr>
+      <tr>
+          <td>Exporter (Span)</td>
+          <td>SDK 处理 span 的组件</td>
+          <td>用于客户端自定义span数据加工处理（如客户端直接上报链路到Vendor）</td>
+      </tr>
+      <tr>
+          <td>Exporter (Trace)</td>
+          <td>Collector 中处理Trace的组件</td>
+          <td>与 Span Exporter 类似，但工作在 Collector 中，处理被 Collector 收集归纳的链路数据</td>
+      </tr>
+      <tr>
+          <td>Reciever</td>
+          <td>Collector 中处理Trace的组件</td>
+          <td>与 Span Exporter 类似，但工作在 Collector 中，处理被 Collector 收集归纳的链路数据</td>
+      </tr>
+  </tbody>
+</table>
+<p>前文提到的 OpenTelemetry 的开放能力，从 Collector 和 Exporter 也能看得出来。</p>
+<h3 id="总结">
+  总结
+  <a class="anchor" href="#%e6%80%bb%e7%bb%93">#</a>
+</h3>
+<p>对于 sentry 并没有过多的介绍，因为从后端的角度看过去，通过改造方案设计，sentry 就只是其中的一种 vendor 而已，并不会对我们的链路采集产生影响。就算以后前端想要试验另一种方案，那我们也只需要支持多一种 vendor 即可。强烈建议了解 OpenTelemetry 的相关概念，以后一定用得上。</p>
+<blockquote>
+<p>水平有限，如有错误，欢迎勘误指正🙏。</p>
+</blockquote>
+<h3 id="参考">
+  参考
+  <a class="anchor" href="#%e5%8f%82%e8%80%83">#</a>
+</h3>
+<ul>
+<li><a href="https://opentelemetry.io/">https://opentelemetry.io/</a></li>
+<li><a href="https://sentry.io/">https://sentry.io/</a></li>
+<li><a href="https://github.com/yeqown/opentelemetry-quake">https://github.com/yeqown/opentelemetry-quake</a></li>
+</ul>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "sentry-otel-fe-be-full-link-summary", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#效果预览">效果预览</a></li>
+        <li><a href="#背景">背景</a></li>
+        <li><a href="#方案描述">方案描述</a></li>
+        <li><a href="#期间遇到的问题">期间遇到的问题</a></li>
+        <li><a href="#附录">附录</a></li>
+        <li><a href="#总结">总结</a></li>
+        <li><a href="#参考">参考</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

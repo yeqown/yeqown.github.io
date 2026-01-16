@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Kubenertes on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/kubenertes/</link>
+    <description>Recent content in Kubenertes on Yeqown</description>
+    <generator>Hugo</generator>
+    <language>en</language>
+    <lastBuildDate>Mon, 25 Mar 2024 09:37:25 +0800</lastBuildDate>
+    <atom:link href="https://www.yeqown.xyz/tags/kubenertes/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Istio Idle Timeout问题复现和解决</title>
+      <link>https://www.yeqown.xyz/2024/03/25/istio-idle-timeout%E9%97%AE%E9%A2%98%E5%A4%8D%E7%8E%B0%E5%92%8C%E8%A7%A3%E5%86%B3/</link>
+      <pubDate>Mon, 25 Mar 2024 09:37:25 +0800</pubDate>
+      <guid>https://www.yeqown.xyz/2024/03/25/istio-idle-timeout%E9%97%AE%E9%A2%98%E5%A4%8D%E7%8E%B0%E5%92%8C%E8%A7%A3%E5%86%B3/</guid>
+      <description>&lt;h2 id=&#34;更新&#34;&gt;&#xA;  更新&#xA;  &lt;a class=&#34;anchor&#34; href=&#34;#%e6%9b%b4%e6%96%b0&#34;&gt;#&lt;/a&gt;&#xA;&lt;/h2&gt;&#xA;&lt;h3 id=&#34;更新-2024-04-01&#34;&gt;&#xA;  更新 2024-04-01&#xA;  &lt;a class=&#34;anchor&#34; href=&#34;#%e6%9b%b4%e6%96%b0-2024-04-01&#34;&gt;#&lt;/a&gt;&#xA;&lt;/h3&gt;&#xA;&lt;p&gt;通过调整 tcp_proxy 的 idle_timeout 参数后，部分中间件（redis, mongo）的异常问题不再出现，但是 mysql(sharding-spere) 和 memcached 仍然存在 &amp;ldquo;invalid connection&amp;rdquo; 错误，所以还需要找到能够解决 mysql(sharding-spere) 和 memcached 的方法。&lt;/p&gt;&#xA;&lt;blockquote&gt;&#xA;&lt;p&gt;上述描述的现象非常主观，不一定正确也不能作为最终结论，但是 idle_timeout 配置确实没有解决所有的问题。&lt;/p&gt;&#xA;&lt;/blockquote&gt;&#xA;&lt;p&gt;这里，需要知道 istio 在 inject 时会通过 iptables 对应用的流量进行劫持，对于 outbound 的流量 iptables 规则拦截转发到 OUTPUT 链。OUTPUT 的链转发流量到 ISTIO_OUTPUT，这个链会决定服务访问外部服务的流量发往何处。&lt;/p&gt;&#xA;&lt;p&gt;这样产生的效果是，除了应用自己建立的连接之外 envoy 也会创建一个代理连接。&lt;/p&gt;&#xA;&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;$ netstat -notp | grep &lt;span style=&#34;color:#ae81ff&#34;&gt;3307&lt;/span&gt;&#xA;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp         &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;             172.23.105.25:41030        x.x.x.x:3307         ESTABLISHED -      off&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;0.00/0/0&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;&#xA;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;tcp         &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;             172.23.105.25:41022        x.x.x.x:3307         ESTABLISHED 1/./app      keepalive&lt;span style=&#34;color:#f92672&#34;&gt;(&lt;/span&gt;0.88/0/0&lt;span style=&#34;color:#f92672&#34;&gt;)&lt;/span&gt;&#xA;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;我遇到的问题可以确定问题就出在 envoy 建立的连接上，因为应用自己建立的连接是正常的，同时还可以看到应用自己的连接开启了 keepalive, 而 envoy 建立的连接没有开启。这样可能会出现这个连接会因为超时而被关闭的情况，或者其他原因导致连接被释放。那如果可以避免将中间件的流量通过 envoy 代理，这样就可以避免这个问题。&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

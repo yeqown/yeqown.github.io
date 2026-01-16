@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="MirrorMaker2 是 Kafka 官方提供的跨集群数据复制工具，支持多种部署模式。那么它是怎么实现的？使用上有什么注意事项？本文将介绍 MirrorMaker2 的设计原理和使用方法，帮助你更好地理解和使用这个强大的工具。另外还顺带探讨一下，如果现在正在使用 Dedicated 模式部署，想要切换到 Connect 集群模式需要注意什么？">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2025/09/28/Apache-Kafka-MirrorMaker2%E4%BB%8E%E4%BD%BF%E7%94%A8%E5%88%B0%E8%BF%81%E7%A7%BB/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="Kafka MirrorMaker2 从使用到迁移">
+  <meta property="og:description" content="MirrorMaker2 是 Kafka 官方提供的跨集群数据复制工具，支持多种部署模式。那么它是怎么实现的？使用上有什么注意事项？本文将介绍 MirrorMaker2 的设计原理和使用方法，帮助你更好地理解和使用这个强大的工具。另外还顺带探讨一下，如果现在正在使用 Dedicated 模式部署，想要切换到 Connect 集群模式需要注意什么？">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2025-09-28T14:59:43+08:00">
+    <meta property="article:modified_time" content="2025-09-28T14:59:43+08:00">
+    <meta property="article:tag" content="Kafka">
+    <meta property="article:tag" content="MirrorMaker2">
+    <meta property="article:tag" content="Kafka Connect">
+    <meta property="article:tag" content="Replication">
+<title>Kafka MirrorMaker2 从使用到迁移 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2025/09/28/Apache-Kafka-MirrorMaker2%E4%BB%8E%E4%BD%BF%E7%94%A8%E5%88%B0%E8%BF%81%E7%A7%BB/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>Kafka MirrorMaker2 从使用到迁移</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#引言">引言</a></li>
+    <li><a href="#kafka-connect-的设计">Kafka Connect 的设计</a></li>
+    <li><a href="#mirrorsourceconnector-的设计">MirrorSourceConnector 的设计</a>
+      <ul>
+        <li><a href="#1-初始化">1. 初始化</a></li>
+        <li><a href="#2-task定义和任务分配">2. Task定义和任务分配</a></li>
+        <li><a href="#3-持续维护">3. 持续维护</a></li>
+      </ul>
+    </li>
+    <li><a href="#mirrorsourcetask-的设计">MirrorSourceTask 的设计</a>
+      <ul>
+        <li><a href="#1-初始化-1">1. 初始化</a></li>
+        <li><a href="#2-数据拉取和写入">2. 数据拉取和写入</a></li>
+        <li><a href="#3-偏移量管理">3. 偏移量管理</a></li>
+      </ul>
+    </li>
+    <li><a href="#kafkaoffsetbackingstore-的设计">KafkaOffsetBackingStore 的设计</a></li>
+    <li><a href="#迁移">迁移</a>
+      <ul>
+        <li><a href="#搭建-kafka-connect-集群">搭建 Kafka Connect 集群</a></li>
+        <li><a href="#如何迁移进度">如何迁移进度</a></li>
+        <li><a href="#操作步骤">操作步骤</a></li>
+      </ul>
+    </li>
+    <li><a href="#总结">总结</a>
+      <ul>
+        <li><a href="#核心要点回顾">核心要点回顾</a></li>
+        <li><a href="#实践建议">实践建议</a></li>
+        <li><a href="#注意事项">注意事项</a></li>
+      </ul>
+    </li>
+    <li><a href="#参考">参考</a></li>
+    <li><a href="#附">附</a>
+      <ul>
+        <li><a href="#connect-配置">Connect 配置</a></li>
+        <li><a href="#mirrorconnector-配置">MirrorConnector 配置</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    Kafka MirrorMaker2 从使用到迁移
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>September 28, 2025</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Kafka/">Kafka</a>, 
+      <a href="/tags/MirrorMaker2/">MirrorMaker2</a>, 
+      <a href="/tags/Kafka-Connect/">Kafka Connect</a>, 
+      <a href="/tags/Replication/">Replication</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><blockquote>
+<p>本文中使用的 Kafka 版本为 v3.3.2</p>
+</blockquote>
+<h2 id="引言">
+  引言
+  <a class="anchor" href="#%e5%bc%95%e8%a8%80">#</a>
+</h2>
+<p>Kafka MirrorMaker2 是 Kafka 官方提供的跨集群数据复制工具, 它是基于 Kafka Connect 框架构建的。MirrorMaker2 支持多种部署模式, 包括 Dedicated 模式和 Connect 集群模式，还有 standalone 模式。</p>
+<p>其中, Dedicated 模式有一个启动脚本 <code>kafka-mirror-maker.sh</code>, 该脚本会启动一个独立的 MirrorMaker2 实例, 而不需要依赖 Kafka Connect 集群。Dedicated 模式适合小规模的复制任务, 但在大规模部署中, 它缺乏可扩展性和高可用性。</p>
+<p>相比之下, Connect 集群模式则是先搭建出一个 Kafka Connect 集群, 再提交 <code>MirrorMaker2</code> 的 <code>MirrorSourceConnector</code> 任务。这种模式下, 可以通过增加或减少 Connect 工作节点来动态调整复制任务的资源, 具备更好的弹性和容错能力。</p>
+<blockquote>
+<p>当然配置上也会更复杂一些, 需要管理 Connect 集群的配置和任务。</p>
+</blockquote>
+<p>那么, 如果我们已经在使用 Dedicated 模式部署了 MirrorMaker2, 但现在需要切换到 Connect 集群模式, 应该如何操作呢? 本文将介绍从 Dedicated 模式迁移到 Connect 集群模式时，怎么处理已经同步的 offset 进度, 以确保数据的一致性和连续性。</p>
+<h2 id="kafka-connect-的设计">
+  Kafka Connect 的设计
+  <a class="anchor" href="#kafka-connect-%e7%9a%84%e8%ae%be%e8%ae%a1">#</a>
+</h2>
+<p>Kafka Connect 是 Apache Kafka 生态系统中的框架和工具集，旨在在 Kafka 和其他数据系统（例如数据库、云服务和文件系统）之间可靠且可扩展地传输数据。主要特性包括分布式架构、基于配置的操作以及对数据转换和各种序列化格式的支持，使数据集成更简单、更解耦。</p>
+<figure>
+  <img src="/images/mm2/connect-architecture.png" alt="Kafka Connect 架构" width="100%" />
+  <figcaption>Kafka Connect 架构</figcaption>
+</figure>
+<p>在整个框架中有以下几个核心概念：</p>
+<ul>
+<li>
+<p><strong>Workers</strong>: 负责实际执行任务执行, 每个 Worker 都有一个线程池, 用于执行多个任务。</p>
+</li>
+<li>
+<p><strong>Connectors</strong>: 连接其他系统和 kafka 的组件，也是整个 Kafka Connect 框架中最重要的扩展点。</p>
+<ul>
+<li>Source Connector: 从其他系统（MySQL, Mongo）导入数据到 Kafka。</li>
+<li>Sink Connector: 将 Kafka 中的数据导出到其他系统。
+<blockquote>
+<p>Connector 自身不执行数据复制，而是负责将整个复制任务拆分成一组可以执行的 <code>Task</code> 交给 Kafka Connect <code>Worker</code> 执行。因此要实现一个 Connector 也需要确定要使用的 Task 类）。</p>
+</blockquote>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Tasks</strong>: 则负责实际执行任务执行。</p>
+<ul>
+<li>Source Task: 从源系统读取数据, 并将其写入 Kafka。</li>
+<li>Sink Task: 从 Kafka 读取数据, 并将其写入目标系统。</li>
+</ul>
+</li>
+</ul>
+<p>除了上述核心组件外, Kafka Connect 还包括以下几个重要概念:</p>
+<ul>
+<li><strong>Converters</strong>: Kafka Connect 要和外部系统交互，不可避免的需要对数据进行序列化和反序列化。Converters 负责将数据从一种格式转换为另一种格式。</li>
+<li><strong>Transformers</strong>: 用于在数据复制过程中对数据进行转换和处理, 比如字段重命名，增加/删除字段等等，当然也可以进行自定义。</li>
+</ul>
+<figure>
+  <img src="/images/mm2/kafka-connect-model.png" alt="Kafka Connect 模型" width="100%" />
+  <figcaption>Kafka Connect 模型</figcaption>
+</figure>
+<p>Kafka Connect 会在 Connector 实例运行时, 跟踪其偏移量，以便连接器在发生故障或者维护时，可以从先前的位置恢复。参考 <a href="https://docs.confluent.io/platform/current/connect/offset-tracking.html">Kafka Connect 文档</a>。</p>
+<p>在对 Kafka Connect 框架有了一定的了解后，我们就可以再深入去理解 MirrorMaker 的设计原理了，一言以蔽之：一个把数据从源 Kafka 复制到目标 Kafka 的  <code>MirrorSourceConnector</code>。</p>
+<blockquote>
+<p>思考题：为什么是实现 SourceConnector 而不是实现 SinkConnector？</p>
+</blockquote>
+<h2 id="mirrorsourceconnector-的设计">
+  MirrorSourceConnector 的设计
+  <a class="anchor" href="#mirrorsourceconnector-%e7%9a%84%e8%ae%be%e8%ae%a1">#</a>
+</h2>
+<blockquote>
+<p>这部分不会关注两种部署模式的区别，重点关注 MirrorMaker2 的核心组件 <code>MirrorSourceConnector</code>。至于 <code>MirrorCheckpointConnector</code> 是用来同步 groups，一个是用来探测与 kafka 集群的联通性，按需使用即可。</p>
+</blockquote>
+<p>MirrorMaker2 的核心组件是 <code>MirrorSourceConnector</code>, 它负责从源集群读取数据并写入目标集群。<code>MirrorSourceConnector</code> 实现了 <code>Kafka Connect</code> 的 <code>SourceConnector</code> 类, 由此可见它的调度和任务管理都依赖于 Kafka Connect 框架。</p>
+<p><code>MirrorSourceConnector</code> 的主要作用就是把源集群的 topic 数据复制到目标集群。它的基本工作流程可以分为以下几个阶段:</p>
+<ul>
+<li>初始化</li>
+<li>Task定义和任务分配</li>
+<li>动态调整/维护</li>
+</ul>
+<h3 id="1-初始化">
+  1. 初始化
+  <a class="anchor" href="#1-%e5%88%9d%e5%a7%8b%e5%8c%96">#</a>
+</h3>
+<p>这部分逻辑集中在 <code>MirrorSourceConnector</code> 的 <code>start</code> 方法中, 该方法会读取配置参数, 并初始化一些内部状态, 包括:</p>
+<p>配置解析：
+通过 MirrorConnectorConfig 解析配置参数（如源/目标集群别名、复制策略、过滤规则等）。若连接器未启用（config.enabled=false），则直接返回。</p>
+<p>资源初始化：
+创建源/目标集群的 AdminClient（用于集群管理操作）、Scheduler（用于定时任务），并初始化 replicationPolicy（ topic 命名转换策略）、topicFilter（ topic 过滤规则）等核心组件。</p>
+<p>初始任务调度：</p>
+<p>通过 Scheduler 执行一次性初始化任务：</p>
+<ul>
+<li>创建 offset-syncs 主题（用于同步消费者偏移量）。</li>
+<li>加载源/目标集群的初始 topic-partition 元数据。</li>
+<li>在目标集群创建缺失的 topic 或分区。</li>
+</ul>
+<h3 id="2-task定义和任务分配">
+  2. Task定义和任务分配
+  <a class="anchor" href="#2-task%e5%ae%9a%e4%b9%89%e5%92%8c%e4%bb%bb%e5%8a%a1%e5%88%86%e9%85%8d">#</a>
+</h3>
+<p>Task 是实际执行数据复制的工作单元，这也是 Kafka Connect 的概念。<code>MirrorSourceConnector</code> 对应的 Task 类是 <code>MirrorSourceTask</code>。
+参见下代码片段：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span>    <span style="color:#a6e22e">@Override</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">public</span> Class<span style="color:#f92672">&lt;?</span> <span style="color:#66d9ef">extends</span> Task<span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">taskClass</span>() {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> MirrorSourceTask.<span style="color:#a6e22e">class</span>;
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// divide topic-partitions among tasks</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// since each mirrored topic has different traffic and number of partitions, to balance the load</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// across all mirrormaker instances (workers), &#39;roundrobin&#39; helps to evenly assign all</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// topic-partition to the tasks, then the tasks are further distributed to workers.</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// For example, 3 tasks to mirror 3 topics with 8, 2 and 2 partitions respectively.</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// &#39;t1&#39; denotes &#39;task 1&#39;, &#39;t0p5&#39; denotes &#39;topic 0, partition 5&#39;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// t1 -&gt; [t0p0, t0p3, t0p6, t1p1]</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// t2 -&gt; [t0p1, t0p4, t0p7, t2p0]</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// t3 -&gt; [t0p2, t0p5, t1p0, t2p1]</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@Override</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">public</span> List<span style="color:#f92672">&lt;</span>Map<span style="color:#f92672">&lt;</span>String, String<span style="color:#f92672">&gt;&gt;</span> <span style="color:#a6e22e">taskConfigs</span>(<span style="color:#66d9ef">int</span> maxTasks) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> (<span style="color:#f92672">!</span>config.<span style="color:#a6e22e">enabled</span>() <span style="color:#f92672">||</span> knownSourceTopicPartitions.<span style="color:#a6e22e">isEmpty</span>()) {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> Collections.<span style="color:#a6e22e">emptyList</span>();
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">int</span> numTasks <span style="color:#f92672">=</span> Math.<span style="color:#a6e22e">min</span>(maxTasks, knownSourceTopicPartitions.<span style="color:#a6e22e">size</span>());
+</span></span><span style="display:flex;"><span>        List<span style="color:#f92672">&lt;</span>List<span style="color:#f92672">&lt;</span>TopicPartition<span style="color:#f92672">&gt;&gt;</span> roundRobinByTask <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> ArrayList<span style="color:#f92672">&lt;&gt;</span>(numTasks);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> (<span style="color:#66d9ef">int</span> i <span style="color:#f92672">=</span> 0; i <span style="color:#f92672">&lt;</span> numTasks; i<span style="color:#f92672">++</span>) {
+</span></span><span style="display:flex;"><span>            roundRobinByTask.<span style="color:#a6e22e">add</span>(<span style="color:#66d9ef">new</span> ArrayList<span style="color:#f92672">&lt;&gt;</span>());
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">int</span> count <span style="color:#f92672">=</span> 0;
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> (TopicPartition partition : knownSourceTopicPartitions) {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">int</span> index <span style="color:#f92672">=</span> count <span style="color:#f92672">%</span> numTasks;
+</span></span><span style="display:flex;"><span>            roundRobinByTask.<span style="color:#a6e22e">get</span>(index).<span style="color:#a6e22e">add</span>(partition);
+</span></span><span style="display:flex;"><span>            count<span style="color:#f92672">++</span>;
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> roundRobinByTask.<span style="color:#a6e22e">stream</span>().<span style="color:#a6e22e">map</span>(config::taskConfigForTopicPartitions)
+</span></span><span style="display:flex;"><span>            .<span style="color:#a6e22e">collect</span>(Collectors.<span style="color:#a6e22e">toList</span>());
+</span></span><span style="display:flex;"><span>    }
+</span></span></code></pre></div><p>从上代码可以看到, <code>MirrorSourceConnector</code> 会根据配置的 <code>maxTasks</code> 参数, 将所有需要复制的 topic-partition 划分成多个子集, 每个子集对应一个 Task 的配置。划分策略采用 round-robin 方式, 以尽量均衡每个 Task 的负载。</p>
+<p>使用时，需要注意 task 数量的设置, 合理的根据任务来设置 task 数量，避免过多或过少。</p>
+<h3 id="3-持续维护">
+  3. 持续维护
+  <a class="anchor" href="#3-%e6%8c%81%e7%bb%ad%e7%bb%b4%e6%8a%a4">#</a>
+</h3>
+<p><code>MirrorSourceConnector</code> Scheduler 会定期执行维护任务, 以确保复制过程的一致性。主要包括:</p>
+<ul>
+<li>同步 topic 的 ACL 和 配置。</li>
+<li>刷新 topic 的分区信息，若发现源集群新增分区或目标集群缺失分区，会触发 <code>computeAndCreateTopicPartitions</code>，在目标集群创建 topic 或扩容分区。</li>
+</ul>
+<h2 id="mirrorsourcetask-的设计">
+  MirrorSourceTask 的设计
+  <a class="anchor" href="#mirrorsourcetask-%e7%9a%84%e8%ae%be%e8%ae%a1">#</a>
+</h2>
+<p><code>MirrorSourceTask</code> 实现了 <code>SourceTask</code>, 它负责实际的数据复制工作。其主要工作流程可以分为以下几个阶段:</p>
+<ul>
+<li>初始化</li>
+<li>数据拉取和写入</li>
+<li>偏移量管理（这里特指 topic 同步的 offset 进度）</li>
+</ul>
+<h3 id="1-初始化-1">
+  1. 初始化
+  <a class="anchor" href="#1-%e5%88%9d%e5%a7%8b%e5%8c%96-1">#</a>
+</h3>
+<p>配置解析：
+加载连接器任务配置（如源集群别名、偏移量同步主题、消费者超时时间等）。</p>
+<p>资源初始化：
+创建 Kafka 消费者（拉取源集群数据）、Kafka 生产者（发送偏移量同步信息）、信号量（控制消费者并发访问）等核心资源。</p>
+<p>分区与偏移量准备：</p>
+<ul>
+<li>从 <code>&lt;offset.storage.topic&gt;</code> 主题加载历史偏移量（通过 <code>loadOffsets</code> 方法）。</li>
+<li>将消费者分配到指定分区，并定位到上次复制的偏移量位置（<code>consumer.seek</code>）。</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span><span style="color:#a6e22e">@Override</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">public</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">start</span>(Map<span style="color:#f92672">&lt;</span>String, String<span style="color:#f92672">&gt;</span> props) {
+</span></span><span style="display:flex;"><span>    MirrorTaskConfig config <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> MirrorTaskConfig(props);
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 初始化消费者、生产者 等资源</span>
+</span></span><span style="display:flex;"><span>    consumer <span style="color:#f92672">=</span> MirrorUtils.<span style="color:#a6e22e">newConsumer</span>(config.<span style="color:#a6e22e">sourceConsumerConfig</span>());
+</span></span><span style="display:flex;"><span>    offsetProducer <span style="color:#f92672">=</span> MirrorUtils.<span style="color:#a6e22e">newProducer</span>(config.<span style="color:#a6e22e">offsetSyncsTopicProducerConfig</span>());
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 加载历史偏移量并定位消费者</span>
+</span></span><span style="display:flex;"><span>    Map<span style="color:#f92672">&lt;</span>TopicPartition, Long<span style="color:#f92672">&gt;</span> topicPartitionOffsets <span style="color:#f92672">=</span> loadOffsets(config.<span style="color:#a6e22e">taskTopicPartitions</span>());
+</span></span><span style="display:flex;"><span>    consumer.<span style="color:#a6e22e">assign</span>(topicPartitionOffsets.<span style="color:#a6e22e">keySet</span>());
+</span></span><span style="display:flex;"><span>    topicPartitionOffsets.<span style="color:#a6e22e">forEach</span>(consumer::seek);
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>其中 <code>loadOffsets</code> 的实现在 Dedicated 模式和 Connect 模式下是不同的:</p>
+<ul>
+<li>在 Dedicated 模式下, 偏移量存储在 <code>mm2-offsets.&lt;source-cluster&gt;</code> 主题中, 需要从该主题读取偏移量。</li>
+<li>在 Connect 模式下, 偏移量存储在 <code>&lt;offset.storage.topic&gt;</code> 主题中, 需要从该主题读取偏移量。</li>
+</ul>
+<p>但无论哪种模式, 读取偏移量的逻辑都是类似的：</p>
+<p><em>依赖于 <code>OffsetStorageReader</code> 接口, 同时在 <code>OffsetStorageReader</code> 的具体实现 <code>OffsetStorageReaderImpl</code> 中又依赖于 <code>OffsetBackingStore</code> 来具体决定偏移量的存储介质（如 Kafka 主题 、文件 等，内存等）</em>。</p>
+<p>MirrorMaker2 使用的是 <code>KafkaOffsetBackingStore</code> 来存储偏移量, 顾名思义, 它是基于 Kafka 主题的存储方式, 也就是 <code>mm2-offsets.&lt;source-cluster&gt;.internal</code> 或 <code>&lt;offset.storage.topic&gt;</code> 主题。</p>
+<p>offset 主题中的消息格式如下，Key 和 Value 都是序列化后的字节数组：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plain" data-lang="plain"><span style="display:flex;"><span>[&#34;&lt;connector-name&gt;&#34;,{&#34;cluster&#34;:&#34;&lt;source-cluster-alias&gt;&#34;,&#34;partition&#34;:&lt;partition&gt;,&#34;topic&#34;:&#34;&lt;topic-name&gt;&#34;}] // Key
+</span></span><span style="display:flex;"><span>{&#34;offset&#34;: &lt;offset&gt;} // Value
+</span></span></code></pre></div><p>在 Dedicated 模式下, <code>&lt;connector-name&gt;</code> 通常是 <code>MirrorSourceConnector</code>，而在 Connect 模式下, <code>&lt;connector-name&gt;</code> 则是用户创建的 Connector 名称。</p>
+<p>‼️ 所以我们也就知道了，MirrorMaker2 在启动时，会尝试 <strong>恢复</strong> 之前的复制进度（偏移量），以确保数据复制的连续性和一致性。只是两种模式下，偏移量的存储位置不同而已。</p>
+<h3 id="2-数据拉取和写入">
+  2. 数据拉取和写入
+  <a class="anchor" href="#2-%e6%95%b0%e6%8d%ae%e6%8b%89%e5%8f%96%e5%92%8c%e5%86%99%e5%85%a5">#</a>
+</h3>
+<p><code>MirrorSourceTask</code> 的拉取逻辑由 <code>poll</code> 方法实现, 它由 Kafka Connect 框架控制调用。<code>poll</code> 方法的主要职责是从源集群拉取数据, 并将其转换为 Connect 框架的 <code>SourceRecord</code> 以供后续处理。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span>    <span style="color:#a6e22e">@Override</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">public</span> List<span style="color:#f92672">&lt;</span>SourceRecord<span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">poll</span>() {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// ...</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">try</span> {
+</span></span><span style="display:flex;"><span>            ConsumerRecords<span style="color:#f92672">&lt;</span><span style="color:#66d9ef">byte</span><span style="color:#f92672">[]</span>, <span style="color:#66d9ef">byte</span><span style="color:#f92672">[]&gt;</span> records <span style="color:#f92672">=</span> consumer.<span style="color:#a6e22e">poll</span>(pollTimeout);
+</span></span><span style="display:flex;"><span>            List<span style="color:#f92672">&lt;</span>SourceRecord<span style="color:#f92672">&gt;</span> sourceRecords <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> ArrayList<span style="color:#f92672">&lt;&gt;</span>(records.<span style="color:#a6e22e">count</span>());
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">for</span> (ConsumerRecord<span style="color:#f92672">&lt;</span><span style="color:#66d9ef">byte</span><span style="color:#f92672">[]</span>, <span style="color:#66d9ef">byte</span><span style="color:#f92672">[]&gt;</span> record : records) {
+</span></span><span style="display:flex;"><span>                SourceRecord converted <span style="color:#f92672">=</span> convertRecord(record);
+</span></span><span style="display:flex;"><span>                sourceRecords.<span style="color:#a6e22e">add</span>(converted);
+</span></span><span style="display:flex;"><span>                TopicPartition topicPartition <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> TopicPartition(converted.<span style="color:#a6e22e">topic</span>(), converted.<span style="color:#a6e22e">kafkaPartition</span>());
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">// 省略部分代码</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> sourceRecords;
+</span></span><span style="display:flex;"><span>        } <span style="color:#66d9ef">catch</span> (WakeupException e) {
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e">// Ignore exception handling</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    SourceRecord <span style="color:#a6e22e">convertRecord</span>(ConsumerRecord<span style="color:#f92672">&lt;</span><span style="color:#66d9ef">byte</span><span style="color:#f92672">[]</span>, <span style="color:#66d9ef">byte</span><span style="color:#f92672">[]&gt;</span> record) {
+</span></span><span style="display:flex;"><span>        String targetTopic <span style="color:#f92672">=</span> formatRemoteTopic(record.<span style="color:#a6e22e">topic</span>()); <span style="color:#75715e">// 处理为 &lt;source-cluster-alias&gt;.&lt;topic&gt;</span>
+</span></span><span style="display:flex;"><span>        Headers headers <span style="color:#f92672">=</span> convertHeaders(record);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">new</span> SourceRecord(
+</span></span><span style="display:flex;"><span>                MirrorUtils.<span style="color:#a6e22e">wrapPartition</span>(<span style="color:#66d9ef">new</span> TopicPartition(record.<span style="color:#a6e22e">topic</span>(), record.<span style="color:#a6e22e">partition</span>()), sourceClusterAlias),
+</span></span><span style="display:flex;"><span>                MirrorUtils.<span style="color:#a6e22e">wrapOffset</span>(record.<span style="color:#a6e22e">offset</span>()),
+</span></span><span style="display:flex;"><span>                targetTopic, record.<span style="color:#a6e22e">partition</span>(),
+</span></span><span style="display:flex;"><span>                Schema.<span style="color:#a6e22e">OPTIONAL_BYTES_SCHEMA</span>, record.<span style="color:#a6e22e">key</span>(),
+</span></span><span style="display:flex;"><span>                Schema.<span style="color:#a6e22e">BYTES_SCHEMA</span>, record.<span style="color:#a6e22e">value</span>(),
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">record</span><span style="color:#960050;background-color:#1e0010">.</span><span style="color:#a6e22e">timestamp</span>(), headers);
+</span></span><span style="display:flex;"><span>    }
+</span></span></code></pre></div><h3 id="3-偏移量管理">
+  3. 偏移量管理
+  <a class="anchor" href="#3-%e5%81%8f%e7%a7%bb%e9%87%8f%e7%ae%a1%e7%90%86">#</a>
+</h3>
+<p>Kafka Connect 框架会自动管理偏移量的提交, 因此 <code>MirrorSourceTask</code> 不需要显式地提交偏移量。框架会定期将偏移量写入 <code>&lt;offset.storage.topic&gt;</code> 主题, 以确保在任务重启时能够恢复到正确的位置。</p>
+<p>在 <code>poll</code> 方法中已经在 SourceRecord 中封装了偏移量信息, 框架会根据这些信息来更新偏移量。</p>
+<h2 id="kafkaoffsetbackingstore-的设计">
+  KafkaOffsetBackingStore 的设计
+  <a class="anchor" href="#kafkaoffsetbackingstore-%e7%9a%84%e8%ae%be%e8%ae%a1">#</a>
+</h2>
+<p>前面提到了 <code>MirrorSourceTask</code> 使用了 <code>KafkaOffsetBackingStore</code> 来管理 topic 同步的 offset 进度，那么它具体是怎么进行管理的？
+如果只进不出，topic 随着时间的推移里面的消息会越来越多，它怎么从这么多数据中获取到正确的偏移量值？投递进去的消息难道就一直保存着吗？</p>
+<p>在 <code>KafkaOffsetBackingStore</code> 关于这些 topic 的创建如下，可以看到指定了 topic 为 <strong>compacted</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span>    <span style="color:#66d9ef">protected</span> NewTopic <span style="color:#a6e22e">newTopicDescription</span>(<span style="color:#66d9ef">final</span> String topic, <span style="color:#66d9ef">final</span> WorkerConfig config) {
+</span></span><span style="display:flex;"><span>        Map<span style="color:#f92672">&lt;</span>String, Object<span style="color:#f92672">&gt;</span> topicSettings <span style="color:#f92672">=</span> config <span style="color:#66d9ef">instanceof</span> DistributedConfig
+</span></span><span style="display:flex;"><span>                <span style="color:#f92672">?</span> ((DistributedConfig) config).<span style="color:#a6e22e">offsetStorageTopicSettings</span>()
+</span></span><span style="display:flex;"><span>                : Collections.<span style="color:#a6e22e">emptyMap</span>();
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> TopicAdmin.<span style="color:#a6e22e">defineTopic</span>(topic)
+</span></span><span style="display:flex;"><span>                .<span style="color:#a6e22e">config</span>(topicSettings) <span style="color:#75715e">// first so that we override user-supplied settings as needed</span>
+</span></span><span style="display:flex;"><span>                .<span style="color:#a6e22e">compacted</span>()
+</span></span><span style="display:flex;"><span>                .<span style="color:#a6e22e">partitions</span>(config.<span style="color:#a6e22e">getInt</span>(DistributedConfig.<span style="color:#a6e22e">OFFSET_STORAGE_PARTITIONS_CONFIG</span>))
+</span></span><span style="display:flex;"><span>                .<span style="color:#a6e22e">replicationFactor</span>(config.<span style="color:#a6e22e">getShort</span>(DistributedConfig.<span style="color:#a6e22e">OFFSET_STORAGE_REPLICATION_FACTOR_CONFIG</span>))
+</span></span><span style="display:flex;"><span>                .<span style="color:#a6e22e">build</span>();
+</span></span><span style="display:flex;"><span>    }
+</span></span></code></pre></div><p>而 <code>compacted</code> 实际对应了 topic 的 <code>cleanup.policy = compact</code>。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span>    <span style="color:#66d9ef">public</span> NewTopicBuilder <span style="color:#a6e22e">compacted</span>() {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">this</span>.<span style="color:#a6e22e">configs</span>.<span style="color:#a6e22e">put</span>(CLEANUP_POLICY_CONFIG, CLEANUP_POLICY_COMPACT);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">this</span>;
+</span></span><span style="display:flex;"><span>    }
+</span></span></code></pre></div><p><code>KafkaOffsetBackingStore</code> 实现了 <code>OffsetBackingStore</code>，它实际又依赖了 <code>KafkaBasedLog</code>, 它明确的注释了：</p>
+<blockquote>
+<p>KafkaBasedLog provides a generic implementation of a shared, compacted log of records stored in Kafka that all
+clients need to consume and, at times, agree on their offset / that they have read to the end of the log.</p>
+</blockquote>
+<p>其内部创建了一个从 <code>earliest</code> 位点开始消费的 consumer，用来读取已存储的偏移量信息。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span>    <span style="color:#66d9ef">protected</span> Consumer<span style="color:#f92672">&lt;</span>K, V<span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">createConsumer</span>() {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// Always force reset to the beginning of the log since this class wants to consume all available log data</span>
+</span></span><span style="display:flex;"><span>        consumerConfigs.<span style="color:#a6e22e">put</span>(ConsumerConfig.<span style="color:#a6e22e">AUTO_OFFSET_RESET_CONFIG</span>, <span style="color:#e6db74">&#34;earliest&#34;</span>);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// Turn off autocommit since we always want to consume the full log</span>
+</span></span><span style="display:flex;"><span>        consumerConfigs.<span style="color:#a6e22e">put</span>(ConsumerConfig.<span style="color:#a6e22e">ENABLE_AUTO_COMMIT_CONFIG</span>, <span style="color:#66d9ef">false</span>);
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">new</span> KafkaConsumer<span style="color:#f92672">&lt;&gt;</span>(consumerConfigs);
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">/**
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * This method finds the end offsets of the Kafka log&#39;s topic partitions, optionally retrying
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     * if the {@code listOffsets()} method of the admin client throws a {@link RetriableException}.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">     */</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">private</span> <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">readToLogEnd</span>(<span style="color:#66d9ef">boolean</span> shouldRetry) {
+</span></span><span style="display:flex;"><span>        Set<span style="color:#f92672">&lt;</span>TopicPartition<span style="color:#f92672">&gt;</span> assignment <span style="color:#f92672">=</span> consumer.<span style="color:#a6e22e">assignment</span>();
+</span></span><span style="display:flex;"><span>        Map<span style="color:#f92672">&lt;</span>TopicPartition, Long<span style="color:#f92672">&gt;</span> endOffsets <span style="color:#f92672">=</span> readEndOffsets(assignment, shouldRetry);
+</span></span><span style="display:flex;"><span>        log.<span style="color:#a6e22e">trace</span>(<span style="color:#e6db74">&#34;Reading to end of log offsets {}&#34;</span>, endOffsets);
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">while</span> (<span style="color:#f92672">!</span>endOffsets.<span style="color:#a6e22e">isEmpty</span>()) {
+</span></span><span style="display:flex;"><span>            Iterator<span style="color:#f92672">&lt;</span>Map.<span style="color:#a6e22e">Entry</span><span style="color:#f92672">&lt;</span>TopicPartition, Long<span style="color:#f92672">&gt;&gt;</span> it <span style="color:#f92672">=</span> endOffsets.<span style="color:#a6e22e">entrySet</span>().<span style="color:#a6e22e">iterator</span>();
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">while</span> (it.<span style="color:#a6e22e">hasNext</span>()) {
+</span></span><span style="display:flex;"><span>                Map.<span style="color:#a6e22e">Entry</span><span style="color:#f92672">&lt;</span>TopicPartition, Long<span style="color:#f92672">&gt;</span> entry <span style="color:#f92672">=</span> it.<span style="color:#a6e22e">next</span>();
+</span></span><span style="display:flex;"><span>                TopicPartition topicPartition <span style="color:#f92672">=</span> entry.<span style="color:#a6e22e">getKey</span>();
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">long</span> endOffset <span style="color:#f92672">=</span> entry.<span style="color:#a6e22e">getValue</span>();
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">long</span> lastConsumedOffset <span style="color:#f92672">=</span> consumer.<span style="color:#a6e22e">position</span>(topicPartition);
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">if</span> (lastConsumedOffset <span style="color:#f92672">&gt;=</span> endOffset) {
+</span></span><span style="display:flex;"><span>                    log.<span style="color:#a6e22e">trace</span>(<span style="color:#e6db74">&#34;Read to end offset {} for {}&#34;</span>, endOffset, topicPartition);
+</span></span><span style="display:flex;"><span>                    it.<span style="color:#a6e22e">remove</span>();
+</span></span><span style="display:flex;"><span>                } <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>                    log.<span style="color:#a6e22e">trace</span>(<span style="color:#e6db74">&#34;Behind end offset {} for {}; last-read offset is {}&#34;</span>,
+</span></span><span style="display:flex;"><span>                            endOffset, topicPartition, lastConsumedOffset);
+</span></span><span style="display:flex;"><span>                    poll(Integer.<span style="color:#a6e22e">MAX_VALUE</span>);
+</span></span><span style="display:flex;"><span>                    <span style="color:#66d9ef">break</span>;
+</span></span><span style="display:flex;"><span>                }
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span></code></pre></div><p>简单总结一下，基于 kafka 的 offset 存储，利用了 kafka compact 机制来保存 offset 进度信息，这样可以避免消息量无限制增长。在需要从 kafka 中恢复数据时，则从头开始消费整个 topic 中的消息，保存最新的偏移量信息。</p>
+<h2 id="迁移">
+  迁移
+  <a class="anchor" href="#%e8%bf%81%e7%a7%bb">#</a>
+</h2>
+<p>经过前面的介绍，我们已经了解了 MirrorMaker2 的工作原理和偏移量管理机制。那么, 如果我们已经在使用 Dedicated 模式部署了 MirrorMaker2, 现在想要切换到 Connect 集群模式, 应该如何操作呢?</p>
+<p>这里考虑两个问题：</p>
+<ul>
+<li>Kafka Connect 集群应该如何搭建？</li>
+<li>怎么迁移才能保证数据的一致，不会重复或丢失？</li>
+</ul>
+<h3 id="搭建-kafka-connect-集群">
+  搭建 Kafka Connect 集群
+  <a class="anchor" href="#%e6%90%ad%e5%bb%ba-kafka-connect-%e9%9b%86%e7%be%a4">#</a>
+</h3>
+<p>Kafka Connect 集群的搭建可以参考官方文档或其他相关资料, 这里不做过多赘述。</p>
+<blockquote>
+<p><a href="https://docs.confluent.io/platform/current/connect/userguide.html">https://docs.confluent.io/platform/current/connect/userguide.html</a></p>
+</blockquote>
+<h3 id="如何迁移进度">
+  如何迁移进度
+  <a class="anchor" href="#%e5%a6%82%e4%bd%95%e8%bf%81%e7%a7%bb%e8%bf%9b%e5%ba%a6">#</a>
+</h3>
+<p>MirrorMaker2 在 Dedicated 模式下运行一段时间后，会在 <strong>TARGET</strong> Kafka 集群 <code>mm2-offsets.&lt;source-cluster&gt;.internal</code> 主题中存储偏移量信息。而在 Connect 模式下, 偏移量信息则存储在 <code>&lt;offset.storage.topic&gt;</code> 主题中。如果我们不做任何处理，那么在切换到 Connect 模式后, 任务会从 <code>&lt;offset.storage.topic&gt;</code> 主题中读取偏移量, 由于该主题中没有任何数据, 任务会从头开始复制数据, 这会导致大量的重复数据。</p>
+<blockquote>
+<p>如果业务能够容忍重复数据, 那么可以直接切换, 但大多数场景下, 我们希望数据复制是连续且一致的。</p>
+</blockquote>
+<p>那么就需要我们把 <code>mm2-offsets.&lt;source-cluster&gt;.internal</code> 主题中的偏移量数据, 迁移到 <code>&lt;offset.storage.topic&gt;</code> 主题中, 那么在切换到 Connect 模式后, 任务就能从正确的位置继续复制数据, 避免重复或丢失。</p>
+<p>这个转换过程也很简单, 只需要编写一个脚本, 从 <code>mm2-offsets.&lt;source-cluster&gt;.internal</code> 主题中读取偏移量数据, 然后按照 <code>&lt;offset.storage.topic&gt;</code> 主题的格式写入即可。</p>
+<blockquote>
+<p>推荐将 offsets 数据保存到文件或者其他存储介质中, 方便人工验证或者调整。</p>
+</blockquote>
+<p>举例来说：</p>
+<p>假如 <code>mm2-offsets.source.internal</code> 主题中有如下消息：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plain" data-lang="plain"><span style="display:flex;"><span>Key: [&#34;MirrorSourceConnector&#34;,{&#34;cluster&#34;:&#34;source&#34;,&#34;partition&#34;:0,&#34;topic&#34;:&#34;test-topic&#34;}]
+</span></span><span style="display:flex;"><span>Value: {&#34;offset&#34;: 12345}
+</span></span></code></pre></div><p>那么我们需要把它转换为 <code>&lt;offset.storage.topic&gt;</code> 主题中的消息：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-plain" data-lang="plain"><span style="display:flex;"><span>Key: [&#34;mm2-source-connector&#34;,{&#34;cluster&#34;:&#34;source&#34;,&#34;partition&#34;:0,&#34;topic&#34;:&#34;test-topic&#34;}]
+</span></span><span style="display:flex;"><span>Value: {&#34;offset&#34;: 12345}
+</span></span></code></pre></div><p>两者唯一的区别在于 Key 中的 connector 名称，如果 <code>source.cluster.alias</code>(cluster) 不同, 也需要做相应的调整。</p>
+<p>脚本举例如下:</p>
+<details ><summary>offset 迁移示例</summary>
+  <div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">extract_dedicated_offsets</span>(brokers, dedicated_offset_topic, output_file):
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;从专用模式的 offset topic 中提取 offset 信息并保存到文件&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    print(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;从 </span><span style="color:#e6db74">{</span>dedicated_offset_topic<span style="color:#e6db74">}</span><span style="color:#e6db74"> 提取 offsets, 创建 consumer 连接到 </span><span style="color:#e6db74">{</span>brokers<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    consumer <span style="color:#f92672">=</span> KafkaConsumer(
+</span></span><span style="display:flex;"><span>        dedicated_offset_topic,
+</span></span><span style="display:flex;"><span>        bootstrap_servers<span style="color:#f92672">=</span>brokers,
+</span></span><span style="display:flex;"><span>        auto_offset_reset<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;earliest&#39;</span>,
+</span></span><span style="display:flex;"><span>        enable_auto_commit<span style="color:#f92672">=</span><span style="color:#66d9ef">False</span>,
+</span></span><span style="display:flex;"><span>        consumer_timeout_ms<span style="color:#f92672">=</span><span style="color:#ae81ff">10000</span>,  <span style="color:#75715e"># 10秒内没有新消息就退出</span>
+</span></span><span style="display:flex;"><span>        key_deserializer<span style="color:#f92672">=</span><span style="color:#66d9ef">lambda</span> x: json<span style="color:#f92672">.</span>loads(x<span style="color:#f92672">.</span>decode(<span style="color:#e6db74">&#39;utf-8&#39;</span>)) <span style="color:#66d9ef">if</span> x <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">None</span>,
+</span></span><span style="display:flex;"><span>        value_deserializer<span style="color:#f92672">=</span><span style="color:#66d9ef">lambda</span> x: json<span style="color:#f92672">.</span>loads(x<span style="color:#f92672">.</span>decode(<span style="color:#e6db74">&#39;utf-8&#39;</span>)) <span style="color:#66d9ef">if</span> x <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">None</span>
+</span></span><span style="display:flex;"><span>    )
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    print(<span style="color:#e6db74">&#34;开始消费消息...&#34;</span>)
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 只保留每个 topic-partition 的最新 offset</span>
+</span></span><span style="display:flex;"><span>    offsets <span style="color:#f92672">=</span> {}
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> message <span style="color:#f92672">in</span> consumer:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> message<span style="color:#f92672">.</span>key <span style="color:#f92672">and</span> message<span style="color:#f92672">.</span>value:
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> message<span style="color:#f92672">.</span>key[<span style="color:#ae81ff">0</span>] <span style="color:#f92672">!=</span> <span style="color:#e6db74">&#34;MirrorSourceConnector&#34;</span>:
+</span></span><span style="display:flex;"><span>                <span style="color:#75715e"># 只处理 MirrorSourceConnector 的消息</span>
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">continue</span>
+</span></span><span style="display:flex;"><span>            
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e"># 专用模式格式: Key[1] = {&#34;cluster&#34;: &#34;...&#34;, &#34;partition&#34;: ..., &#34;topic&#34;: &#34;...&#34;}</span>
+</span></span><span style="display:flex;"><span>            partition_info <span style="color:#f92672">=</span> message<span style="color:#f92672">.</span>key[<span style="color:#ae81ff">1</span>]
+</span></span><span style="display:flex;"><span>            cluster <span style="color:#f92672">=</span> partition_info[<span style="color:#e6db74">&#34;cluster&#34;</span>]
+</span></span><span style="display:flex;"><span>            topic <span style="color:#f92672">=</span> partition_info[<span style="color:#e6db74">&#34;topic&#34;</span>]
+</span></span><span style="display:flex;"><span>            partition <span style="color:#f92672">=</span> partition_info[<span style="color:#e6db74">&#34;partition&#34;</span>]
+</span></span><span style="display:flex;"><span>            offset <span style="color:#f92672">=</span> message<span style="color:#f92672">.</span>value[<span style="color:#e6db74">&#34;offset&#34;</span>]
+</span></span><span style="display:flex;"><span>            
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e"># 过滤掉内部 topic (heartbeats, checkpoints 等)</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> topic<span style="color:#f92672">.</span>endswith(<span style="color:#e6db74">&#39;heartbeats&#39;</span>) <span style="color:#f92672">or</span> <span style="color:#e6db74">&#39;checkpoints&#39;</span> <span style="color:#f92672">in</span> topic <span style="color:#f92672">or</span> <span style="color:#e6db74">&#39;internal&#39;</span> <span style="color:#f92672">in</span> topic:
+</span></span><span style="display:flex;"><span>                print(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;跳过内部 topic: </span><span style="color:#e6db74">{</span>topic<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">continue</span>
+</span></span><span style="display:flex;"><span>            
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e"># 使用 topic-partition 作为唯一标识，保留最新的 offset</span>
+</span></span><span style="display:flex;"><span>            key <span style="color:#f92672">=</span> <span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">{</span>cluster<span style="color:#e6db74">}</span><span style="color:#e6db74">-</span><span style="color:#e6db74">{</span>topic<span style="color:#e6db74">}</span><span style="color:#e6db74">-</span><span style="color:#e6db74">{</span>partition<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>            offsets[key] <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;cluster&#34;</span>: cluster,
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;topic&#34;</span>: topic,
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;partition&#34;</span>: partition,
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;offset&#34;</span>: offset
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>            print(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;提取 offset: </span><span style="color:#e6db74">{</span>key<span style="color:#e6db74">}</span><span style="color:#e6db74"> -&gt; </span><span style="color:#e6db74">{</span>offset<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>            print(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;跳过其他消息: </span><span style="color:#e6db74">{</span>message<span style="color:#f92672">.</span>key[<span style="color:#ae81ff">0</span>] <span style="color:#66d9ef">if</span> message<span style="color:#f92672">.</span>key <span style="color:#66d9ef">else</span> <span style="color:#e6db74">&#39;None&#39;</span><span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    consumer<span style="color:#f92672">.</span>close()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 保存到文件</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">with</span> open(output_file, <span style="color:#e6db74">&#39;w&#39;</span>) <span style="color:#66d9ef">as</span> f:
+</span></span><span style="display:flex;"><span>        json<span style="color:#f92672">.</span>dump(offsets, f, indent<span style="color:#f92672">=</span><span style="color:#ae81ff">2</span>)
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    print(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;提取了 </span><span style="color:#e6db74">{</span>len(offsets)<span style="color:#e6db74">}</span><span style="color:#e6db74"> 个 offset 记录到 </span><span style="color:#e6db74">{</span>output_file<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">publish_connect_offsets</span>(brokers, connect_offset_topic, connector_name, input_file):
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;从文件读取 offset 信息，转换为 Connect 格式并发布到 Connect offset topic&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 从文件读取 offset 信息</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">with</span> open(input_file, <span style="color:#e6db74">&#39;r&#39;</span>) <span style="color:#66d9ef">as</span> f:
+</span></span><span style="display:flex;"><span>        offsets <span style="color:#f92672">=</span> json<span style="color:#f92672">.</span>load(f)
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    producer <span style="color:#f92672">=</span> KafkaProducer(
+</span></span><span style="display:flex;"><span>        bootstrap_servers<span style="color:#f92672">=</span>brokers,
+</span></span><span style="display:flex;"><span>        key_serializer<span style="color:#f92672">=</span><span style="color:#66d9ef">lambda</span> x: json<span style="color:#f92672">.</span>dumps(x, separators<span style="color:#f92672">=</span>(<span style="color:#e6db74">&#39;,&#39;</span>, <span style="color:#e6db74">&#39;:&#39;</span>))<span style="color:#f92672">.</span>encode(<span style="color:#e6db74">&#39;utf-8&#39;</span>),
+</span></span><span style="display:flex;"><span>        value_serializer<span style="color:#f92672">=</span><span style="color:#66d9ef">lambda</span> x: json<span style="color:#f92672">.</span>dumps(x, separators<span style="color:#f92672">=</span>(<span style="color:#e6db74">&#39;,&#39;</span>, <span style="color:#e6db74">&#39;:&#39;</span>))<span style="color:#f92672">.</span>encode(<span style="color:#e6db74">&#39;utf-8&#39;</span>)
+</span></span><span style="display:flex;"><span>    )
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    success_count <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> offset_data <span style="color:#f92672">in</span> offsets<span style="color:#f92672">.</span>values():
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 转换为 Connect 格式</span>
+</span></span><span style="display:flex;"><span>        connect_key <span style="color:#f92672">=</span> [
+</span></span><span style="display:flex;"><span>            connector_name,
+</span></span><span style="display:flex;"><span>            {
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;cluster&#34;</span>: offset_data[<span style="color:#e6db74">&#34;cluster&#34;</span>],
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;partition&#34;</span>: offset_data[<span style="color:#e6db74">&#34;partition&#34;</span>],
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;topic&#34;</span>: offset_data[<span style="color:#e6db74">&#34;topic&#34;</span>]
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>        ]
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        connect_value <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;offset&#34;</span>: offset_data[<span style="color:#e6db74">&#34;offset&#34;</span>]
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">try</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#75715e"># print(f&#34;发布 offset: {connect_key} -&gt; {connect_value} 到 {connect_offset_topic}&#34;)</span>
+</span></span><span style="display:flex;"><span>            future <span style="color:#f92672">=</span> producer<span style="color:#f92672">.</span>send(connect_offset_topic, key<span style="color:#f92672">=</span>connect_key, value<span style="color:#f92672">=</span>connect_value)
+</span></span><span style="display:flex;"><span>            future<span style="color:#f92672">.</span>get(timeout<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span>)
+</span></span><span style="display:flex;"><span>            success_count <span style="color:#f92672">+=</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">except</span> KafkaError <span style="color:#66d9ef">as</span> e:
+</span></span><span style="display:flex;"><span>            print(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;发送 offset 失败: </span><span style="color:#e6db74">{</span>e<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>, file<span style="color:#f92672">=</span>sys<span style="color:#f92672">.</span>stderr)
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    producer<span style="color:#f92672">.</span>flush()
+</span></span><span style="display:flex;"><span>    producer<span style="color:#f92672">.</span>close()
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    print(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;成功发布了 </span><span style="color:#e6db74">{</span>success_count<span style="color:#e6db74">}</span><span style="color:#e6db74">/</span><span style="color:#e6db74">{</span>len(offsets)<span style="color:#e6db74">}</span><span style="color:#e6db74"> 个 offset 记录&#34;</span>)
+</span></span></code></pre></div>  </div>
+</details>
+<h3 id="操作步骤">
+  操作步骤
+  <a class="anchor" href="#%e6%93%8d%e4%bd%9c%e6%ad%a5%e9%aa%a4">#</a>
+</h3>
+<ol start="0">
+<li>准备好 Kafka Connect 集群环境（需要搭建在 Target 集群中）</li>
+<li>选择合适的时机停止 dedicated 模式的 MirrorMaker2 服务</li>
+<li>运行 extract_dedicated_offsets 提取出 offset (从 <code>mm2-offsets.&lt;source-cluster-alias&gt;.internal</code> 中提取)</li>
+<li>运行 publish_connect_offsets 写入 offset (写入 <code>&lt;offset.storage.topic&gt;</code>)</li>
+<li>在 Kafka Connect 中创建 Connector 任务
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>curl -X POST -H <span style="color:#e6db74">&#34;Content-Type: application/json&#34;</span> --data @mm2-connector.json http://localhost:8083/connectors
+</span></span></code></pre></div></li>
+</ol>
+<details ><summary>connector 配置文件简单示例</summary>
+  <div class="markdown-inner">
+<p>更多配置请参考 <a href="#mirrorconnector-%e9%85%8d%e7%bd%ae">MirrorSourceConnector 配置</a></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">&#34;name&#34;</span>: <span style="color:#e6db74">&#34;mm2-source-connector&#34;</span>, <span style="color:#75715e">// 连接名称, 可以自定义
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#f92672">&#34;config&#34;</span>: {
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">&#34;connector.class&#34;</span>: <span style="color:#e6db74">&#34;org.apache.kafka.connect.mirror.MirrorSourceConnector&#34;</span>, <span style="color:#75715e">// 连接类, 固定值
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#f92672">&#34;source.cluster.alias&#34;</span>: <span style="color:#e6db74">&#34;source&#34;</span>, <span style="color:#75715e">// 源集群别名, 可以自定义，迁移时写入 &lt;offset.storage.topic&gt; 的值
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#f92672">&#34;target.cluster.alias&#34;</span>: <span style="color:#e6db74">&#34;target&#34;</span>, <span style="color:#75715e">// 目标集群别名, 可以自定义
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#f92672">&#34;source.cluster.bootstrap.servers&#34;</span>: <span style="color:#e6db74">&#34;kafka-source:9092&#34;</span>, <span style="color:#75715e">// 源集群 bootstrap.servers, 迁移时需要指向源集群
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#f92672">&#34;target.cluster.bootstrap.servers&#34;</span>: <span style="color:#e6db74">&#34;kafka-target:9092&#34;</span>, <span style="color:#75715e">// 目标集群 bootstrap.servers, 迁移时需要指向目标集群
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#f92672">&#34;topics&#34;</span>: <span style="color:#e6db74">&#34;test-topic,test-topic-second&#34;</span>, <span style="color:#75715e">// 要迁移的 topic 列表, 可以自定义
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#f92672">&#34;tasks.max&#34;</span>: <span style="color:#ae81ff">2</span>                            <span style="color:#75715e">// 任务数量, 可以根据集群资源调整
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>        <span style="color:#75715e">// ... 更多配置
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div>  </div>
+</details>
+<h2 id="总结">
+  总结
+  <a class="anchor" href="#%e6%80%bb%e7%bb%93">#</a>
+</h2>
+<p>本文深入探讨了 Apache Kafka MirrorMaker2 的设计原理和实现机制，并详细介绍了从 Dedicated 模式迁移到 Connect 集群模式的完整方案。</p>
+<h3 id="核心要点回顾">
+  核心要点回顾
+  <a class="anchor" href="#%e6%a0%b8%e5%bf%83%e8%a6%81%e7%82%b9%e5%9b%9e%e9%a1%be">#</a>
+</h3>
+<p><strong>架构设计</strong>：</p>
+<ul>
+<li>MirrorMaker2 基于 Kafka Connect 框架构建，通过 MirrorSourceConnector 实现跨集群数据复制</li>
+<li>支持 Dedicated 模式（独立运行）和 Connect 集群模式（分布式部署）两种部署方式</li>
+<li>采用 round-robin 策略将 topic-partition 分配给多个 Task，实现负载均衡</li>
+</ul>
+<p><strong>偏移量管理</strong>：</p>
+<ul>
+<li>使用 KafkaOffsetBackingStore 基于 Kafka topic 存储偏移量信息</li>
+<li>利用 Kafka 的 compact 机制避免偏移量数据无限增长</li>
+<li>Dedicated 模式存储在 <code>mm2-offsets.&lt;source-cluster&gt;.internal</code>，Connect 模式存储在 <code>&lt;offset.storage.topic&gt;</code></li>
+</ul>
+<p><strong>迁移策略</strong>：</p>
+<ul>
+<li>通过提取和转换偏移量数据，确保迁移过程中数据复制的连续性</li>
+<li>关键在于正确转换 connector 名称和集群别名，保持偏移量的一致性</li>
+<li>迁移过程需要短暂停机，但可以避免数据重复或丢失</li>
+</ul>
+<h3 id="实践建议">
+  实践建议
+  <a class="anchor" href="#%e5%ae%9e%e8%b7%b5%e5%bb%ba%e8%ae%ae">#</a>
+</h3>
+<ol>
+<li>
+<p><strong>选择合适的部署模式</strong>：小规模场景可选择 Dedicated 模式，大规模生产环境建议使用 Connect 集群模式以获得更好的可扩展性和高可用性</p>
+</li>
+<li>
+<p><strong>合理配置 Task 数量</strong>：根据 topic-partition 数量和集群资源合理设置 <code>tasks.max</code>，避免资源浪费或性能瓶颈</p>
+</li>
+<li>
+<p><strong>做好迁移规划</strong>：迁移前充分测试偏移量提取和转换脚本，选择业务低峰期进行迁移操作</p>
+</li>
+<li>
+<p><strong>监控和验证</strong>：迁移后密切监控数据复制状态，验证偏移量恢复的正确性</p>
+</li>
+</ol>
+<h3 id="注意事项">
+  注意事项
+  <a class="anchor" href="#%e6%b3%a8%e6%84%8f%e4%ba%8b%e9%a1%b9">#</a>
+</h3>
+<ul>
+<li>本文基于 Kafka v3.3.2，不同版本的实现细节可能有所差异</li>
+<li>未涉及 MirrorCheckpointConnector 和 MirrorHeartbeatConnector 的详细介绍，实际使用中需要根据场景考虑是否需要启用这些组件</li>
+<li>对于消费者组偏移量同步的场景，需要额外的迁移策略</li>
+</ul>
+<p>通过理解 MirrorMaker2 的内部机制，我们能够更好地运维和优化跨集群数据复制方案，确保数据的一致性和系统的稳定性。</p>
+<h2 id="参考">
+  参考
+  <a class="anchor" href="#%e5%8f%82%e8%80%83">#</a>
+</h2>
+<ul>
+<li><a href="https://kafka.apache.org/33/documentation.html#connectapi">Kafka Connect API</a></li>
+<li><a href="https://kafka.apache.org/33/documentation.html#connectconfigs">Kafka Connect Configs</a></li>
+<li><a href="https://docs.confluent.io/platform/current/connect/design.html">Confluent - Kafka Connect Architecture</a></li>
+<li><a href="https://docs.confluent.io/platform/8.0/connect/devguide.html">Confluent - Kafka Connect Developer Guide</a></li>
+</ul>
+<h2 id="附">
+  附
+  <a class="anchor" href="#%e9%99%84">#</a>
+</h2>
+<h3 id="connect-配置">
+  Connect 配置
+  <a class="anchor" href="#connect-%e9%85%8d%e7%bd%ae">#</a>
+</h3>
+<p>Kafka Connect 的配置分为两个层面：</p>
+<p><strong>Worker 配置</strong>：控制 Connect 集群的基础行为</p>
+<ul>
+<li><code>bootstrap.servers</code>: Kafka 集群地址</li>
+<li><code>group.id</code>: Connect 集群的唯一标识</li>
+<li><code>config.storage.topic</code>: 存储 Connector 配置的内部主题，默认值为 <code>connect-configs</code></li>
+<li><code>offset.storage.topic</code>: 存储偏移量信息的内部主题，默认值为 <code>connect-offsets</code></li>
+<li><code>status.storage.topic</code>: 存储任务状态的内部主题，默认值为 <code>connect-status</code></li>
+</ul>
+<p>更多参见 <a href="https://kafka.apache.org/33/documentation.html#connectconfigs">Kafka Connect Configs</a></p>
+<p><strong>Connector 配置</strong>：定义具体的数据复制任务</p>
+<ul>
+<li><code>connector.class</code>: 指定使用的 Connector 类</li>
+<li><code>tasks.max</code>: 最大任务数量</li>
+<li><code>topics</code> 或 <code>topics.regex</code>: 指定要处理的主题</li>
+</ul>
+<p>其他特定于 Connector 的配置参数, 要参见相应的 Connector 源码或者文档。</p>
+<h3 id="mirrorconnector-配置">
+  MirrorConnector 配置
+  <a class="anchor" href="#mirrorconnector-%e9%85%8d%e7%bd%ae">#</a>
+</h3>
+<p>表格根据 <a href="https://github.com/apache/kafka/blob/3.3.2/connect/mirror/src/main/java/org/apache/kafka/connect/mirror/MirrorConnectorConfig.java">Kafka@3.3.2/MirrorConnectorConfig.java</a> 整理而来。</p>
+<table>
+  <thead>
+      <tr>
+          <th>配置项</th>
+          <th>描述</th>
+          <th>默认值</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>enabled</code></td>
+          <td>是否启用源集群到目标集群的复制</td>
+          <td>true</td>
+      </tr>
+      <tr>
+          <td><code>topics</code></td>
+          <td>要复制的主题。支持逗号分隔的主题名称和正则表达式</td>
+          <td>.* (所有主题)</td>
+      </tr>
+      <tr>
+          <td><code>topics.exclude</code></td>
+          <td>排除的主题。支持逗号分隔的主题名称和正则表达式。排除规则优先于包含规则</td>
+          <td>&quot;&quot; (无排除主题)</td>
+      </tr>
+      <tr>
+          <td><code>groups</code></td>
+          <td>要复制的消费者组。支持逗号分隔的组 ID 和正则表达式</td>
+          <td>.* (所有组)</td>
+      </tr>
+      <tr>
+          <td><code>groups.exclude</code></td>
+          <td>排除的消费者组。支持逗号分隔的组 ID 和正则表达式。排除规则优先于包含规则</td>
+          <td>&quot;&quot; (无排除组)</td>
+      </tr>
+      <tr>
+          <td><code>config.properties.exclude</code></td>
+          <td>不应复制的主题配置属性。支持逗号分隔的属性名称和正则表达式</td>
+          <td>&quot;&quot; (无排除属性)</td>
+      </tr>
+      <tr>
+          <td><code>topic.filter.class</code></td>
+          <td>使用的 TopicFilter 类。选择要复制的主题</td>
+          <td>org.apache.kafka.connect.mirror.DefaultTopicFilter</td>
+      </tr>
+      <tr>
+          <td><code>group.filter.class</code></td>
+          <td>使用的 GroupFilter 类。选择要复制的消费者组</td>
+          <td>org.apache.kafka.connect.mirror.DefaultGroupFilter</td>
+      </tr>
+      <tr>
+          <td><code>config.property.filter.class</code></td>
+          <td>使用的 ConfigPropertyFilter 类。选择要复制的主题配置属性</td>
+          <td>org.apache.kafka.connect.mirror.DefaultConfigPropertyFilter</td>
+      </tr>
+      <tr>
+          <td><code>source.cluster.alias</code></td>
+          <td>源集群别名</td>
+          <td>source</td>
+      </tr>
+      <tr>
+          <td><code>target.cluster.alias</code></td>
+          <td>目标集群别名。用于指标报告</td>
+          <td>target</td>
+      </tr>
+      <tr>
+          <td><code>consumer.poll.timeout.ms</code></td>
+          <td>轮询源集群时的超时时间</td>
+          <td>1000 (1 秒)</td>
+      </tr>
+      <tr>
+          <td><code>admin.timeout.ms</code></td>
+          <td>管理任务的超时时间（例如检测新主题）</td>
+          <td>60000 (1 分钟)</td>
+      </tr>
+      <tr>
+          <td><code>refresh.topics.enabled</code></td>
+          <td>是否定期检查新主题和分区</td>
+          <td>true</td>
+      </tr>
+      <tr>
+          <td><code>refresh.topics.interval.seconds</code></td>
+          <td>主题刷新频率</td>
+          <td>600 (10 分钟)</td>
+      </tr>
+      <tr>
+          <td><code>refresh.groups.enabled</code></td>
+          <td>是否定期检查新消费者组</td>
+          <td>true</td>
+      </tr>
+      <tr>
+          <td><code>refresh.groups.interval.seconds</code></td>
+          <td>消费者组刷新频率</td>
+          <td>600 (10 分钟)</td>
+      </tr>
+      <tr>
+          <td><code>sync.topic.configs.enabled</code></td>
+          <td>是否定期配置远程主题以匹配其对应的上游主题</td>
+          <td>true</td>
+      </tr>
+      <tr>
+          <td><code>sync.topic.configs.interval.seconds</code></td>
+          <td>主题配置同步频率</td>
+          <td>600 (10 分钟)</td>
+      </tr>
+      <tr>
+          <td><code>sync.topic.acls.enabled</code></td>
+          <td>是否定期配置远程主题 ACL 以匹配其对应的上游主题</td>
+          <td>true</td>
+      </tr>
+      <tr>
+          <td><code>sync.topic.acls.interval.seconds</code></td>
+          <td>主题 ACL 同步频率</td>
+          <td>600 (10 分钟)</td>
+      </tr>
+      <tr>
+          <td><code>emit.heartbeats.enabled</code></td>
+          <td>是否向目标集群发送心跳</td>
+          <td>true</td>
+      </tr>
+      <tr>
+          <td><code>emit.heartbeats.interval.seconds</code></td>
+          <td>心跳频率</td>
+          <td>1 (1 秒)</td>
+      </tr>
+      <tr>
+          <td><code>emit.checkpoints.enabled</code></td>
+          <td>是否将消费者偏移量复制到目标集群</td>
+          <td>true</td>
+      </tr>
+      <tr>
+          <td><code>emit.checkpoints.interval.seconds</code></td>
+          <td>检查点频率</td>
+          <td>60 (1 分钟)</td>
+      </tr>
+      <tr>
+          <td><code>sync.group.offsets.enabled</code></td>
+          <td>是否将转换后的偏移量同步到目标集群的 __consumer_offsets（如果没有活跃消费者）</td>
+          <td>false</td>
+      </tr>
+      <tr>
+          <td><code>sync.group.offsets.interval.seconds</code></td>
+          <td>消费者组偏移量同步频率</td>
+          <td>60 (1 分钟)</td>
+      </tr>
+      <tr>
+          <td><code>replication.policy.class</code></td>
+          <td>定义远程主题命名约定的类</td>
+          <td>org.apache.kafka.connect.mirror.DefaultReplicationPolicy</td>
+      </tr>
+      <tr>
+          <td><code>replication.policy.separator</code></td>
+          <td>远程主题命名约定中使用的分隔符</td>
+          <td>. (点)</td>
+      </tr>
+      <tr>
+          <td><code>replication.factor</code></td>
+          <td>新创建的远程主题的复制因子</td>
+          <td>2</td>
+      </tr>
+      <tr>
+          <td><code>heartbeats.topic.replication.factor</code></td>
+          <td>心跳主题的复制因子</td>
+          <td>3</td>
+      </tr>
+      <tr>
+          <td><code>checkpoints.topic.replication.factor</code></td>
+          <td>检查点主题的复制因子</td>
+          <td>3</td>
+      </tr>
+      <tr>
+          <td><code>offset-syncs.topic.replication.factor</code></td>
+          <td>偏移量同步主题的复制因子</td>
+          <td>3</td>
+      </tr>
+      <tr>
+          <td><code>offset.lag.max</code></td>
+          <td>远程分区在重新同步之前可以落后的最大偏移量</td>
+          <td>100 (偏移量)</td>
+      </tr>
+      <tr>
+          <td><code>offset-syncs.topic.location</code></td>
+          <td>偏移量同步主题的位置（源集群/目标集群）</td>
+          <td>source</td>
+      </tr>
+      <tr>
+          <td><code>metric.reporters</code></td>
+          <td>用作指标报告器的类列表</td>
+          <td>null (无额外报告器，默认启用 JMX)</td>
+      </tr>
+      <tr>
+          <td><code>security.protocol</code></td>
+          <td>与 broker 通信时使用的安全协议</td>
+          <td>PLAINTEXT</td>
+      </tr>
+  </tbody>
+</table>
+<p>除此之外还有一些通用的 Kafka 配置，采用前缀匹配再合并的方式，处理先后顺序是：</p>
+<p><code>&lt;source/target&gt;.cluster.*</code> -&gt; <code>consumer.*</code> -&gt; <code>&lt;source/target&gt;.producer.*</code> -&gt; 固定配置，参见下方 <code>sourceConsumerConfig</code> 代码处理顺序。</p>
+<blockquote>
+<p>配置会被剪切掉前缀再合并到最终的 props 中。如：<em><strong><code>source.cluster.bootstrap.servers</code></strong></em> 其实对应的是 <em><strong><code>bootstrap.servers</code></strong></em> 配置。</p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-java" data-lang="java"><span style="display:flex;"><span>Map<span style="color:#f92672">&lt;</span>String, Object<span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">sourceConsumerConfig</span>() {
+</span></span><span style="display:flex;"><span>    Map<span style="color:#f92672">&lt;</span>String, Object<span style="color:#f92672">&gt;</span> props <span style="color:#f92672">=</span> <span style="color:#66d9ef">new</span> HashMap<span style="color:#f92672">&lt;&gt;</span>();
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 1. 基础集群配置（如 source.cluster.bootstrap.servers）</span>
+</span></span><span style="display:flex;"><span>    props.<span style="color:#a6e22e">putAll</span>(originalsWithPrefix(SOURCE_CLUSTER_PREFIX));
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 2. 保留 Kafka 客户端配置（过滤非客户端属性）</span>
+</span></span><span style="display:flex;"><span>    props.<span style="color:#a6e22e">keySet</span>().<span style="color:#a6e22e">retainAll</span>(MirrorClientConfig.<span style="color:#a6e22e">CLIENT_CONFIG_DEF</span>.<span style="color:#a6e22e">names</span>());
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 3. 通用 consumer. 配置（如 consumer.fetch.min.bytes）</span>
+</span></span><span style="display:flex;"><span>    props.<span style="color:#a6e22e">putAll</span>(originalsWithPrefix(CONSUMER_CLIENT_PREFIX));
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 4. 源集群专用 consumer. 配置（如 source.consumer.max.poll.records，优先级最高）</span>
+</span></span><span style="display:flex;"><span>    props.<span style="color:#a6e22e">putAll</span>(originalsWithPrefix(SOURCE_PREFIX <span style="color:#f92672">+</span> CONSUMER_CLIENT_PREFIX));
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 5. 强制覆盖关键配置（如禁用自动提交、默认 earliest 偏移量）</span>
+</span></span><span style="display:flex;"><span>    props.<span style="color:#a6e22e">put</span>(ENABLE_AUTO_COMMIT_CONFIG, <span style="color:#e6db74">&#34;false&#34;</span>);
+</span></span><span style="display:flex;"><span>    props.<span style="color:#a6e22e">putIfAbsent</span>(AUTO_OFFSET_RESET_CONFIG, <span style="color:#e6db74">&#34;earliest&#34;</span>);
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> props;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><table>
+  <thead>
+      <tr>
+          <th>Key 前缀</th>
+          <th>描述</th>
+          <th>生效范围</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>producer.*</code></td>
+          <td>通用生产者配置（如 producer.bootstrap.servers、producer.acks 等）。</td>
+          <td>同时作用于源集群和目标集群的生产者，除非被 source.producer. 或 target.producer. 覆盖。</td>
+      </tr>
+      <tr>
+          <td><code>consumer.*</code></td>
+          <td>通用消费者配置（如 consumer.bootstrap.servers、consumer.group.id 等）。</td>
+          <td>同时作用于源集群和目标集群的消费者，除非被 source.consumer. 或 target.consumer. 覆盖。</td>
+      </tr>
+      <tr>
+          <td><code>source.producer.*</code></td>
+          <td>源集群生产者的专用配置（优先级高于 producer.）。</td>
+          <td>仅用于源集群的生产者（如发送偏移量同步记录到 offsetSyncsTopic）。</td>
+      </tr>
+      <tr>
+          <td><code>source.consumer.*</code></td>
+          <td>源集群消费者的专用配置（优先级高于 consumer.）。</td>
+          <td>仅用于源集群的数据拉取消费者（如从源集群主题拉取待复制数据）。</td>
+      </tr>
+      <tr>
+          <td><code>target.producer.*</code></td>
+          <td>目标集群生产者的专用配置（优先级高于 producer.）。</td>
+          <td>仅用于目标集群的生产者（如复制数据到目标集群主题）。</td>
+      </tr>
+      <tr>
+          <td><code>target.consumer.*</code></td>
+          <td>目标集群消费者的专用配置（优先级高于 consumer.）。</td>
+          <td>仅用于目标集群的消费者（如读取目标集群元数据或偏移量同步记录）。</td>
+      </tr>
+  </tbody>
+</table>
+<blockquote>
+<p><code>producer.</code> 和 <code>consumer.</code> 前缀支持所有 Kafka 标准生产者/消费者配置（如 acks、retries、fetch.min.bytes 等），具体可参考 Kafka 官方文档配置：
+<a href="https://kafka.apache.org/documentation/#consumerconfigs">Consumer Config</a> /
+<a href="https://kafka.apache.org/documentation/#producerconfigs">Producer Config</a></p>
+</blockquote>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#引言">引言</a></li>
+    <li><a href="#kafka-connect-的设计">Kafka Connect 的设计</a></li>
+    <li><a href="#mirrorsourceconnector-的设计">MirrorSourceConnector 的设计</a>
+      <ul>
+        <li><a href="#1-初始化">1. 初始化</a></li>
+        <li><a href="#2-task定义和任务分配">2. Task定义和任务分配</a></li>
+        <li><a href="#3-持续维护">3. 持续维护</a></li>
+      </ul>
+    </li>
+    <li><a href="#mirrorsourcetask-的设计">MirrorSourceTask 的设计</a>
+      <ul>
+        <li><a href="#1-初始化-1">1. 初始化</a></li>
+        <li><a href="#2-数据拉取和写入">2. 数据拉取和写入</a></li>
+        <li><a href="#3-偏移量管理">3. 偏移量管理</a></li>
+      </ul>
+    </li>
+    <li><a href="#kafkaoffsetbackingstore-的设计">KafkaOffsetBackingStore 的设计</a></li>
+    <li><a href="#迁移">迁移</a>
+      <ul>
+        <li><a href="#搭建-kafka-connect-集群">搭建 Kafka Connect 集群</a></li>
+        <li><a href="#如何迁移进度">如何迁移进度</a></li>
+        <li><a href="#操作步骤">操作步骤</a></li>
+      </ul>
+    </li>
+    <li><a href="#总结">总结</a>
+      <ul>
+        <li><a href="#核心要点回顾">核心要点回顾</a></li>
+        <li><a href="#实践建议">实践建议</a></li>
+        <li><a href="#注意事项">注意事项</a></li>
+      </ul>
+    </li>
+    <li><a href="#参考">参考</a></li>
+    <li><a href="#附">附</a>
+      <ul>
+        <li><a href="#connect-配置">Connect 配置</a></li>
+        <li><a href="#mirrorconnector-配置">MirrorConnector 配置</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

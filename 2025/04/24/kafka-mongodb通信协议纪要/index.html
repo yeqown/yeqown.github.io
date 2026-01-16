@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Kafka 和 MongoDB 是目前使用比较广泛的消息队列和数据库，本文将记录学习 kafka 和 mongodb 的协议过程中的一些设计概念，掌握客户端和服务器交互的大体流程">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2025/04/24/kafka-mongodb%E9%80%9A%E4%BF%A1%E5%8D%8F%E8%AE%AE%E7%BA%AA%E8%A6%81/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="Kafka &#43; Mongodb 通信协议纪要">
+  <meta property="og:description" content="Kafka 和 MongoDB 是目前使用比较广泛的消息队列和数据库，本文将记录学习 kafka 和 mongodb 的协议过程中的一些设计概念，掌握客户端和服务器交互的大体流程">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2025-04-24T14:06:44+08:00">
+    <meta property="article:modified_time" content="2025-04-24T14:06:44+08:00">
+    <meta property="article:tag" content="Kafka">
+    <meta property="article:tag" content="Mongodb">
+    <meta property="article:tag" content="协议">
+<title>Kafka &#43; Mongodb 通信协议纪要 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2025/04/24/kafka-mongodb%E9%80%9A%E4%BF%A1%E5%8D%8F%E8%AE%AE%E7%BA%AA%E8%A6%81/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>Kafka &#43; Mongodb 通信协议纪要</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#kafka-协议">KAFKA 协议</a>
+      <ul>
+        <li><a href="#协议结构">协议结构</a></li>
+        <li><a href="#api-请求和响应举例">API 请求和响应举例</a></li>
+        <li><a href="#协议抓包分析">协议抓包分析</a></li>
+        <li><a href="#小结">小结</a></li>
+      </ul>
+    </li>
+    <li><a href="#mongodb-协议">MongoDB 协议</a>
+      <ul>
+        <li><a href="#标准消息头">标准消息头</a></li>
+        <li><a href="#op_compressed-消息格式">OP_COMPRESSED 消息格式</a></li>
+        <li><a href="#op_msg-消息格式">OP_MSG 消息格式</a></li>
+        <li><a href="#协议抓包分析-1">协议抓包分析</a></li>
+        <li><a href="#小结-1">小结</a></li>
+      </ul>
+    </li>
+    <li><a href="#总结">总结</a></li>
+    <li><a href="#参考文档">参考文档</a></li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    Kafka &#43; Mongodb 通信协议纪要
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>April 24, 2025</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Kafka/">Kafka</a>, 
+      <a href="/tags/Mongodb/">Mongodb</a>, 
+      <a href="/tags/%E5%8D%8F%E8%AE%AE/">协议</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><p>Kafka 和 MongoDB 是目前使用比较广泛的消息队列和数据库，在之前的很长时间里对这两个软件系统的理解都停留在概念和使用上，直到最近遇到一个“诡异”的问题，已有的经验和调试方法无法定位时，最终尝试了下抓包分析才最终定位到问题的根源。</p>
+<blockquote>
+<p><strong>问题描述：</strong>
+使用 sarama 编写了一个 kafka 消费者组，这里不同寻常的地方在于：手动提交 + 批量消费。遇到的问题：某些分区消费进度无法成功提交，但是消息是消费成功的。出现这种情况的分区没有规律，触发 rebalance 后 “故障分区” 有概率会发生变化。</p>
+<p><strong>分析/定位</strong>：这里很明显的问题在于手动提交 offset 为什么不成功？从实现来说，提交 offset 的逻辑跟分区没有关系是一致，那这种不确定性故障时从哪儿来的？而且还和 rebalance 相关。
+梳理下 kafka 客户端消费提交涉及到的操作：<code>Fetch</code>, <code>OffsetCommit</code>, 但是消费是正常的，那么只需要抓包分析 <code>OffsetCommit</code> 就可以知道 offset 提交存在什么问题。</p>
+<p><strong>结果</strong>：
+通过抓包一切都明朗了：出现问题的分区同时有多个 OffsetCommit 请求，且其中有的请求提交的 offset 一致停留在一个 “旧的” 位置，不会更新，这样就缩小了范围：程序提交 offset 逻辑异常。</p>
+</blockquote>
+<img src="/images/mongo-kafka-protocol/protocol-concept-illustration.jpeg" width="100%" />
+<h2 id="kafka-协议">
+  KAFKA 协议
+  <a class="anchor" href="#kafka-%e5%8d%8f%e8%ae%ae">#</a>
+</h2>
+<p>Kafka 协议是基于 TCP/IP 协议的二进制协议。其结构组成如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> RequestOrResponse {
+</span></span><span style="display:flex;"><span>    RequestResponseHeader requestResponseHeader; <span style="color:#75715e">// uint32 messageLength;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    SpecificRequestOrResponseHeader body; <span style="color:#75715e">// 格式取决于具体的请求和响应，比如：RequestV1Header
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> RequestV1Header {
+</span></span><span style="display:flex;"><span>  int16 apiKey;
+</span></span><span style="display:flex;"><span>  int16 apiVersion;
+</span></span><span style="display:flex;"><span>  int32 correlationId;
+</span></span><span style="display:flex;"><span>  string clientId;
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="协议结构">
+  协议结构
+  <a class="anchor" href="#%e5%8d%8f%e8%ae%ae%e7%bb%93%e6%9e%84">#</a>
+</h3>
+<blockquote>
+<p><a href="https://kafka.apache.org/protocol.html#protocol_messages">https://kafka.apache.org/protocol.html#protocol_messages</a></p>
+</blockquote>
+<p>二进制协议的结构如下：</p>
+<p><strong>Request V1 Header:</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#ae81ff">0</span>             <span style="color:#ae81ff">1</span>               <span style="color:#ae81ff">2</span>               <span style="color:#ae81ff">3</span>               <span style="color:#ae81ff">4</span>
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">0</span> <span style="color:#ae81ff">1</span> <span style="color:#ae81ff">2</span> <span style="color:#ae81ff">3</span> <span style="color:#ae81ff">4</span> <span style="color:#ae81ff">5</span> <span style="color:#ae81ff">6</span> <span style="color:#ae81ff">7</span> <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">1</span> <span style="color:#ae81ff">2</span> <span style="color:#ae81ff">3</span> <span style="color:#ae81ff">4</span> <span style="color:#ae81ff">5</span> <span style="color:#ae81ff">6</span> <span style="color:#ae81ff">7</span> <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">1</span> <span style="color:#ae81ff">2</span> <span style="color:#ae81ff">3</span> <span style="color:#ae81ff">4</span> <span style="color:#ae81ff">5</span> <span style="color:#ae81ff">6</span> <span style="color:#ae81ff">7</span> <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">1</span> <span style="color:#ae81ff">2</span> <span style="color:#ae81ff">3</span> <span style="color:#ae81ff">4</span> <span style="color:#ae81ff">5</span> <span style="color:#ae81ff">6</span> <span style="color:#ae81ff">7</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>             message <span style="color:#a6e22e">length</span> (total message size)             <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>     request api key         <span style="color:#f92672">|</span>    request api version        <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>                     correlation_id                          <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>        client id length N   <span style="color:#f92672">|</span>                               <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>         client_id <span style="color:#960050;background-color:#1e0010">占用</span> N <span style="color:#960050;background-color:#1e0010">空间的，这里不确定具体的长度</span>            <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>          request extend header                              <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>          ....................................               <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>          ....................................               <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>          request extend header                              <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>          ....................................               <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span>
+</span></span></code></pre></div><table>
+  <thead>
+      <tr>
+          <th>字段</th>
+          <th>描述</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>message length</td>
+          <td>INT32, 消息长度，包括所有字段，不包括消息长度本身。</td>
+      </tr>
+      <tr>
+          <td>request api key</td>
+          <td>INT16 请求的 API 键，用于标识请求的类型。</td>
+      </tr>
+      <tr>
+          <td>request api version</td>
+          <td>INT16 请求的 API 版本，用于标识请求的版本。</td>
+      </tr>
+      <tr>
+          <td>correlation_id</td>
+          <td>INT32 关联 ID，用于标识请求和响应之间的关系。</td>
+      </tr>
+      <tr>
+          <td>client id</td>
+          <td>NULLABLE_STRING, 客户端 ID, 是一个 <a href="https://kafka.apache.org/protocol.html#protocol_types">NULLABLE_STRING</a></td>
+      </tr>
+  </tbody>
+</table>
+<blockquote>
+<p><strong>NULLABLE_STRING</strong> Represents a sequence of characters or null.</p>
+<p>For <strong>non-null strings</strong>, first the length N is given as an <strong>INT16</strong>. Then N bytes follow which are the UTF-8 encoding of the character sequence.</p>
+<p>A <strong>null</strong> value is encoded with length of <strong>-1</strong> and there are no following bytes.</p>
+</blockquote>
+<p><strong>Request V2 Header:</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#ae81ff">0</span>             <span style="color:#ae81ff">1</span>               <span style="color:#ae81ff">2</span>               <span style="color:#ae81ff">3</span>               <span style="color:#ae81ff">4</span>
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">0</span> <span style="color:#ae81ff">1</span> <span style="color:#ae81ff">2</span> <span style="color:#ae81ff">3</span> <span style="color:#ae81ff">4</span> <span style="color:#ae81ff">5</span> <span style="color:#ae81ff">6</span> <span style="color:#ae81ff">7</span> <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">1</span> <span style="color:#ae81ff">2</span> <span style="color:#ae81ff">3</span> <span style="color:#ae81ff">4</span> <span style="color:#ae81ff">5</span> <span style="color:#ae81ff">6</span> <span style="color:#ae81ff">7</span> <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">1</span> <span style="color:#ae81ff">2</span> <span style="color:#ae81ff">3</span> <span style="color:#ae81ff">4</span> <span style="color:#ae81ff">5</span> <span style="color:#ae81ff">6</span> <span style="color:#ae81ff">7</span> <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">1</span> <span style="color:#ae81ff">2</span> <span style="color:#ae81ff">3</span> <span style="color:#ae81ff">4</span> <span style="color:#ae81ff">5</span> <span style="color:#ae81ff">6</span> <span style="color:#ae81ff">7</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>             message <span style="color:#a6e22e">length</span> (total message size)             <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>     request api key         <span style="color:#f92672">|</span>    request api version        <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>                     correlation_id                          <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>        client id length N   <span style="color:#f92672">|</span>                               <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>         client_id <span style="color:#960050;background-color:#1e0010">占用</span> N <span style="color:#960050;background-color:#1e0010">空间的，这里不确定具体的长度</span>            <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span> <span style="color:#a6e22e">_tagged_fields</span> (<span style="color:#960050;background-color:#1e0010">仅为说明该值传输，占用空间不确定</span>)                <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>          request extend header                              <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>         ....................................                <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>         ....................................                <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>          request extend header                              <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>         ....................................                <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span>
+</span></span></code></pre></div><p><strong>Response V0 Header:</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#ae81ff">0</span>             <span style="color:#ae81ff">1</span>               <span style="color:#ae81ff">2</span>               <span style="color:#ae81ff">3</span>               <span style="color:#ae81ff">4</span>
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">0</span> <span style="color:#ae81ff">1</span> <span style="color:#ae81ff">2</span> <span style="color:#ae81ff">3</span> <span style="color:#ae81ff">4</span> <span style="color:#ae81ff">5</span> <span style="color:#ae81ff">6</span> <span style="color:#ae81ff">7</span> <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">1</span> <span style="color:#ae81ff">2</span> <span style="color:#ae81ff">3</span> <span style="color:#ae81ff">4</span> <span style="color:#ae81ff">5</span> <span style="color:#ae81ff">6</span> <span style="color:#ae81ff">7</span> <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">1</span> <span style="color:#ae81ff">2</span> <span style="color:#ae81ff">3</span> <span style="color:#ae81ff">4</span> <span style="color:#ae81ff">5</span> <span style="color:#ae81ff">6</span> <span style="color:#ae81ff">7</span> <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">1</span> <span style="color:#ae81ff">2</span> <span style="color:#ae81ff">3</span> <span style="color:#ae81ff">4</span> <span style="color:#ae81ff">5</span> <span style="color:#ae81ff">6</span> <span style="color:#ae81ff">7</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>             message <span style="color:#a6e22e">length</span> (total message size)             <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>     correlation_id                                          <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span>
+</span></span></code></pre></div><table>
+  <thead>
+      <tr>
+          <th>字段</th>
+          <th>描述</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>correlation_id</td>
+          <td>UINT32 关联 ID，用于标识请求和响应之间的关系。</td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Response V1 Header:</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#ae81ff">0</span>             <span style="color:#ae81ff">1</span>               <span style="color:#ae81ff">2</span>               <span style="color:#ae81ff">3</span>               <span style="color:#ae81ff">4</span>
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">0</span> <span style="color:#ae81ff">1</span> <span style="color:#ae81ff">2</span> <span style="color:#ae81ff">3</span> <span style="color:#ae81ff">4</span> <span style="color:#ae81ff">5</span> <span style="color:#ae81ff">6</span> <span style="color:#ae81ff">7</span> <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">1</span> <span style="color:#ae81ff">2</span> <span style="color:#ae81ff">3</span> <span style="color:#ae81ff">4</span> <span style="color:#ae81ff">5</span> <span style="color:#ae81ff">6</span> <span style="color:#ae81ff">7</span> <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">1</span> <span style="color:#ae81ff">2</span> <span style="color:#ae81ff">3</span> <span style="color:#ae81ff">4</span> <span style="color:#ae81ff">5</span> <span style="color:#ae81ff">6</span> <span style="color:#ae81ff">7</span> <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">1</span> <span style="color:#ae81ff">2</span> <span style="color:#ae81ff">3</span> <span style="color:#ae81ff">4</span> <span style="color:#ae81ff">5</span> <span style="color:#ae81ff">6</span> <span style="color:#ae81ff">7</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>             message <span style="color:#a6e22e">length</span> (total message size)             <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>     correlation_id                                          <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>      <span style="color:#a6e22e">_tagged_fields</span> (<span style="color:#960050;background-color:#1e0010">仅为说明该值传输，占用空间不确定</span>)           <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span>
+</span></span></code></pre></div><p>这里 request 和 reponse header 分别有两个版本，且相当于前一个版本，后者增加了一个 <code>_tagged_fields</code> 字段，其格式为：</p>
+<blockquote>
+<p><a href="https://cwiki.apache.org/confluence/display/KAFKA/KIP-482%3A&#43;The&#43;Kafka&#43;Protocol&#43;should&#43;Support&#43;Optional&#43;Tagged&#43;Fields">https://cwiki.apache.org/confluence/display/KAFKA/KIP-482%3A+The+Kafka+Protocol+should+Support+Optional+Tagged+Fields</a></p>
+</blockquote>
+<table>
+  <thead>
+      <tr>
+          <th>The number of tagged fields</th>
+          <th>Field 1 Tag</th>
+          <th>Field 1 Length</th>
+          <th>Field 1 Data</th>
+          <th>Field 2 Tag</th>
+          <th>Field 2 Length</th>
+          <th>Field 2 Data</th>
+          <th>&hellip;</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>UNSIGNED_VARINT</td>
+          <td>UNSIGNED_VARINT</td>
+          <td>UNSIGNED_VARINT</td>
+          <td>&lt;field 1 type&gt;</td>
+          <td>UNSIGNED_VARINT</td>
+          <td>UNSIGNED_VARINT</td>
+          <td>&lt;field 2 type&gt;</td>
+          <td>&hellip;</td>
+      </tr>
+  </tbody>
+</table>
+<blockquote>
+<p>UNSIGNED_VARINT 是一种变长的无符号整数编码方式，参考 google protobuf varint 和 zig-zag 编码。如果是 tagCount = 0，那么这里只需要使用一个字节表示 0x00。</p>
+</blockquote>
+<h3 id="api-请求和响应举例">
+  API 请求和响应举例
+  <a class="anchor" href="#api-%e8%af%b7%e6%b1%82%e5%92%8c%e5%93%8d%e5%ba%94%e4%b8%be%e4%be%8b">#</a>
+</h3>
+<p>其中 request 和 response header 格式取决于请求和响应的类型。比如 <a href="https://kafka.apache.org/protocol.html#The_Messages_ApiVersions">ApiVersion(18)</a> 请求有 5 个版本，如下：</p>
+<table>
+  <thead>
+      <tr>
+          <th>API Version</th>
+          <th>Based Request Header Version</th>
+          <th>fields</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>0</td>
+          <td>1</td>
+          <td>-</td>
+      </tr>
+      <tr>
+          <td>1</td>
+          <td>1</td>
+          <td>-</td>
+      </tr>
+      <tr>
+          <td>2</td>
+          <td>1</td>
+          <td>-</td>
+      </tr>
+      <tr>
+          <td>3</td>
+          <td>2</td>
+          <td>client_software_name(COMPACT_STRING); client_software_version(COMPACT_STRING); _tagged_fileds</td>
+      </tr>
+      <tr>
+          <td>4</td>
+          <td>2</td>
+          <td>client_software_name(COMPACT_STRING); client_software_version(COMPACT_STRING); _tagged_fileds</td>
+      </tr>
+  </tbody>
+</table>
+<p>响应有 4 个版本，如下：</p>
+<table>
+  <thead>
+      <tr>
+          <th>API Version</th>
+          <th>Based Response Header Version</th>
+          <th>fields</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>0</td>
+          <td>0</td>
+          <td>{error_code, api_keys[{api_key,min_version,max_version}]}</td>
+      </tr>
+      <tr>
+          <td>1</td>
+          <td>0</td>
+          <td>{error_code, api_keys[{api_key,min_version,max_version}], throttle_time_ms}</td>
+      </tr>
+      <tr>
+          <td>2</td>
+          <td>0</td>
+          <td>{error_code, api_keys[{api_key,min_version,max_version}], throttle_time_ms}</td>
+      </tr>
+      <tr>
+          <td>3</td>
+          <td>0</td>
+          <td>{error_code, api_keys[{api_key,min_version,max_version,_tagged_fields}], throttle_time_ms, _tagged_fields}</td>
+      </tr>
+  </tbody>
+</table>
+<p>更多的请求和响应 header 格式参考：<a href="https://kafka.apache.org/protocol.html#protocol_api_keys">API Keys</a></p>
+<h3 id="协议抓包分析">
+  协议抓包分析
+  <a class="anchor" href="#%e5%8d%8f%e8%ae%ae%e6%8a%93%e5%8c%85%e5%88%86%e6%9e%90">#</a>
+</h3>
+<p>下面使用 wireshark 抓包并结合前面提到的协议实际分析下 Kafka 协议的交互过程。启动一个 kafka 客户端：</p>
+<figure>
+  <img src="/images/mongo-kafka-protocol/kafka-protocol-sample1.png" width="100%" alt="Kafka 和 MongoDB 协议概念图" />
+  <figcaption>Kafka 抓包：ApiVersions Request</figcaption>
+</figure>
+<figure>
+  <img src="/images/mongo-kafka-protocol/kafka-protocol-sample2.png" width="100%" alt="Kafka 抓包：Response" />
+  <figcaption>Kafka 抓包：ApiVersions Response</figcaption>
+</figure>
+<p>从图中能看到由于 wireshark 解析已经足够好了，所以看到的 kafka 协议字段已经可读性非常高了，直接就能和协议文档一一对应起来。唯一需要注意的就是 kafka 协议的编码需要根据文档和字段类型进行解析，比如 NullableString 类型的字段需要先解析长度，然后再解析字符串; VARINT 遵循了变长的 zig-zag 编码，参考 <a href="https://protobuf.dev/programming-guides/encoding/">Google Protocol Buffers</a></p>
+<blockquote>
+<p>Zig-zag 编码解释：https://gist.github.com/mfuerstenau/ba870a29e16536fdbaba</p>
+</blockquote>
+<h3 id="小结">
+  小结
+  <a class="anchor" href="#%e5%b0%8f%e7%bb%93">#</a>
+</h3>
+<p>为了支持协议的向后兼容性，Kafka API 提供了版本化语义 和 ApiVersions API 来动态协商客户端和服务器通信协议（版本）。客户端连接到服务器之后需要请求服务端支持的 API 版本范围，从中选一个两边都支持的版本。在发送请求时，客户端携带 请求API 的版本，服务器默认相同版本的响应格式返回，如果客户端携带了不支持的版本，服务器会响应 <code>UNSUPPORTED_VERSION(35)</code> 以提示客户端调整版本。</p>
+<p>协议中定义了 API Keys 枚举，用来说明服务器支持的 API 清单，每个 API 都有唯一的标识ID，客户端和服务器通过这个 ID 对应特定的功能，也用来确定具体的请求和响应格式。</p>
+<p>Kafka 协议采用了二进制编码，为此协议中约定了一些<a href="https://kafka.apache.org/protocol.html#protocol_types">基础类型</a>，如：BOOLEAN，INT8, INT16, INT32, INT64, UINT, VARINT, VARLONG, UUID, STRING, COMPACT_STRING 等等。</p>
+<h2 id="mongodb-协议">
+  MongoDB 协议
+  <a class="anchor" href="#mongodb-%e5%8d%8f%e8%ae%ae">#</a>
+</h2>
+<p>MongoDB 协议是一个简单的基于 socket 的请求响应协议。客户端通过一个常规的 TCP/IP 套接字与数据库服务器进行通信，服务器默认端口为 27017，协议采用了小端字节序。</p>
+<h3 id="标准消息头">
+  标准消息头
+  <a class="anchor" href="#%e6%a0%87%e5%87%86%e6%b6%88%e6%81%af%e5%a4%b4">#</a>
+</h3>
+<p>通常而言，每条消息都是有一个标准消息头和紧跟着的数据构成，标准消息头格式如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#ae81ff">0</span>             <span style="color:#ae81ff">1</span>               <span style="color:#ae81ff">2</span>               <span style="color:#ae81ff">3</span>               <span style="color:#ae81ff">4</span>
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">0</span> <span style="color:#ae81ff">1</span> <span style="color:#ae81ff">2</span> <span style="color:#ae81ff">3</span> <span style="color:#ae81ff">4</span> <span style="color:#ae81ff">5</span> <span style="color:#ae81ff">6</span> <span style="color:#ae81ff">7</span> <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">1</span> <span style="color:#ae81ff">2</span> <span style="color:#ae81ff">3</span> <span style="color:#ae81ff">4</span> <span style="color:#ae81ff">5</span> <span style="color:#ae81ff">6</span> <span style="color:#ae81ff">7</span> <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">1</span> <span style="color:#ae81ff">2</span> <span style="color:#ae81ff">3</span> <span style="color:#ae81ff">4</span> <span style="color:#ae81ff">5</span> <span style="color:#ae81ff">6</span> <span style="color:#ae81ff">7</span> <span style="color:#ae81ff">0</span> <span style="color:#ae81ff">1</span> <span style="color:#ae81ff">2</span> <span style="color:#ae81ff">3</span> <span style="color:#ae81ff">4</span> <span style="color:#ae81ff">5</span> <span style="color:#ae81ff">6</span> <span style="color:#ae81ff">7</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>             message <span style="color:#a6e22e">length</span> (total message size)             <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>             <span style="color:#a6e22e">requestID</span> (identifier <span style="color:#66d9ef">for</span> this message)         <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>             <span style="color:#a6e22e">responseTo</span> (requestID from the origin request)  <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">|</span>             <span style="color:#a6e22e">opcode</span> (message type)                           <span style="color:#f92672">|</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++</span>
+</span></span></code></pre></div><p>其中 OpCode 的取值有如下几种：</p>
+<blockquote>
+<p>注意随着 MongoDB 版本的升级，MongoDB 已经使用 OP_MSG 操作码来统一请求和响应格式。</p>
+</blockquote>
+<table>
+  <thead>
+      <tr>
+          <th>OpCode</th>
+          <th>值</th>
+          <th>描述</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>OP_COMPRESSED</td>
+          <td>2011</td>
+          <td>使用压缩来来包装其他操作码</td>
+      </tr>
+      <tr>
+          <td>OP_MSG</td>
+          <td>2013</td>
+          <td>使用标准格式发送消息。用于客户端请求和数据库回复。</td>
+      </tr>
+      <tr>
+          <td>OP_REPLY</td>
+          <td>1</td>
+          <td>响应消息。自 MongoDB 5.0 弃用，5.1 删除</td>
+      </tr>
+      <tr>
+          <td>OP_UPDATE</td>
+          <td>2001</td>
+          <td>更新消息。自 MongoDB 5.0 弃用，5.1 删除</td>
+      </tr>
+      <tr>
+          <td>OP_INSERT</td>
+          <td>2002</td>
+          <td>插入消息。自 MongoDB 5.0 弃用，5.1 删除</td>
+      </tr>
+      <tr>
+          <td>RESERVED</td>
+          <td>2003</td>
+          <td>以前用于 OP_GET_BY_OID</td>
+      </tr>
+      <tr>
+          <td>OP_QUERY</td>
+          <td>2004</td>
+          <td>查询消息。自 MongoDB 5.0 弃用，5.1 删除</td>
+      </tr>
+      <tr>
+          <td>OP_GET_MORE</td>
+          <td>2005</td>
+          <td>获取更多消息。自 MongoDB 5.0 弃用，5.1 删除</td>
+      </tr>
+      <tr>
+          <td>OP_DELETE</td>
+          <td>2006</td>
+          <td>删除消息。自 MongoDB 5.0 弃用，5.1 删除</td>
+      </tr>
+      <tr>
+          <td>OP_KILL_CURSORS</td>
+          <td>2007</td>
+          <td>杀死游标消息。自 MongoDB 5.0 弃用，5.1 删除</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="op_compressed-消息格式">
+  OP_COMPRESSED 消息格式
+  <a class="anchor" href="#op_compressed-%e6%b6%88%e6%81%af%e6%a0%bc%e5%bc%8f">#</a>
+</h3>
+<p>任何操作码都可以使用 OP_COMPRESSED 来包装，OP_COMPRESSED 消息格式如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> OP_COMPRESSED {
+</span></span><span style="display:flex;"><span>    MsgHeader header;            <span style="color:#75715e">// 标准消息头
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    int32  originalOpcode;       <span style="color:#75715e">// 原始 opcode 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    int32  uncompressedSize;     <span style="color:#75715e">// 未压缩消息大小
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    uint8  compressorId;         <span style="color:#75715e">// 压缩器（算法）的标识
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    <span style="color:#66d9ef">char</span>    <span style="color:#f92672">*</span>compressedMessage;  <span style="color:#75715e">// 压缩后的消息，不包括标准消息头
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div><p><code>compressorId</code> 的取值有如下几种：</p>
+<table>
+  <thead>
+      <tr>
+          <th>compressorId</th>
+          <th>值</th>
+          <th>描述</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>0</td>
+          <td>noop</td>
+          <td>不压缩</td>
+      </tr>
+      <tr>
+          <td>1</td>
+          <td>snappy</td>
+          <td>snappy 压缩算法</td>
+      </tr>
+      <tr>
+          <td>2</td>
+          <td>zlib</td>
+          <td>zlib 压缩算法</td>
+      </tr>
+      <tr>
+          <td>3</td>
+          <td>zstd</td>
+          <td>zstd 压缩算法</td>
+      </tr>
+      <tr>
+          <td>4-255</td>
+          <td>保留</td>
+          <td>保留</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="op_msg-消息格式">
+  OP_MSG 消息格式
+  <a class="anchor" href="#op_msg-%e6%b6%88%e6%81%af%e6%a0%bc%e5%bc%8f">#</a>
+</h3>
+<p>OP_MSG 是一种可以扩展的消息格式，用于客户端请求和服务器响应。其格式如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> OP_MSG {
+</span></span><span style="display:flex;"><span>    MsgHeader header;            <span style="color:#75715e">// 标准消息头
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    uint32 flagBits;             <span style="color:#75715e">// 标志位
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    Sections[] sections;         <span style="color:#75715e">// 数据段
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>    optional<span style="color:#f92672">&lt;</span>uint32<span style="color:#f92672">&gt;</span> checksum;   <span style="color:#75715e">// 校验和 CRC-32C
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div><p><strong>FlagBits</strong></p>
+<p>FlagsBits 是一个 32 位的无符号整数，用来说明 OP_MSG 的格式和行为。前 16 位是必要的，并且如果有未知位设置，解析器必须要抛出错误。后16位是可选的，解析器必须忽略任何未知位设置，代理和消息转发器必须清除任何未知位设置。</p>
+<table>
+  <thead>
+      <tr>
+          <th>bit位</th>
+          <th>字段</th>
+          <th>请求</th>
+          <th>响应</th>
+          <th>描述</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>0</td>
+          <td>checksumPresent</td>
+          <td>✅</td>
+          <td>✅</td>
+          <td>表示消息是否包含校验和</td>
+      </tr>
+      <tr>
+          <td>1</td>
+          <td>moreToCome</td>
+          <td>✅</td>
+          <td>✅</td>
+          <td>表示是否有更多数据段。另一条消息将紧随此消息之后，无需接收方采取进一步行动。接收方在收到 moreToCome 设置为 0 的消息之前， 不得发送其他消息，否则发送可能会阻塞，从而导致死锁。带有 moreToCome 的请求 位设置不会收到回复。回复只会包含此 响应设置了 exhaustAllowed 位的请求而设置。</td>
+      </tr>
+      <tr>
+          <td>16</td>
+          <td>exhaustAllowed</td>
+          <td>✅</td>
+          <td>-</td>
+          <td>客户端已准备好使用 moreToCome 位对此请求进行多次回复。除非请求中设置了此位，否则服务器永远不会生成设置了 moreToCome 位的回复。</td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>Sections</strong></p>
+<p>OP_MSG 消息包含一个或者多个部分（section），每个部分都以一个kind 字节开头，kind 用来指示类型。kind 之后的字节构成该部分的载荷。</p>
+<table>
+  <thead>
+      <tr>
+          <th>kind</th>
+          <th>描述</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>0</td>
+          <td>Body, body section 被编码为单个 BSON 对象；BSON 对象的字节大小在 section 开始位置（64位）</td>
+      </tr>
+      <tr>
+          <td>1</td>
+          <td>Document Sequence, 支持传输多个文档，优化批量操作。 其基本结构是</td>
+      </tr>
+      <tr>
+          <td>2</td>
+          <td>仅内部使用</td>
+      </tr>
+  </tbody>
+</table>
+<blockquote>
+<p>Body 类型常用于标准的请求和响应体。</p>
+</blockquote>
+<p><strong>CheckSum</strong></p>
+<p>每条消息都可以附带 CRC-32C 校验和，用于验证消息的完整性（除 checksum 自身）。</p>
+<h3 id="协议抓包分析-1">
+  协议抓包分析
+  <a class="anchor" href="#%e5%8d%8f%e8%ae%ae%e6%8a%93%e5%8c%85%e5%88%86%e6%9e%90-1">#</a>
+</h3>
+<p>下面用 wireshark 抓包并结合前面提到的协议实际分析下 MongoDB 协议的交互过程。使用 mongosh 连接到 MongoDB 数据库，执行一条查询所有db的命令：</p>
+<blockquote>
+<p><em><strong>Using MongoDB:		7.0.2 <br>
+Using Mongosh:		2.3.2</strong></em></p>
+</blockquote>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ mongosh
+</span></span><span style="display:flex;"><span>&gt; show databases
+</span></span></code></pre></div><p>抓包结果如下：</p>
+<figure>
+  <img src="/images/mongo-kafka-protocol/mongo-protocol-sample1.png" width="100%" alt="Kafka 和 MongoDB 协议概念图" />
+  <figcaption>MongoDB 抓包：Request</figcaption>
+</figure>
+<figure>
+  <img src="/images/mongo-kafka-protocol/mongo-protocol-sample2.png" width="100%" alt="MongoDB 抓包：Response" />
+  <figcaption>MongoDB 抓包：Response</figcaption>
+</figure>
+<p>wireshark 可以清晰的看到 <code>show databases</code> 命令的请求和响应体。都包含了标准消息头（message length, requestID, responseTo, opcode）。响应中的 reponseTo 值等于对应请求的 requestID，而请求中的 reponseTo 值为 0，这也是区分请求和响应的方法。</p>
+<p>在 OP_MSG（opcode = 2013, 也就是 Extensible Message Format） 消息体中包含了 flagBits, sections 等字段，而 checksum 由于 flagBits 中没有设置，所以没有包含。</p>
+<p>掌握了这些基本概念后，我们可以简单的手搓一个脚本用来解析 MongoDB 协议（ wireshark 毕竟看起来不那么直观）。核心解析代码如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">parse_op_msg</span>(self, payload):
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;解析 OP_MSG 消息格式
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    OP_MSG 格式 (MongoDB 3.6+):
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    struct {
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        MsgHeader header;         // 标准消息头, 16 字节
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        uint32    flagBits;       // 标志位
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        // 接下来是一个或多个部分 (sections)
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        // 每个部分以一个字节的类型标识开始
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        // 类型 0: 正文部分 (body section)
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        // 类型 1: 文档序列部分 (document sequence)
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    }
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    &#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> len(payload) <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">20</span>:  <span style="color:#75715e"># 头部 16 字节 + 标志位 4 字节</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">None</span>
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">try</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 解析标志位</span>
+</span></span><span style="display:flex;"><span>        flag_bits <span style="color:#f92672">=</span> struct<span style="color:#f92672">.</span>unpack(<span style="color:#e6db74">&#34;&lt;I&#34;</span>, payload[<span style="color:#ae81ff">16</span>:<span style="color:#ae81ff">20</span>])[<span style="color:#ae81ff">0</span>]
+</span></span><span style="display:flex;"><span>        flags <span style="color:#f92672">=</span> []
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> bit, name <span style="color:#f92672">in</span> OP_MSG_FLAGS<span style="color:#f92672">.</span>items():
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> flag_bits <span style="color:#f92672">&amp;</span> (<span style="color:#ae81ff">1</span> <span style="color:#f92672">&lt;&lt;</span> bit):
+</span></span><span style="display:flex;"><span>                flags<span style="color:#f92672">.</span>append(name)
+</span></span><span style="display:flex;"><span>                
+</span></span><span style="display:flex;"><span>        result <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;flags&#34;</span>: flags,
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;sections&#34;</span>: []
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 解析部分 (sections)</span>
+</span></span><span style="display:flex;"><span>        offset <span style="color:#f92672">=</span> <span style="color:#ae81ff">20</span>  <span style="color:#75715e"># 跳过头部和标志位</span>
+</span></span><span style="display:flex;"><span>                    
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 读取部分类型</span>
+</span></span><span style="display:flex;"><span>        kind <span style="color:#f92672">=</span> payload[offset]
+</span></span><span style="display:flex;"><span>        offset <span style="color:#f92672">+=</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>        
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> kind <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>:  <span style="color:#75715e"># Body kind</span>
+</span></span><span style="display:flex;"><span>            section <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;kind&#34;</span>: <span style="color:#e6db74">&#34;body&#34;</span>,
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;document&#34;</span>: <span style="color:#66d9ef">None</span>,
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;error&#34;</span>: <span style="color:#66d9ef">None</span>
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>            doc <span style="color:#f92672">=</span> parse_body_kind(payload[offset:])
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> doc:
+</span></span><span style="display:flex;"><span>                section[<span style="color:#e6db74">&#34;document&#34;</span>] <span style="color:#f92672">=</span> doc
+</span></span><span style="display:flex;"><span>            result[<span style="color:#e6db74">&#34;sections&#34;</span>]<span style="color:#f92672">.</span>append(section)
+</span></span><span style="display:flex;"><span>            offset <span style="color:#f92672">=</span> len(payload)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">else</span>:  <span style="color:#75715e"># documentSequence kind 和 其他，这里暂不考虑</span>
+</span></span><span style="display:flex;"><span>            section <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;kind&#34;</span>: <span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;unknown(</span><span style="color:#e6db74">{</span>kind<span style="color:#e6db74">}</span><span style="color:#e6db74">)&#34;</span>,
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;error&#34;</span>: <span style="color:#e6db74">&#34;未知的部分类型&#34;</span>
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>            result[<span style="color:#e6db74">&#34;sections&#34;</span>]<span style="color:#f92672">.</span>append(section)
+</span></span><span style="display:flex;"><span>            
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> result
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">except</span> <span style="color:#a6e22e">Exception</span> <span style="color:#66d9ef">as</span> e:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">raise</span> <span style="color:#a6e22e">Exception</span>(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;解析 OP_MSG 消息时出错: </span><span style="color:#e6db74">{</span>e<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">None</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">parse_body_kind</span>(payload) <span style="color:#f92672">-&gt;</span> dict:
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    解析 OP_MSG 消息体中的 body 类的 section:
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    8byte 的 sectionMessageLength
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    剩余都是 body 的 section
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    &#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> len(payload) <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">4</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">None</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">try</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 这里通过 bson.decode_document 整个 payload 就是 bson 序列化后的结构。</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># length (4 bytes) + payload (length-4, bytes)</span>
+</span></span><span style="display:flex;"><span>        doc <span style="color:#f92672">=</span> bson<span style="color:#f92672">.</span>decode_document(payload, <span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> doc
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">except</span> <span style="color:#a6e22e">Exception</span> <span style="color:#66d9ef">as</span> e:
+</span></span><span style="display:flex;"><span>        print(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;解析 OP_MSG 消息体中的 body 类的 section 时出错: </span><span style="color:#e6db74">{</span>e<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">None</span>
+</span></span></code></pre></div><p>展示结果如下：</p>
+<figure>
+  <img src="/images/mongo-kafka-protocol/mongo-protocol-sample3.png" width="100%" alt="MongoDB 抓包：show databases" />
+  <figcaption>show databases</figcaption>
+</figure>
+<figure>
+  <img src="/images/mongo-kafka-protocol/mongo-protocol-sample4.png" width="100%" alt="MongoDB 抓包：db.coll.find().limit(10)" />
+  <figcaption>db.coll.find().limit(10)</figcaption>
+</figure>
+<h3 id="小结-1">
+  小结
+  <a class="anchor" href="#%e5%b0%8f%e7%bb%93-1">#</a>
+</h3>
+<p>MongoDB 协议采用了小端字节序，并且使用了标准的 TCP/IP 套接字进行通信；客户端和服务器通过一个常规的 TCP/IP 套接字进行通信，服务器默认端口为 27017。</p>
+<p>随着 MongoDB 版本的升级，MongoDB 已经使用 OP_MSG 操作码来统一请求和响应格式。在 OP_MSG 中 Section 采用 BSON 编码，这样非常灵活，如果 API 功能进行了调整（新增/调整了字段，那么是可以不需要调整协议，而只用调整功能即可）。</p>
+<p>要进一步深入的话可以再实现一个简单的 MongoDB 客户端，或者结合某个特定的客户端实现代码来深入了解 mongodb 协议的交互过程。当然这里还没有深究 <code>show databases</code> 这种命令的具体内容，有兴趣可以继续研究下 <a href="https://github.com/mongodb/specifications">MongoDB specification</a>。</p>
+<h2 id="总结">
+  总结
+  <a class="anchor" href="#%e6%80%bb%e7%bb%93">#</a>
+</h2>
+<p>任何 C/S 模式的软件系统都可以自定义自己的 “协议”，而这些协议的模式大同小异，简单的可以直接使用文本协议实现如 memcached, 复杂的则可以完全自定义自己的二进制协议，如 kafka 和 mongodb, 更进一步它们甚至有自己独一套的编码协议，但是不管怎么样一套协议也无非就是：确定传输协议 + 设计应用协议 + 采用什么编码。</p>
+<p>掌握这些协议的设计思路和理念之后，下一步就可以去深入了解软件整体的 API 功能设计，这样会帮助我们更深入服务侧的逻辑实现，加深对软件系统的理解。</p>
+<h2 id="参考文档">
+  参考文档
+  <a class="anchor" href="#%e5%8f%82%e8%80%83%e6%96%87%e6%a1%a3">#</a>
+</h2>
+<ul>
+<li><a href="https://kafka.apache.org/protocol.html">Kafka Protocol Guide</a></li>
+<li><a href="https://www.mongodb.com/docs/manual/reference/mongodb-wire-protocol/">MongoDB Wire Protocol</a></li>
+<li><a href="https://github.com/mongodb/specifications/blob/master/source/message/OP_MSG.md">MongoDB specification OP_MSG</a></li>
+<li><a href="https://bsonspec.org/">BSON serialization specification</a></li>
+</ul>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#kafka-协议">KAFKA 协议</a>
+      <ul>
+        <li><a href="#协议结构">协议结构</a></li>
+        <li><a href="#api-请求和响应举例">API 请求和响应举例</a></li>
+        <li><a href="#协议抓包分析">协议抓包分析</a></li>
+        <li><a href="#小结">小结</a></li>
+      </ul>
+    </li>
+    <li><a href="#mongodb-协议">MongoDB 协议</a>
+      <ul>
+        <li><a href="#标准消息头">标准消息头</a></li>
+        <li><a href="#op_compressed-消息格式">OP_COMPRESSED 消息格式</a></li>
+        <li><a href="#op_msg-消息格式">OP_MSG 消息格式</a></li>
+        <li><a href="#协议抓包分析-1">协议抓包分析</a></li>
+        <li><a href="#小结-1">小结</a></li>
+      </ul>
+    </li>
+    <li><a href="#总结">总结</a></li>
+    <li><a href="#参考文档">参考文档</a></li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

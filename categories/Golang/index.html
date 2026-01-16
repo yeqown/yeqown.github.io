@@ -1,0 +1,2490 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/categories/Golang/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="Golang">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="website">
+<title>Golang | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/categories/Golang/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><link rel="alternate" type="application/rss+xml" href="https://www.yeqown.xyz/categories/Golang/index.xml" title="Yeqown" />
+<!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>Golang</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  <nav>
+  <ul>
+  
+    
+    <li class="book-section-flat">
+      <strong>Categories</strong>
+      <ul>
+      
+        <li class="flex justify-between">
+          <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>
+          <span>33</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/%E6%9E%B6%E6%9E%84/">架构</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Golang/">Golang</a>
+          <span>12</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Kubernetes/">Kubernetes</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F/">分布式</a>
+          <span>6</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/">数据库</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Service-Mesh/">Service Mesh</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/design/">Design</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Tracing/">Tracing</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Algorithm/">Algorithm</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/DevOps/">DevOps</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Test/">Test</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4/">常用命令</a>
+          <span>1</span>
+        </li>
+      
+      </ul>
+    </li>
+    
+  
+    
+    <li class="book-section-flat">
+      <strong>Tags</strong>
+      <ul>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Victoria-Logs/">Victoria Logs</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%88%97%E5%BC%8F%E5%AD%98%E5%82%A8/">列式存储</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%AD%98%E5%82%A8/">存储</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E6%97%A5%E5%BF%97/">日志</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/GC/">GC</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Golang/">Golang</a>
+          <span>30</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Green-Tea/">Green Tea</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Debezium/">Debezium</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Incremental-Snapshot/">Incremental Snapshot</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Kafka-Connect/">Kafka Connect</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Mongodb/">Mongodb</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Source-Connector/">Source Connector</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Apache-Doris/">Apache Doris</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/MySQL/">Mysql</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Prepared-Statements/">Prepared Statements</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Kafka/">Kafka</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/MirrorMaker2/">MirrorMaker2</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Replication/">Replication</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Javascript/">Javascript</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/python/">Python</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Rust/">Rust</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/WASM/">WASM</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/WebAssembly/">WebAssembly</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/gRPC/">GRPC</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/grpcreplay/">Grpcreplay</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Istio/">Istio</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Kubernetes/">Kubernetes</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/sidecar/">Sidecar</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/traffic-mirror/">Traffic Mirror</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%8D%8F%E8%AE%AE/">协议</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Doris/">Doris</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/FoundationDB/">FoundationDB</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%AD%98%E7%AE%97%E5%88%86%E7%A6%BB/">存算分离</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/memcached/">Memcached</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Rendezvous-Hashing/">Rendezvous Hashing</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/tcpdump/">Tcpdump</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/wireshark/">Wireshark</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/APISIX/">APISIX</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/CDC/">CDC</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/DMS/">DMS</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Pyroscope/">Pyroscope</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/ShardingSphere-Proxy/">ShardingSphere Proxy</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/shardingsphere/">Shardingsphere</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F/">分布式</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%88%86%E5%BA%93%E5%88%86%E8%A1%A8/">分库分表</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Envoy/">Envoy</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/kubenertes/">Kubenertes</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/service-mesh/">Service Mesh</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/MQ/">MQ</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/multi-raft/">Multi-Raft</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/nats/">Nats</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/raft/">Raft</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/fsnotify/">Fsnotify</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/inotify/">Inotify</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/linux/">Linux</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/c/">C</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/lua/">Lua</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/redis/">Redis</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/exec/">Exec</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/fork/">Fork</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Graceful-Restart/">Graceful Restart</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/tcp/">TCP</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Cloudflare/">Cloudflare</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/SSH/">SSH</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Tunnel/">Tunnel</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/CGO/">CGO</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/POSIX/">POSIX</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/CronJob/">CronJob</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Distributed/">Distributed</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/k8s/">K8s</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Fieldmask/">Fieldmask</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/protocol-buffers/">Protocol-Buffers</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/OpenTelemetry/">OpenTelemetry</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Sentry/">Sentry</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Tools/">Tools</a>
+          <span>6</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Load-Balancing/">Load Balancing</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/docker/">Docker</a>
+          <span>6</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E9%95%9C%E5%83%8F/">镜像</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Jaeger/">Jaeger</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Opentracing/">Opentracing</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Tracing/">Tracing</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Channel/">Channel</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/goim/">Goim</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Gin/">Gin</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/memory-leak/">Memory Leak</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/pprof/">Pprof</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/hashtable/">Hashtable</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/im/">Im</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/socket.io/">Socket.io</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/cache/">Cache</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/repository/">Repository</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/AMQP/">AMQP</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Network/">Network</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Ring-Buffer/">Ring Buffer</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Algorithm/">Algorithm</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Caching/">Caching</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/LRU/">LRU</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/LRU-K/">LRU-K</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Crypto/">Crypto</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/RC4/">RC4</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/snowflake/">Snowflake</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/hot-reload/">Hot-Reload</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Swagger/">Swagger</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/QR-Code/">QR Code</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/etcd/">Etcd</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/microservice/">Microservice</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E6%9C%8D%E5%8A%A1%E6%B3%A8%E5%86%8C%E5%8F%91%E7%8E%B0/">服务注册发现</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/DTO/">DTO</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/HTTP/">HTTP</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Note/">Note</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/api-gateway/">Api-Gateway</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/round-robin/">Round-Robin</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/weighted-round-robin/">Weighted-Round-Robin</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/JSON-RPC2.0/">JSON-RPC2.0</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/RPC/">RPC</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/App/">App</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/RN/">RN</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Spider/">Spider</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/CD/">CD</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/CI/">CI</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Jenkins/">Jenkins</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Distributed-Architecture/">Distributed Architecture</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/aliyun/">Aliyun</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/rds/">Rds</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Trie/">Trie</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Dynamic-Programming/">Dynamic Programming</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Levenshtein-Distance/">Levenshtein Distance</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/ShortURL/">ShortURL</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/drone/">Drone</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/docker-compose/">Docker Compose</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/selenium/">Selenium</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Test/">Test</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Pytest/">Pytest</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Git/">Git</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/database/">Database</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/index/">Index</a>
+          <span>1</span>
+        </li>
+      
+      </ul>
+    </li>
+    
+  
+  </ul>
+</nav>
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+  
+  <article class="markdown book-post">
+    <h2>
+      <a href="/2025/11/06/%E8%AF%91-Golang%E7%BB%BF%E8%8C%B6%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/">译：The Green Tea Garbage Collector</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>November 6, 2025</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Golang/">Golang</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/GC/">GC</a>, 
+      <a href="/tags/Green-Tea/">Green Tea</a>
+  </div>
+  
+
+
+    <p><blockquote>
+<p>原文链接：<a href="https://go.dev/blog/greenteagc">The Green Tea Garbage Collector</a></p>
+</blockquote>
+<p>Go <code>1.25</code> 引入了一款名为 Green Tea 的新型实验性垃圾回收器，在构建时通过设置 <code>GOEXPERIMENT=greenteagc</code> 来启用。</p>
+<p>许多工作负载在垃圾回收上花费的时间减少了约 10%，但有些工作负载的降幅高达 <strong>40%</strong>！它已经为生产环境做好了准备，并且已经在 <em>Google</em> 内部使用，我们鼓励您尝试一下。我们知道有些工作负载受益不多，甚至根本没有受益，因此您的反馈对于我们未来的工作至关重要。</p>
+<p>根据我们现在掌握的数据，我们计划在 Go <code>1.26</code> 中将其作为默认设置。要报告任何问题，请提交一个新 issue。要报告任何成功案例，请回复现有的 <a href="https://github.com/golang/go/issues/73581">Green Tea issue</a>。</p>
+<p>本文是根据 <em><strong>Michael Knyszek</strong></em> 在 <em><strong>GopherCon 2025</strong></em> 上的演讲整理而成的博客文章。一旦演讲视频在线发布，我们将更新这篇博文并附上链接。</p>
+<h2 id="理解垃圾回收">
+  理解垃圾回收
+  <a class="anchor" href="#%e7%90%86%e8%a7%a3%e5%9e%83%e5%9c%be%e5%9b%9e%e6%94%b6">#</a>
+</h2>
+<p>在我们讨论 <strong>Green Tea</strong> 之前，让我们先就垃圾回收达成共识。</p>
+<h3 id="对象和指针">
+  对象和指针
+  <a class="anchor" href="#%e5%af%b9%e8%b1%a1%e5%92%8c%e6%8c%87%e9%92%88">#</a>
+</h3>
+<p>垃圾回收的目的是自动回收和重用程序不再使用的内存。为此，Go 垃圾回收器关注的是 <em>对象</em> 和 <em>指针</em>。</p>
+<p>在 Go 运行时的上下文中，对象是其底层内存在堆上分配的 Go 值。当 Go 编译器无法确定值的生命周期时，就会在堆上分配内存。例如，以下代码片段分配了一个堆对象：一个指针切片的底层存储空间。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#66d9ef">var</span> <span style="color:#a6e22e">x</span> = make([]<span style="color:#f92672">*</span><span style="color:#66d9ef">int</span>, <span style="color:#ae81ff">10</span>) <span style="color:#75715e">// 全局变量
+</span></span></span></code></pre></div><p>Go 编译器无法将切片底层存储分配在堆以外的任何地方，因为它很难知道（甚至不可能知道） <code>x</code> 会引用该对象多长时间。</p>
+<p>指针只是指示 Go 值在内存中位置的数字，Go 程序就是通过指针来引用对象的。例如，要获取上一个代码片段中分配的对象的起始地址的指针，我们可以这样写：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#f92672">&amp;</span><span style="color:#a6e22e">x</span>[<span style="color:#ae81ff">0</span>] <span style="color:#75715e">// 0xc000104000
+</span></span></span></code></pre></div><h3 id="标记清除">
+  标记清除
+  <a class="anchor" href="#%e6%a0%87%e8%ae%b0%e6%b8%85%e9%99%a4">#</a>
+</h3>
+<p>Go 的垃圾回收器遵循一种广义上称为<em><strong>追踪式垃圾回收</strong></em>的策略，这意味着垃圾回收器会跟随或“追踪”程序中的指针，以确定程序仍在使用的对象。</p>
+        <a href="/2025/11/06/%E8%AF%91-Golang%E7%BB%BF%E8%8C%B6%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6/">...</a>
+      
+    </p>
+  </article>
+  
+  <article class="markdown book-post">
+    <h2>
+      <a href="/2022/07/25/%E5%9C%A8parent-shell%E4%B8%AD%E6%89%A7%E8%A1%8C%E5%86%85%E7%BD%AE%E5%91%BD%E4%BB%A4%E7%9A%84%E6%96%B9%E6%B3%95/">在Parent Shell中执行内置命令的方法</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>July 25, 2022</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Golang/">Golang</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/c/">C</a>, 
+      <a href="/tags/POSIX/">POSIX</a>, 
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/CGO/">CGO</a>
+  </div>
+  
+
+
+    <p><h3 id="背景">
+  背景
+  <a class="anchor" href="#%e8%83%8c%e6%99%af">#</a>
+</h3>
+<p>最近在为 大仓项目(Monorepo) 制作一个脚手架，其中构思了一个自动替用户切换工作路径的工具（代码是通过模板初始化的，在结构上基本一致，但是代码文件较深，想要在terminal去和文件交互时，只能使用 <code>cd</code> 命令，费时费力），因此我期望一个小工具，能比较方便的帮我跳转到目标路径。预期的使用效果如下：</p>
+<image src="/images/hack_tty_command.svg" width="80%"/>
+<p>这个命令执行后，你可以从当前路径（任意路径）跳转到目标路径，那我就不用记我应该先跳转到根目录再前往目标目录了，少敲击很多次 tab。</p>
+<blockquote>
+<p>PS: 后续计划给这个命令扩展一下历史记录，可以通过筛选匹配历史快速补全命令，提高效率。</p>
+</blockquote>
+<h3 id="chdir没作用">
+  chdir没作用？
+  <a class="anchor" href="#chdir%e6%b2%a1%e4%bd%9c%e7%94%a8">#</a>
+</h3>
+<p>这个小工具是通过Go来编写的，我从文档中看到 <code>os.Chdir</code> 这个调用, 因此用它来试试：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// Chdir changes the current working directory to the named directory. 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// If there is an error, it will be of type *PathError.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">Chdir</span>(<span style="color:#a6e22e">dir</span> <span style="color:#66d9ef">string</span>) <span style="color:#66d9ef">error</span>
+</span></span></code></pre></div><p>结果我发现没有效果，通过 <code>os.Getwd()</code> 却能看到当前路径已经被改变了。这个切换的需求还没解决，我却产生了几个新的疑问：</p>
+<ul>
+<li><code>cd</code> 命令怎么实现的？</li>
+<li><code>chdir</code> 系统调用的使用和原理？</li>
+</ul>
+<p>通过执行如下的命令，会发现 <code>cd</code> 命令并不是通过一个独立的可执行文件来实现的，而是内置在 bash 等 shell 程序中，其次通过查阅资料可以发现
+大部分Linux发行版都部分符合 POSIX 标准。如果再检索一下shell程序的原理，我们会得出如下的结论：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>$ which cd
+</span></span><span style="display:flex;"><span>cd: shell built-in command
+</span></span></code></pre></div><p>shell 程序在执行内建命令时，是通过调用内部的函数的执行。而非内建的命令（如 git / gcc / gdb）都是通过 fork 一个进程来执行；cd 命令是通过 <code>chdir</code> [<a href="#https://standards.ieee.org/ieee/1003.1/1388/">IEEE Std 1003.1-1988</a>] 系统调用实现的；<code>chdir</code> 在 &lt;uinstd.h&gt; 头文件中定义；</p>
+        <a href="/2022/07/25/%E5%9C%A8parent-shell%E4%B8%AD%E6%89%A7%E8%A1%8C%E5%86%85%E7%BD%AE%E5%91%BD%E4%BB%A4%E7%9A%84%E6%96%B9%E6%B3%95/">...</a>
+      
+    </p>
+  </article>
+  
+  <article class="markdown book-post">
+    <h2>
+      <a href="/2022/01/25/protoc-gen-fieldmask%E6%8F%92%E4%BB%B6/">protoc-gen-fieldmask插件</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>January 25, 2022</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Golang/">Golang</a>, 
+      <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/protocol-buffers/">Protocol-Buffers</a>, 
+      <a href="/tags/Fieldmask/">Fieldmask</a>, 
+      <a href="/tags/gRPC/">GRPC</a>
+  </div>
+  
+
+
+    <p><h3 id="背景">
+  背景
+  <a class="anchor" href="#%e8%83%8c%e6%99%af">#</a>
+</h3>
+<p>gRPC 作为服务端的常用框架，它通过 protocol-buffers 语言来定义服务，同时也约定了请求和响应的格式，这样在服务端和客户端之间就可以通过 protoc 生成的代码直接运行而不用考虑编码传输问题了。</p>
+<p>但是，可能会遇到这样的场景：</p>
+<ul>
+<li>
+<p>RPC 响应中 <strong><em>无用的字段过多</em></strong> , 浪费带宽和无效计算，如下图所示：</p>
+<blockquote>
+<p>这里的无用字段是指，在响应中，没有用到的字段，这些字段可以忽略掉，不会影响客户端的使用。</p>
+</blockquote>
+  <img src="/images/fieldmask-case1.jpg">
+<p>或许 <strong>拆分接口</strong> 是一个好的办法，但是可能会因为这样那样的原因（信息粒度降低导致接口太多了，有些地方就是需要聚合信息；细粒度的API设计同时会导致代码重复增加），可能无法推动拆分改造。同时如果没有拆分标准，亦或团队内成员不能严格遵守标准，那么拆分也只是重复问题而已。</p>
+</li>
+<li>
+<p>RPC 增量更新时，如何判断零值字段是否需要更新？</p>
+<p>对于 unset 和 zero value 不好区分的语言中（比如：go），在提供服务的一方遇到 <strong><em>增量更新</em></strong> 的场景时就会遇到这样的情况：</p>
+<p>对于这种情况当然可以也有一些方法来解决，比如：<strong>使用指针来定义数据基本类型</strong>，那么在使用的时候如果判定为 <code>nil</code> 就说明没有设置，如果不为 <code>nil</code> 且为零值，那么就说明也是需要更新的。不过这样解决的缺点就是，<code>nil refference panic</code> 的概率又增加了，在使用时也稍微麻烦了一点。</p>
+<p><img src="/images/fieldmask-case2.jpg">·</p>
+</li>
+</ul>
+<h3 id="解决方案">
+  解决方案
+  <a class="anchor" href="#%e8%a7%a3%e5%86%b3%e6%96%b9%e6%a1%88">#</a>
+</h3>
+<p>其实我们在思考上述两种场景的时候，把 <strong>客户端</strong> 和 <strong>服务端</strong> 的角色提取出来，就会发现这两个场景都是从 <strong>服务端</strong> 的视角遇到的问题，两个场景都是类似的：</p>
+<ol>
+<li>客户端需要哪些字段，服务端不知道</li>
+<li>客户端更新了哪些字段，服务端也不知道</li>
+</ol>
+<p>但是，其实客户端是知道的，因此让客户端把这部分信息传递给服务端就行了。因此我们可以用 <a href="">FieldMask</a> 字段，用来传递客户端需要的字段，服务端就只返回需要的字段；客户端的告诉服务端需要哪些字段，服务端就更新哪些字段。</p>
+<p>但是 <code>FieldMask</code> 只是一个定义，在具体的使用场景中还需要开发者自己编写一些辅助方法，来实现功能。那么是不是可以提供一个插件，让开发者可以只编写 <code>proto</code> 文件，便可以自动生成一些辅助方法呢？答案是肯定的，预览效果如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-protobuf" data-lang="protobuf"><span style="display:flex;"><span><span style="color:#66d9ef">message</span> <span style="color:#a6e22e">UserInfoRequest</span> {<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>  <span style="color:#66d9ef">string</span> user_id <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>  google.protobuf.FieldMask field_mask <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span> [<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>    (fieldmask.option.Option)<span style="color:#f92672">.</span>in <span style="color:#f92672">=</span> {gen<span style="color:#f92672">:</span> <span style="color:#66d9ef">true</span>},<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>    (fieldmask.option.Option)<span style="color:#f92672">.</span>out <span style="color:#f92672">=</span> {gen<span style="color:#f92672">:</span> <span style="color:#66d9ef">true</span>, message<span style="color:#f92672">:</span><span style="color:#e6db74">&#34;UserInfoResponse&#34;</span>}<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>  ];<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>}<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">message</span> <span style="color:#a6e22e">Address</span> {<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>  <span style="color:#66d9ef">string</span> country <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>  <span style="color:#66d9ef">string</span> province <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>}<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">message</span> <span style="color:#a6e22e">UserInfoResponse</span> {<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>  <span style="color:#66d9ef">string</span> user_id <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>;<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>  <span style="color:#66d9ef">string</span> name <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span>;<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>  <span style="color:#66d9ef">string</span> email <span style="color:#f92672">=</span> <span style="color:#ae81ff">3</span>;<span style="color:#960050;background-color:#1e0010">·
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>  Address address <span style="color:#f92672">=</span> <span style="color:#ae81ff">4</span>;<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>}<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">message</span> <span style="color:#a6e22e">NonEmpty</span> {}<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span><span style="color:#66d9ef">service</span> UserInfo {<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>  <span style="color:#66d9ef">rpc</span> GetUserInfo(UserInfoRequest) <span style="color:#66d9ef">returns</span> (UserInfoResponse) {}<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>  <span style="color:#66d9ef">rpc</span> UpdateUserInfo(UserInfoRequest) <span style="color:#66d9ef">returns</span> (NonEmpty) {}<span style="color:#960050;background-color:#1e0010">
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010"></span>}<span style="color:#960050;background-color:#1e0010">
+</span></span></span></code></pre></div><p>生成的代码如下：</p>
+        <a href="/2022/01/25/protoc-gen-fieldmask%E6%8F%92%E4%BB%B6/">...</a>
+      
+    </p>
+  </article>
+  
+  <article class="markdown book-post">
+    <h2>
+      <a href="/2020/09/27/WebSocket-Implemention-With-Go/">WebSocket Implemention With Go</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>September 27, 2020</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Golang/">Golang</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/Tools/">Tools</a>
+  </div>
+  
+
+
+    <p><h3 id="什么是ws协议">
+  什么是WS协议
+  <a class="anchor" href="#%e4%bb%80%e4%b9%88%e6%98%afws%e5%8d%8f%e8%ae%ae">#</a>
+</h3>
+<blockquote>
+<p>The WebSocket Protocol enables two-way communication between a client
+running untrusted code in a controlled environment to a remote host
+that has opted-in to communications from that code.  The security
+model used for this is the origin-based security model commonly used
+by web browsers.  The protocol consists of an opening handshake
+followed by basic message framing, layered over TCP.</p>
+</blockquote>
+<blockquote>
+<p>The goal of this technology is to provide a mechanism for browser-based
+applications that need two-way communication with servers that does
+not rely on opening multiple HTTP connections (e.g., using XMLHttpRequest or <code>&lt;iframe&gt;</code>s and long.polling). -  摘自 RFC6455 Abstract.</p>
+        <a href="/2020/09/27/WebSocket-Implemention-With-Go/">...</a>
+      
+    </p>
+  </article>
+  
+  <article class="markdown book-post">
+    <h2>
+      <a href="/2019/03/30/goswagger%E5%85%A5%E9%97%A8%E6%89%8B%E5%86%8C/">goswagger入门手册</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>March 30, 2019</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Golang/">Golang</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/Swagger/">Swagger</a>
+  </div>
+  
+
+
+    <p><blockquote>
+<p>本文旨在记录使用goswagger过程中遇到的一些问题（只在生成文档方面，不涉及其他功能）：</p>
+</blockquote>
+<ul>
+<li>如何在go1.11+以上（支持Go Module）版本中的应用swagger</li>
+<li>一些注解上的注意事项</li>
+<li>如何在团队中管理API文档（主要涵盖了：swagger-ui的部署和使用）</li>
+</ul>
+<h3 id="关于swaggerhttpsswaggerio">
+  关于<a href="https://swagger.io">swagger</a>
+  <a class="anchor" href="#%e5%85%b3%e4%ba%8eswaggerhttpsswaggerio">#</a>
+</h3>
+<p>swagger涵盖WebAPI的一整套工具：API设计，API实现（代码生成），API文档，API测试及API规范。更多信息请参见官网</p>
+<!-- more -->
+<h3 id="准备工作">
+  准备工作
+  <a class="anchor" href="#%e5%87%86%e5%a4%87%e5%b7%a5%e4%bd%9c">#</a>
+</h3>
+<ul>
+<li>一个Golang web项目，并软连接到<code>GOPATH/src</code>下。【毕竟是支持Gomodule的项目，还放在GOPATH下就不科学了😄】</li>
+<li>安装swagger工具. 参见<a href="https://goswagger.io/install.html">安装</a></li>
+<li>环境：
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>➜  swagger-demo git:<span style="color:#f92672">(</span>master<span style="color:#f92672">)</span> ✗ go version
+</span></span><span style="display:flex;"><span>go version go1.11.5 darwin/amd64
+</span></span><span style="display:flex;"><span>➜  swagger-demo git:<span style="color:#f92672">(</span>master<span style="color:#f92672">)</span> ✗ swagger version
+</span></span><span style="display:flex;"><span>version: v0.18.0
+</span></span><span style="display:flex;"><span>commit: 6b23bb61413826ce42c3b14a37bf5870caf91e0b
+</span></span></code></pre></div></li>
+</ul>
+<h3 id="编写注释">
+  编写注释
+  <a class="anchor" href="#%e7%bc%96%e5%86%99%e6%b3%a8%e9%87%8a">#</a>
+</h3>
+<blockquote>
+<p>元信息包含了这个应用的基本信息。一般新建一个doc.go放在你的API根目录下；还有一定要注意这句话：</p>
+</blockquote>
+<blockquote>
+<p>You give it a main file and it will parse all the files that are reachable by that main package to produce a swagger specification.To use you can add a go:generate comment to your main file。</p>
+        <a href="/2019/03/30/goswagger%E5%85%A5%E9%97%A8%E6%89%8B%E5%86%8C/">...</a>
+      
+    </p>
+  </article>
+  
+  <article class="markdown book-post">
+    <h2>
+      <a href="/2018/11/26/QR-Code%E7%94%9F%E6%88%90%E5%99%A8forgolang/">Go 语言实现 QR Code 生成器：从原理到实践</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>November 26, 2018</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Golang/">Golang</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/QR-Code/">QR Code</a>
+  </div>
+  
+
+
+    <p><blockquote>
+<p>项目地址：<a href="https://github.com/yeqown/go-qrcode">yeqown/go-qrcode</a></p>
+<p>在造轮子的过程中，参考了同类项目 <a href="https://github.com/skip2/go-qrcode">skip2/go-qrcode</a> 的实现，特别是复用了其纠错算法和 BitSet 的部分逻辑。但为了更深入理解 QR Code 的生成机制，我决定完整地梳理一遍流程并重构实现。</p>
+</blockquote>
+<h2 id="背景">
+  背景
+  <a class="anchor" href="#%e8%83%8c%e6%99%af">#</a>
+</h2>
+<p>二维码（QR Code）看似只是一堆杂乱无章的黑白像素点，实则包含了一套严密的数据编码、纠错和掩码机制。作为一名 Gopher，在日常开发中调用现成的库生成二维码非常简单，但如果想探究其“黑盒”内部的秘密，最好的方式莫过于亲手实现一个。</p>
+<h2 id="快速上手">
+  快速上手
+  <a class="anchor" href="#%e5%bf%ab%e9%80%9f%e4%b8%8a%e6%89%8b">#</a>
+</h2>
+<p>在深入原理之前，我们先来看看如何使用 <code>go-qrcode</code> 库在几行代码内生成一张二维码图片。</p>
+<h3 id="示例代码">
+  示例代码
+  <a class="anchor" href="#%e7%a4%ba%e4%be%8b%e4%bb%a3%e7%a0%81">#</a>
+</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> (
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;fmt&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;log&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;github.com/yeqown/go-qrcode/v2&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;github.com/yeqown/go-qrcode/writer/standard&#34;</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 1. 初始化 QRCode 对象，输入文本内容
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">qrc</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">qrcode</span>.<span style="color:#a6e22e">New</span>(<span style="color:#e6db74">&#34;https://github.com/yeqown/go-qrcode&#34;</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatalf</span>(<span style="color:#e6db74">&#34;could not generate QRCode: %v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 2. 初始化标准 Writer，指定输出文件名
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">w</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">standard</span>.<span style="color:#a6e22e">New</span>(<span style="color:#e6db74">&#34;../testdata/repo-qrcode.jpeg&#34;</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatalf</span>(<span style="color:#e6db74">&#34;standard.New failed: %v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 3. 保存
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">qrc</span>.<span style="color:#a6e22e">Save</span>(<span style="color:#a6e22e">w</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Fatalf</span>(<span style="color:#e6db74">&#34;could not save image: %v&#34;</span>, <span style="color:#a6e22e">err</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Println</span>(<span style="color:#e6db74">&#34;QR Code generate successfully!&#34;</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>生成结果示意如下：</p>
+        <a href="/2018/11/26/QR-Code%E7%94%9F%E6%88%90%E5%99%A8forgolang/">...</a>
+      
+    </p>
+  </article>
+  
+  <article class="markdown book-post">
+    <h2>
+      <a href="/2018/11/19/go-get%E9%81%87%E5%88%B0%E5%A2%99%E7%9A%84%E8%A7%A3%E5%86%B3%E6%96%B9%E6%B3%95/">go-get遇到🧱的解决方法</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>November 19, 2018</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Golang/">Golang</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>
+  </div>
+  
+
+
+    <p><p>解决方法有两种，在网上也很好找到：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>1. 最简单的，从¥“github.com/golang”找到对应的包并下载到 $GOPATH/src/golang.org/x/ 下
+</span></span><span style="display:flex;"><span>2. 第二种，就是翻过🧱了。
+</span></span></code></pre></div><h3 id="1-问题翻了还是没办法直接使用go-get来下载呢">
+  1 问题：翻了🧱，还是没办法直接使用go get来下载呢？
+  <a class="anchor" href="#1-%e9%97%ae%e9%a2%98%e7%bf%bb%e4%ba%86%e8%bf%98%e6%98%af%e6%b2%a1%e5%8a%9e%e6%b3%95%e7%9b%b4%e6%8e%a5%e4%bd%bf%e7%94%a8go-get%e6%9d%a5%e4%b8%8b%e8%bd%bd%e5%91%a2">#</a>
+</h3>
+<p>先说原因，因为go get并没有走你的代理啊！！！！那么如何设置代理呢？</p>
+<!-- more -->
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>export http_proxy<span style="color:#f92672">=</span>http://ip:port
+</span></span><span style="display:flex;"><span>go get golang.org/xxx
+</span></span></code></pre></div><p>其他设置代理的方式，自行参见 <a href="##%e5%8f%82%e8%80%83">参考</a></p>
+<h3 id="2-如果你的代理不支持http--https协议可咋整">
+  2 如果你的代理不支持http || https协议，可咋整？
+  <a class="anchor" href="#2-%e5%a6%82%e6%9e%9c%e4%bd%a0%e7%9a%84%e4%bb%a3%e7%90%86%e4%b8%8d%e6%94%af%e6%8c%81http--https%e5%8d%8f%e8%ae%ae%e5%8f%af%e5%92%8b%e6%95%b4">#</a>
+</h3>
+<p>那么想办法支持http或者把http再代理到你可以使用的协议（socks5~），那么可以使用<a href="https://github.com/cyfdecyf/cow">cow</a>。</p>
+<p>cow 推荐使用方式：</p>
+<p>go get 下载安装（因为刚开始图简单，使用程序的时候运行报错了，go get 安装方式并不会有这样的困扰）。
+配置的时候也很简单，编辑配置文件 ～/.cow/rc，配置http socks5代理服务和监听代理端口。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-sh" data-lang="sh"><span style="display:flex;"><span>listen <span style="color:#f92672">=</span> http://127.0.0.1:7777
+</span></span><span style="display:flex;"><span>proxy <span style="color:#f92672">=</span> socks5://127.0.0.1:1080
+</span></span></code></pre></div><h3 id="3-运行">
+  3 运行
+  <a class="anchor" href="#3-%e8%bf%90%e8%a1%8c">#</a>
+</h3>
+<p>配置完成之后就可以直接运行了</p>
+<pre tabindex="0"><code>    ./cow
+    # 另开一个Terminal
+    export http_proxy=http://ip:port
+    go get golang.org/xxx
+</code></pre><h3 id="写在后面">
+  写在后面
+  <a class="anchor" href="#%e5%86%99%e5%9c%a8%e5%90%8e%e9%9d%a2">#</a>
+</h3>
+<p>知道了go get无法翻🧱的原因之后，就可以发挥自己的想象力来解决问题了，这样解决还是挺繁琐的。虽然cow可以配置开机启动，但对于一个懒癌晚期）的人来说（如果不是因为升级Go到了1.11，go-module机制让我无法开心的玩耍，我也不会去考虑为啥翻🧱了go get还是不能用，明明有代理却还有使用另外一个代理～。</p>
+<p>友情提示：vscode-go 也可以设置proxy哦</p>
+<h3 id="参考">
+  参考：
+  <a class="anchor" href="#%e5%8f%82%e8%80%83">#</a>
+</h3>
+<ul>
+<li><a href="https://blog.csdn.net/zhyhang/article/details/78444974">go get 使用代理</a></li>
+<li><a href="https://github.com/cyfdecyf/cow">cow</a></li>
+<li><a href="https://github.com/cyfdecyf/cow/blob/master/doc/sample-config/rc">cow配置文件说明</a></li>
+<li><a href="https://blog.csdn.net/easy_mind/article/details/78214696">vscode-go设置proxy</a></li>
+</ul>
+    </p>
+  </article>
+  
+  <article class="markdown book-post">
+    <h2>
+      <a href="/2018/08/29/Golang%E9%80%82%E7%94%A8%E7%9A%84DTO%E5%B7%A5%E5%85%B7/">Golang适用的DTO工具</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>August 29, 2018</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Golang/">Golang</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/Tools/">Tools</a>, 
+      <a href="/tags/DTO/">DTO</a>
+  </div>
+  
+
+
+    <p><blockquote>
+<p>DTO (Data Transfer Object) 是Java中的概念，起到数据封装和隔离的作用。在使用Golang开发Web应用的过程中，也会有类似的需求。先贴项目地址 <a href="https://github.com/yeqown/server-common/tree/master/dbs/tools">github.com/yeqown/server-common/tree/master/dbs/tools</a></p>
+</blockquote>
+<!-- more -->
+<h3 id="举个例子">
+  举个例子
+  <a class="anchor" href="#%e4%b8%be%e4%b8%aa%e4%be%8b%e5%ad%90">#</a>
+</h3>
+<p>现在有一个用户数据结构如下,</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-Golang" data-lang="Golang"><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">UserModel</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">ID</span>          <span style="color:#66d9ef">int64</span>   <span style="color:#e6db74">`gorm:&#34;column:id&#34;`</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Name</span>        <span style="color:#66d9ef">string</span>  <span style="color:#e6db74">`gorm:&#34;column:name&#34;`</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Password</span>    <span style="color:#66d9ef">string</span>  <span style="color:#e6db74">`gorm:&#34;column:password&#34;`</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>// 问题1: 现在要求是想要JSON格式返回用户数据，并且不希望其中包含有Password字段
+// 解决1:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-Golang" data-lang="Golang"><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">UserModel</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">ID</span>          <span style="color:#66d9ef">int64</span>   <span style="color:#e6db74">`gorm:&#34;column:id&#34; json:&#34;id&#34;`</span> 
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Name</span>        <span style="color:#66d9ef">string</span>  <span style="color:#e6db74">`gorm:&#34;column:name&#34; json:&#34;name&#34;`</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Password</span>    <span style="color:#66d9ef">string</span>  <span style="color:#e6db74">`gorm:&#34;column:password&#34; json:&#34;-&#34;`</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>// 问题2: 同样是JSON数据格式，并且希望额外返回用户的身份标示Ident（假设必须要跟用户数据放在一起）
+// 解决2: （这也是我的场景）</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-Golang" data-lang="Golang"><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">UserDTO</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">ID</span>          <span style="color:#66d9ef">int64</span>   <span style="color:#e6db74">`json:&#34;id&#34;`</span> 
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Name</span>        <span style="color:#66d9ef">string</span>  <span style="color:#e6db74">`json:&#34;name&#34;`</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Password</span>    <span style="color:#66d9ef">string</span>  <span style="color:#e6db74">`json:&#34;-&#34;`</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Ident</span>       <span style="color:#66d9ef">string</span>  <span style="color:#e6db74">`json:&#34;ident&#34;`</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">LoadUserDTOFromModel</span>(<span style="color:#a6e22e">data</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">UserMolde</span>) <span style="color:#f92672">*</span><span style="color:#a6e22e">UserDTO</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">ident</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">genUserIdent</span>(<span style="color:#a6e22e">data</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span>{
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">ID</span>          <span style="color:#a6e22e">data</span>.<span style="color:#a6e22e">ID</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">Name</span>        <span style="color:#a6e22e">data</span>.<span style="color:#a6e22e">Name</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">Ident</span>       <span style="color:#a6e22e">ident</span>,
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="背景和需求">
+  背景和需求
+  <a class="anchor" href="#%e8%83%8c%e6%99%af%e5%92%8c%e9%9c%80%e6%b1%82">#</a>
+</h3>
+<p>一般来说我的项目结构如下：其中models和services也就是分开定义Data struct(UserModel)和Object(UserDTO)的文件夹。</p>
+<p><img src="/images/dbtools-web-filetree.png" alt="Web项目结构举例" /></p>
+<p>其实DTO的过程对于我来说，就是基于Data Struct生成一个新的Struct结构，并附带一个<code>func LoadDTOTypeFromModel(data *ModelType) *DTOType</code>。在这个过程中，其实除了个别Object结构体需要额外处理以外，大部分都是新换一个tag~。因此这部分工作步骤都是类似的，那么为什么不用一个工具来避免这部分重复的工作呢～？</p>
+<h3 id="思路">
+  思路
+  <a class="anchor" href="#%e6%80%9d%e8%b7%af">#</a>
+</h3>
+<p>先说一下思路:</p>
+        <a href="/2018/08/29/Golang%E9%80%82%E7%94%A8%E7%9A%84DTO%E5%B7%A5%E5%85%B7/">...</a>
+      
+    </p>
+  </article>
+  
+  <article class="markdown book-post">
+    <h2>
+      <a href="/2018/05/18/%E4%BD%BF%E7%94%A8golang-%E5%AE%9E%E7%8E%B0JSON-RPC2-0/">使用golang 实现JSON-RPC2.0</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>May 18, 2018</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Golang/">Golang</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/RPC/">RPC</a>, 
+      <a href="/tags/JSON-RPC2.0/">JSON-RPC2.0</a>
+  </div>
+  
+
+
+    <p><hr>
+<h3 id="什么是rpc">
+  什么是RPC？
+  <a class="anchor" href="#%e4%bb%80%e4%b9%88%e6%98%afrpc">#</a>
+</h3>
+<p>远程过程调用（英语：Remote Procedure Call，缩写为 RPC）是一个计算机通信协议。该协议允许运行于一台计算机的程序调用另一台计算机的子程序，而程序员无需额外地为这个交互作用编程。如果涉及的软件采用面向对象编程，那么远程过程调用亦可称作远程调用或远程方法调用。</p>
+<p>远程过程调用是一个分布式计算的客户端-服务器（Client/Server）的例子，它简单而又广受欢迎。远程过程调用总是由客户端对服务器发出一个执行若干过程请求，并用客户端提供的参数。执行结果将返回给客户端。由于存在各式各样的变体和细节差异，对应地派生了各式远程过程调用协议，而且它们并不互相兼容。——————源自维基百科</p>
+<!-- more -->
+<hr>
+<h3 id="什么又是json-rpc">
+  什么又是JSON-RPC?
+  <a class="anchor" href="#%e4%bb%80%e4%b9%88%e5%8f%88%e6%98%afjson-rpc">#</a>
+</h3>
+<p>JSON-RPC，是一个无状态且轻量级的远程过程调用（RPC）传送协议，其传递内容通过 JSON 为主。相较于一般的 REST 通过网址（如 GET /user）调用远程服务器，JSON-RPC 直接在内容中定义了欲调用的函数名称（如 {&ldquo;method&rdquo;: &ldquo;getUser&rdquo;}），这也令开发者不会陷于该使用 PUT 或者 PATCH 的问题之中。
+更多JSON-RPC约定参见：<a href="https://zh.wikipedia.org/wiki/JSON-RPC">https://zh.wikipedia.org/wiki/JSON-RPC</a></p>
+<h3 id="问题">
+  问题
+  <a class="anchor" href="#%e9%97%ae%e9%a2%98">#</a>
+</h3>
+<h4 id="服务端注册及调用">
+  服务端注册及调用
+  <a class="anchor" href="#%e6%9c%8d%e5%8a%a1%e7%ab%af%e6%b3%a8%e5%86%8c%e5%8f%8a%e8%b0%83%e7%94%a8">#</a>
+</h4>
+<p>约定如**<code>net/rpc</code>**：</p>
+<blockquote>
+<ul>
+<li>the method&rsquo;s type is exported.</li>
+</ul>
+</blockquote>
+<ul>
+<li>the method is exported.</li>
+<li>the method has two arguments, both exported (or builtin) types.</li>
+<li>the method&rsquo;s second argument is a pointer.</li>
+<li>the method has return type error.</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// 这就是约定
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">t</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">T</span>) <span style="color:#a6e22e">MethodName</span>(<span style="color:#a6e22e">argType</span> <span style="color:#a6e22e">T1</span>, <span style="color:#a6e22e">replyType</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">T2</span>) <span style="color:#66d9ef">error</span>
+</span></span></code></pre></div><p>那么问题来了:</p>
+        <a href="/2018/05/18/%E4%BD%BF%E7%94%A8golang-%E5%AE%9E%E7%8E%B0JSON-RPC2-0/">...</a>
+      
+    </p>
+  </article>
+  
+  <article class="markdown book-post">
+    <h2>
+      <a href="/2018/04/20/gorm%E4%BD%BF%E7%94%A8%E8%AE%B0%E5%BD%95/">gorm使用记录</a>
+    </h2>
+    
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>April 20, 2018</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>, 
+      <a href="/categories/Golang/">Golang</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>
+  </div>
+  
+
+
+    <p><h3 id="关于gorm">
+  关于Gorm
+  <a class="anchor" href="#%e5%85%b3%e4%ba%8egorm">#</a>
+</h3>
+<p><a href="http://doc.gorm.io">gorm文档</a></p>
+<!-- [gorm文档2](http://gorm.io) -->
+<!-- more -->
+<h3 id="遇见问题">
+  遇见问题
+  <a class="anchor" href="#%e9%81%87%e8%a7%81%e9%97%ae%e9%a2%98">#</a>
+</h3>
+<h4 id="无法通过结构体的方式更新或查询零值">
+  <strong>无法通过结构体的方式更新或查询零值</strong>
+  <a class="anchor" href="#%e6%97%a0%e6%b3%95%e9%80%9a%e8%bf%87%e7%bb%93%e6%9e%84%e4%bd%93%e7%9a%84%e6%96%b9%e5%bc%8f%e6%9b%b4%e6%96%b0%e6%88%96%e6%9f%a5%e8%af%a2%e9%9b%b6%e5%80%bc">#</a>
+</h4>
+<pre><code>这里零值是说，各个类型的默认值。
+</code></pre>
+<p>关于这一点是在<a href="http://doc.gorm.io/crud.html#update">这里</a>中注明了的，也提供了解决方案：</p>
+<blockquote>
+<p>WARNING when update with struct, GORM will only update those fields that with non blank value</p>
+</blockquote>
+<blockquote>
+<p>For below Update, nothing will be updated as &ldquo;&rdquo;, 0, false are blank values of their types</p>
+</blockquote>
+<blockquote>
+<p>NOTE When query with struct, GORM will only query with those fields has non-zero value, that means if your field’s value is 0, &lsquo;&rsquo;, false or other zero values, it won’t be used to build query conditions,</p>
+        <a href="/2018/04/20/gorm%E4%BD%BF%E7%94%A8%E8%AE%B0%E5%BD%95/">...</a>
+      
+    </p>
+  </article>
+  
+
+  
+    <ul class="pagination pagination-default">
+      <li class="page-item disabled">
+        <a aria-disabled="true" aria-label="First" class="page-link" role="button" tabindex="-1"><span aria-hidden="true">&laquo;&laquo;</span></a>
+      </li>
+      <li class="page-item disabled">
+        <a aria-disabled="true" aria-label="Previous" class="page-link" role="button" tabindex="-1"><span aria-hidden="true">&laquo;</span></a>
+      </li>
+      <li class="page-item active">
+        <a aria-current="page" aria-label="Page 1" class="page-link" role="button">1</a>
+      </li>
+      <li class="page-item">
+        <a href="/categories/Golang/page/2/" aria-label="Page 2" class="page-link" role="button">2</a>
+      </li>
+      <li class="page-item">
+        <a href="/categories/Golang/page/2/" aria-label="Next" class="page-link" role="button"><span aria-hidden="true">&raquo;</span></a>
+      </li>
+      <li class="page-item">
+        <a href="/categories/Golang/page/2/" aria-label="Last" class="page-link" role="button"><span aria-hidden="true">&raquo;&raquo;</span></a>
+      </li>
+    </ul>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  <nav>
+  <ul>
+  
+    
+    <li class="book-section-flat">
+      <strong>Categories</strong>
+      <ul>
+      
+        <li class="flex justify-between">
+          <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>
+          <span>33</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/%E6%9E%B6%E6%9E%84/">架构</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Golang/">Golang</a>
+          <span>12</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Kubernetes/">Kubernetes</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F/">分布式</a>
+          <span>6</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/">数据库</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Service-Mesh/">Service Mesh</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/design/">Design</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Tracing/">Tracing</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Algorithm/">Algorithm</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/DevOps/">DevOps</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/Test/">Test</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/categories/%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4/">常用命令</a>
+          <span>1</span>
+        </li>
+      
+      </ul>
+    </li>
+    
+  
+    
+    <li class="book-section-flat">
+      <strong>Tags</strong>
+      <ul>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Victoria-Logs/">Victoria Logs</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%88%97%E5%BC%8F%E5%AD%98%E5%82%A8/">列式存储</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%AD%98%E5%82%A8/">存储</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E6%97%A5%E5%BF%97/">日志</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/GC/">GC</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Golang/">Golang</a>
+          <span>30</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Green-Tea/">Green Tea</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Debezium/">Debezium</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Incremental-Snapshot/">Incremental Snapshot</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Kafka-Connect/">Kafka Connect</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Mongodb/">Mongodb</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Source-Connector/">Source Connector</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Apache-Doris/">Apache Doris</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/MySQL/">Mysql</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Prepared-Statements/">Prepared Statements</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Kafka/">Kafka</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/MirrorMaker2/">MirrorMaker2</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Replication/">Replication</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Javascript/">Javascript</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/python/">Python</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Rust/">Rust</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/WASM/">WASM</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/WebAssembly/">WebAssembly</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/gRPC/">GRPC</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/grpcreplay/">Grpcreplay</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Istio/">Istio</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Kubernetes/">Kubernetes</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/sidecar/">Sidecar</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/traffic-mirror/">Traffic Mirror</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%8D%8F%E8%AE%AE/">协议</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Doris/">Doris</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/FoundationDB/">FoundationDB</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%AD%98%E7%AE%97%E5%88%86%E7%A6%BB/">存算分离</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/memcached/">Memcached</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Rendezvous-Hashing/">Rendezvous Hashing</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/tcpdump/">Tcpdump</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/wireshark/">Wireshark</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/APISIX/">APISIX</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/CDC/">CDC</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/DMS/">DMS</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Pyroscope/">Pyroscope</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/ShardingSphere-Proxy/">ShardingSphere Proxy</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/shardingsphere/">Shardingsphere</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F/">分布式</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E5%88%86%E5%BA%93%E5%88%86%E8%A1%A8/">分库分表</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Envoy/">Envoy</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/kubenertes/">Kubenertes</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/service-mesh/">Service Mesh</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/MQ/">MQ</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/multi-raft/">Multi-Raft</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/nats/">Nats</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/raft/">Raft</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/fsnotify/">Fsnotify</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/inotify/">Inotify</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/linux/">Linux</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/c/">C</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/lua/">Lua</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/redis/">Redis</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/exec/">Exec</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/fork/">Fork</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Graceful-Restart/">Graceful Restart</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/tcp/">TCP</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Cloudflare/">Cloudflare</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/SSH/">SSH</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Tunnel/">Tunnel</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/CGO/">CGO</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/POSIX/">POSIX</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/CronJob/">CronJob</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Distributed/">Distributed</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/k8s/">K8s</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Fieldmask/">Fieldmask</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/protocol-buffers/">Protocol-Buffers</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/OpenTelemetry/">OpenTelemetry</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Sentry/">Sentry</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Tools/">Tools</a>
+          <span>6</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Load-Balancing/">Load Balancing</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/docker/">Docker</a>
+          <span>6</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E9%95%9C%E5%83%8F/">镜像</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Jaeger/">Jaeger</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Opentracing/">Opentracing</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Tracing/">Tracing</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Channel/">Channel</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/goim/">Goim</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Gin/">Gin</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/memory-leak/">Memory Leak</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/pprof/">Pprof</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/hashtable/">Hashtable</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/im/">Im</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/socket.io/">Socket.io</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/cache/">Cache</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/repository/">Repository</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/AMQP/">AMQP</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Network/">Network</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Ring-Buffer/">Ring Buffer</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Algorithm/">Algorithm</a>
+          <span>4</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Caching/">Caching</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/LRU/">LRU</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/LRU-K/">LRU-K</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Crypto/">Crypto</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/RC4/">RC4</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/snowflake/">Snowflake</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/hot-reload/">Hot-Reload</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Swagger/">Swagger</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/QR-Code/">QR Code</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/etcd/">Etcd</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/microservice/">Microservice</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/%E6%9C%8D%E5%8A%A1%E6%B3%A8%E5%86%8C%E5%8F%91%E7%8E%B0/">服务注册发现</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/DTO/">DTO</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/HTTP/">HTTP</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Note/">Note</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/api-gateway/">Api-Gateway</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/round-robin/">Round-Robin</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/weighted-round-robin/">Weighted-Round-Robin</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/JSON-RPC2.0/">JSON-RPC2.0</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/RPC/">RPC</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/App/">App</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/RN/">RN</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Spider/">Spider</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/CD/">CD</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/CI/">CI</a>
+          <span>3</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Jenkins/">Jenkins</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Distributed-Architecture/">Distributed Architecture</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/aliyun/">Aliyun</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/rds/">Rds</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Trie/">Trie</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Dynamic-Programming/">Dynamic Programming</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Levenshtein-Distance/">Levenshtein Distance</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/ShortURL/">ShortURL</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/drone/">Drone</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/docker-compose/">Docker Compose</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/selenium/">Selenium</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Test/">Test</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Pytest/">Pytest</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/Git/">Git</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/database/">Database</a>
+          <span>1</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/index/">Index</a>
+          <span>1</span>
+        </li>
+      
+      </ul>
+    </li>
+    
+  
+  </ul>
+</nav>
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="远程过程调用（英语：Remote Procedure Call，缩写为 RPC）是一个计算机通信协议。该协议允许运行于一台计算机的程序调用另一台计算机的子程序，而程序员无需额外地为这个交互作用编程。如果涉及的软件采用面向对象编程，那么远程过程调用亦可称作远程调用或远程方法调用。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#343a40">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2018/05/18/%E4%BD%BF%E7%94%A8golang-%E5%AE%9E%E7%8E%B0JSON-RPC2-0/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="使用golang 实现JSON-RPC2.0">
+  <meta property="og:description" content="远程过程调用（英语：Remote Procedure Call，缩写为 RPC）是一个计算机通信协议。该协议允许运行于一台计算机的程序调用另一台计算机的子程序，而程序员无需额外地为这个交互作用编程。如果涉及的软件采用面向对象编程，那么远程过程调用亦可称作远程调用或远程方法调用。">
+  <meta property="og:locale" content="en">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2018-05-18T17:52:18+00:00">
+    <meta property="article:modified_time" content="2018-05-18T17:52:18+00:00">
+    <meta property="article:tag" content="Golang">
+    <meta property="article:tag" content="RPC">
+    <meta property="article:tag" content="JSON-RPC2.0">
+<title>使用golang 实现JSON-RPC2.0 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2018/05/18/%E4%BD%BF%E7%94%A8golang-%E5%AE%9E%E7%8E%B0JSON-RPC2-0/">
+<link rel="stylesheet" href="/book.min.c2fbf3db843e2f212ac724c116ea0973ae0c44d9926b1c14e16b29de812a6dc5.css" integrity="sha256-wvvz24Q&#43;LyEqxyTBFuoJc64MRNmSaxwU4Wsp3oEqbcU=" crossorigin="anonymous">
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.f17080086de35ea2d8ae7bbe8fd7dfab7183b485730a9353be99f4f0986495e5.js" integrity="sha256-8XCACG3jXqLYrnu&#43;j9ffq3GDtIVzCpNTvpn08JhkleU=" crossorigin="anonymous"></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade"><!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/categories"  target="_blank" rel="noopener">
+        Categories
+      </a>
+  </li>
+  
+  <li>
+    <a href="/tags"  target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>使用golang 实现JSON-RPC2.0</h3>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#什么是rpc">什么是RPC？</a></li>
+        <li><a href="#什么又是json-rpc">什么又是JSON-RPC?</a></li>
+        <li><a href="#问题">问题</a></li>
+        <li><a href="#使用示例">使用示例</a></li>
+        <li><a href="#实现">实现</a></li>
+        <li><a href="#缺陷">缺陷</a></li>
+        <li><a href="#参考">参考</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h2>
+    使用golang 实现JSON-RPC2.0
+  </h2>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/svg/calendar.svg" class="book-icon " alt="" />
+    <span>May 18, 2018</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Golang/">Golang</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Golang/">Golang</a>, 
+      <a href="/tags/RPC/">RPC</a>, 
+      <a href="/tags/JSON-RPC2.0/">JSON-RPC2.0</a>
+  </div>
+  
+
+
+  <div class="book-post-content"><hr>
+<h3 id="什么是rpc">
+  什么是RPC？
+  <a class="anchor" href="#%e4%bb%80%e4%b9%88%e6%98%afrpc">#</a>
+</h3>
+<p>远程过程调用（英语：Remote Procedure Call，缩写为 RPC）是一个计算机通信协议。该协议允许运行于一台计算机的程序调用另一台计算机的子程序，而程序员无需额外地为这个交互作用编程。如果涉及的软件采用面向对象编程，那么远程过程调用亦可称作远程调用或远程方法调用。</p>
+<p>远程过程调用是一个分布式计算的客户端-服务器（Client/Server）的例子，它简单而又广受欢迎。远程过程调用总是由客户端对服务器发出一个执行若干过程请求，并用客户端提供的参数。执行结果将返回给客户端。由于存在各式各样的变体和细节差异，对应地派生了各式远程过程调用协议，而且它们并不互相兼容。——————源自维基百科</p>
+<!-- more -->
+<hr>
+<h3 id="什么又是json-rpc">
+  什么又是JSON-RPC?
+  <a class="anchor" href="#%e4%bb%80%e4%b9%88%e5%8f%88%e6%98%afjson-rpc">#</a>
+</h3>
+<p>JSON-RPC，是一个无状态且轻量级的远程过程调用（RPC）传送协议，其传递内容通过 JSON 为主。相较于一般的 REST 通过网址（如 GET /user）调用远程服务器，JSON-RPC 直接在内容中定义了欲调用的函数名称（如 {&ldquo;method&rdquo;: &ldquo;getUser&rdquo;}），这也令开发者不会陷于该使用 PUT 或者 PATCH 的问题之中。
+更多JSON-RPC约定参见：<a href="https://zh.wikipedia.org/wiki/JSON-RPC">https://zh.wikipedia.org/wiki/JSON-RPC</a></p>
+<h3 id="问题">
+  问题
+  <a class="anchor" href="#%e9%97%ae%e9%a2%98">#</a>
+</h3>
+<h4 id="服务端注册及调用">
+  服务端注册及调用
+  <a class="anchor" href="#%e6%9c%8d%e5%8a%a1%e7%ab%af%e6%b3%a8%e5%86%8c%e5%8f%8a%e8%b0%83%e7%94%a8">#</a>
+</h4>
+<p>约定如**<code>net/rpc</code>**：</p>
+<blockquote>
+<ul>
+<li>the method&rsquo;s type is exported.</li>
+</ul>
+</blockquote>
+<ul>
+<li>the method is exported.</li>
+<li>the method has two arguments, both exported (or builtin) types.</li>
+<li>the method&rsquo;s second argument is a pointer.</li>
+<li>the method has return type error.</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// 这就是约定
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">t</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">T</span>) <span style="color:#a6e22e">MethodName</span>(<span style="color:#a6e22e">argType</span> <span style="color:#a6e22e">T1</span>, <span style="color:#a6e22e">replyType</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">T2</span>) <span style="color:#66d9ef">error</span>
+</span></span></code></pre></div><p>那么问题来了:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>	<span style="color:#960050;background-color:#1e0010">问题</span><span style="color:#ae81ff">1</span><span style="color:#960050;background-color:#1e0010">:</span> <span style="color:#960050;background-color:#1e0010">Server怎么来注册`t.Methods`?</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#960050;background-color:#1e0010">问题</span><span style="color:#ae81ff">2</span><span style="color:#960050;background-color:#1e0010">:</span> <span style="color:#960050;background-color:#1e0010">JSON-RPC请求参数里面的Params给到args?</span>
+</span></span></code></pre></div><p>server端类型定义：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">methodType</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">method</span>     <span style="color:#a6e22e">reflect</span>.<span style="color:#a6e22e">Method</span> <span style="color:#75715e">// 用于调用
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">ArgType</span>    <span style="color:#a6e22e">reflect</span>.<span style="color:#a6e22e">Type</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ReplyType</span>  <span style="color:#a6e22e">reflect</span>.<span style="color:#a6e22e">Type</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">service</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">name</span>   <span style="color:#66d9ef">string</span>                 <span style="color:#75715e">// 服务的名字, 一般为`T`
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">rcvr</span>   <span style="color:#a6e22e">reflect</span>.<span style="color:#a6e22e">Value</span>          <span style="color:#75715e">// 方法的接受者, 即约定中的 `t`
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">typ</span>    <span style="color:#a6e22e">reflect</span>.<span style="color:#a6e22e">Type</span>           <span style="color:#75715e">// 注册的类型, 即约定中的`T`
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">method</span> <span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#f92672">*</span><span style="color:#a6e22e">methodType</span> <span style="color:#75715e">// 注册的方法, 即约定中的`MethodName`的集合
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// Server represents an RPC Server.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Server</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">serviceMap</span> <span style="color:#a6e22e">sync</span>.<span style="color:#a6e22e">Map</span>   <span style="color:#75715e">// map[string]*service
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>}
+</span></span></code></pre></div><p>解决问题1，参考了<code>net/rpc</code>中的注册调用。主要使用<code>reflect</code>这个包。代码如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// 解析传入的类型及相应的可导出方法，将rcvr的type，Methods的相关信息存放到Server.m中。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// 如果type是不可导出的，则会报错
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">s</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Server</span>) <span style="color:#a6e22e">Register</span>(<span style="color:#a6e22e">rcvr</span> <span style="color:#66d9ef">interface</span>{}) <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">_service</span> <span style="color:#f92672">:=</span> new(<span style="color:#a6e22e">service</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">_service</span>.<span style="color:#a6e22e">typ</span> = <span style="color:#a6e22e">reflect</span>.<span style="color:#a6e22e">TypeOf</span>(<span style="color:#a6e22e">rcvr</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">_service</span>.<span style="color:#a6e22e">rcvr</span> = <span style="color:#a6e22e">reflect</span>.<span style="color:#a6e22e">ValueOf</span>(<span style="color:#a6e22e">rcvr</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">sname</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">reflect</span>.<span style="color:#a6e22e">Indirect</span>(<span style="color:#a6e22e">_service</span>.<span style="color:#a6e22e">rcvr</span>).<span style="color:#a6e22e">Type</span>().<span style="color:#a6e22e">Name</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">sname</span> <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;&#34;</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">err_s</span> <span style="color:#f92672">:=</span> <span style="color:#e6db74">&#34;rpc.Register: no service name for type &#34;</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">_service</span>.<span style="color:#a6e22e">typ</span>.<span style="color:#a6e22e">String</span>()
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Print</span>(<span style="color:#a6e22e">err_s</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">errors</span>.<span style="color:#a6e22e">New</span>(<span style="color:#a6e22e">err_s</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">isExported</span>(<span style="color:#a6e22e">sname</span>) {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">err_s</span> <span style="color:#f92672">:=</span> <span style="color:#e6db74">&#34;rpc.Register: type &#34;</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">sname</span> <span style="color:#f92672">+</span> <span style="color:#e6db74">&#34; is not exported&#34;</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">log</span>.<span style="color:#a6e22e">Print</span>(<span style="color:#a6e22e">err_s</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">errors</span>.<span style="color:#a6e22e">New</span>(<span style="color:#a6e22e">err_s</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">_service</span>.<span style="color:#a6e22e">name</span> = <span style="color:#a6e22e">sname</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">_service</span>.<span style="color:#a6e22e">method</span> = <span style="color:#a6e22e">suitableMethods</span>(<span style="color:#a6e22e">_service</span>.<span style="color:#a6e22e">typ</span>, <span style="color:#66d9ef">true</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// sync.Map.LoadOrStore
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">dup</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">m</span>.<span style="color:#a6e22e">LoadOrStore</span>(<span style="color:#a6e22e">sname</span>, <span style="color:#a6e22e">_service</span>); <span style="color:#a6e22e">dup</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">errors</span>.<span style="color:#a6e22e">New</span>(<span style="color:#e6db74">&#34;rpc: service already defined: &#34;</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">sname</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 关于suitableMethods，也是使用reflect，
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// 来获取_service.typ中的所有可导出方法及方法的相关参数，保存成*methodType
+</span></span></span></code></pre></div><p>suitableMethods代码由此去：[https: //github.com/yeqown/rpc/blob/master/server.go#L105](https: //github.com/yeqown/rpc/blob/master/server.go#L105)</p>
+<p>解决问题2，要解决问题2，且先看如何调用Method，代码如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// 约定：    func (t *T) MethodName(argType T1, replyType *T2) error
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// s.rcvr： 即约定中的 t
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// argv：   即约定中的 argType
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// replyv： 即约定中的 replyType
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">s</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">service</span>) <span style="color:#a6e22e">call</span>(<span style="color:#a6e22e">mtype</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">methodType</span>, <span style="color:#a6e22e">req</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Request</span>, <span style="color:#a6e22e">argv</span>, <span style="color:#a6e22e">replyv</span> <span style="color:#a6e22e">reflect</span>.<span style="color:#a6e22e">Value</span>) <span style="color:#f92672">*</span><span style="color:#a6e22e">Response</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">function</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">mtype</span>.<span style="color:#a6e22e">method</span>.<span style="color:#a6e22e">Func</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">returnValues</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">function</span>.<span style="color:#a6e22e">Call</span>([]<span style="color:#a6e22e">reflect</span>.<span style="color:#a6e22e">Value</span>{<span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">rcvr</span>, <span style="color:#a6e22e">argv</span>, <span style="color:#a6e22e">replyv</span>})
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">errIter</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">returnValues</span>[<span style="color:#ae81ff">0</span>].<span style="color:#a6e22e">Interface</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">errmsg</span> <span style="color:#f92672">:=</span> <span style="color:#e6db74">&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">errIter</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">errmsg</span> = <span style="color:#a6e22e">errIter</span>.(<span style="color:#66d9ef">error</span>).<span style="color:#a6e22e">Error</span>()
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">NewResponse</span>(<span style="color:#a6e22e">req</span>.<span style="color:#a6e22e">ID</span>, <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">NewJsonrpcErr</span>(<span style="color:#a6e22e">InternalErr</span>, <span style="color:#a6e22e">errmsg</span>, <span style="color:#66d9ef">nil</span>))
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">NewResponse</span>(<span style="color:#a6e22e">req</span>.<span style="color:#a6e22e">ID</span>, <span style="color:#a6e22e">replyv</span>.<span style="color:#a6e22e">Interface</span>(), <span style="color:#66d9ef">nil</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p>看了如何调用，再加上JSON-RPC的约定，知道了传给服务端的是一个JSON，而且其中的<code>Params</code>是一个json格式的数据。那就变成了:<code>interface{}</code> - req.Params 到<code>reflect.Value</code> - argv。那么怎么转换呢？看代码：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">s</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Server</span>) <span style="color:#a6e22e">call</span>(<span style="color:#a6e22e">req</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Request</span>) <span style="color:#f92672">*</span><span style="color:#a6e22e">Response</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// ....
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 根据req.Method来查询method
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// req.Method 格式如：&#34;ServiceName.MethodName&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// mtype *methodType
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">mtype</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">svc</span>.<span style="color:#a6e22e">method</span>[<span style="color:#a6e22e">methodName</span>]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 根据注册时候的mtype.ArgType来生成一个reflect.Value
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">argIsValue</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">false</span> <span style="color:#75715e">// if true, need to indirect before calling.
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">argv</span> <span style="color:#a6e22e">reflect</span>.<span style="color:#a6e22e">Value</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">mtype</span>.<span style="color:#a6e22e">ArgType</span>.<span style="color:#a6e22e">Kind</span>() <span style="color:#f92672">==</span> <span style="color:#a6e22e">reflect</span>.<span style="color:#a6e22e">Ptr</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">argv</span> = <span style="color:#a6e22e">reflect</span>.<span style="color:#a6e22e">New</span>(<span style="color:#a6e22e">mtype</span>.<span style="color:#a6e22e">ArgType</span>.<span style="color:#a6e22e">Elem</span>())
+</span></span><span style="display:flex;"><span>	} <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">argv</span> = <span style="color:#a6e22e">reflect</span>.<span style="color:#a6e22e">New</span>(<span style="color:#a6e22e">mtype</span>.<span style="color:#a6e22e">ArgType</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">argIsValue</span> = <span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">argIsValue</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">argv</span> = <span style="color:#a6e22e">argv</span>.<span style="color:#a6e22e">Elem</span>()
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 为argv参数生成了一个reflect.Value,但是argv目前为止都还是是0值。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 那么怎么把req.Params 复制给argv ?
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 我尝试过，argv = reflect.Value(req.Params)，但是在调用的时候 会提示说：“map[string]interface{} as main.*Args”，
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 这也就是说，并没有将参数的值正确的赋值给argv。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 后面才又了这个convert函数:
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// bs, _ := json.Marshal(req.Params)
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// json.Unmarshal(bs, argv.Interface())
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 因此有一些限制～，就不多说了 
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">convert</span>(<span style="color:#a6e22e">req</span>.<span style="color:#a6e22e">Params</span>, <span style="color:#a6e22e">argv</span>.<span style="color:#a6e22e">Interface</span>())
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Note: 约定中ReplyType是一个指针类型，方便赋值。
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#75715e">// 根据注册时候的mtype.ReplyType来生成一个reflect.Value
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">replyv</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">reflect</span>.<span style="color:#a6e22e">New</span>(<span style="color:#a6e22e">mtype</span>.<span style="color:#a6e22e">ReplyType</span>.<span style="color:#a6e22e">Elem</span>())
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">switch</span> <span style="color:#a6e22e">mtype</span>.<span style="color:#a6e22e">ReplyType</span>.<span style="color:#a6e22e">Elem</span>().<span style="color:#a6e22e">Kind</span>() {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">reflect</span>.<span style="color:#a6e22e">Map</span>:
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">replyv</span>.<span style="color:#a6e22e">Elem</span>().<span style="color:#a6e22e">Set</span>(<span style="color:#a6e22e">reflect</span>.<span style="color:#a6e22e">MakeMap</span>(<span style="color:#a6e22e">mtype</span>.<span style="color:#a6e22e">ReplyType</span>.<span style="color:#a6e22e">Elem</span>()))
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">reflect</span>.<span style="color:#a6e22e">Slice</span>:
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">replyv</span>.<span style="color:#a6e22e">Elem</span>().<span style="color:#a6e22e">Set</span>(<span style="color:#a6e22e">reflect</span>.<span style="color:#a6e22e">MakeSlice</span>(<span style="color:#a6e22e">mtype</span>.<span style="color:#a6e22e">ReplyType</span>.<span style="color:#a6e22e">Elem</span>(), <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>))
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">svc</span>.<span style="color:#a6e22e">call</span>(<span style="color:#a6e22e">mtype</span>, <span style="color:#a6e22e">req</span>, <span style="color:#a6e22e">argv</span>, <span style="color:#a6e22e">replyv</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h4 id="支持http调用">
+  支持HTTP调用
+  <a class="anchor" href="#%e6%94%af%e6%8c%81http%e8%b0%83%e7%94%a8">#</a>
+</h4>
+<p>已经完成了上述的部分，再来谈支持HTTP就非常简单了。实现<code>http.Handler</code>接口就行啦～。如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// 支持之POST &amp; json
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">s</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Server</span>) <span style="color:#a6e22e">ServeHTTP</span>(<span style="color:#a6e22e">w</span> <span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">ResponseWriter</span>, <span style="color:#a6e22e">r</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">Request</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">resp</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Response</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">w</span>.<span style="color:#a6e22e">Header</span>().<span style="color:#a6e22e">Set</span>(<span style="color:#e6db74">&#34;Content-Type&#34;</span>, <span style="color:#e6db74">&#34;application/json&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">r</span>.<span style="color:#a6e22e">Method</span> <span style="color:#f92672">!=</span> <span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">MethodPost</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">resp</span> = <span style="color:#a6e22e">NewResponse</span>(<span style="color:#e6db74">&#34;&#34;</span>, <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">NewJsonrpcErr</span>(
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">StatusMethodNotAllowed</span>, <span style="color:#e6db74">&#34;HTTP request method must be POST&#34;</span>, <span style="color:#66d9ef">nil</span>),
+</span></span><span style="display:flex;"><span>		)
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">response</span>(<span style="color:#a6e22e">w</span>, <span style="color:#a6e22e">resp</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 解析请求参数到[]*rpc.Request
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">reqs</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">getRequestFromBody</span>(<span style="color:#a6e22e">r</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">resp</span> = <span style="color:#a6e22e">NewResponse</span>(<span style="color:#e6db74">&#34;&#34;</span>, <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">NewJsonrpcErr</span>(<span style="color:#a6e22e">InternalErr</span>, <span style="color:#a6e22e">err</span>.<span style="color:#a6e22e">Error</span>(), <span style="color:#66d9ef">nil</span>))
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">response</span>(<span style="color:#a6e22e">w</span>, <span style="color:#a6e22e">resp</span>)
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 处理请求，包括批量请求
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">resps</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">handleWithRequests</span>(<span style="color:#a6e22e">reqs</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> len(<span style="color:#a6e22e">resps</span>) &gt; <span style="color:#ae81ff">1</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">response</span>(<span style="color:#a6e22e">w</span>, <span style="color:#a6e22e">resps</span>)
+</span></span><span style="display:flex;"><span>	} <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">response</span>(<span style="color:#a6e22e">w</span>, <span style="color:#a6e22e">resps</span>[<span style="color:#ae81ff">0</span>])
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h3 id="使用示例">
+  使用示例
+  <a class="anchor" href="#%e4%bd%bf%e7%94%a8%e7%a4%ba%e4%be%8b">#</a>
+</h3>
+<h4 id="服务端使用">
+  服务端使用
+  <a class="anchor" href="#%e6%9c%8d%e5%8a%a1%e7%ab%af%e4%bd%bf%e7%94%a8">#</a>
+</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// test_server.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> (
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// &#34;fmt&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#e6db74">&#34;net/http&#34;</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;github.com/yeqown/rpc&#34;</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Int</span> <span style="color:#66d9ef">int</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Args</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">A</span> <span style="color:#66d9ef">int</span> <span style="color:#e6db74">`json:&#34;a&#34;`</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">B</span> <span style="color:#66d9ef">int</span> <span style="color:#e6db74">`json:&#34;b&#34;`</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">i</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Int</span>) <span style="color:#a6e22e">Sum</span>(<span style="color:#a6e22e">args</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Args</span>, <span style="color:#a6e22e">reply</span> <span style="color:#f92672">*</span><span style="color:#66d9ef">int</span>) <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#f92672">*</span><span style="color:#a6e22e">reply</span> = <span style="color:#a6e22e">args</span>.<span style="color:#a6e22e">A</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">args</span>.<span style="color:#a6e22e">B</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">MultyArgs</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">A</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Args</span> <span style="color:#e6db74">`json:&#34;aa&#34;`</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">B</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Args</span> <span style="color:#e6db74">`json:&#34;bb&#34;`</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">MultyReply</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">A</span> <span style="color:#66d9ef">int</span> <span style="color:#e6db74">`json:&#34;aa&#34;`</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">B</span> <span style="color:#66d9ef">int</span> <span style="color:#e6db74">`json:&#34;bb&#34;`</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">i</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Int</span>) <span style="color:#a6e22e">Multy</span>(<span style="color:#a6e22e">args</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">MultyArgs</span>, <span style="color:#a6e22e">reply</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">MultyReply</span>) <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">reply</span>.<span style="color:#a6e22e">A</span> = (<span style="color:#a6e22e">args</span>.<span style="color:#a6e22e">A</span>.<span style="color:#a6e22e">A</span> <span style="color:#f92672">*</span> <span style="color:#a6e22e">args</span>.<span style="color:#a6e22e">A</span>.<span style="color:#a6e22e">B</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">reply</span>.<span style="color:#a6e22e">B</span> = (<span style="color:#a6e22e">args</span>.<span style="color:#a6e22e">B</span>.<span style="color:#a6e22e">A</span> <span style="color:#f92672">*</span> <span style="color:#a6e22e">args</span>.<span style="color:#a6e22e">B</span>.<span style="color:#a6e22e">B</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">s</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">rpc</span>.<span style="color:#a6e22e">NewServer</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">mine_int</span> <span style="color:#f92672">:=</span> new(<span style="color:#a6e22e">Int</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">Register</span>(<span style="color:#a6e22e">mine_int</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">go</span> <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">HandleTCP</span>(<span style="color:#e6db74">&#34;127.0.0.1:9999&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// 开启http
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span>	<span style="color:#a6e22e">http</span>.<span style="color:#a6e22e">ListenAndServe</span>(<span style="color:#e6db74">&#34;:9998&#34;</span>, <span style="color:#a6e22e">s</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h4 id="客户端使用">
+  客户端使用
+  <a class="anchor" href="#%e5%ae%a2%e6%88%b7%e7%ab%af%e4%bd%bf%e7%94%a8">#</a>
+</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-golang" data-lang="golang"><span style="display:flex;"><span><span style="color:#75715e">// test_client.go
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"></span><span style="color:#f92672">package</span> <span style="color:#a6e22e">main</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> (
+</span></span><span style="display:flex;"><span>	<span style="color:#e6db74">&#34;github.com/yeqown/rpc&#34;</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Args</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">A</span> <span style="color:#66d9ef">int</span> <span style="color:#e6db74">`json:&#34;a&#34;`</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">B</span> <span style="color:#66d9ef">int</span> <span style="color:#e6db74">`json:&#34;b&#34;`</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">MultyArgs</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">A</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Args</span> <span style="color:#e6db74">`json:&#34;aa&#34;`</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">B</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">Args</span> <span style="color:#e6db74">`json:&#34;bb&#34;`</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">MultyReply</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">A</span> <span style="color:#66d9ef">int</span> <span style="color:#e6db74">`json:&#34;aa&#34;`</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">B</span> <span style="color:#66d9ef">int</span> <span style="color:#e6db74">`json:&#34;bb&#34;`</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">main</span>() {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">c</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">rpc</span>.<span style="color:#a6e22e">NewClient</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">DialTCP</span>(<span style="color:#e6db74">&#34;127.0.0.1:9999&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">sum</span> <span style="color:#66d9ef">int</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Call</span>(<span style="color:#e6db74">&#34;1&#34;</span>, <span style="color:#e6db74">&#34;Int.Sum&#34;</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">Args</span>{<span style="color:#a6e22e">A</span>: <span style="color:#ae81ff">1</span>, <span style="color:#a6e22e">B</span>: <span style="color:#ae81ff">2</span>}, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">sum</span>)
+</span></span><span style="display:flex;"><span>	println(<span style="color:#a6e22e">sum</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">DialTCP</span>(<span style="color:#e6db74">&#34;127.0.0.1:9999&#34;</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">var</span> <span style="color:#a6e22e">reply</span> <span style="color:#a6e22e">MultyReply</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Call</span>(<span style="color:#e6db74">&#34;2&#34;</span>, <span style="color:#e6db74">&#34;Int.Multy&#34;</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">MultyArgs</span>{<span style="color:#a6e22e">A</span>: <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">Args</span>{<span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">2</span>}, <span style="color:#a6e22e">B</span>: <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">Args</span>{<span style="color:#ae81ff">3</span>, <span style="color:#ae81ff">4</span>}}, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">reply</span>)
+</span></span><span style="display:flex;"><span>	println(<span style="color:#a6e22e">reply</span>.<span style="color:#a6e22e">A</span>, <span style="color:#a6e22e">reply</span>.<span style="color:#a6e22e">B</span>)
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><h4 id="运行截图">
+  运行截图
+  <a class="anchor" href="#%e8%bf%90%e8%a1%8c%e6%88%aa%e5%9b%be">#</a>
+</h4>
+<p><img src="/images/server.png" alt="server" />
+<img src="/images/client.png" alt="client" />
+<img src="/images/http-support.png" alt="http-support" /></p>
+<hr>
+<h3 id="实现">
+  实现
+  <a class="anchor" href="#%e5%ae%9e%e7%8e%b0">#</a>
+</h3>
+<p>上面只挑了我觉得比较重要的部分，讲了实现，更多如客户端的支持，JSON-RPC的请求响应定义，可以在项目中里查阅。目前基于TCP和HTTP实现了JSON-RPC，<strong>项目地址：<a href="https://github.com/yeqown/rpc">github.com/yeqown/rpc</a></strong></p>
+<h3 id="缺陷">
+  缺陷
+  <a class="anchor" href="#%e7%bc%ba%e9%99%b7">#</a>
+</h3>
+<p>只支持JSON-RPC, 且还没有完全实现JSON-RPC的约定。譬如批量调用中：</p>
+<blockquote>
+<p>若批量调用的 RPC 操作本身非一个有效 JSON 或一个至少包含一个值的数组，则服务端返回的将单单是一个响应对象而非数组。若批量调用没有需要返回的响应对象，则服务端不需要返回任何结果且必须不能返回一个空数组给客户端。</p>
+</blockquote>
+<p>阅读参考中的两个RPC，发现两者都是使用的<code>codec</code>的方式来提供扩展。因此以后可以考虑使用这种方式来扩展。</p>
+<hr>
+<h3 id="参考">
+  参考
+  <a class="anchor" href="#%e5%8f%82%e8%80%83">#</a>
+</h3>
+<ul>
+<li><a href="https://golang.org/pkg/net/rpc/">net/rpc</a></li>
+<li><a href="https://github.com/gorilla/rpc">grollia/rpc</a></li>
+</ul>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "jsonrpc2-based-golang", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+
+<div class="flex align-center">
+    <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+        访问量<span id="busuanzi_value_site_pv"></span>
+    </span>
+    <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+        访客数<span id="busuanzi_value_site_uv"></span>
+    </span>
+</div></div>
+
+
+
+  <script>(function(){function e(e){const t=window.getSelection(),n=document.createRange();n.selectNodeContents(e),t.removeAllRanges(),t.addRange(n)}document.querySelectorAll("pre code").forEach(t=>{t.addEventListener("click",function(){if(window.getSelection().toString())return;e(t.parentElement),navigator.clipboard&&navigator.clipboard.writeText(t.parentElement.textContent)})})})()</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#什么是rpc">什么是RPC？</a></li>
+        <li><a href="#什么又是json-rpc">什么又是JSON-RPC?</a></li>
+        <li><a href="#问题">问题</a></li>
+        <li><a href="#使用示例">使用示例</a></li>
+        <li><a href="#实现">实现</a></li>
+        <li><a href="#缺陷">缺陷</a></li>
+        <li><a href="#参考">参考</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
