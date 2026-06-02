@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xl="http://www.w3.org/1999/xlink" version="1.1" viewBox="-672 -12.274322 724 392.2743" width="724" height="392.2743">
+  <defs>
+    <font-face font-family="PingFang SC" font-size="12" panose-1="2 11 4 0 0 0 0 0 0 0" units-per-em="1000" underline-position="-150" underline-thickness="58" slope="0" x-height="600" cap-height="860" ascent="1060.0021" descent="-340.0007" font-weight="400">
+      <font-face-src>
+        <font-face-name name="PingFangSC-Regular"/>
+      </font-face-src>
+    </font-face>
+    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="FilledArrow_Marker" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-1 -4 10 8" markerWidth="10" markerHeight="8" color="black">
+      <g>
+        <path d="M 8 0 L 0 -3 L 0 3 Z" fill="currentColor" stroke="currentColor" stroke-width="1"/>
+      </g>
+    </marker>
+    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="FilledBox_Marker" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-1 -4 8 8" markerWidth="8" markerHeight="8" color="black">
+      <g>
+        <rect x="0" y="-3" width="6" height="6" fill="currentColor" stroke="currentColor" stroke-width="1"/>
+      </g>
+    </marker>
+  </defs>
+  <metadata> Produced by OmniGraffle 7.14.1 
+    <dc:date>2020-03-29 04:02:02 +0000</dc:date>
+  </metadata>
+  <g id="Canvas_1" fill-opacity="1" stroke="none" stroke-opacity="1" fill="none" stroke-dasharray="none">
+    <title>Canvas 1</title>
+    <g id="Canvas_1: 新版概念">
+      <title>新版概念</title>
+      <g id="Graphic_47">
+        <rect x="-487" y="124" width="197" height="55" fill="#ffc0c0"/>
+        <text transform="translate(-482 126)" fill="black">
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="69.5" y="13">主服务器</tspan>
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="6.644" y="30">runid = 69dafe8b58066478aea</tspan>
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="37.034" y="47">Offset = 10086 + 33</tspan>
+        </text>
+      </g>
+      <g id="Graphic_48">
+        <rect x="-145" y="42" width="197" height="55" fill="#c0ffc0"/>
+        <text transform="translate(-140 44)" fill="black">
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="63.56" y="13">从服务器 A</tspan>
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="6.644" y="30">runid = 69dafe8b58066478aea</tspan>
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="52.946" y="47">offset = 10086</tspan>
+        </text>
+      </g>
+      <g id="Line_51">
+        <path d="M -290 127.88304 C -247.6417 117.72696 -197.9996 105.82447 -154.62698 95.42518" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4.0,4.0" stroke-width="1"/>
+      </g>
+      <g id="Graphic_54">
+        <rect x="-145" y="124" width="197" height="55" fill="#ccc"/>
+        <text transform="translate(-140 126)" fill="black">
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="63.44" y="13">从服务器 B</tspan>
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="6.644" y="30">runid = 69dafe8b58066478aea</tspan>
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="55.334" y="47">offset = 10119</tspan>
+        </text>
+      </g>
+      <g id="Graphic_55">
+        <rect x="-145" y="206" width="197" height="55" fill="#ccc"/>
+        <text transform="translate(-140 208)" fill="black">
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="63.134" y="13">从服务器 C</tspan>
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="6.644" y="30">runid = 69dafe8b58066478aea</tspan>
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="55.334" y="47">offset = 10119</tspan>
+        </text>
+      </g>
+      <g id="Line_56">
+        <path d="M -290 175.11696 C -247.6417 185.27304 -197.9996 197.17553 -154.62698 207.57482" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_57">
+        <path d="M -290 151.5 C -247.73062 151.5 -198.208 151.5 -154.90022 151.5" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_58">
+        <rect x="-232.28625" y="96.46922" width="34" height="27" fill="white"/>
+        <text transform="translate(-227.28625 101.46922)" fill="black">
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="0" y="13">断线</tspan>
+        </text>
+      </g>
+      <g id="Graphic_59">
+        <rect x="-259.42632" y="138" width="80.392" height="27" fill="white"/>
+        <text transform="translate(-254.42632 143)" fill="black">
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="0" y="13">同步 33 字节</tspan>
+        </text>
+      </g>
+      <g id="Graphic_60">
+        <rect x="-261.6776" y="178.04535" width="80.392" height="27" fill="white"/>
+        <text transform="translate(-256.6776 183.04535)" fill="black">
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="0" y="13">同步 33 字节</tspan>
+        </text>
+      </g>
+      <g id="Graphic_61">
+        <rect x="-672" y="69" width="117" height="165" fill="#ffc0c0"/>
+        <text transform="translate(-667 75)" fill="black">
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="23.5" y="13">复制缓冲区</tspan>
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="27.112" y="47">10085: …</tspan>
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="27.112" y="64">10086: …</tspan>
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="47.5" y="81">…</tspan>
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="29.5" y="98">10115: …</tspan>
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="29.818" y="115">10117: …</tspan>
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="29.5" y="132">10118: …</tspan>
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="29.5" y="149">10119: …</tspan>
+        </text>
+      </g>
+      <g id="Line_62">
+        <path d="M -487 151.5 C -507.8219 151.5 -529.29366 151.5 -548.5022 151.5" marker-end="url(#FilledBox_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1.0,4.0" stroke-width="1"/>
+      </g>
+      <g id="Line_64">
+        <path d="M -145 51.10312 C -199.60197 46.20123 -264.95886 49.876776 -308.02946 84.17084 C -325.39847 98.00055 -339.0349 108.99057 -349.73775 117.72378" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_65">
+        <rect x="-384.4196" y="50.79112" width="222.46" height="27" fill="white"/>
+        <text transform="translate(-379.4196 55.79112)" fill="black">
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="3.996" y="13">psync 69dafe8b58066478aea 10086  </tspan>
+        </text>
+      </g>
+      <g id="Line_66">
+        <path d="M -392.40865 124 C -397.33717 68.87021 -391.25004 -46.23071 -244.4536 -1.790869 C -187.96537 15.309876 -147.57185 28.53769 -118.69497 38.68572" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_68">
+        <rect x="-445.2197" y="-8.59951" width="142.24" height="61" fill="white"/>
+        <text transform="translate(-440.2197 -3.5995097)" fill="black">
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="7958079e-19" y="13">offset 还在缓冲区，回复</tspan>
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="31.65" y="30">CONTINUE+</tspan>
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="36.12" y="47">部分重同步</tspan>
+        </text>
+      </g>
+      <g id="Graphic_69">
+        <rect x="-487" y="325" width="197" height="55" fill="#ffffc0"/>
+        <text transform="translate(-482 327)" fill="black">
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="63.266" y="13">从服务器 D</tspan>
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="6.644" y="30">runid = 69dafe8b58066478aea</tspan>
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="52.946" y="47">offset = 10000</tspan>
+        </text>
+      </g>
+      <g id="Line_70">
+        <path d="M -388.5 179 C -388.5 214.2762 -388.5 275.6088 -388.5 315.1039" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4.0,4.0" stroke-width="1"/>
+      </g>
+      <g id="Graphic_71">
+        <rect x="-405.5" y="233.9228" width="34" height="27" fill="white"/>
+        <text transform="translate(-400.5 238.9228)" fill="black">
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="0" y="13">断线</tspan>
+        </text>
+      </g>
+      <g id="Line_72">
+        <path d="M -359.5309 325 C -335.39873 297.8853 -308.6107 254.7126 -333.10162 214.00884 C -339.56873 203.26055 -345.3987 194.35524 -350.6275 186.9777" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_74">
+        <path d="M -420.94696 179 C -443.39745 204.2249 -464.56494 245.86146 -436.0766 299.97054 C -432.90515 305.9942 -429.945 311.4558 -427.1821 316.4031" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_75">
+        <rect x="-376" y="279.4614" width="222.46" height="27" fill="white"/>
+        <text transform="translate(-371 284.4614)" fill="black">
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="3.996" y="13">psync 69dafe8b58066478aea 10000  </tspan>
+        </text>
+      </g>
+      <g id="Graphic_77">
+        <rect x="-659.226" y="251" width="255.628" height="61" fill="white"/>
+        <text transform="translate(-654.226 256)" fill="black">
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="56.694" y="13">offset 不在缓冲区，回复</tspan>
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="3126388e-19" y="30">FULLRESYNC 69dafe8b58066478aea 10119</tspan>
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="92.814" y="47">完整重同步 </tspan>
+        </text>
+      </g>
+    </g>
+  </g>
+</svg>

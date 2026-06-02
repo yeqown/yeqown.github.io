@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520">
+  <defs>
+    <style>
+      .bg { fill: #0b1020; }
+      .grid { stroke: rgba(148,163,184,.12); stroke-width: 1; }
+      .title { fill: #e2e8f0; font: 700 24px 'JetBrains Mono', monospace; }
+      .sub { fill: #94a3b8; font: 12px 'JetBrains Mono', monospace; }
+      .box { stroke-width: 2; rx: 14; ry: 14; }
+      .label { fill: #e2e8f0; font: 600 16px 'JetBrains Mono', monospace; }
+      .small { fill: #cbd5e1; font: 12px 'JetBrains Mono', monospace; }
+      .arrow { stroke: #94a3b8; stroke-width: 2.2; fill: none; marker-end: url(#arrow); }
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L8,3 z" fill="#94a3b8"/>
+    </marker>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(148,163,184,.10)" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="520"/>
+  <rect x="0" y="0" width="1200" height="520" fill="url(#grid)"/>
+
+  <text class="title" x="60" y="52">BambooHouse 写入路径</text>
+  <text class="sub" x="60" y="76">SQL → Executor → Table → Partition → Part → 列文件 / 索引文件</text>
+
+  <line class="arrow" x1="220" y1="132" x2="260" y2="132"/>
+  <line class="arrow" x1="440" y1="132" x2="480" y2="132"/>
+  <line class="arrow" x1="620" y1="132" x2="700" y2="132"/>
+  <line class="arrow" x1="880" y1="132" x2="920" y2="132"/>
+  <line class="arrow" x1="1080" y1="170" x2="1080" y2="240"/>
+
+  <rect x="60" y="110" width="160" height="60" class="box" fill="rgba(8,51,68,.45)" stroke="#22d3ee"/>
+  <text class="label" x="140" y="145" text-anchor="middle">SQL</text>
+
+  <rect x="260" y="110" width="180" height="60" class="box" fill="rgba(6,78,59,.45)" stroke="#34d399"/>
+  <text class="label" x="350" y="138" text-anchor="middle">Executor</text>
+  <text class="small" x="350" y="156" text-anchor="middle">AST → 引擎调用</text>
+
+  <rect x="480" y="110" width="180" height="60" class="box" fill="rgba(6,78,59,.45)" stroke="#34d399"/>
+  <text class="label" x="570" y="138" text-anchor="middle">Table</text>
+  <text class="small" x="570" y="156" text-anchor="middle">唯一表实现</text>
+
+  <rect x="700" y="110" width="180" height="60" class="box" fill="rgba(6,78,59,.45)" stroke="#34d399"/>
+  <text class="label" x="790" y="138" text-anchor="middle">Partition</text>
+  <text class="small" x="790" y="156" text-anchor="middle">按维度拆分</text>
+
+  <rect x="920" y="110" width="200" height="60" class="box" fill="rgba(6,78,59,.45)" stroke="#34d399"/>
+  <text class="label" x="1020" y="138" text-anchor="middle">Part</text>
+  <text class="small" x="1020" y="156" text-anchor="middle">不可变落盘块</text>
+
+  <rect x="860" y="240" width="260" height="90" class="box" fill="rgba(76,29,149,.35)" stroke="#a78bfa"/>
+  <text class="label" x="990" y="270" text-anchor="middle">磁盘文件</text>
+  <text class="small" x="990" y="292" text-anchor="middle">{column}.bin / {column}.mark</text>
+  <text class="small" x="990" y="310" text-anchor="middle">primary.idx / minmax.idx</text>
+</svg>

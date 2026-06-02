@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en-US" dir="ltr">
+<head>
+  <!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="列式数据库常常用于 OLAP 场景，相比于行式数据库，列式数据库在查询分析场景下有更好的性能。本文将以 ClickHouse 为例，介绍列式数据库的核心原理，并给出一个最小可实现模型的伪代码思路。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#2e3440">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2026/03/31/%E5%88%97%E5%BC%8F%E6%95%B0%E6%8D%AE%E5%BA%93%E6%98%AF%E6%80%8E%E4%B9%88%E7%82%BC%E6%88%90%E7%9A%84/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="列式数据库是怎么炼成的">
+  <meta property="og:description" content="列式数据库常常用于 OLAP 场景，相比于行式数据库，列式数据库在查询分析场景下有更好的性能。本文将以 ClickHouse 为例，介绍列式数据库的核心原理，并给出一个最小可实现模型的伪代码思路。">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2026-03-31T14:44:37+08:00">
+    <meta property="article:modified_time" content="2026-03-31T14:44:37+08:00">
+    <meta property="article:tag" content="Database">
+    <meta property="article:tag" content="OLAP">
+    <meta property="article:tag" content="Columnar Storage">
+
+
+  <meta itemprop="name" content="列式数据库是怎么炼成的">
+  <meta itemprop="description" content="列式数据库常常用于 OLAP 场景，相比于行式数据库，列式数据库在查询分析场景下有更好的性能。本文将以 ClickHouse 为例，介绍列式数据库的核心原理，并给出一个最小可实现模型的伪代码思路。">
+  <meta itemprop="datePublished" content="2026-03-31T14:44:37+08:00">
+  <meta itemprop="dateModified" content="2026-03-31T14:44:37+08:00">
+  <meta itemprop="wordCount" content="1173">
+  <meta itemprop="keywords" content="Database,OLAP,Columnar Storage">
+
+<title>列式数据库是怎么炼成的 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2026/03/31/%E5%88%97%E5%BC%8F%E6%95%B0%E6%8D%AE%E5%BA%93%E6%98%AF%E6%80%8E%E4%B9%88%E7%82%BC%E6%88%90%E7%9A%84/">
+<link rel="stylesheet" href="/book.min.378fc6a182871ef00f65a0471fe69f8698a690aa571b6a32ddd6a023f8ce3b22.css" integrity="sha256-N4/GoYKHHvAPZaBHH&#43;afhpimkKpXG2oy3dagI/jOOyI=" crossorigin="anonymous">
+
+
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.0e20cff897c7e41df39c48ee6b90671f81cb7a62e30a02c50d43fe20ce4ca41a.js" integrity="sha256-DiDP&#43;JfH5B3znEjua5BnH4HLemLjCgLFDUP&#43;IM5MpBo=" crossorigin="anonymous"></script>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade">
+  
+</head>
+<body dir="ltr" class="book-kind-page book-type-posts">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    
+<aside class="book-menu">
+  <div class="book-menu-content">
+    
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input id="book-search-input" type="text" 
+    placeholder="Search"
+    aria-label="Search"
+    maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+<ul><li><a href="/categories">Categories</a></li><li><a href="/tags">Tags</a></li></ul>
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">
+      About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+
+  </div>
+</aside>
+ 
+
+    <div class="book-page">
+      <header class="book-header hidden">
+        
+<div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/icons/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>列式数据库是怎么炼成的</h3>
+
+  <label for="toc-control">
+    
+    <img src="/icons/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-clickhouse-的设计">1. ClickHouse 的设计</a>
+      <ul>
+        <li><a href="#11-整体组件">1.1 整体组件</a></li>
+        <li><a href="#12-存储结构">1.2 存储结构</a></li>
+        <li><a href="#13-数据写入和合并">1.3 数据写入和合并</a></li>
+        <li><a href="#14-更新和删除">1.4 更新和删除</a></li>
+        <li><a href="#15-查询与裁剪">1.5 查询与裁剪</a></li>
+        <li><a href="#16-数据复制">1.6 数据复制</a></li>
+        <li><a href="#17-acid-特性">1.7 ACID 特性</a></li>
+        <li><a href="#18-并行化查询">1.8 并行化查询</a></li>
+        <li><a href="#小结">小结</a></li>
+      </ul>
+    </li>
+    <li><a href="#2-手搓一个最小列式数据库">2. 手搓一个最小列式数据库</a>
+      <ul>
+        <li><a href="#21-先定义-mvp-的能力边界">2.1 先定义 MVP 的能力边界</a></li>
+        <li><a href="#22-核心数据结构">2.2 核心数据结构</a></li>
+        <li><a href="#23-写入路径伪代码">2.3 写入路径伪代码</a></li>
+        <li><a href="#24-查询路径伪代码">2.4 查询路径伪代码</a></li>
+        <li><a href="#25-用一个查询例子串起来">2.5 用一个查询例子串起来</a></li>
+      </ul>
+    </li>
+    <li><a href="#参考资料">参考资料</a></li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h1>
+    列式数据库是怎么炼成的
+  </h1>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/icons/calendar.svg" class="book-icon" alt="Calendar" />
+    <span>March 31, 2026</span>
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Database/">Database</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Database/">Database</a>, 
+      <a href="/tags/OLAP/">OLAP</a>, 
+      <a href="/tags/Columnar-Storage/">Columnar Storage</a>
+  </div>
+  
+
+
+  <div class="book-post-content markdown-inner"><p>列式数据库与行式数据库最大的区别在于数据的存储方式，也就是它们在磁盘上的组织方式不同。传统的行式数据库常用于 <code>OLTP (Online Transaction Processing)</code> 场景，在这个场景下需要频繁的进行数据的插入、更新、删除操作，操作的对象往往是单行数据。而列式数据库常用于 <code>OLAP (Online Analytical Processing)</code> 场景，对于数据的聚合查询更为常见，往往需要扫描某一列的大量数据进行计算。</p>
+<figure>
+  <img src="/images/columnar-database/storage-difference.png" alt="Storage Difference">
+  <figcaption>Storage Difference</figcaption>
+</figure>
+<p>如果同时用过两种类型的数据库，就会发现：</p>
+<blockquote class='book-hint '>
+<p>这里列举的优化原则只是冰山一角，仅用于说明两种数据库最显眼的差异。</p>
+</blockquote><p>使用行式数据库过程中，最简单常见的优化原则就是 <strong>尽可能命中索引、降低 B+ 树高度、减少扫描行数</strong>，如：</p>
+<ul>
+<li>优先对区分度高的列建立索引</li>
+<li>覆盖索引（索引中包含查询所需的所有列，避免回表）</li>
+<li>索引下推（在存储引擎层提前过滤不满足条件的数据）</li>
+<li>最左前缀匹配原则</li>
+<li>避免使用函数或者隐式类型转换（如：<code>where date(create_time) = '2022-01-01'</code>），会导致索引失效</li>
+<li>避免在索引列上使用 <code>!=</code>、<code>&lt;&gt;</code> 等操作符，会导致索引失效</li>
+<li>避免深度分页</li>
+<li>分库分表（提出这一优化方向，也是基于单表数据量过大，索引维护的开销会增加，性能也会退化）</li>
+<li>等等&hellip;</li>
+</ul>
+<p>减少扫描行数这一思路对于列式数据库同样适用（如分区裁剪），但列式数据库还有另一个很重要的优化方向，那就是 <strong>减少列</strong>，如：</p>
+<ul>
+<li>行存特性（如果是点查询，列数据库 I/O 反而会增加，这一点和行式数据库正好相悖）</li>
+<li>只读取查询涉及的列（行存也提倡避免 SELECT *，但由于行存以行为单位读取磁盘，主要减少的是网络传输量而非磁盘 I/O；而列存中每列独立存储，少读一列就直接少一份磁盘 I/O）</li>
+<li>等等&hellip;</li>
+</ul>
+<p>当然，任何数据库的优化，都逃不开 <strong>减少 I/O</strong> 这一核心目的。说得更白话一点，如果有一种完美的存储介质，它没有I/O延迟，也不会丢失数据，那么这些优化也就不再需要了。</p>
+<!-- more -->
+<h2 id="1-clickhouse-的设计">1. ClickHouse 的设计<a class="anchor" href="#1-clickhouse-%e7%9a%84%e8%ae%be%e8%ae%a1">#</a></h2>
+<h3 id="11-整体组件">1.1 整体组件<a class="anchor" href="#11-%e6%95%b4%e4%bd%93%e7%bb%84%e4%bb%b6">#</a></h3>
+<p>从 ClickHouse 的架构图来看，列式数据库包含以下核心组件：</p>
+<figure>
+    <img src="/images/columnar-database/clickhouse-architecture.png" alt="ClickHouse Architecture">
+    <figcaption>ClickHouse Architecture</figcaption>
+</figure>
+<ul>
+<li><em><strong>查询处理层</strong></em>： 查询处理遵循传统范式：解析入站查询、构建并优化逻辑与物理查询计划，然后执行
+<ul>
+<li>SQL Parser</li>
+<li>SQL Planner</li>
+<li>Physical Plan Builder</li>
+<li>Plan Executor</li>
+</ul>
+</li>
+<li><em><strong>存储层</strong></em>：由不同的表引擎组成，这些表引擎封装了表数据的格式和位置
+<ul>
+<li>MergeTree* Family Tables Engines： 代表了 ClickHouse 中的主要持久化格式</li>
+<li>Special-Purpose Tables Engines：用于加速或分布查询执行的专用表引擎
+<ul>
+<li>Dictionary</li>
+<li>Memory</li>
+<li>Distributed (Data Sharding) 处理分布式</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><em><strong>集成层</strong></em>：用于与外部系统进行双向数据交换的虚拟表引擎，例如关系型数据库 (如 PostgreSQL、MySQL) 、发布/订阅系统 (如 Kafka、RabbitMQ) ，或键值存储 (如 Redis) 。还可以与数据湖 (如 Iceberg) 或对象存储中的文件 (如 AWS S3、Google GCP) 交互
+<ul>
+<li>Virtual Tables Engines</li>
+</ul>
+</li>
+<li><em><strong>正交组件</strong></em>：提供辅助功能
+<ul>
+<li>Thread pools</li>
+<li>Caches</li>
+<li>RBAC (Role-Based Access Control)</li>
+<li>Backups</li>
+<li>Monitoring</li>
+</ul>
+</li>
+<li><em><strong>访问层</strong></em>：通过不同协议管理用户会话并与应用程序通信
+<ul>
+<li>User Session</li>
+<li>Wire protocols</li>
+</ul>
+</li>
+</ul>
+<p>我们更进一步，丢掉分布式特性、集成和监控，只保留最影响 OLAP 查询性能的核心设计，如下所示：</p>
+<table>
+  <thead>
+      <tr>
+          <th>层</th>
+          <th>组件</th>
+          <th>职责</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>查询处理层</td>
+          <td>SQL Parser</td>
+          <td>解析 SQL 语句，生成抽象语法树 (AST)</td>
+      </tr>
+      <tr>
+          <td>查询处理层</td>
+          <td>Query Engine</td>
+          <td>查询计划生成、优化和执行，即 ClickHouse 中的 SQL planner、Physical Plan Builder、Plan Executor 集成</td>
+      </tr>
+      <tr>
+          <td>存储层</td>
+          <td>MergeTree Engine</td>
+          <td>列式存储格式、数据分块、压缩编码、稀疏索引、Data Skipping Index、数据读写</td>
+      </tr>
+  </tbody>
+</table>
+<blockquote class='book-hint '>
+<p>查询处理层本身非常复杂，这里不展开；下面会从存储结构、写入路径、查询裁剪和系统级取舍几个角度，拆开看 ClickHouse 为 OLAP 做了哪些核心设计。</p>
+</blockquote><h3 id="12-存储结构">1.2 存储结构<a class="anchor" href="#12-%e5%ad%98%e5%82%a8%e7%bb%93%e6%9e%84">#</a></h3>
+<p>列式数据库通常有如下的特点（相较于行式数据库而言）：</p>
+<ul>
+<li>压缩率高</li>
+<li>大数据集的聚合计算更快</li>
+<li>按列过滤高效</li>
+<li>并行度高</li>
+<li>更新 / 删除 性能较差</li>
+<li>点查询 性能较差</li>
+</ul>
+<p>而这些特点跟它的存储结构紧密相关。</p>
+<p>ClickHouse 中每个 MergeTree* 表引擎的表都被组织为一组不可变的表分片，每当一批行数据插入到表中时，会创建一个分片。后台合并任务会定期将多个小分片合并成一个大分片，直到达到可配置的分片大小。因此为了提升写入性能（减少分片数量），行数据插入支持两种模式：</p>
+<ul>
+<li>同步模式：每条 INSERT 创建一个新的分片 (因此建议客户端使用批量 INSERT，降低合并开销)</li>
+<li>异步模式：将同一个表的 INSERT 缓存在一起，达到一定数量后，才创建新的分片</li>
+</ul>
+<p>而在磁盘上，一个分片对应一个目录，其中包含每一列的一个文件。一个分片的行会在 <em><strong>逻辑上</strong></em> 进一步划分为若干组，每组包含 8192 条记录，成为 <strong>granule</strong>。一个 <strong>granule</strong> 表示由 ClickHouse 中扫描和索引查询的最小不可再分数据单元。</p>
+<p>但是 <strong>granule</strong> 只是逻辑上的概念，在物理上，磁盘数据是在 <strong>chunk</strong>（块）级别进行的，chunk 将某一列中多个相邻的 granule 组合在一起。一个块上的 granule 数量不是固定的，因为一个块又大小限制，默认是 1MB，受到该列的数据类型和分布影响。块还会被压缩用来减小大小和 I/O 成本。</p>
+<p>为了在存在压缩的情况下仍然能够快速随机访问单个 granule，ClickHouse 会为每一列存储一个映射，用于将每个 granule 的 ID 关联到其所在压缩块在该列文件中的偏移，以及该 granule 在未压缩块中的偏移。</p>
+<blockquote class='book-hint '>
+<p>就是一个索引，用于快速查找每个 <em><strong>granule</strong></em> 在存储中的位置</p>
+</blockquote><p>列还可以进一步采用字典编码，比如：<code>LowCardinality(T)</code> 使用整数 ID 替换原始列值，<code>Nullable(T)</code> 则为列 T 添加一个内部位图，用于表示列值是否为 NULL。</p>
+<p>最后，表还可以通过分区表达式进行分区（范围分区、哈希分区或轮询分区）。为了实现分区裁剪，ClickHouse 还会为每个分区存储分区表达式的最小值和最大值，用于查询的时候跳过不需要的分区。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Table (users)
+</span></span><span style="display:flex;"><span>│
+</span></span><span style="display:flex;"><span>├── Partition_202401/                         ← 分区 (按分区表达式划分)
+</span></span><span style="display:flex;"><span>│   │
+</span></span><span style="display:flex;"><span>│   ├── Part_1/                               ← 分片 (不可变, 后台合并)
+</span></span><span style="display:flex;"><span>│   │   │
+</span></span><span style="display:flex;"><span>│   │   │  ── 核心数据文件 ──
+</span></span><span style="display:flex;"><span>│   │   │
+</span></span><span style="display:flex;"><span>│   │   ├── primary.idx                       ← 稀疏索引 (每个 granule 一个条目)
+</span></span><span style="display:flex;"><span>│   │   ├── id.bin                            ← 列数据文件 (压缩存储)
+</span></span><span style="display:flex;"><span>│   │   │   ├── [Chunk 0] ──compressed──┐
+</span></span><span style="display:flex;"><span>│   │   │   │   ├── Header              │ 压缩算法 / 压缩后大小 / 原始大小
+</span></span><span style="display:flex;"><span>│   │   │   │   ├── Granule 0 (8192行)  │
+</span></span><span style="display:flex;"><span>│   │   │   │   ├── Granule 1 (8192行)  │ ~1MB
+</span></span><span style="display:flex;"><span>│   │   │   │   └── Granule 2 (8192行)  ┘
+</span></span><span style="display:flex;"><span>│   │   │   │
+</span></span><span style="display:flex;"><span>│   │   │   └── [Chunk 1] ──compressed──┐
+</span></span><span style="display:flex;"><span>│   │   │       ├── Header              │ 压缩算法 / 压缩后大小 / 原始大小
+</span></span><span style="display:flex;"><span>│   │   │       ├── Granule 3 (8192行)  │
+</span></span><span style="display:flex;"><span>│   │   │       └── Granule 4 (8192行)  ┘
+</span></span><span style="display:flex;"><span>│   │   │
+</span></span><span style="display:flex;"><span>│   │   ├── id.mrk                            ← 标记文件 (granule → 定位信息)
+</span></span><span style="display:flex;"><span>│   │   │   ┌────────────┬──────────────┬──────────────────┐
+</span></span><span style="display:flex;"><span>│   │   │   │ Granule ID │ Chunk Offset │ Granule Offset   │
+</span></span><span style="display:flex;"><span>│   │   │   │            │ (压缩文件中) │ (解压后块内偏移) │
+</span></span><span style="display:flex;"><span>│   │   │   ├────────────┼──────────────┼──────────────────┤
+</span></span><span style="display:flex;"><span>│   │   │   │ 0          │ 0            │ 0                │
+</span></span><span style="display:flex;"><span>│   │   │   │ 1          │ 0            │ 8192             │
+</span></span><span style="display:flex;"><span>│   │   │   │ 2          │ 0            │ 16384            │
+</span></span><span style="display:flex;"><span>│   │   │   │ 3          │ 1048576      │ 0                │
+</span></span><span style="display:flex;"><span>│   │   │   │ 4          │ 1048576      │ 8192             │
+</span></span><span style="display:flex;"><span>│   │   │   └────────────┴──────────────┴──────────────────┘
+</span></span><span style="display:flex;"><span>│   │   │
+</span></span><span style="display:flex;"><span>│   │   ├── name.bin                          ← 其他列的数据文件
+</span></span><span style="display:flex;"><span>│   │   ├── name.mrk
+</span></span><span style="display:flex;"><span>│   │   ├── age.bin
+</span></span><span style="display:flex;"><span>│   │   ├── age.mrk
+</span></span><span style="display:flex;"><span>│   │   │
+</span></span><span style="display:flex;"><span>│   │   │  ── 元数据文件 ──
+</span></span><span style="display:flex;"><span>│   │   │
+</span></span><span style="display:flex;"><span>│   │   ├── checksums.txt                     ← 所有文件的校验和 (数据完整性校验)
+</span></span><span style="display:flex;"><span>│   │   ├── columns.txt                       ← 该 Part 的列名和类型列表
+</span></span><span style="display:flex;"><span>│   │   ├── count.txt                         ← 该 Part 的总行数 (COUNT(*) 直接读取)
+</span></span><span style="display:flex;"><span>│   │   ├── partition.dat                     ← 该 Part 的分区键值
+</span></span><span style="display:flex;"><span>│   │   └── minmax_create_time.idx            ← 分区键列的 min/max (分区裁剪用)
+</span></span><span style="display:flex;"><span>│   │
+</span></span><span style="display:flex;"><span>│   └── Part_2/                               ← 另一个分片
+</span></span><span style="display:flex;"><span>│       └── ...
+</span></span><span style="display:flex;"><span>│
+</span></span><span style="display:flex;"><span>└── Partition_202402/
+</span></span><span style="display:flex;"><span>    └── ...</span></span></code></pre></div><blockquote class='book-hint '>
+<p>注意：插入行是顺序（主键以及排序键）存储在磁盘上的。</p>
+</blockquote><p>也就是说，后面要讲的写入吞吐、查询裁剪，以及并行化执行，本质上都建立在这套 Part、Column、Granule 的组织方式之上。</p>
+<h3 id="13-数据写入和合并">1.3 数据写入和合并<a class="anchor" href="#13-%e6%95%b0%e6%8d%ae%e5%86%99%e5%85%a5%e5%92%8c%e5%90%88%e5%b9%b6">#</a></h3>
+<p>列式数据库的写入路径通常围绕两个目标展开：一是尽可能高吞吐地接收新数据，二是通过后台合并逐步把数据整理成更适合查询的形态。</p>
+<p>在前面提到的 MergeTree 模型中，行数据插入后会先形成新的 Part。为了兼顾写入吞吐和查询性能，ClickHouse 一方面允许批量写入和异步聚合写入，另一方面又会依赖后台合并任务持续整理这些 Parts。</p>
+<figure>
+  <img src="/images/columnar-database/merges01.png"/>
+  <figcaption>part 插入和合并</figcaption>
+</figure>
+<p>BI 和 Observability 场景要求数据库既能支撑高数据摄取速率，又能通过聚合或数据老化等技术持续减少历史数据量。ClickHouse 提供了不同的合并策略对于已有数据进行持续的增量转换：</p>
+<ul>
+<li>Replacing Merges：通常用作一种合并时更新机制（通常用于更新频繁的场景），或者作为插入时数据去重机制的替代方案。</li>
+<li>Aggregating Merges：将具有相同 primary key 列值的多行折叠为一行聚合结果，非 primary key 列必须是汇总值。</li>
+<li>Time-To-Live (TTL) Merges：为历史数据提供老化机制。可以用于将冷数据移动到成本更低的存储介质中。</li>
+</ul>
+<p>在实际的业务场景中，客户端发送数据到服务器时，可能因为各种原因导致无法获取到执行结果（如超时，网络异常等）。这种情况下，客户端无法判断数据是否已经插入到数据库中，在传统的数据库中，往往通过唯一索引来避免重复插入。但是，对于列式数据库来说，维护这样的一个唯一索引带来的开销往往是难以接受的。</p>
+<p>因此，ClickHouse 提供了一种更轻量级的替代方案：服务器会维护最近 N 个已经插入 parts 的 hash 值，并忽略哪些 hash 值已经存在的 parts 的重新插入。为了对去重提供更多控制，还允许客户端提供插入数据的 insert token。</p>
+<p>这条写入路径也是 ClickHouse 最擅长的“顺风路”：数据尽量以追加和合并的方式被整理。相对地，一旦需求变成直接修改已有数据，代价就会显著上升。</p>
+<h3 id="14-更新和删除">1.4 更新和删除<a class="anchor" href="#14-%e6%9b%b4%e6%96%b0%e5%92%8c%e5%88%a0%e9%99%a4">#</a></h3>
+<p>MergeTree* 表引擎的设计更适合仅追加（append-only）的工作负载，但某些场景下仍需要偶尔修改已有数据。</p>
+<p>更新时，ClickHouse 会就地重写表中的所有 parts。如果要避免删除整表或者更新列时，表或者列的大小在短时间内翻倍，这个操作就无法提供原子性（如果要提供原子性，需要一次性生成新副本，修改完成后再替换旧的 part）。不提供原子性，意味着并行执行的 SELECT 可能同时读取到已修改和未修改的 parts。这样也可以减少修改带来的开销。</p>
+<p>删除时，依然需要较大的开销，因为如果要删除特定行，则需要对表的所有列进行删除。作为替代方案，ClickHouse 提供了轻量级删除（Lightweight Delete），即额外维护一个位图列，用于标记某一行是否被删除。在 SELECT 查询时，再针对该位图列进行过滤。</p>
+<blockquote class='book-hint '>
+<p>轻量级删除可以降低删除带来的开销，但是会降低查询性能。</p>
+</blockquote><h3 id="15-查询与裁剪">1.5 查询与裁剪<a class="anchor" href="#15-%e6%9f%a5%e8%af%a2%e4%b8%8e%e8%a3%81%e5%89%aa">#</a></h3>
+<p>前面介绍存储结构、append-only Part 和排序键，并不是为了把磁盘格式讲得更完整，而是因为这些设计最终都会体现在查询阶段：它们共同服务的目标，是让分析查询尽可能减少无效扫描。</p>
+<p>就算是列式存储，可以减少 I/O，但是面对单次查询就要扫描 PB 级别的数据时，速度和成本也难以接受，因此数据库往往还需要进一步减少扫描的数据量，这就是数据裁剪的目的。</p>
+<p>在 ClickHouse 中数据裁剪通过以下方式实现：</p>
+<ul>
+<li>
+<p>主键索引：（稀疏索引）
+通过为表定义主键索引，来决定每个 Partition 中行的排序顺序，该索引是局部聚簇。另外分区内还会存储每个 Granule 中的首个主键列值到 Granule ID 的映射。这样查询时，如果是根据主键列查询，那么可以二分查找主键索引来快速定位。</p>
+</li>
+<li>
+<p>表投影：
+即包含相同行，但是按照不同的主键排序的表。但是很显然，这样会增加 insert、merge 和存储开销。</p>
+</li>
+<li>
+<p>跳过索引：
+这是一种比投影更轻量的方案。它旨在索引数据块（多个连续 Granule 的层级）存储少量元数据，从而避免扫描无关行。ClickHouse 中支持的跳过索引有：</p>
+<ul>
+<li>MinMax：为每个索引数据块存储索引表达式的最小值和最大值。</li>
+<li>Set：存储每个索引数据块中可配置数量的唯一值。</li>
+<li>BloomFilter：针对行、token 或者 n-gram 值进行构建。</li>
+</ul>
+</li>
+</ul>
+<p>一条分析查询在 ClickHouse 中通常不是像 OLTP 数据库那样，先命中某个索引，再迅速精确定位到某一行并返回结果；更常见的方式是逐层减少扫描范围。</p>
+<ol>
+<li>查询会先根据分区条件做分区裁剪，再根据主键稀疏索引缩小到候选 granule；</li>
+<li>如果还定义了跳过索引，那么可以继续排除不可能命中的数据块。</li>
+<li>等这些裁剪都完成之后，系统才真正去读取涉及的列，并执行过滤、聚合等算子。</li>
+</ol>
+<p>因此，ClickHouse 的优化重点并不是“精确命中单行”，而是尽可能减少无效扫描的分区、块和列。不同查询模式在这种设计下的收益也不一样。</p>
+<ul>
+<li>对于点查来说，ClickHouse 并不占优势，因为最小扫描单位仍然是 granule，很难像 B+ 树那样精准命中单行；</li>
+<li>对于范围查询来说，如果过滤条件和排序键方向一致，稀疏索引通常能较有效地缩小候选范围；</li>
+<li>而对于聚合查询来说，列式存储的优势会最明显，因为查询往往只需要读取少量列，并且天然适合向量化执行和批量计算。</li>
+</ul>
+<p>当存储结构、写入路径和查询裁剪都确定之后，剩下的问题就变成：这套系统还能如何扩展、并为了吞吐接受哪些系统级代价。</p>
+<h3 id="16-数据复制">1.6 数据复制<a class="anchor" href="#16-%e6%95%b0%e6%8d%ae%e5%a4%8d%e5%88%b6">#</a></h3>
+<p>ClickHouse 基于 Raft 协议提供分布式且具备容错的协调层。当各节点执行本地的 insert、merge、mutation 和 DDL 语句时，复制日志会在所有其他节点上异步回放。这里不关注列式数据库的分布式特性，因此也不展开。</p>
+<h3 id="17-acid-特性">1.7 ACID 特性<a class="anchor" href="#17-acid-%e7%89%b9%e6%80%a7">#</a></h3>
+<p>为最大化并发读写操作的性能，ClickHouse 尽可能避免使用锁。查询在开始时会基于所有相关表中全部 parts 的一个快照来执行。这样可以保证在执行期间，由并行 INSERT 或合并操作新插入的 parts 不会参与本次查询执行。为防止 parts 被同时修改或删除，在查询执行期间，会增加这些被处理 parts 的 <em><strong>引用计数</strong></em>。</p>
+<p>因此，ClickHouse 从严格意义上来说并不满足 ACID，只有 SELECT 和 INSERT 并行时，能做到互不影响（INSERT 会新建一个 part，而 SELECT 会对 parts 产生一个快照）。</p>
+<blockquote class='book-hint '>
+<p>这样的取舍在 OLAP 场景下是完全可以接受的，放弃原子性可以换来更高的读写性能。</p>
+</blockquote><h3 id="18-并行化查询">1.8 并行化查询<a class="anchor" href="#18-%e5%b9%b6%e8%a1%8c%e5%8c%96%e6%9f%a5%e8%af%a2">#</a></h3>
+<p>前面介绍过 ClickHouse 中采用了多层级存储结构，得益于这样的设计，查询时可以分三个层级对查询进行并行化，这三个层级分别是：表分片（Table Shard）、数据块（Data Chunks）和数据元素（Data Elements）。</p>
+<blockquote class='book-hint '>
+<p>表分片，这里是指分布式架构中，将分布式表根据分片键将数据分配到不同的 Shard （位于不同的节点或者集群）上，每个 Shard 本质上都是一个独立的表。</p>
+<p>这一点和传统数据库的分库分表相同。</p>
+</blockquote><figure>
+  <img src="/images/columnar-database/parallel-overview.png" alt="Parallel Query">
+  <figcaption>Parallel Query Overview</figcaption>
+</figure>
+<p>这里提到的 SIMD（Single Instruction Multiple Data）是一种并行计算技术，可以提升算术运算、过滤和聚合的性能。比如前面提到的删除位图，就可以利用 SIMD 与命中行的位图进行位运算，用一条 CPU 指令即可完成多行数据的过滤。</p>
+<p>至于多核和多节点并行，涉及比较多的细节（Physical Plan、Repartition、Aggregation、Merge 等），这里也不展开了。</p>
+<h3 id="小结">小结<a class="anchor" href="#%e5%b0%8f%e7%bb%93">#</a></h3>
+<p>到这里，前面这些看起来分散的主题，其实都可以重新压回同一张设计图：存储结构决定了写入路径、修改代价、查询裁剪方式，以及一致性和并行化的边界。</p>
+<p>ClickHouse 的存储是一个多级结构，每一级都有明确的职责：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Table → Partition → Part → Column File (.bin) → Compressed Chunk → Granule</span></span></code></pre></div><ul>
+<li><strong>Partition（分区）</strong>：按业务维度（通常是时间）划分数据，配合 <code>minmax_*.idx</code> 实现分区裁剪，查询时整块跳过无关分区。</li>
+<li><strong>Part（分片）</strong>：数据写入的基本单位，不可变，后台异步合并。不可变性让并发读写无需加锁（SELECT 基于 parts 快照执行），代价是更新和删除开销大。</li>
+<li><strong>Column File（列文件）</strong>：每列独立存储，查询时只读取涉及的列；同类型数据连续排列，天然适合压缩编码。</li>
+<li><strong>Compressed Chunk（压缩块）</strong>：物理 I/O 的最小单位（~1MB），包含 Header 和多个 Granule 的压缩数据。通过 <code>.mrk</code> 标记文件实现 Granule 级别的随机访问而无需解压整个列文件。</li>
+<li><strong>Granule（粒度）</strong>：逻辑上的最小扫描单元（8192行），稀疏索引和跳过索引都以 Granule 为粒度工作。粒度越小定位越精确，但索引开销越大。</li>
+</ul>
+<p>换句话说，<code>1.2</code> 解释了这张结构图本身，<code>1.3</code> 和 <code>1.4</code> 解释了它为何擅长追加写入却不擅长原地修改，<code>1.5</code> 解释了它为何能减少查询扫描量，而 <code>1.6</code> 到 <code>1.8</code> 则补上了这套设计在复制、一致性和并行执行上的系统级边界。</p>
+<p>设计上的核心取舍：</p>
+<table>
+  <thead>
+      <tr>
+          <th>选择</th>
+          <th>获得</th>
+          <th>牺牲</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>列式存储</td>
+          <td>高压缩率、列裁剪、向量化计算</td>
+          <td>点查不友好</td>
+      </tr>
+      <tr>
+          <td>不可变 Part（append-only）</td>
+          <td>无锁并发、简化一致性</td>
+          <td>更新/删除代价高</td>
+      </tr>
+      <tr>
+          <td>稀疏索引（非 B+ 树）</td>
+          <td>索引体积小可以常驻内存，维护成本低</td>
+          <td>点查不友好，最小扫描单位是 Granule</td>
+      </tr>
+      <tr>
+          <td>放弃严格 ACID</td>
+          <td>更高的读写吞吐</td>
+          <td>并发修改时无事务隔离</td>
+      </tr>
+      <tr>
+          <td>Part hash 去重（非唯一索引）</td>
+          <td>写入路径轻量</td>
+          <td>只能去重整个 Part，非行级去重</td>
+      </tr>
+      <tr>
+          <td>按分区组织数据</td>
+          <td>分区裁剪、冷热数据管理更自然</td>
+          <td>分区过细会导致 Part 过多，过粗又会削弱裁剪效果</td>
+      </tr>
+      <tr>
+          <td>较大的 Granule / Chunk</td>
+          <td>索引更稀疏、元数据更少、顺序 I/O 更友好</td>
+          <td>过滤不够精确，可能为了少量命中数据多扫一个 granule</td>
+      </tr>
+      <tr>
+          <td>后台异步合并（merge）</td>
+          <td>写入路径轻、吞吐高、读写更容易并发</td>
+          <td>会带来写放大，且查询性能会受 merge 进度影响</td>
+      </tr>
+  </tbody>
+</table>
+<h2 id="2-手搓一个最小列式数据库">2. 手搓一个最小列式数据库<a class="anchor" href="#2-%e6%89%8b%e6%90%93%e4%b8%80%e4%b8%aa%e6%9c%80%e5%b0%8f%e5%88%97%e5%bc%8f%e6%95%b0%e6%8d%ae%e5%ba%93">#</a></h2>
+<p>前面已经拆完了 ClickHouse 的核心设计，但真实的生产级系统太复杂，不可能在一篇文章里完整复刻。好在如果只保留几个最关键的机制：<strong>分区、Part、列文件、稀疏索引、列裁剪</strong>，其实已经足够拼出一个最小可用的列式数据库骨架。下面我们尝试站在实现者的角度，把这些设计重新串起来。</p>
+<h3 id="21-先定义-mvp-的能力边界">2.1 先定义 MVP 的能力边界<a class="anchor" href="#21-%e5%85%88%e5%ae%9a%e4%b9%89-mvp-%e7%9a%84%e8%83%bd%e5%8a%9b%e8%be%b9%e7%95%8c">#</a></h3>
+<p>在动手之前，先主动砍掉一大批能力，把目标收敛到一个最小闭环。</p>
+<p>我们只支持：</p>
+<ul>
+<li>单机</li>
+<li>单表</li>
+<li>append-only 写入</li>
+<li>按时间字段分区</li>
+<li>分区内按一个排序键排序</li>
+<li>每个 granule 维护一条稀疏索引</li>
+<li>支持 filter + <code>sum</code> / <code>count</code> 这类简单聚合查询</li>
+</ul>
+<p>我们明确不支持：</p>
+<ul>
+<li>update</li>
+<li>delete</li>
+<li>join</li>
+<li>事务</li>
+<li>压缩</li>
+<li>分布式执行</li>
+</ul>
+<p>这样做的目的是让核心结构尽量清晰：只关注一批行是如何写入成列式结构的，以及一条查询是如何一步步减少扫描量的。</p>
+<h3 id="22-核心数据结构">2.2 核心数据结构<a class="anchor" href="#22-%e6%a0%b8%e5%bf%83%e6%95%b0%e6%8d%ae%e7%bb%93%e6%9e%84">#</a></h3>
+<p>如果把前面介绍过的概念压缩成最小模型，那么核心结构大概如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Table
+</span></span><span style="display:flex;"><span>└── Partitions[partition_key]
+</span></span><span style="display:flex;"><span>    └── Parts[]
+</span></span><span style="display:flex;"><span>        ├── ColumnFiles[column_name]
+</span></span><span style="display:flex;"><span>        └── PrimaryIndex[]</span></span></code></pre></div><p>其中每一层的职责分别是：</p>
+<ul>
+<li><code>Table</code>：保存表的 schema、分区键、排序键，以及所有分区的入口。</li>
+<li><code>Partition</code>：按照分区键组织数据，例如按天或者按月保存同一时间范围内的多个 Part。</li>
+<li><code>Part</code>：一次批量写入形成的不可变数据块，内部已经按排序键排好序。</li>
+<li><code>ColumnFile</code>：Part 中每一列独立存储的数据文件。</li>
+<li><code>Chunk</code>：ColumnFile 的内部结构，包含 Header 和多个 Granule 的数据，压缩单元。</li>
+<li><code>Granule</code>：逻辑上的最小扫描单元（8192行），<code>primary_index</code> 和跳过索引都以 Granule 为粒度工作。</li>
+</ul>
+<figure>
+  <img src="/images/columnar-database/mvp-structure.svg"/>
+  <figcaption>最小列式数据库的层级结构：Partition、Part、列文件与稀疏索引</figcaption>
+</figure>
+<p>这里最关键的一点是：<strong>Part 内部按排序键有序、列独立存储、granule 级别有 <code>primary_index</code></strong>。只要这三点成立，后面的查询裁剪就有了基础。</p>
+<h3 id="23-写入路径伪代码">2.3 写入路径伪代码<a class="anchor" href="#23-%e5%86%99%e5%85%a5%e8%b7%af%e5%be%84%e4%bc%aa%e4%bb%a3%e7%a0%81">#</a></h3>
+<p>接下来考虑一批行写进来之后，会发生什么。</p>
+<figure>
+  <img src="/images/columnar-database/mvp-write-path.svg"/>
+  <figcaption>写入路径：分区、排序、切分 granule 与按列落盘</figcaption>
+</figure>
+<p>使用伪代码描述如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">insert</span>(rows):
+</span></span><span style="display:flex;"><span>    grouped <span style="color:#f92672">=</span> group_by(rows, partition_key)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> partition_value, partition_rows <span style="color:#f92672">in</span> grouped:
+</span></span><span style="display:flex;"><span>        sorted_rows <span style="color:#f92672">=</span> sort_by(partition_rows, sort_key)
+</span></span><span style="display:flex;"><span>        granules <span style="color:#f92672">=</span> split_into_granules(sorted_rows, granule_size<span style="color:#f92672">=</span><span style="color:#ae81ff">8192</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        part <span style="color:#f92672">=</span> Part(schema<span style="color:#f92672">=</span>schema, sort_key<span style="color:#f92672">=</span>sort_key, granules<span style="color:#f92672">=</span>granules)
+</span></span><span style="display:flex;"><span>        partitions[partition_value]<span style="color:#f92672">.</span>add_part(part)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Part</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">__init__</span>(self, schema, sort_key, granules):
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>schema <span style="color:#f92672">=</span> schema
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>sort_key <span style="color:#f92672">=</span> sort_key
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>granules <span style="color:#f92672">=</span> granules
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>primary_index <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>_build_primary_index()
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>column_files <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>_build_column_files()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">_build_primary_index</span>(self):
+</span></span><span style="display:flex;"><span>        index <span style="color:#f92672">=</span> []
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> granule_id, granule <span style="color:#f92672">in</span> enumerate(self<span style="color:#f92672">.</span>granules):
+</span></span><span style="display:flex;"><span>            index<span style="color:#f92672">.</span>append({
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;first_sort_key&#34;</span>: granule<span style="color:#f92672">.</span>rows[<span style="color:#ae81ff">0</span>][self<span style="color:#f92672">.</span>sort_key],
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;granule_id&#34;</span>: granule_id,
+</span></span><span style="display:flex;"><span>            })
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> index
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">_build_column_files</span>(self):
+</span></span><span style="display:flex;"><span>        column_files <span style="color:#f92672">=</span> {}
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> column <span style="color:#f92672">in</span> self<span style="color:#f92672">.</span>schema:
+</span></span><span style="display:flex;"><span>            column_files[column] <span style="color:#f92672">=</span> []
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">for</span> granule <span style="color:#f92672">in</span> self<span style="color:#f92672">.</span>granules:
+</span></span><span style="display:flex;"><span>                column_files[column]<span style="color:#f92672">.</span>append(extract_column(granule<span style="color:#f92672">.</span>rows, column))
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> column_files</span></span></code></pre></div><p>这段流程看起来很朴素，但已经包含了列式数据库最关键的几个动作：</p>
+<ol>
+<li><strong>按分区键分桶</strong>：让后续查询可以先裁剪整个分区。</li>
+<li><strong>按排序键排序</strong>：让相邻数据在逻辑上更有局部性，便于索引裁剪。</li>
+<li><strong>切成 granule</strong>：把最小扫描单位控制在一个比行更粗，但又足够细的粒度上。</li>
+<li><strong>按列写入</strong>：支持列裁剪，同时对聚合算子更友好。</li>
+<li><strong>构造 <code>primary_index</code></strong>：记录每个 granule 的首个排序键值，用于查询时快速排除不可能命中的 granule。</li>
+</ol>
+<p>也就是说，一批行数据在写入完成后，不再是“很多行记录”，而是变成了：<strong>按分区组织的多个 Part，每个 Part 内部按列存储，并额外带有 granule 级别的 <code>primary_index</code></strong>。</p>
+<h3 id="24-查询路径伪代码">2.4 查询路径伪代码<a class="anchor" href="#24-%e6%9f%a5%e8%af%a2%e8%b7%af%e5%be%84%e4%bc%aa%e4%bb%a3%e7%a0%81">#</a></h3>
+<p>再来看一条带过滤和聚合的查询是怎么执行的。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">query</span>(partition_predicate, sort_key_predicate, other_predicates, aggregate_column):
+</span></span><span style="display:flex;"><span>    result <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    candidate_partitions <span style="color:#f92672">=</span> prune_partitions(partitions, partition_predicate)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> partition <span style="color:#f92672">in</span> candidate_partitions:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> part <span style="color:#f92672">in</span> partition<span style="color:#f92672">.</span>parts:
+</span></span><span style="display:flex;"><span>            candidate_granules <span style="color:#f92672">=</span> prune_granules(part<span style="color:#f92672">.</span>primary_index, sort_key_predicate)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            predicate_columns <span style="color:#f92672">=</span> read_predicate_columns(part, candidate_granules, [
+</span></span><span style="display:flex;"><span>                sort_key_predicate<span style="color:#f92672">.</span>column,
+</span></span><span style="display:flex;"><span>                <span style="color:#f92672">*</span>columns_of(other_predicates),
+</span></span><span style="display:flex;"><span>            ])
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">for</span> granule_id <span style="color:#f92672">in</span> candidate_granules:
+</span></span><span style="display:flex;"><span>                matched_row_ids <span style="color:#f92672">=</span> filter_granule(
+</span></span><span style="display:flex;"><span>                    predicate_columns,
+</span></span><span style="display:flex;"><span>                    granule_id,
+</span></span><span style="display:flex;"><span>                    sort_key_predicate,
+</span></span><span style="display:flex;"><span>                    other_predicates,
+</span></span><span style="display:flex;"><span>                )
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>                values <span style="color:#f92672">=</span> read_column_values(part, aggregate_column, granule_id, matched_row_ids)
+</span></span><span style="display:flex;"><span>                result <span style="color:#f92672">+=</span> aggregate(values)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> result</span></span></code></pre></div><figure>
+  <img src="/images/columnar-database/mvp-query-path.svg"/>
+  <figcaption>查询裁剪链路：先缩小分区 / Part 扫描范围，再减少 Granule，最后减少列 I/O</figcaption>
+</figure>
+<p>这条伪代码更接近 <code>sum</code> 这一类需要读取聚合列的执行路径；如果是 <code>count</code>，只需要统计 <code>matched_row_ids</code>，不必读取聚合列。</p>
+<p>这条路径里，真正重要的不是代码细节，而是扫描量如何被一层层削减：</p>
+<ol>
+<li><strong>先裁剪分区</strong>：不在时间范围内的分区整块跳过。</li>
+<li><strong>再裁剪 granule</strong>：通过 <code>primary_index</code> 只保留可能命中的 granule。</li>
+<li><strong>读取谓词列并筛出命中位置</strong>：只读取过滤条件涉及的列，在 granule 内找出真正命中的行位置。</li>
+<li><strong>最后读取聚合列并计算</strong>：只对命中的位置读取目标列值，再执行聚合。</li>
+</ol>
+<p>换句话说，<code>primary_index</code> 的作用是先缩小候选 granule 的范围，而真正的过滤发生在读取谓词列之后，真正的值读取发生在聚合列阶段。
+这里的“值读取”特指最终聚合目标列的值读取，不包括前面为了过滤而读取的谓词列。</p>
+<p>这其实就是前面反复提到的三个关键词：<strong>先缩小分区 / Part 扫描范围、再减少 Granule、最后减少列 I/O</strong>。</p>
+<h3 id="25-用一个查询例子串起来">2.5 用一个查询例子串起来<a class="anchor" href="#25-%e7%94%a8%e4%b8%80%e4%b8%aa%e6%9f%a5%e8%af%a2%e4%be%8b%e5%ad%90%e4%b8%b2%e8%b5%b7%e6%9d%a5">#</a></h3>
+<p>假设现在有这样一条查询：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> <span style="color:#66d9ef">sum</span>(amount)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span> orders
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">WHERE</span> dt <span style="color:#66d9ef">BETWEEN</span> <span style="color:#e6db74">&#39;2026-03-01&#39;</span> <span style="color:#66d9ef">AND</span> <span style="color:#e6db74">&#39;2026-03-31&#39;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">AND</span> user_id <span style="color:#f92672">=</span> <span style="color:#ae81ff">1001</span></span></span></code></pre></div><p>它的执行过程可以理解为：</p>
+<p>第一步，数据库先根据 <code>dt</code> 做分区裁剪。假设表是按月分区，那么 3 月之外的分区可以直接跳过，连对应的 Part 都不需要打开。</p>
+<p>第二步，在命中的 3 月分区里，再查看每个 Part 的 <code>primary_index</code>。只有当 Part 内部的数据按 <code>user_id</code> 排序，或者 <code>user_id</code> 是排序键的前导列时，数据库才能先圈定哪些 granule 可能包含 <code>user_id = 1001</code>；但这一步只能缩小候选 granule，不能像 B+ 树那样直接定位到具体行。</p>
+<p>第三步，真正读取数据时，也不需要把整行都读出来，只需要先读取过滤条件涉及的列。这里通常先读取 <code>user_id</code>，在候选 granule 内筛出真正命中的行位置；如果 <code>dt</code> 已经在分区裁剪阶段处理掉，甚至连 <code>dt</code> 列本身都不需要读取。</p>
+<p>第四步，在命中的位置确定之后，再去读取 <code>amount</code> 列对应的值，并把这些值逐步累加起来。</p>
+<p>走完这个过程就会发现，列式数据库真正高效的地方，并不只是“按列存”这四个字，而是它围绕“减少扫描量”形成了一整套层层递进的组织方式：</p>
+<ul>
+<li>分区负责减少需要扫描的 Part</li>
+<li><code>primary_index</code> 负责减少需要扫描的 Granule</li>
+<li>谓词列负责筛出真正命中的位置</li>
+<li>聚合列负责在命中的位置上读取值并计算结果</li>
+</ul>
+<p>这也是为什么说，列式数据库的核心不只是换了一种存储格式，而是围绕分析查询重新组织了整条数据路径。</p>
+<h2 id="参考资料">参考资料<a class="anchor" href="#%e5%8f%82%e8%80%83%e8%b5%84%e6%96%99">#</a></h2>
+<ul>
+<li><a href="https://clickhouse.com/docs/zh/academic_overview">ClickHouse 架构</a></li>
+<li><a href="https://www.cnblogs.com/traditional/p/15218743.html">MergeTree 的深度原理解析</a></li>
+</ul>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "how-build-a-columnar-database", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+  <div>
+  
+  </div>
+  <div>
+  
+    <a href="/2025/12/11/%E7%90%86%E8%A7%A3VictoriaLogs%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%AE%9E%E7%8E%B0/" class="flex align-center">
+      <span>VictoriaLogs 设计与实现</span>
+      <img src="/icons/forward.svg" class="book-icon" alt="Forward" />
+    </a>
+  
+  </div>
+</div>
+ 
+        
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+        
+<div class="flex align-center" style="margin-top: 1rem;">
+  <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+    访问量<span id="busuanzi_value_site_pv"></span>
+  </span>
+  <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+    访客数<span id="busuanzi_value_site_uv"></span>
+  </span>
+</div>
+        
+  
+ 
+        
+  
+  
+    <script>(function(){document.querySelectorAll("pre:has(code)").forEach(e=>{e.addEventListener("click",e.focus),e.addEventListener("copy",function(t){if(t.preventDefault(),navigator.clipboard){const t=window.getSelection().toString()||e.textContent;navigator.clipboard.writeText(t)}})})})()</script>
+  
+
+      </footer>
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+  
+  <aside class="book-toc">
+    <div class="book-toc-content">
+      
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-clickhouse-的设计">1. ClickHouse 的设计</a>
+      <ul>
+        <li><a href="#11-整体组件">1.1 整体组件</a></li>
+        <li><a href="#12-存储结构">1.2 存储结构</a></li>
+        <li><a href="#13-数据写入和合并">1.3 数据写入和合并</a></li>
+        <li><a href="#14-更新和删除">1.4 更新和删除</a></li>
+        <li><a href="#15-查询与裁剪">1.5 查询与裁剪</a></li>
+        <li><a href="#16-数据复制">1.6 数据复制</a></li>
+        <li><a href="#17-acid-特性">1.7 ACID 特性</a></li>
+        <li><a href="#18-并行化查询">1.8 并行化查询</a></li>
+        <li><a href="#小结">小结</a></li>
+      </ul>
+    </li>
+    <li><a href="#2-手搓一个最小列式数据库">2. 手搓一个最小列式数据库</a>
+      <ul>
+        <li><a href="#21-先定义-mvp-的能力边界">2.1 先定义 MVP 的能力边界</a></li>
+        <li><a href="#22-核心数据结构">2.2 核心数据结构</a></li>
+        <li><a href="#23-写入路径伪代码">2.3 写入路径伪代码</a></li>
+        <li><a href="#24-查询路径伪代码">2.4 查询路径伪代码</a></li>
+        <li><a href="#25-用一个查询例子串起来">2.5 用一个查询例子串起来</a></li>
+      </ul>
+    </li>
+    <li><a href="#参考资料">参考资料</a></li>
+  </ul>
+</nav>
+
+
+
+    </div>
+  </aside>
+  
+ 
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

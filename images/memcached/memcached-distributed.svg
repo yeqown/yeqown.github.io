@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="832px" height="361px" viewBox="0 0 832 361" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="background: #FFFFFF;">
+    <title>memcached-distributed</title>
+    <g id="页面-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="编组" transform="translate(99, 168)">
+            <rect id="矩形" stroke="#0091FF" stroke-width="2" fill="#44D7B6" x="1" y="1" width="114" height="61" rx="10"></rect>
+            <text id="client2" font-family="AlibabaPuHuiTiM, Alibaba PuHuiTi" font-size="16" font-weight="400" line-spacing="24" fill="#000000" fill-opacity="0.85">
+                <tspan x="36" y="36">client2</tspan>
+            </text>
+        </g>
+        <g id="编组" transform="translate(99, 75)">
+            <rect id="矩形" stroke="#0091FF" stroke-width="2" fill="#44D7B6" x="1" y="1" width="114" height="61" rx="10"></rect>
+            <text id="client1" font-family="AlibabaPuHuiTiM, Alibaba PuHuiTi" font-size="16" font-weight="400" line-spacing="24" fill="#000000" fill-opacity="0.85">
+                <tspan x="36" y="36">client1</tspan>
+            </text>
+        </g>
+        <g id="编组" transform="translate(99, 261)">
+            <rect id="矩形" stroke="#0091FF" stroke-width="2" fill="#44D7B6" x="1" y="1" width="114" height="61" rx="10"></rect>
+            <text id="client3" font-family="AlibabaPuHuiTiM, Alibaba PuHuiTi" font-size="16" font-weight="400" line-spacing="24" fill="#000000" fill-opacity="0.85">
+                <tspan x="36" y="36">client3</tspan>
+            </text>
+        </g>
+        <rect id="矩形" stroke="#7C3CC9" stroke-width="2" fill-opacity="0.3" fill="#9254DE" x="383" y="76" width="177" height="102" rx="10"></rect>
+        <rect id="矩形备份" stroke="#7C3CC9" stroke-width="2" fill-opacity="0.3" fill="#9254DE" x="383" y="221" width="177" height="102" rx="10"></rect>
+        <text id="memcached1" font-family="AlibabaPuHuiTiM, Alibaba PuHuiTi" font-size="16" font-weight="400" fill="#000000" fill-opacity="0.85">
+            <tspan x="419" y="133">memcached1</tspan>
+        </text>
+        <text id="memcached2" font-family="AlibabaPuHuiTiM, Alibaba PuHuiTi" font-size="16" font-weight="400" fill="#000000" fill-opacity="0.85">
+            <tspan x="419" y="278">memcached2</tspan>
+        </text>
+        <path id="直线" d="M216.217404,100.794929 C219.242096,101.17528 221.468086,103.651151 221.496511,106.498271 L371.349,125.341 L371.887039,121.061543 C371.930369,120.716968 372.233367,120.465796 372.585693,120.464319 L372.682847,120.470225 C372.793105,120.484089 372.898756,120.522365 372.991431,120.582021 L382.845263,126.924943 C383.174958,127.137167 383.265751,127.563883 383.048055,127.87804 C382.962768,128.001119 382.837888,128.09391 382.692159,128.142486 L371.574713,131.848301 C371.202741,131.972292 370.793268,131.782368 370.660129,131.424095 C370.622705,131.323385 370.610138,131.215944 370.623426,131.11028 L371.161,126.829 L221.30922,107.986953 C220.576521,110.738037 217.80705,112.585391 214.782596,112.205071 C211.49478,111.791633 209.150671,108.902228 209.546883,105.751404 C209.943094,102.600581 212.929588,100.381491 216.217404,100.794929 Z" fill="#FB9A0E" fill-rule="nonzero"></path>
+        <text id="There’s-NO-communica" font-family="AlibabaPuHuiTiM, Alibaba PuHuiTi" font-size="16" font-weight="400">
+            <tspan x="382" y="203" fill="#000000" fill-opacity="0.85">There’s </tspan>
+            <tspan x="442.064" y="203" fill="#F7636E">NO </tspan>
+            <tspan x="470.128" y="203" fill="#262626">communication</tspan>
+            <tspan x="590.416" y="203" fill="#000000" fill-opacity="0.85"> between memcached servers</tspan>
+        </text>
+        <path id="直线-2" d="M219.465207,102.335911 C221.672663,104.437937 221.993482,107.751372 220.326188,110.058925 L375.31,257.641 L378.757728,254.020431 L383.482793,266.459734 L370.827314,262.348609 L374.274,258.727 L219.290359,111.14663 C217.067098,112.924506 213.742147,112.766016 211.534793,110.664089 C209.135041,108.378951 208.964941,104.662156 211.154864,102.362393 C213.344787,100.06263 217.065454,100.050774 219.465207,102.335911 Z" fill="#E63F07" fill-rule="nonzero"></path>
+        <path id="直线-3" d="M369.342354,131.863798 L382.619113,132.752727 L373.607817,142.543491 L371.753,137.9 L221.303118,197.989369 C221.993692,200.751753 220.463896,203.709081 217.632731,204.839846 C214.555393,206.068933 211.105862,204.674574 209.927987,201.725459 C208.750112,198.776343 210.289931,195.389241 213.367269,194.160154 C216.198328,193.029431 219.344391,194.119047 220.746924,196.59691 L371.196,136.506 L369.342354,131.863798 Z" fill="#595959" fill-rule="nonzero"></path>
+        <path id="直线-4" d="M217.803053,194.231372 C220.595997,195.452239 222.030055,198.456361 221.252018,201.194788 L372.415,267.273 L374.41851,262.69202 L383.110855,272.767021 L369.812404,273.229277 L371.815,268.647 L220.650361,202.57112 C219.16872,205.001888 215.989831,205.98947 213.196947,204.768628 C210.160651,203.441386 208.73036,200.006597 210.002301,197.096814 C211.274242,194.187031 214.766758,192.904129 217.803053,194.231372 Z" fill="#595959" fill-rule="nonzero"></path>
+        <path id="直线-5" d="M382.488686,137.546535 L377.603479,149.923823 L374.202,146.258 L220.370957,289.002577 C222.009203,291.331512 221.645882,294.641232 219.411137,296.714915 C216.982094,298.968892 213.261889,298.90902 211.101828,296.581187 C208.941767,294.253353 209.15982,290.539062 211.588863,288.285085 C213.823797,286.211228 217.151779,286.096187 219.351895,287.904222 L373.182,145.158 L369.781205,141.493993 L382.488686,137.546535 Z" fill="#595959" fill-rule="nonzero"></path>
+        <path id="直线-6" d="M371.212988,273.248864 L383.664183,277.942504 L372.204801,284.706014 L371.773,279.725 L221.491945,292.733975 C221.353271,295.577857 219.03306,297.965658 215.995907,298.228575 C212.694545,298.514365 209.796238,296.181273 209.522356,293.017468 C209.248474,289.853663 211.702732,287.057214 215.004093,286.771425 C218.041026,286.508526 220.736885,288.461781 221.362463,291.239205 L371.643,278.23 L371.212988,273.248864 Z" fill="#595959" fill-rule="nonzero"></path>
+        <text id="key:-foo" transform="translate(306.5, 106) rotate(7) translate(-306.5, -106)" font-family="AlibabaPuHuiTiM, Alibaba PuHuiTi" font-size="16" font-weight="400" fill="#FB9A0E">
+            <tspan x="275" y="112">key: foo</tspan>
+        </text>
+        <text id="key:-bar" transform="translate(267, 139) rotate(44) translate(-267, -139)" font-family="AlibabaPuHuiTiM, Alibaba PuHuiTi" font-size="16" font-weight="400" fill="#E63F07">
+            <tspan x="235" y="145">key: bar</tspan>
+        </text>
+    </g>
+</svg>

@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en-US" dir="ltr">
+<head>
+  <!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Ring Buffer是一个圆形的，首尾相接的数据结构，可以用作缓存。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#2e3440">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2019/09/19/%E5%88%9D%E8%AF%86Ring-Buffer/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="初识Ring Buffer">
+  <meta property="og:description" content="Ring Buffer是一个圆形的，首尾相接的数据结构，可以用作缓存。">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2019-09-19T11:10:51+08:00">
+    <meta property="article:modified_time" content="2019-09-19T11:10:51+08:00">
+    <meta property="article:tag" content="Ring Buffer">
+
+
+  <meta itemprop="name" content="初识Ring Buffer">
+  <meta itemprop="description" content="Ring Buffer是一个圆形的，首尾相接的数据结构，可以用作缓存。">
+  <meta itemprop="datePublished" content="2019-09-19T11:10:51+08:00">
+  <meta itemprop="dateModified" content="2019-09-19T11:10:51+08:00">
+  <meta itemprop="wordCount" content="152">
+  <meta itemprop="keywords" content="Ring Buffer">
+
+<title>初识Ring Buffer | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2019/09/19/%E5%88%9D%E8%AF%86Ring-Buffer/">
+<link rel="stylesheet" href="/book.min.378fc6a182871ef00f65a0471fe69f8698a690aa571b6a32ddd6a023f8ce3b22.css" integrity="sha256-N4/GoYKHHvAPZaBHH&#43;afhpimkKpXG2oy3dagI/jOOyI=" crossorigin="anonymous">
+
+
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.0e20cff897c7e41df39c48ee6b90671f81cb7a62e30a02c50d43fe20ce4ca41a.js" integrity="sha256-DiDP&#43;JfH5B3znEjua5BnH4HLemLjCgLFDUP&#43;IM5MpBo=" crossorigin="anonymous"></script>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade">
+  
+</head>
+<body dir="ltr" class="book-kind-page book-type-posts">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    
+<aside class="book-menu">
+  <div class="book-menu-content">
+    
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input id="book-search-input" type="text" 
+    placeholder="Search"
+    aria-label="Search"
+    maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+<ul><li><a href="/categories">Categories</a></li><li><a href="/tags">Tags</a></li></ul>
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">
+      About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+
+  </div>
+</aside>
+ 
+
+    <div class="book-page">
+      <header class="book-header hidden">
+        
+<div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/icons/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>初识Ring Buffer</h3>
+
+  <label for="toc-control">
+    
+    <img src="/icons/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#使用场景">使用场景</a></li>
+        <li><a href="#实现方式">实现方式</a></li>
+        <li><a href="#参考文献">参考文献</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h1>
+    初识Ring Buffer
+  </h1>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/icons/calendar.svg" class="book-icon" alt="Calendar" />
+    <span>September 19, 2019</span>
+  </div>
+
+
+
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Ring-Buffer/">Ring Buffer</a>
+  </div>
+  
+
+
+  <div class="book-post-content markdown-inner"><h3 id="使用场景">使用场景<a class="anchor" href="#%e4%bd%bf%e7%94%a8%e5%9c%ba%e6%99%af">#</a></h3>
+<blockquote class='book-hint '>
+<p>一个服务器程序可能会收到多个客户端的网络数据流，在每个数据流上实际上有多个独立的数据包，只有一个数据包接收完整了才能做进一步的处理。如果在一个网络连接上数据包并不完整，就需要暂时缓存住尚未接收完的数据包。</p>
+</blockquote><p>解决以上场景的方法肯定不止<code>RingBuffer</code>这一种，同理<code>RingBuffer</code>也不只是这一个使用场景，这里只是介绍下<code>RingBuffer</code>在这种场景下的使用。</p>
+<h3 id="实现方式">实现方式<a class="anchor" href="#%e5%ae%9e%e7%8e%b0%e6%96%b9%e5%bc%8f">#</a></h3>
+<p><code>RingBuffer</code>结构定义：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-js" data-lang="js"><span style="display:flex;"><span><span style="color:#66d9ef">const</span> <span style="color:#a6e22e">A</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">10</span></span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// Byts ...</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">Byts</span> []<span style="color:#66d9ef">byte</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// RingBuffer . not concurrent safe</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">RingBuffer</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">data</span>   []<span style="color:#f92672">*</span><span style="color:#a6e22e">Byts</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">pRead</span>  <span style="color:#66d9ef">uint</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">pWrite</span> <span style="color:#66d9ef">uint</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">size</span>   <span style="color:#66d9ef">uint</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// NewRingBuffer . at least 2</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">NewRingBuffer</span>(<span style="color:#a6e22e">size</span> <span style="color:#66d9ef">uint</span>) <span style="color:#f92672">*</span><span style="color:#a6e22e">RingBuffer</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">size</span> <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">1</span> {
+</span></span><span style="display:flex;"><span>		panic(<span style="color:#e6db74">&#34;too small size&#34;</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">RingBuffer</span>{
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">data</span>:   make([]<span style="color:#f92672">*</span><span style="color:#a6e22e">Byts</span>, <span style="color:#a6e22e">size</span>),
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">pRead</span>:  <span style="color:#ae81ff">0</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">pWrite</span>: <span style="color:#ae81ff">0</span>,
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">size</span>:   <span style="color:#a6e22e">size</span>,
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}</span></span></code></pre></div><p><code>RingBuffer</code>方法定义：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-go" data-lang="go"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">buf</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">RingBuffer</span>) <span style="color:#a6e22e">Write</span>(<span style="color:#a6e22e">d</span> <span style="color:#a6e22e">Byts</span>) <span style="color:#66d9ef">error</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> (<span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">pWrite</span><span style="color:#f92672">+</span><span style="color:#ae81ff">1</span>)<span style="color:#f92672">%</span><span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">size</span> <span style="color:#f92672">==</span> <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">pRead</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">errFull</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">data</span>[<span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">pWrite</span>] = <span style="color:#a6e22e">d</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">pWrite</span> = (<span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">pWrite</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>) <span style="color:#f92672">%</span> <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">size</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">buf</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">RingBuffer</span>) <span style="color:#a6e22e">Read</span>() (<span style="color:#f92672">*</span><span style="color:#a6e22e">Byts</span>, <span style="color:#66d9ef">error</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">pRead</span> <span style="color:#f92672">==</span> <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">pWrite</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">errEmpty</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">d</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">data</span>[<span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">pRead</span>]
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">pRead</span> = (<span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">pRead</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>) <span style="color:#f92672">%</span> <span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">size</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">d</span>, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// Reset . drop all data</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">buf</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">RingBuffer</span>) <span style="color:#a6e22e">Reset</span>() {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">pRead</span> = <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">buf</span>.<span style="color:#a6e22e">pWrite</span> = <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>}</span></span></code></pre></div><h3 id="参考文献">参考文献<a class="anchor" href="#%e5%8f%82%e8%80%83%e6%96%87%e7%8c%ae">#</a></h3>
+<ol>
+<li><a href="http://mechanitis.blogspot.com/2011/06/dissecting-disruptor-whats-so-special.html">Ring-Buffer in disroptor Introduction</a></li>
+<li><a href="https://github.com/Terry-Mao/goim/blob/master/internal/comet/ring.go">Goim Ring Buffer实现</a></li>
+<li><a href="https://blog.codingnow.com/2012/02/ring_buffer.html">Ring Buffer 应用</a></li>
+</ol>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "ring-buffer-introduction", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+  <div>
+  
+    <a href="/2019/09/21/TCP%E6%8B%86%E5%8C%85%E7%B2%98%E5%8C%85/" class="flex align-center">
+      <img src="/icons/backward.svg" class="book-icon" alt="Backward" />
+      <span>TCP拆包与粘包：从字节流特性到应用层协议设计</span>
+    </a>
+  
+  </div>
+  <div>
+  
+    <a href="/2019/08/12/LRU%E5%92%8CLRU-K/" class="flex align-center">
+      <span>LRU和LRU-K</span>
+      <img src="/icons/forward.svg" class="book-icon" alt="Forward" />
+    </a>
+  
+  </div>
+</div>
+ 
+        
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+        
+<div class="flex align-center" style="margin-top: 1rem;">
+  <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+    访问量<span id="busuanzi_value_site_pv"></span>
+  </span>
+  <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+    访客数<span id="busuanzi_value_site_uv"></span>
+  </span>
+</div>
+        
+  
+ 
+        
+  
+  
+    <script>(function(){document.querySelectorAll("pre:has(code)").forEach(e=>{e.addEventListener("click",e.focus),e.addEventListener("copy",function(t){if(t.preventDefault(),navigator.clipboard){const t=window.getSelection().toString()||e.textContent;navigator.clipboard.writeText(t)}})})})()</script>
+  
+
+      </footer>
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+  
+  <aside class="book-toc">
+    <div class="book-toc-content">
+      
+  
+<nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#使用场景">使用场景</a></li>
+        <li><a href="#实现方式">实现方式</a></li>
+        <li><a href="#参考文献">参考文献</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+    </div>
+  </aside>
+  
+ 
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
