@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 810" width="2880" height="1620" role="img" aria-labelledby="title desc">
+  <title id="title">Pages inside one Parquet Column Chunk</title>
+  <desc id="desc">A Column Chunk contains an optional Dictionary Page followed by Data Pages. Every Page has a variable-length Thrift PageHeader and a body whose layout is selected by PageHeader type.</desc>
+  <defs>
+    <marker id="arrow-blue" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+      <path d="M 0 0 L 8 4 L 0 8 z" fill="#4E7CF6" />
+    </marker>
+  </defs>
+
+  <rect data-element-id="page-frame-canvas" x="0" y="0" width="1440" height="810" fill="#F8FAFC" />
+  <text data-element-id="page-frame-title" x="70" y="67" font-family="Helvetica, Arial, sans-serif" font-size="30" font-weight="700" fill="#1F2937">Pages inside one Parquet Column Chunk</text>
+  <text data-element-id="page-frame-subtitle" x="70" y="101" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#1F2937">Every page starts with the same PageHeader; type selects one page-specific header and body layout.</text>
+
+  <text data-element-id="page-sequence-section-label" x="70" y="148" font-family="Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#4E7CF6">1 · Contiguous page sequence</text>
+  <rect data-element-id="page-sequence-boundary" x="70" y="165" width="340" height="450" rx="12" fill="#FFFFFF" stroke="#1F2937" stroke-width="2" />
+  <text data-element-id="page-sequence-boundary-label" x="92" y="201" font-family="Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#1F2937">Column Chunk · byte order</text>
+  <rect data-element-id="page-sequence-dictionary" x="98" y="220" width="284" height="65" rx="10" fill="#FFF6DC" stroke="#F2BD4D" stroke-width="2" />
+  <text data-element-id="page-sequence-dictionary-title" x="240" y="247" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#1F2937" text-anchor="middle">Dictionary Page</text>
+  <text data-element-id="page-sequence-dictionary-detail" x="240" y="271" font-family="Helvetica, Arial, sans-serif" font-size="16" fill="#1F2937" text-anchor="middle">optional · first · at most one</text>
+  <rect data-element-id="page-sequence-data-zero" x="98" y="295" width="284" height="70" rx="10" fill="#EAF0FF" stroke="#4E7CF6" stroke-width="3" />
+  <text data-element-id="page-sequence-data-zero-title" x="240" y="324" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#1F2937" text-anchor="middle">Data Page V2 · #0</text>
+  <text data-element-id="page-sequence-data-zero-detail" x="240" y="350" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#4E7CF6" text-anchor="middle">zoom this physical Page</text>
+  <rect data-element-id="page-sequence-data-one" x="98" y="375" width="284" height="55" rx="10" fill="#EAF0FF" stroke="#4E7CF6" stroke-width="2" />
+  <text data-element-id="page-sequence-data-one-title" x="240" y="409" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#1F2937" text-anchor="middle">Data Page V2 · #1</text>
+  <text data-element-id="page-sequence-ellipsis" x="240" y="461" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="700" fill="#1F2937" text-anchor="middle">⋮</text>
+  <rect data-element-id="page-sequence-data-nine" x="98" y="478" width="284" height="55" rx="10" fill="#EAF0FF" stroke="#4E7CF6" stroke-width="2" />
+  <text data-element-id="page-sequence-data-nine-title" x="240" y="512" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#1F2937" text-anchor="middle">Data Page V2 · #9</text>
+  <text data-element-id="page-sequence-note" x="240" y="570" font-family="Helvetica, Arial, sans-serif" font-size="16" fill="#1F2937" text-anchor="middle">
+    <tspan x="240" dy="0">Pages are contiguous. Count and target size</tspan>
+    <tspan x="240" dy="21">are writer choices, not format constants.</tspan>
+  </text>
+  <line data-element-id="page-sequence-zoom-arrow" x1="386" y1="330" x2="468" y2="330" stroke="#4E7CF6" stroke-width="4" stroke-linecap="round" marker-end="url(#arrow-blue)" />
+  <text data-element-id="page-sequence-zoom-label" x="427" y="313" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#4E7CF6" text-anchor="middle">zoom</text>
+
+  <text data-element-id="page-common-section-label" x="480" y="148" font-family="Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#4E7CF6">2 · Common physical frame</text>
+  <rect data-element-id="page-common-boundary" x="480" y="165" width="390" height="450" rx="12" fill="#FFFFFF" stroke="#1F2937" stroke-width="2" />
+  <text data-element-id="page-common-boundary-label" x="502" y="201" font-family="Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#1F2937">one physical Page</text>
+  <rect data-element-id="page-common-header" x="505" y="220" width="145" height="175" rx="10" fill="#FFF6DC" stroke="#F2BD4D" stroke-width="2" />
+  <text data-element-id="page-common-header-text" x="577.5" y="252" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#1F2937" text-anchor="middle">
+    <tspan x="577.5" dy="0">PageHeader</tspan>
+    <tspan x="577.5" dy="21">Thrift · variable</tspan>
+    <tspan x="577.5" dy="21">type</tspan>
+    <tspan x="577.5" dy="21">sizes</tspan>
+    <tspan x="577.5" dy="21">crc?</tspan>
+    <tspan x="577.5" dy="21">*_header</tspan>
+  </text>
+  <rect data-element-id="page-common-body" x="650" y="220" width="195" height="175" rx="10" fill="#EAF7F0" stroke="#55B685" stroke-width="2" />
+  <rect data-element-id="page-common-crc-boundary" x="657" y="227" width="181" height="161" rx="8" fill="none" stroke="#EF6A5B" stroke-width="3" stroke-dasharray="9 7" />
+  <text data-element-id="page-common-body-text" x="747.5" y="280" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#1F2937" text-anchor="middle">
+    <tspan x="747.5" dy="0">Page body</tspan>
+    <tspan x="747.5" dy="35">compressed_page_size</tspan>
+    <tspan x="747.5" dy="22">bytes on disk</tspan>
+  </text>
+  <text data-element-id="page-common-crc-label" x="747.5" y="421" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#EF6A5B" text-anchor="middle">crc covers body only</text>
+  <polyline data-element-id="page-common-callout-leader" points="526,460 544,430 572,460" fill="#FFF6DC" stroke="#1F2937" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+  <rect data-element-id="page-common-callout" x="500" y="460" width="350" height="95" rx="10" fill="#FFF6DC" stroke="#1F2937" stroke-width="2" />
+  <text data-element-id="page-common-callout-text" x="675" y="497" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="600" fill="#1F2937" text-anchor="middle">
+    <tspan x="675" dy="0">The matching *_header is nested</tspan>
+    <tspan x="675" dy="23">inside the same PageHeader serialization.</tspan>
+  </text>
+  <text data-element-id="page-common-decode-note" x="675" y="590" font-family="Helvetica, Arial, sans-serif" font-size="16" fill="#1F2937" text-anchor="middle">Header length is known only after Thrift decoding.</text>
+
+  <text data-element-id="page-type-section-label" x="920" y="148" font-family="Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#4E7CF6">3 · type chooses one branch</text>
+  <line data-element-id="page-type-main-arrow" x1="870" y1="330" x2="940" y2="330" stroke="#4E7CF6" stroke-width="4" stroke-linecap="round" marker-end="url(#arrow-blue)" />
+  <text data-element-id="page-type-main-label" x="905" y="313" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#4E7CF6" text-anchor="middle">read type</text>
+  <line data-element-id="page-type-router-spine" x1="940" y1="218" x2="940" y2="480" stroke="#4E7CF6" stroke-width="2" stroke-linecap="round" />
+  <line data-element-id="page-type-dictionary-arrow" x1="940" y1="218" x2="970" y2="218" stroke="#4E7CF6" stroke-width="2" stroke-linecap="round" marker-end="url(#arrow-blue)" />
+  <line data-element-id="page-type-v1-arrow" x1="940" y1="338" x2="970" y2="338" stroke="#4E7CF6" stroke-width="2" stroke-linecap="round" marker-end="url(#arrow-blue)" />
+  <line data-element-id="page-type-v2-arrow" x1="940" y1="480" x2="970" y2="480" stroke="#4E7CF6" stroke-width="2" stroke-linecap="round" marker-end="url(#arrow-blue)" />
+
+  <rect data-element-id="page-type-dictionary-row" x="970" y="165" width="400" height="105" rx="10" fill="#FFF6DC" stroke="#F2BD4D" stroke-width="2" />
+  <text data-element-id="page-type-dictionary-title" x="988" y="194" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#1F2937">type = 2 · DICTIONARY_PAGE</text>
+  <text data-element-id="page-type-dictionary-detail" x="988" y="218" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#1F2937">
+    <tspan x="988" dy="0">dictionary_page_header</tspan>
+    <tspan x="988" dy="20">body · encoded dictionary values</tspan>
+    <tspan x="988" dy="20">ColumnChunk codec covers the whole body</tspan>
+  </text>
+
+  <rect data-element-id="page-type-v1-row" x="970" y="285" width="400" height="105" rx="10" fill="#EAF0FF" stroke="#4E7CF6" stroke-width="2" />
+  <text data-element-id="page-type-v1-title" x="988" y="314" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#1F2937">type = 0 · DATA_PAGE</text>
+  <text data-element-id="page-type-v1-detail" x="988" y="338" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#1F2937">
+    <tspan x="988" dy="0">data_page_header</tspan>
+    <tspan x="988" dy="20">body · RL + DL + encoded values</tspan>
+    <tspan x="988" dy="20">ColumnChunk codec covers the whole body</tspan>
+  </text>
+
+  <rect data-element-id="page-type-v2-row" x="970" y="405" width="400" height="185" rx="10" fill="#FFFFFF" stroke="#4E7CF6" stroke-width="3" />
+  <text data-element-id="page-type-v2-title" x="988" y="434" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#1F2937">type = 3 · DATA_PAGE_V2</text>
+  <text data-element-id="page-type-v2-detail" x="988" y="459" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#1F2937">data_page_header_v2 · body is split into three regions</text>
+  <rect data-element-id="page-type-v2-rl" x="990" y="476" width="66" height="64" rx="8" fill="#EAF0FF" stroke="#4E7CF6" stroke-width="2" />
+  <text data-element-id="page-type-v2-rl-text" x="1023" y="516" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#1F2937" text-anchor="middle">RL</text>
+  <rect data-element-id="page-type-v2-dl" x="1064" y="476" width="66" height="64" rx="8" fill="#EAF0FF" stroke="#4E7CF6" stroke-width="2" />
+  <text data-element-id="page-type-v2-dl-text" x="1097" y="516" font-family="Helvetica, Arial, sans-serif" font-size="18" font-weight="700" fill="#1F2937" text-anchor="middle">DL</text>
+  <rect data-element-id="page-type-v2-values" x="1138" y="476" width="212" height="64" rx="8" fill="#EAF7F0" stroke="#55B685" stroke-width="2" />
+  <text data-element-id="page-type-v2-values-text" x="1244" y="516" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#1F2937" text-anchor="middle">encoded values</text>
+  <text data-element-id="page-type-v2-level-note" x="1060" y="568" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#4E7CF6" text-anchor="middle">uncompressed</text>
+  <text data-element-id="page-type-v2-values-note" x="1244" y="568" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#55B685" text-anchor="middle">is_compressed flag</text>
+  <rect data-element-id="page-type-index-note" x="970" y="600" width="400" height="48" rx="9" fill="#FFFFFF" stroke="#EF6A5B" stroke-width="2" stroke-dasharray="8 6" />
+  <text data-element-id="page-type-index-note-text" x="1170" y="630" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1F2937" text-anchor="middle">type = 1 · INDEX_PAGE ≠ ColumnIndex / OffsetIndex</text>
+
+  <rect data-element-id="page-evidence-band" x="70" y="670" width="1300" height="80" rx="10" fill="#FFFFFF" stroke="#1F2937" stroke-width="2" />
+  <text data-element-id="page-evidence-title" x="92" y="698" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#4E7CF6">
+    <tspan x="92" dy="0">Sample evidence</tspan>
+    <tspan x="92" dy="22">RG1 / created_at</tspan>
+  </text>
+  <text data-element-id="page-evidence-dictionary" x="340" y="699" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="600" fill="#1F2937">
+    <tspan x="340" dy="0">type=2 · header 26 B · body 60,426 B</tspan>
+    <tspan x="340" dy="22">Dictionary Page</tspan>
+  </text>
+  <text data-element-id="page-evidence-v2" x="720" y="699" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="600" fill="#1F2937">
+    <tspan x="720" dy="0">type=3 · header 32 B · body 1,261 B</tspan>
+    <tspan x="720" dy="22">first Data Page V2</tspan>
+  </text>
+  <text data-element-id="page-evidence-caveat" x="1100" y="699" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#EF6A5B">
+    <tspan x="1100" dy="0">26 B / 32 B are serialized lengths,</tspan>
+    <tspan x="1100" dy="21">not fixed sizes.</tspan>
+  </text>
+</svg>

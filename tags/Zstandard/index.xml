@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Zstandard on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/Zstandard/</link>
+    <description>Recent content in Zstandard on Yeqown</description>
+    <generator>Hugo</generator>
+    <language>en-US</language>
+    <lastBuildDate>Fri, 07 Aug 2026 00:00:00 +0800</lastBuildDate>
+    <atom:link href="https://www.yeqown.xyz/tags/Zstandard/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>服务端与数据库压缩：原理、组合与选型</title>
+      <link>https://www.yeqown.xyz/2026/08/07/server-database-compression-algorithms/</link>
+      <pubDate>Fri, 07 Aug 2026 00:00:00 +0800</pubDate>
+      <guid>https://www.yeqown.xyz/2026/08/07/server-database-compression-algorithms/</guid>
+      <description>&lt;p&gt;压缩是软件开发中非常常见的一种数据处理手段。做服务端开发时，我们会把响应体压缩后再传输，减少网络带宽和跨机房流量；也会把日志、消息、缓存快照或数据库块压缩后保存，少占磁盘、对象存储和页缓存。数据库系统更进一步，通常还会先利用列、类型和排序里的规律做编码，再交给通用压缩算法处理。&lt;/p&gt;&#xA;&lt;p&gt;判断一种压缩方案是否合适，不能只看压缩后体积，还要把 CPU、内存、I/O 和延迟放在同一条数据路径上衡量。&lt;/p&gt;&#xA;&lt;p&gt;本文从数据中可被利用的冗余出发，依次回答每种算法解决了什么问题、怎样工作、在什么数据上有效，以及实际系统把它用在数据路径的哪个位置。最后使用三类数据验证这些判断，并给出面向工程约束的选型方法。&lt;/p&gt;&#xA;&lt;!-- more --&gt;&#xA;&lt;blockquote class=&#39;book-hint &#39;&gt;&#xA;&lt;p&gt;&lt;strong&gt;范围说明&lt;/strong&gt;&lt;/p&gt;&#xA;&lt;p&gt;本文讨论服务端和数据库开发中的无损压缩方案，不仅包含常见的通用压缩算法（如 Snappy、LZ4、Zstandard 等），也包含面向字节流（LZ77）和面向字段的压缩编码（如 RLE、Dictionary 等），还会介绍熵编码的相关内容（如 Huffman、FSE、ANS 等），以及它们在实际系统中的应用。&lt;/p&gt;&#xA;&lt;/blockquote&gt;&lt;h2 id=&#34;1-一笔交易&#34;&gt;1. 一笔交易&lt;a class=&#34;anchor&#34; href=&#34;#1-%e4%b8%80%e7%ac%94%e4%ba%a4%e6%98%93&#34;&gt;#&lt;/a&gt;&lt;/h2&gt;&#xA;&lt;p&gt;服务端里，数据很少只是安静地躺在磁盘上。它会经过网卡、内存、页缓存、磁盘、对象存储和跨机房链路；一次查询、一条日志、一批消息，真正花钱和拖慢速度的往往是这些路径上反复搬运的字节。压缩的直接收益，就是让这些字节变少。原本要从对象存储读 1 GiB，压缩后只读 200 MiB，哪怕后面要解压，端到端延迟也可能下降，因为系统绕开了更慢的 I/O。&lt;/p&gt;&#xA;&lt;figure&gt;&#xA;  &lt;img&#xA;    src=&#34;https://www.yeqown.xyz/images/server-database-compression-algorithms/server-compression-tradeoff-path.svg&#34;&#xA;    alt=&#34;工厂流水线隐喻：传送带上方展示压缩前后的箱子尺寸变化，传送带下方依次是装箱压缩、网卡、内存页缓存、磁盘对象存储、跨机房链路和使用解压，第三个绿色工人表示额外成本&#34;&#xA;    style=&#34;display: block; width: 100%; height: auto;&#34;&#xA;  /&gt;&#xA;  &lt;figcaption&gt;箱子变小，装箱和使用多付成本&lt;/figcaption&gt;&#xA;&lt;/figure&gt;&#xA;&lt;p&gt;但压缩不是白送的。写入端要花 CPU 找重复、建字典、计算概率或改写字段表示；读取端要解压，还可能要把编码后的值恢复成执行引擎能处理的类型。压缩块本身也会带来工作内存和读放大：只想读一小段数据时，可能必须先把整个块取回来再解压。&lt;/p&gt;&#xA;&lt;p&gt;所以压缩选型本质上是在换资源。在线接口可能愿意用一点 CPU 换更少的公网流量，但如果机器本来就卡在 CPU 上，压缩会把延迟打高；冷数据归档通常能接受更慢的压缩速度，因为少占对象存储更重要；数据库的 flush、compaction 或 merge 路径可以把一部分成本挪到后台，而前台查询更关心解压速度和最小读取块。&lt;/p&gt;&#xA;&lt;p&gt;这也是服务端压缩和普通归档文件压缩的区别。归档文件常常只关心最终体积，服务端还要看压缩发生在写入前台、后台任务、网络传输还是读取路径上。算法没有脱离场景的“最好”，只有在某条数据路径里是否划算。&lt;/p&gt;&#xA;&lt;h2 id=&#34;2-不只一层&#34;&gt;2. 不只一层&lt;a class=&#34;anchor&#34; href=&#34;#2-%e4%b8%8d%e5%8f%aa%e4%b8%80%e5%b1%82&#34;&gt;#&lt;/a&gt;&lt;/h2&gt;&#xA;&lt;p&gt;今天的压缩已经渗进了服务端的很多基础路径。HTTP 响应会压缩，RPC 和消息批次可能压缩，日志落盘和对象存储归档会压缩，数据库页、SST block、列式文件和时间序列 chunk 也经常压缩。很多时候它不是一个单独功能，而是数据格式、存储引擎和执行引擎的一部分。&lt;/p&gt;&#xA;&lt;p&gt;这也让问题变复杂了。调用方说“用 LZ4”或“用 Zstd”，通常只说到了通用字节流 Codec；数据库和分析文件格式还会在它前面做一层数据感知编码。通用 Codec 只看到字节，不知道其中八个字节是一条时间戳，也不知道一列字符串只有几十个不同值。数据库知道 schema、列边界、排序键和空值信息，就可以先把这些确定的信息写进更紧凑的表示，再交给通用 Codec 继续处理字节级重复。&lt;/p&gt;&#xA;&lt;p&gt;在数据库中，一条典型但并非所有系统都完整采用的链路是：写入时，原始列先经过 RLE、Dictionary、Delta、Prefix Compression 之类的编码，形成整数 ID、差值、偏移或前缀/后缀记录；系统再把编码后的流组织成页或块，交给 LZ4、Snappy、gzip 或 Zstandard。读取时先定位并解压相关块，再按算子需要解码字段值；字典过滤、RLE 扫描等操作也可能直接作用于编码表示，不必先还原整列。&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

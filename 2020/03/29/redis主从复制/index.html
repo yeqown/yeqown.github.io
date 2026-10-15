@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en-US" dir="ltr">
+<head>
+  <!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Redis 如何通过复制流、replication ID、offset 和 replication backlog 维持副本数据，并为 Sentinel 与 Redis Cluster 的故障转移提供基础。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#2e3440">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2020/03/29/redis%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="Redis 复制：从全量同步到 PSYNC2">
+  <meta property="og:description" content="Redis 如何通过复制流、replication ID、offset 和 replication backlog 维持副本数据，并为 Sentinel 与 Redis Cluster 的故障转移提供基础。">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2020-03-29T09:45:19+08:00">
+    <meta property="article:modified_time" content="2026-08-03T00:00:00+08:00">
+    <meta property="article:tag" content="Redis">
+    <meta property="article:tag" content="主从复制">
+    <meta property="article:tag" content="PSYNC">
+    <meta property="article:tag" content="高可用">
+
+
+  <meta itemprop="name" content="Redis 复制：从全量同步到 PSYNC2">
+  <meta itemprop="description" content="Redis 如何通过复制流、replication ID、offset 和 replication backlog 维持副本数据，并为 Sentinel 与 Redis Cluster 的故障转移提供基础。">
+  <meta itemprop="datePublished" content="2020-03-29T09:45:19+08:00">
+  <meta itemprop="dateModified" content="2026-08-03T00:00:00+08:00">
+  <meta itemprop="wordCount" content="959">
+  <meta itemprop="keywords" content="Redis,主从复制,PSYNC,高可用">
+
+<title>Redis 复制：从全量同步到 PSYNC2 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2020/03/29/redis%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6/">
+<link rel="stylesheet" href="/book.min.c40223b1e1a5ffa9f6a0fe48797821424561eff06762ee5c75071bda9d009477.css" integrity="sha256-xAIjseGl/6n2oP5IeXghQkVh7/BnYu5cdQcb2p0AlHc=" crossorigin="anonymous">
+
+
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.99ce27de54629b271c4277001097f0e183ca5eaedb015e65542b29ce1c90db30.js" integrity="sha256-mc4n3lRimyccQncAEJfw4YPKXq7bAV5lVCspzhyQ2zA=" crossorigin="anonymous"></script>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade">
+  
+</head>
+<body dir="ltr" class="book-kind-page book-type-posts">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    
+<aside class="book-menu">
+  <div class="book-menu-content">
+    
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input id="book-search-input" type="text" 
+    placeholder="Search"
+    aria-label="Search"
+    maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+<ul><li><a href="/categories">Categories</a></li><li><a href="/tags">Tags</a></li></ul>
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">
+      About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+
+  </div>
+</aside>
+ 
+
+    <div class="book-page">
+      <header class="book-header hidden">
+        
+<div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/icons/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>Redis 复制：从全量同步到 PSYNC2</h3>
+
+  <label for="toc-control">
+    
+    <img src="/icons/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-为什么需要复制">1. 为什么需要复制</a></li>
+    <li><a href="#2-redis-如何复制数据">2. Redis 如何复制数据</a>
+      <ul>
+        <li><a href="#21-部分重同步恢复断开的链路">2.1 部分重同步：恢复断开的链路</a></li>
+        <li><a href="#22-全量同步首次复制或无法部分重同步">2.2 全量同步：首次复制或无法部分重同步</a></li>
+        <li><a href="#23-复制流正常运行时的持续同步">2.3 复制流：正常运行时的持续同步</a></li>
+      </ul>
+    </li>
+    <li><a href="#3-复制机制的演进">3. 复制机制的演进</a>
+      <ul>
+        <li><a href="#redis-28-以前sync-全量同步">Redis 2.8 以前：<code>SYNC</code> 全量同步</a></li>
+        <li><a href="#redis-28psync1-与断线续传">Redis 2.8：PSYNC1 与断线续传</a></li>
+        <li><a href="#redis-40psync2-如何补上-psync1-的缺口">Redis 4.0：PSYNC2 如何补上 PSYNC1 的缺口</a></li>
+      </ul>
+    </li>
+    <li><a href="#4-扩展与生产实践">4. 扩展与生产实践</a>
+      <ul>
+        <li><a href="#41-sentinel-与-redis-cluster">4.1 Sentinel 与 Redis Cluster</a></li>
+        <li><a href="#42-复制相关配置">4.2 复制相关配置</a></li>
+        <li><a href="#43-最小验证实验">4.3 最小验证实验</a></li>
+        <li><a href="#44-常见问题与排查">4.4 常见问题与排查</a></li>
+      </ul>
+    </li>
+    <li><a href="#参考资料">参考资料</a></li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h1>
+    Redis 复制：从全量同步到 PSYNC2
+  </h1>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/icons/calendar.svg" class="book-icon" alt="Calendar" />
+    <span>March 29, 2020</span>
+    
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Database/">Database</a>, 
+      <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F/">分布式</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Redis/">Redis</a>, 
+      <a href="/tags/%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6/">主从复制</a>, 
+      <a href="/tags/PSYNC/">PSYNC</a>, 
+      <a href="/tags/%E9%AB%98%E5%8F%AF%E7%94%A8/">高可用</a>
+  </div>
+  
+
+
+  <div class="book-post-content markdown-inner"><p>Sentinel 可以在主节点故障后提升副本，Redis Cluster 也能在故障分片内完成主从切换。两种架构都要求副本在故障发生前持续接收主节点的数据，并尽量跟上写入进度。Redis 复制负责维护这份可供接管的数据。</p>
+<p>但副本不是主节点的实时镜像。Redis 默认异步传输复制流，主节点响应写入时，副本可能还没有收到对应的数据。链路断开后能否从断点接着传，则取决于 replication ID、offset 和 replication backlog 能否证明双方共享同一段复制历史。本文从部分重同步、全量同步和正常复制流三个阶段入手，解释这些机制为什么存在，以及它们在恢复成本、内存占用、写入延迟和数据一致性之间的取舍。</p>
+<h2 id="1-为什么需要复制">1. 为什么需要复制<a class="anchor" href="#1-%e4%b8%ba%e4%bb%80%e4%b9%88%e9%9c%80%e8%a6%81%e5%a4%8d%e5%88%b6">#</a></h2>
+<p>对现代在线业务来说，只运行一个 Redis 进程、把所有数据和流量压在一台机器上，已经很难满足生产要求。节点故障时，业务需要尽快恢复服务；当数据量或访问量超过单机上限时，又需要把容量和请求分散到多个节点。前者是高可用问题，后者是大数据量和高并发带来的水平扩展问题。RDB 和 AOF 只能帮助单个节点重启后恢复数据，不能让另一个在线节点立即接管服务，也不能突破单机容量。</p>
+<p>Redis 提供了两种典型部署架构来处理这两类问题。Sentinel 面向不分片的数据集，监控主节点和副本，并在主节点故障后自动选择副本接管，主要解决高可用。Redis Cluster 把键空间分到多个主节点，用分片扩展容量和写入吞吐；每个分片内仍配置副本，因此 Cluster 也包含分片级的高可用。</p>
+<p>两种架构都依赖复制。无论是 Sentinel 提升副本，还是 Cluster 在故障分片内切换主节点，候选节点都必须预先拥有尽可能新的数据。复制持续把主节点的数据变更传给副本，是两种架构的共同基础。它不负责故障判断、选主或客户端路由，这些职责分别由 Sentinel、Cluster 和客户端完成。</p>
+<h2 id="2-redis-如何复制数据">2. Redis 如何复制数据<a class="anchor" href="#2-redis-%e5%a6%82%e4%bd%95%e5%a4%8d%e5%88%b6%e6%95%b0%e6%8d%ae">#</a></h2>
+<p>Redis 复制的发起方是副本。它连接主节点，完成 <code>PING</code>、可选的身份认证和 <code>REPLCONF</code> 信息交换，然后发送 <code>PSYNC &lt;replication-id&gt; &lt;offset&gt;</code> 申报自己已有的复制历史和进度。主节点维护 replication ID、当前 offset 和 replication backlog，并根据副本的请求选择同步方式。</p>
+<p>复制链路按主节点的处理顺序分为三段：副本断线恢复时，先尝试部分重同步；第一次复制或部分重同步条件不成立时，改为全量同步；副本追上主节点后，进入持续传输复制流的正常运行状态。这三段并不是每次都依次执行：部分重同步成功后会跳过全量同步，直接回到复制流。两种同步方式都通向同一个结果：先让副本追上，再持续传递新的数据变更。</p>
+<blockquote class='book-hint '>
+<p><strong>为什么复制进度要同时使用 replication ID 和 offset？</strong></p>
+<p><code>offset</code> 只是某一条复制历史中的字节位置，并不是全局版本号。两条不同的复制历史即使 offset 相同，对应的数据也可能完全不同。replication ID 用来标识复制历史，offset 用来标识这条历史中的位置；主节点只有同时核对二者，才能判断副本缺少的是不是自己仍可补发的那段字节。</p>
+<p>PSYNC2 还保留 secondary replication ID 和它的有效 offset 边界，使新主节点在故障转移后仍能识别上一条复制历史。Redis 只保存当前和上一代两个 ID，不追踪完整的历史树，元数据大小固定，判断也简单。连续多次角色切换或缺失数据已经离开 backlog 时，仍需全量同步。</p>
+</blockquote><h3 id="21-部分重同步恢复断开的链路">2.1 部分重同步：恢复断开的链路<a class="anchor" href="#21-%e9%83%a8%e5%88%86%e9%87%8d%e5%90%8c%e6%ad%a5%e6%81%a2%e5%a4%8d%e6%96%ad%e5%bc%80%e7%9a%84%e9%93%be%e8%b7%af">#</a></h3>
+<p>复制连接断开后，副本保留上次的 replication ID 和下一个需要的 offset，重连时用 <code>PSYNC &lt;replication-id&gt; &lt;offset&gt;</code> 提交给主节点。主节点按 PSYNC2 规则检查两个条件：</p>
+<ol>
+<li>请求 ID 等于 current replication ID，或者等于 secondary replication ID 且请求 offset <code>&lt;= second_repl_offset</code>。</li>
+<li>从请求 offset 到主节点当前 offset 的所有字节仍完整保存在 replication backlog 中。</li>
+</ol>
+<p>两个条件都满足时，主节点返回 <code>+CONTINUE</code>，从请求 offset 开始发送缺失字节；副本按顺序应用这段复制流，追上后直接进入第 2.3 节的持续复制。任一条件不满足时，主节点都无法证明副本可以从现有历史继续，因此返回 <code>+FULLRESYNC</code>，转入第 2.2 节。当前 ID 不一致并不必然触发全量同步，PSYNC2 保留的 secondary ID 是故障转移后仍可能接续旧历史的例外。</p>
+<p>图中的副本已处理到 10086，下一个需要的字节是 10087，因此请求为 <code>PSYNC repl-A 10087</code>。主节点当前 offset 是 10119，需要传输 10087 到 10119，共 <code>10119 - 10087 + 1 = 33</code> 字节。backlog 从 10085 开始，完整覆盖这段范围；只要 ID 条件也成立，主节点就能执行部分重同步。</p>
+<figure>
+  <img
+    src="/images/redis-master-slave-replication/psync2-resynchronization.svg"
+    alt="副本携带 replication ID 和 offset 重连，主节点先识别复制历史，再检查缺失区间是否仍在 replication backlog，从而选择部分重同步或全量同步"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>复制历史可识别且缺失数据仍在 backlog 时，主节点才返回 +CONTINUE。</figcaption>
+</figure>
+<p>backlog 是定长环形缓冲区，而不是无限增长或持久化的命令日志。这样可以把内存消耗限制在固定范围内，并按 offset 回放连续字节；取舍是只能覆盖最近一段历史。写入速度越高、断线越久，旧字节就越容易被覆盖。backlog 容量除以每秒复制流量，大致就是它能容纳的断线时长。</p>
+<h3 id="22-全量同步首次复制或无法部分重同步">2.2 全量同步：首次复制或无法部分重同步<a class="anchor" href="#22-%e5%85%a8%e9%87%8f%e5%90%8c%e6%ad%a5%e9%a6%96%e6%ac%a1%e5%a4%8d%e5%88%b6%e6%88%96%e6%97%a0%e6%b3%95%e9%83%a8%e5%88%86%e9%87%8d%e5%90%8c%e6%ad%a5">#</a></h3>
+<p>副本第一次连接主节点时没有可复用的复制历史，通常发送 <code>PSYNC ? -1</code>。断线重连时，如果 replication ID 无法识别，或者缺失字节已离开 backlog，部分重同步也无法执行。这两类情况下，主节点返回 <code>+FULLRESYNC &lt;replication-id&gt; &lt;offset&gt;</code>，用全量同步为副本重新建立数据基线。</p>
+<p>全量同步按下面的顺序执行：</p>
+<ol>
+<li>主节点生成某一时刻的 RDB 快照，同时缓冲快照生成和传输期间的新写入。</li>
+<li>主节点把 RDB 发送给副本；副本接收并加载快照，替换自己的旧数据集。</li>
+<li>主节点发送同步期间缓冲的增量数据，副本应用完成后进入持续复制。</li>
+</ol>
+<p>“快照 + 增量”给副本提供了确定的数据基线，主节点不必永久保存从启动以来的所有写命令，生成快照期间也可以继续处理请求。代价是 fork、写时复制、增量缓冲和 RDB 传输会消耗 CPU、内存、磁盘及网络资源；副本加载 RDB 时也可能暂时不能提供服务。diskless replication 可以省去主节点的中间 RDB 文件，但不会消除生成快照、占用网络和副本加载数据集的成本。</p>
+<h3 id="23-复制流正常运行时的持续同步">2.3 复制流：正常运行时的持续同步<a class="anchor" href="#23-%e5%a4%8d%e5%88%b6%e6%b5%81%e6%ad%a3%e5%b8%b8%e8%bf%90%e8%a1%8c%e6%97%b6%e7%9a%84%e6%8c%81%e7%bb%ad%e5%90%8c%e6%ad%a5">#</a></h3>
+<p>副本追上后，主节点把客户端写入以及过期、淘汰产生的数据变更编码进复制流，持续发送给副本，并按复制流的字节数推进 offset。即使当前没有副本连接，offset 也会继续增长；启用 backlog 时，主节点还会保留一段近期复制流，供断线后回放。</p>
+<p>副本顺序应用复制流，并定期 ACK 自己已处理的 offset。复制链路没有固定的结束步骤：只有取消复制关系时，副本才会停止跟随；连接断开则重新回到第 2.1 节的同步判定。RDB、AOF 是否开启以及采用什么刷盘策略，是各节点自己的持久化配置，与复制 ACK 的时机相互独立。</p>
+<p>这种异步设计避免了让每次写入的延迟和可用性都受副本影响。主节点在本地执行完命令后即可响应客户端，副本在后台追赶；慢副本或短时断线不会立即阻塞主节点写入。取舍是“客户端收到成功”与“副本已经收到数据”之间存在时间窗口。</p>
+<figure>
+  <img
+    src="/images/redis-master-slave-replication/steady-state-replication.svg"
+    alt="客户端写入主节点后先收到成功响应，主节点随后把复制流发送给副本，副本处理后再返回 ACK，说明 Redis 默认复制是异步的"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>主节点通常不会等待副本 ACK 再响应客户端。</figcaption>
+</figure>
+<p>最典型的数据丢失过程是：主节点执行写入并向客户端返回 <code>OK</code>；副本还没收到对应的复制流；主节点随即故障；故障转移把尚未包含该写入的副本提升为主节点。客户端已经收到成功响应，这次写入却不在新主节点上。</p>
+<p>副本读取也可能滞后。需要 read-after-write 或 write-after-read 语义时，客户端路由或业务协议必须明确哪些请求固定访问主节点，或者如何携带版本并等待副本追上。仅把读取切到副本无法提供这些保证。</p>
+<p><code>WAIT numreplicas timeout</code> 把更强的复制确认变成按请求选择，而不是让所有写入都承担副本延迟。它等待指定数量的副本 ACK 当前连接此前写入所到达的 offset，直到数量满足或超时，然后返回已经到达该 offset 的副本数。写入与 <code>WAIT</code> 必须在同一条客户端连接中执行。要求的副本越多、等待时间越长，数据落在故障窗口内的概率越小，写入延迟和超时概率也越高。</p>
+<p>超时不会回滚已经接受的写入。<code>WAIT</code> 也不会把 Redis 变成 CP 系统或强一致系统，更不代表数据已经在副本磁盘上持久化；它确认的是复制 ACK，不是持久化完成。</p>
+<p><code>min-replicas-to-write</code> 与 <code>min-replicas-max-lag</code> 提供另一层约束：当近期通信正常的副本数量不足时，主节点拒绝写入，以限制主节点孤立或复制严重落后期间的风险。这个门槛不逐条等待写入持久化，仍不能保证故障转移零丢失。</p>
+<h2 id="3-复制机制的演进">3. 复制机制的演进<a class="anchor" href="#3-%e5%a4%8d%e5%88%b6%e6%9c%ba%e5%88%b6%e7%9a%84%e6%bc%94%e8%bf%9b">#</a></h2>
+<p>Redis 复制的演进可以按 <code>FULLSYNC → PSYNC1 → PSYNC2</code> 理解。后两代方案没有取代全量同步，而是逐步扩大“可以避免全量同步”的范围；部分重同步条件不满足时，当前 Redis 仍会回到全量同步。这里的 <code>FULLSYNC</code> 只是对全量同步阶段的简称，不是 Redis 命令名。</p>
+<h3 id="redis-28-以前sync-全量同步">Redis 2.8 以前：<code>SYNC</code> 全量同步<a class="anchor" href="#redis-28-%e4%bb%a5%e5%89%8dsync-%e5%85%a8%e9%87%8f%e5%90%8c%e6%ad%a5">#</a></h3>
+<p>Redis 2.8 以前，副本使用 <code>SYNC</code> 请求同步，协议不支持断点续传。Redis 2.8 及以后改用 <code>PSYNC</code>；副本第一次连接，或者无法部分重同步时，主节点返回 <code>+FULLRESYNC &lt;replication-id&gt; &lt;offset&gt;</code>。两者使用的协议不同，但都需要传输完整数据集。</p>
+<p>这种方案不需要信任副本的旧数据，总能重新建立一份确定的数据基线。但是复制成本由整个数据集的大小决定，与副本实际缺少多少数据无关。</p>
+<p>这一阶段的问题在断线后尤其明显。即使副本只丢失了几秒的数据，<code>SYNC</code> 也要重新生成和传输完整 RDB。网络不稳定时，反复断开就会触发反复全量同步，恢复时间被数据集大小决定，主节点还可能周期性出现延迟和内存抖动。diskless replication 可以省去中间 RDB 文件的磁盘 I/O，但不会消除生成快照、占用网络和加载数据集的成本。</p>
+<h3 id="redis-28psync1-与断线续传">Redis 2.8：PSYNC1 与断线续传<a class="anchor" href="#redis-28psync1-%e4%b8%8e%e6%96%ad%e7%ba%bf%e7%bb%ad%e4%bc%a0">#</a></h3>
+<p>Redis 2.8 引入第一版 <code>PSYNC</code>，后来通常称为 PSYNC1。为了支持断点续传，主节点维护持续递增的复制 offset，并在内存中增加一个定长的 replication backlog buffer（复制积压缓冲区），保存最近发送过的复制流；副本则记住主节点的运行 ID 和自己下一步需要的 offset。</p>
+<p>副本重连时发送 <code>PSYNC &lt;run-id&gt; &lt;offset&gt;</code>。如果运行 ID 仍指向同一个主节点，而且请求 offset 之后的字节还在 backlog 中，主节点返回 <code>+CONTINUE</code>，只补发断线期间缺失的部分；否则返回 <code>+FULLRESYNC</code>。短暂网络抖动不再必然触发 RDB 生成和全量传输，复制恢复的耗时从“数据集有多大”缩小为“断线期间漏了多少数据”。</p>
+<p>PSYNC1 的 <code>runid</code> 绑定 Redis 进程，副本记住的上游 <code>runid</code> 和 offset 也只保存在内存中。因此，以下场景都会让原有 <code>runid</code> 对断点续传失效：</p>
+<ol>
+<li><strong>主节点进程重启。</strong> 无论是崩溃后拉起、主机重启还是滚动升级，新进程都会生成新 <code>runid</code>。即使数据从同一份 RDB 或 AOF 恢复，副本携带的旧 <code>runid</code> 也无法匹配。</li>
+<li><strong>副本进程重启。</strong> PSYNC1 没有把上游 <code>runid</code> 和已处理 offset 写入 RDB。副本重启后即使恢复了数据集，也没有可用的复制进度，只能请求全量同步。</li>
+<li><strong>副本被提升为主节点。</strong> Sentinel 或 Cluster 故障转移，以及手工执行 <code>SLAVEOF NO ONE</code>，都会让提升后的节点以自己的 <code>runid</code> 提供复制。其他副本仍携带旧主节点的 <code>runid</code>，新主节点无法用 PSYNC1 证明自己继承了这段历史。</li>
+<li><strong>副本改挂到另一个主节点。</strong> 执行 <code>SLAVEOF &lt;host&gt; &lt;port&gt;</code> 切换上游时，副本只能保留当前一份上游复制状态。之后再切回原主节点，无法依靠已被丢弃的 <code>runid</code> 和 offset 续传。</li>
+</ol>
+<p>这里的“丢失”不一定是字符串从内存中消失，也包括新主节点不再能用它识别共同历史。普通网络断开不会改变 <code>runid</code>；backlog 被覆盖也不会改变 <code>runid</code>，只是让所需 offset 离开了可回放窗口。两者都会使部分重同步失败，原因不同。</p>
+<p>PSYNC1 因此仍有两类边界：复制历史因 <code>runid</code> 变化或状态丢失而无法识别，或者历史虽然可识别，但定长 backlog 已经覆盖所需字节。任一情况都会回到全量同步。</p>
+<h3 id="redis-40psync2-如何补上-psync1-的缺口">Redis 4.0：PSYNC2 如何补上 PSYNC1 的缺口<a class="anchor" href="#redis-40psync2-%e5%a6%82%e4%bd%95%e8%a1%a5%e4%b8%8a-psync1-%e7%9a%84%e7%bc%ba%e5%8f%a3">#</a></h3>
+<p>PSYNC2 延续了 PSYNC1 的 backlog 判断，针对上面前三种“复制历史无法识别”的情况增加了三条恢复路径。</p>
+<h4 id="改进一主节点重启后仍能识别旧历史">改进一：主节点重启后仍能识别旧历史<a class="anchor" href="#%e6%94%b9%e8%bf%9b%e4%b8%80%e4%b8%bb%e8%8a%82%e7%82%b9%e9%87%8d%e5%90%af%e5%90%8e%e4%bb%8d%e8%83%bd%e8%af%86%e5%88%ab%e6%97%a7%e5%8e%86%e5%8f%b2">#</a></h4>
+<p>PSYNC1 的 <code>runid</code> 随进程重启而改变，副本因此无法用旧 ID 续传。主节点有有效 backlog 时，PSYNC2 会把 replication ID 和 offset 写入 RDB。主节点从这份 RDB 重启后，把旧 ID 作为 secondary ID，并生成新的 current ID。停机前已处理到该 offset 的副本可以携带旧 ID 请求续传；新 backlog 仍覆盖请求位置时，便可部分重同步。</p>
+<h4 id="改进二副本重启后恢复复制进度">改进二：副本重启后恢复复制进度<a class="anchor" href="#%e6%94%b9%e8%bf%9b%e4%ba%8c%e5%89%af%e6%9c%ac%e9%87%8d%e5%90%af%e5%90%8e%e6%81%a2%e5%a4%8d%e5%a4%8d%e5%88%b6%e8%bf%9b%e5%ba%a6">#</a></h4>
+<p>PSYNC1 只在内存中保存副本的上游 ID 和 offset，重启后这些进度全部丢失。PSYNC2 把它们写入 RDB；副本从包含这些元数据的 RDB 恢复时，可以继续用旧 ID 和 offset 发起 <code>PSYNC</code>。主节点仍能识别该 ID，且缺失字节还在 backlog 中时，副本无需重新加载整份数据。仅使用 AOF 恢复的副本不能依赖这条路径。</p>
+<h4 id="改进三故障转移后接续旧历史">改进三：故障转移后接续旧历史<a class="anchor" href="#%e6%94%b9%e8%bf%9b%e4%b8%89%e6%95%85%e9%9a%9c%e8%bd%ac%e7%a7%bb%e5%90%8e%e6%8e%a5%e7%bb%ad%e6%97%a7%e5%8e%86%e5%8f%b2">#</a></h4>
+<p>PSYNC1 只识别一个 <code>runid</code>。副本被提升后，其他副本所持的旧 ID 会与新主节点不匹配。PSYNC2 改为同时保留 current replication ID 和 secondary replication ID。<code>INFO replication</code> 中的对应字段如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>master_replid:a4e75e65a3bc4ea6860557e54919a0349585fedd
+</span></span><span style="display:flex;"><span>master_replid2:0000000000000000000000000000000000000000
+</span></span><span style="display:flex;"><span>master_repl_offset:906412
+</span></span><span style="display:flex;"><span>second_repl_offset:-1</span></span></code></pre></div><p><code>master_replid</code> 和 <code>master_repl_offset</code> 表示当前历史的 ID 和字节位置；<code>master_replid2</code> 和 <code>second_repl_offset</code> 保存上一代 ID 及其有效上界。示例中的全零 ID 和 <code>-1</code> 表示当前没有有效的上一代历史。</p>
+<p>如果副本复制到 <code>906412</code> 后被提升，Redis 会生成新的 current ID，把 <code>a4e75e...</code> 移入 <code>master_replid2</code>，并将 <code>second_repl_offset</code> 设为 <code>906413</code>。这里加一，是因为 <code>PSYNC</code> 传入的是下一个尚未收到的字节位置。其他副本可以用 <code>PSYNC a4e75e... 906413</code> 请求续传；backlog 仍覆盖所需字节时，新主节点返回 <code>+CONTINUE</code>。新 current ID 则用来区分故障转移后的新分支，避免与网络分区中继续写入的旧主节点混淆。</p>
+<p>PSYNC2 仍只保存一代旧 ID，backlog 也仍是有限窗口。连续多次角色切换、在多个上游之间来回改挂、请求 offset 越界，或者缺失字节已被 backlog 覆盖时，仍需全量同步。</p>
+<h2 id="4-扩展与生产实践">4. 扩展与生产实践<a class="anchor" href="#4-%e6%89%a9%e5%b1%95%e4%b8%8e%e7%94%9f%e4%ba%a7%e5%ae%9e%e8%b7%b5">#</a></h2>
+<h3 id="41-sentinel-与-redis-cluster">4.1 Sentinel 与 Redis Cluster<a class="anchor" href="#41-sentinel-%e4%b8%8e-redis-cluster">#</a></h3>
+<p>单条复制连接只能反映主节点与某个副本之间的通信状态，无法在网络分区时独立判断哪一侧应该继续提供写服务。故障检测、选主和客户端改路需要结合整个拓扑及多个节点的判断，因此 Redis 把这些职责交给 Sentinel 或 Cluster。代价是系统增加了协调节点、拓扑状态和客户端适配，不再只是启动一个主节点和一个副本。</p>
+<p>Sentinel 不做分片，每个数据节点保存完整数据集。它监控主节点和副本节点，在确认故障后选出一个符合晋升条件的副本并提升为新主节点；客户端需要支持 Sentinel 服务发现，在故障转移后重新获取主节点地址并重连。</p>
+<p>Redis Cluster 把键空间划分为 16384 个 hash slots。每个分片有自己的主节点和副本，故障转移发生在分片内部：图中只有故障的分片 B 切换到它的副本，其他分片不随之切换。cluster-aware 客户端负责 slot 路由，并处理 <code>MOVED</code> 和 <code>ASK</code> 重定向。</p>
+<table>
+  <thead>
+      <tr>
+          <th>维度</th>
+          <th>Sentinel</th>
+          <th>Redis Cluster</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>数据布局</td>
+          <td>不分片，每个数据节点保存完整数据集</td>
+          <td>16384 个 hash slots 分布到多个分片</td>
+      </tr>
+      <tr>
+          <td>故障转移范围</td>
+          <td>整个数据集的主节点与副本节点之间切换</td>
+          <td>只在故障分片内提升副本</td>
+      </tr>
+      <tr>
+          <td>扩展能力</td>
+          <td>可扩展读吞吐，单份数据仍受单节点容量约束</td>
+          <td>通过分片扩展容量与吞吐</td>
+      </tr>
+      <tr>
+          <td>客户端行为</td>
+          <td>使用 Sentinel 感知的发现与重连</td>
+          <td>感知 slot 路由，处理 <code>MOVED</code> 与 <code>ASK</code></td>
+      </tr>
+      <tr>
+          <td>异步复制风险</td>
+          <td>已确认写入仍可能落在复制延迟窗口内</td>
+          <td>每个分片都保留相同的复制延迟窗口</td>
+      </tr>
+  </tbody>
+</table>
+<figure>
+  <img
+    src="/images/redis-master-slave-replication/sentinel-vs-cluster.svg"
+    alt="Sentinel 在保存完整数据集的主从节点间切换主节点，Redis Cluster 则只在发生故障的哈希槽分片内提升副本"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>Sentinel 解决单数据集故障转移；Redis Cluster 同时提供分片与分片级故障转移。</figcaption>
+</figure>
+<p>两种方案都沿用异步复制。它们缩短故障后的恢复时间，却没有消除主节点已响应、副本尚未收到数据的窗口；图中的切换关系也不表示故障转移可以做到零数据丢失。</p>
+<h3 id="42-复制相关配置">4.2 复制相关配置<a class="anchor" href="#42-%e5%a4%8d%e5%88%b6%e7%9b%b8%e5%85%b3%e9%85%8d%e7%bd%ae">#</a></h3>
+<p>这一节涉及的参数先全部列在下面，行尾注释只说明直接作用。这些 <code>#</code> 注释用于阅读，不能原样放进 <code>redis.conf</code>；实际配置时需要删掉行尾说明，或改成独立注释行。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>replicaof 10.0.0.10 6379       # 指定副本要连接的主节点地址和端口
+</span></span><span style="display:flex;"><span>masteruser replication         # 使用主节点上专用于复制的 ACL 用户
+</span></span><span style="display:flex;"><span>masterauth &lt;password&gt;          # 提供复制用户的密码，避免使用默认用户凭据
+</span></span><span style="display:flex;"><span>replica-read-only yes          # 拒绝客户端直接写副本，避免产生不会回传的本地数据
+</span></span><span style="display:flex;"><span>replica-serve-stale-data yes   # 主从断线或同步期间，仍允许副本返回可能过期的数据
+</span></span><span style="display:flex;"><span>replica-priority 100           # 供 Sentinel 选择晋升节点；设为 0 表示不参与晋升
+</span></span><span style="display:flex;"><span>repl-ping-replica-period 10    # 主节点每 10 秒向副本发送一次心跳
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>repl-backlog-size 256mb        # 在主节点内存中保留 256 MB 近期复制流
+</span></span><span style="display:flex;"><span>repl-backlog-ttl 3600          # 无副本连接 3600 秒后释放 backlog
+</span></span><span style="display:flex;"><span>repl-diskless-sync yes         # 全量同步时直接通过 socket 发送 RDB
+</span></span><span style="display:flex;"><span>repl-diskless-sync-delay 5     # 延迟 5 秒启动传输，等待更多副本加入
+</span></span><span style="display:flex;"><span>repl-diskless-load disabled    # 副本先将 RDB 落盘，再加载到内存
+</span></span><span style="display:flex;"><span>repl-timeout 60                # 60 秒内无有效复制 I/O 则认为链路超时
+</span></span><span style="display:flex;"><span>client-output-buffer-limit replica 256mb 64mb 60 # 限制慢副本占用的主节点输出缓冲
+</span></span><span style="display:flex;"><span>min-replicas-to-write 1        # 至少有 1 个合格副本时才接受写入
+</span></span><span style="display:flex;"><span>min-replicas-max-lag 10        # 最近 10 秒内有 ACK 的副本才计为合格</span></span></code></pre></div><p>下面只展开会直接改变全量同步成本、部分重同步窗口或写入可用性的参数。<code>参数</code> 列表示配置值的格式，具体可选值与默认值应以当前 Redis 版本的 <code>redis.conf</code> 为准。</p>
+<table>
+  <thead>
+      <tr>
+          <th>配置项</th>
+          <th>参数</th>
+          <th>作用说明</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>repl-backlog-size</code></td>
+          <td><code>&lt;size&gt;</code></td>
+          <td>设置主节点为部分重同步保留的近期复制流容量。容量越大，可覆盖的断线窗口越长，但会占用更多内存。</td>
+      </tr>
+      <tr>
+          <td><code>repl-backlog-ttl</code></td>
+          <td><code>&lt;ttl&gt;</code></td>
+          <td>设置最后一个副本断开后继续保留 backlog 的秒数；<code>0</code> 表示不因空闲而释放。</td>
+      </tr>
+      <tr>
+          <td><code>repl-diskless-sync</code></td>
+          <td><code>&lt;yes|no&gt;</code></td>
+          <td>控制全量同步时是否由主节点通过 socket 直接发送 RDB，从而省去中间 RDB 文件的磁盘 I/O。</td>
+      </tr>
+      <tr>
+          <td><code>repl-diskless-sync-delay</code></td>
+          <td><code>&lt;seconds&gt;</code></td>
+          <td>设置 diskless sync 开始前的等待时间，以便让多个副本共享同一次快照；等待也会推迟首个副本开始同步。</td>
+      </tr>
+      <tr>
+          <td><code>repl-diskless-load</code></td>
+          <td><code>&lt;disabled|on-empty-db|swapdb&gt;</code></td>
+          <td>控制副本如何加载无盘传输的 RDB，在落盘加载、空库时直接加载和使用临时数据库加载后切换之间选择。</td>
+      </tr>
+      <tr>
+          <td><code>repl-timeout</code></td>
+          <td><code>&lt;seconds&gt;</code></td>
+          <td>设置复制链路无有效 I/O 时的超时时间；过短可能把网络抖动或事件循环停顿误判为断线。</td>
+      </tr>
+      <tr>
+          <td><code>client-output-buffer-limit</code></td>
+          <td><code>replica &lt;hard-limit&gt; &lt;soft-limit&gt; &lt;soft-seconds&gt;</code></td>
+          <td>限制主节点为慢副本积压的输出缓冲：触及硬上限，或持续超过软上限达到指定时间时，主节点会断开该副本。</td>
+      </tr>
+      <tr>
+          <td><code>min-replicas-to-write</code></td>
+          <td><code>&lt;count&gt;</code></td>
+          <td>设置主节点接受写入所需的最少合格副本数；副本不足时拒绝写入，以可用性换取更小的数据丢失窗口。</td>
+      </tr>
+      <tr>
+          <td><code>min-replicas-max-lag</code></td>
+          <td><code>&lt;seconds&gt;</code></td>
+          <td>设置副本被计为合格副本所允许的最大 ACK 间隔，与 <code>min-replicas-to-write</code> 配合使用。</td>
+      </tr>
+  </tbody>
+</table>
+<p>先用 <code>CONFIG GET</code> 确认实例的运行值，再核对当前版本的 <code>redis.conf</code>。部分参数支持 <code>CONFIG SET</code>，但运行时修改不等于配置已经持久化；重启后的值仍取决于配置文件或托管平台。</p>
+<h3 id="43-最小验证实验">4.3 最小验证实验<a class="anchor" href="#43-%e6%9c%80%e5%b0%8f%e9%aa%8c%e8%af%81%e5%ae%9e%e9%aa%8c">#</a></h3>
+<p>下面的端口只是示例，命令只能对可随时丢弃的本地 Redis 实例执行。假设 <code>6379</code> 和 <code>6380</code> 上已经各有一个正在运行的实例，分别进入两个端口的 <code>redis-cli</code>。先让 <code>6380</code> 成为 <code>6379</code> 的副本，再查看双方复制状态：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>127.0.0.1:6380&gt; REPLICAOF 127.0.0.1 6379
+</span></span><span style="display:flex;"><span>127.0.0.1:6380&gt; INFO replication
+</span></span><span style="display:flex;"><span>127.0.0.1:6379&gt; INFO replication
+</span></span><span style="display:flex;"><span>127.0.0.1:6379&gt; INFO stats</span></span></code></pre></div><p>重点查看 <code>master_replid</code>、<code>master_repl_offset</code>、副本 offset，以及 <code>repl_backlog_active</code>、<code>repl_backlog_first_byte_offset</code> 和 <code>repl_backlog_histlen</code>。<code>INFO stats</code> 中的 <code>sync_full</code>、<code>sync_partial_ok</code> 和 <code>sync_partial_err</code> 可以帮助判断最近走过哪种同步路径。首次建立关系通常能在日志中看到全量同步。</p>
+<p>调整 backlog 后，可以主动断开主节点上的复制连接，观察副本自动重连：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>127.0.0.1:6379&gt; CONFIG SET repl-backlog-size 16mb
+</span></span><span style="display:flex;"><span>127.0.0.1:6379&gt; CLIENT KILL TYPE REPLICA</span></span></code></pre></div><p><code>CLIENT KILL</code> 只切断连接，不会取消复制配置。副本会自动重连。若 ID 仍可识别且缺失范围尚在 backlog，日志会记录部分重同步；覆盖范围不足时则会出现全量同步。测试不同 backlog 大小后，应同时比较日志、offset、backlog 范围和 <code>INFO stats</code> 计数，不能只看连接最终是否恢复。</p>
+<p><code>WAIT</code> 要在写入所用的同一交互连接中验证：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>127.0.0.1:6379&gt; SET replication:demo 1
+</span></span><span style="display:flex;"><span>OK
+</span></span><span style="display:flex;"><span>127.0.0.1:6379&gt; WAIT 1 1000
+</span></span><span style="display:flex;"><span>(integer) 1</span></span></code></pre></div><p>这里的整数表示在 1000 毫秒内，有一个副本 ACK 了这条连接此前写入对应的 offset。如果没有健康副本，结果可能是 <code>0</code>；示例中的 <code>(integer) 1</code> 不是任何环境下都必然得到的输出。</p>
+<h3 id="44-常见问题与排查">4.4 常见问题与排查<a class="anchor" href="#44-%e5%b8%b8%e8%a7%81%e9%97%ae%e9%a2%98%e4%b8%8e%e6%8e%92%e6%9f%a5">#</a></h3>
+<ol>
+<li>
+<p><strong>副本无法建立复制连接</strong></p>
+<p><strong>现象：</strong> 副本的 <code>master_link_status</code> 长时间为 <code>down</code>，日志中没有进入全量同步或部分重同步，<code>master_last_io_seconds_ago</code> 也持续增大。</p>
+<p><strong>排查流程：</strong></p>
+<ol>
+<li>在副本执行 <code>INFO replication</code>，确认主节点地址、端口和当前同步状态。</li>
+<li>检查副本到主节点的网络、端口、TLS 配置和防火墙规则。</li>
+<li>对照两端 ACL，核对 <code>masteruser</code>、<code>masterauth</code> 以及复制用户所需权限。</li>
+<li>如果握手已经完成但同步中断，再检查主节点日志、全量同步耗时和 <code>repl-timeout</code>。</li>
+</ol>
+</li>
+<li>
+<p><strong>频繁发生全量同步</strong></p>
+<p><strong>现象：</strong> <code>INFO stats</code> 中的 <code>sync_full</code> 或 <code>sync_partial_err</code> 持续增加，日志反复出现 <code>+FULLRESYNC</code>，同步期间延迟和资源占用明显升高。</p>
+<p><strong>排查流程：</strong></p>
+<ol>
+<li>比较副本请求的 replication ID 与主节点的当前 ID、secondary ID，先确认复制历史能否识别。</li>
+<li>对照请求 offset、<code>repl_backlog_first_byte_offset</code> 和 <code>repl_backlog_histlen</code>，确认缺失区间是否仍在 backlog。</li>
+<li>如果 backlog 覆盖不足，根据高峰复制流量和可容忍断线时长重新估算 <code>repl-backlog-size</code>。</li>
+<li>如果历史与覆盖范围都正常，继续检查网络中断、进程重启、主节点切换和输出缓冲超限。</li>
+</ol>
+</li>
+<li>
+<p><strong>复制延迟持续增大</strong></p>
+<p><strong>现象：</strong> 主节点与副本的 offset 差值不断扩大，副本读到旧数据，连接却仍显示为 <code>up</code>。</p>
+<p><strong>排查流程：</strong></p>
+<ol>
+<li>连续采样两端 offset，确认差值是短时波动还是持续增长。</li>
+<li>查看 <code>CLIENT LIST</code> 和 Redis 日志，确认副本连接的输出缓冲是否在增长。</li>
+<li>比较主节点写入速率与复制网络吞吐，再检查副本 CPU 是否繁忙、命令执行是否过慢。</li>
+<li>如果正在全量同步，继续观察磁盘吞吐、内存峰值和 RDB 加载耗时。</li>
+</ol>
+</li>
+<li>
+<p><strong>副本反复断开并自动恢复</strong></p>
+<p><strong>现象：</strong> <code>master_link_status</code> 在 <code>up</code> 与 <code>down</code> 之间切换，日志连续出现重连，严重时还会从部分重同步退化为全量同步。</p>
+<p><strong>排查流程：</strong></p>
+<ol>
+<li>用两端日志对齐断开时间，先区分网络重置、超时、进程暂停和主节点主动关闭连接。</li>
+<li>确认 <code>repl-timeout</code> 大于 <code>repl-ping-replica-period</code>，并检查是否存在长时间事件循环阻塞。</li>
+<li>查看副本输出缓冲是否触及 <code>client-output-buffer-limit replica</code>。</li>
+<li>找到副本消费不动的原因后再调整超时或缓冲；直接放宽限制可能只会推迟内存耗尽。</li>
+</ol>
+</li>
+<li>
+<p><strong>故障转移后出现已确认写入丢失</strong></p>
+<p><strong>现象：</strong> 客户端已经收到写入成功响应，但新主节点上找不到这次写入。</p>
+<p><strong>排查流程：</strong></p>
+<ol>
+<li>还原客户端收到响应、原主节点故障和副本晋升的时间顺序。</li>
+<li>确认目标副本在故障前处理到哪个 offset，判断写入是否进入该副本。</li>
+<li>检查业务是否在同一连接执行 <code>WAIT</code>，以及 <code>WAIT</code> 实际返回的副本数。</li>
+<li>核对 <code>min-replicas-to-write</code>、<code>min-replicas-max-lag</code> 和各节点的 RDB/AOF 策略。复制 ACK 不等于数据已经落盘。</li>
+</ol>
+</li>
+</ol>
+<p>Redis 用快照建立数据基线，用复制流持续传递变更；replication ID 识别历史，offset 标记进度，定长 backlog 保存可补发的近期字节。主节点不必保存无限历史，也不用默认等待副本，内存占用和写入延迟因此有了明确边界；代价是全量同步的资源开销，以及异步复制留下的数据窗口。Sentinel 与 Redis Cluster 在此之上完成不同范围的故障转移，但数据丢失上限仍由复制延迟、确认策略和各节点持久化配置共同决定。</p>
+<h2 id="参考资料">参考资料<a class="anchor" href="#%e5%8f%82%e8%80%83%e8%b5%84%e6%96%99">#</a></h2>
+<ul>
+<li><a href="https://redis.io/docs/latest/operate/oss_and_stack/management/replication/">Redis replication</a></li>
+<li><a href="https://redis.io/docs/latest/operate/oss_and_stack/management/config/">Redis configuration</a></li>
+<li><a href="https://redis.io/docs/latest/commands/psync/">PSYNC</a></li>
+<li><a href="https://redis.io/docs/latest/commands/wait/">WAIT</a></li>
+<li><a href="https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/">Redis Sentinel</a></li>
+<li><a href="https://redis.io/docs/latest/operate/oss_and_stack/reference/cluster-spec/">Redis Cluster specification</a></li>
+<li>黄健宏《Redis 设计与实现》：仅用于了解早期 <code>SYNC</code> 与 Redis 2.8 的 PSYNC1，属于历史资料。</li>
+</ul>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "redis-master-slave-replication", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+  <div>
+  
+    <a href="/2020/04/02/%E6%B6%88%E6%81%AF%E6%8E%A8%E9%80%81%E6%9E%B6%E6%9E%84-based-GOIM/" class="flex align-center">
+      <img src="/icons/backward.svg" class="book-icon" alt="Backward" />
+      <span>消息推送架构-Based-GOIM</span>
+    </a>
+  
+  </div>
+  <div>
+  
+    <a href="/2020/01/21/gin%E6%BA%90%E7%A0%81%E7%AE%80%E8%A6%81%E5%88%86%E6%9E%90/" class="flex align-center">
+      <span>Gin源码简要分析</span>
+      <img src="/icons/forward.svg" class="book-icon" alt="Forward" />
+    </a>
+  
+  </div>
+</div>
+ 
+        
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+        
+<div class="flex align-center" style="margin-top: 1rem;">
+  <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+    访问量<span id="busuanzi_value_site_pv"></span>
+  </span>
+  <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+    访客数<span id="busuanzi_value_site_uv"></span>
+  </span>
+</div>
+        
+  
+ 
+        
+  
+  
+    <script>(function(){document.querySelectorAll("pre:has(code)").forEach(e=>{e.addEventListener("click",e.focus),e.addEventListener("copy",function(t){if(t.preventDefault(),navigator.clipboard){const t=window.getSelection().toString()||e.textContent;navigator.clipboard.writeText(t)}})})})()</script>
+  
+
+      </footer>
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+  
+  <aside class="book-toc">
+    <div class="book-toc-content">
+      
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-为什么需要复制">1. 为什么需要复制</a></li>
+    <li><a href="#2-redis-如何复制数据">2. Redis 如何复制数据</a>
+      <ul>
+        <li><a href="#21-部分重同步恢复断开的链路">2.1 部分重同步：恢复断开的链路</a></li>
+        <li><a href="#22-全量同步首次复制或无法部分重同步">2.2 全量同步：首次复制或无法部分重同步</a></li>
+        <li><a href="#23-复制流正常运行时的持续同步">2.3 复制流：正常运行时的持续同步</a></li>
+      </ul>
+    </li>
+    <li><a href="#3-复制机制的演进">3. 复制机制的演进</a>
+      <ul>
+        <li><a href="#redis-28-以前sync-全量同步">Redis 2.8 以前：<code>SYNC</code> 全量同步</a></li>
+        <li><a href="#redis-28psync1-与断线续传">Redis 2.8：PSYNC1 与断线续传</a></li>
+        <li><a href="#redis-40psync2-如何补上-psync1-的缺口">Redis 4.0：PSYNC2 如何补上 PSYNC1 的缺口</a></li>
+      </ul>
+    </li>
+    <li><a href="#4-扩展与生产实践">4. 扩展与生产实践</a>
+      <ul>
+        <li><a href="#41-sentinel-与-redis-cluster">4.1 Sentinel 与 Redis Cluster</a></li>
+        <li><a href="#42-复制相关配置">4.2 复制相关配置</a></li>
+        <li><a href="#43-最小验证实验">4.3 最小验证实验</a></li>
+        <li><a href="#44-常见问题与排查">4.4 常见问题与排查</a></li>
+      </ul>
+    </li>
+    <li><a href="#参考资料">参考资料</a></li>
+  </ul>
+</nav>
+
+
+
+    </div>
+  </aside>
+  
+ 
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

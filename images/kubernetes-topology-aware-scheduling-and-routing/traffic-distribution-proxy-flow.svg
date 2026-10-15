@@ -1,0 +1,82 @@
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
+  <!-- svg-source:manual -->
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#1f2937"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#16a34a"/>
+    </marker>
+    <marker id="arrow-muted" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+    </marker>
+    <filter id="paper" x="-2%" y="-2%" width="104%" height="104%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" result="noise"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer><feFuncA type="table" tableValues="0 0.025"/></feComponentTransfer>
+      <feBlend in="SourceGraphic" mode="multiply"/>
+    </filter>
+  </defs>
+  <rect x="0" y="0" width="1280" height="720" fill="#ffffff"/>
+  <g filter="url(#paper)">
+    <text x="640" y="56" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="34" font-weight="700" fill="#1f2937"><tspan x="640" dy="0">trafficDistribution 生效时机与 kube-proxy 转发路径</tspan></text>
+
+    <text x="226" y="112" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="23" font-weight="700" fill="#2563eb"><tspan x="226" dy="0">控制面：Service 变化后生成 hints</tspan></text>
+    <rect x="55" y="146" width="206" height="122" rx="20" fill="#dbeafe" stroke="#2563eb" stroke-width="2.6"/>
+    <text x="158" y="186" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="27" font-weight="700" fill="#1f2937"><tspan x="158" dy="0">Service</tspan></text>
+    <text x="158" y="219" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="19" font-weight="500" fill="#334155"><tspan x="158" dy="0">trafficDistribution:</tspan></text>
+    <text x="158" y="244" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="17" font-weight="700" fill="#2563eb"><tspan x="158" dy="0">PreferSameZone</tspan></text>
+    <text x="158" y="264" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="17" font-weight="700" fill="#2563eb"><tspan x="158" dy="0">PreferSameNode</tspan></text>
+
+    <rect x="326" y="142" width="230" height="120" rx="20" fill="#dcfce7" stroke="#16a34a" stroke-width="2.6"/>
+    <text x="441" y="181" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="26" font-weight="700" fill="#1f2937"><tspan x="441" dy="0">EndpointSlice</tspan></text>
+    <text x="441" y="213" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="23" font-weight="700" fill="#1f2937"><tspan x="441" dy="0">controller</tspan></text>
+    <text x="441" y="246" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="18" font-weight="500" fill="#334155"><tspan x="441" dy="0">reconcile 时写 hints</tspan></text>
+
+    <rect x="624" y="146" width="230" height="112" rx="20" fill="#fef3c7" stroke="#d97706" stroke-width="2.6"/>
+    <text x="739" y="186" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="26" font-weight="700" fill="#1f2937"><tspan x="739" dy="0">EndpointSlice</tspan></text>
+    <text x="739" y="222" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="19" font-weight="500" fill="#334155"><tspan x="739" dy="0">endpoints[*].hints</tspan></text>
+    <text x="739" y="248" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="17" font-weight="500" fill="#334155"><tspan x="739" dy="0">ForZones / ForNodes</tspan></text>
+
+    <line x1="261" y1="202" x2="326" y2="202" stroke="#1f2937" stroke-width="3" stroke-linecap="round" marker-end="url(#arrow)"/>
+    <line x1="556" y1="202" x2="624" y2="202" stroke="#1f2937" stroke-width="3" stroke-linecap="round" marker-end="url(#arrow)"/>
+
+    <text x="989" y="112" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="23" font-weight="700" fill="#d97706"><tspan x="989" dy="0">每个节点：kube-proxy 同步规则</tspan></text>
+    <rect x="902" y="146" width="302" height="112" rx="20" fill="#f8fafc" stroke="#1f2937" stroke-width="2.6"/>
+    <text x="1053" y="186" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="25" font-weight="700" fill="#1f2937"><tspan x="1053" dy="0">kube-proxy@node-a</tspan></text>
+    <text x="1053" y="222" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="19" font-weight="500" fill="#334155"><tspan x="1053" dy="0">watch EndpointSlice</tspan></text>
+    <text x="1053" y="248" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="18" font-weight="500" fill="#334155"><tspan x="1053" dy="0">读取本节点 zone/node</tspan></text>
+    <line x1="854" y1="202" x2="902" y2="202" stroke="#1f2937" stroke-width="3" stroke-linecap="round" marker-end="url(#arrow)"/>
+
+    <rect x="134" y="352" width="245" height="178" rx="22" fill="#f0fdf4" stroke="#16a34a" stroke-width="2.6"/>
+    <text x="256" y="390" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="25" font-weight="700" fill="#1f2937"><tspan x="256" dy="0">CategorizeEndpoints</tspan></text>
+    <text x="256" y="428" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="18" font-weight="500" fill="#334155"><tspan x="256" dy="0">1. same-node 命中?</tspan></text>
+    <text x="256" y="458" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="18" font-weight="500" fill="#334155"><tspan x="256" dy="0">2. same-zone 命中?</tspan></text>
+    <text x="256" y="488" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="18" font-weight="500" fill="#334155"><tspan x="256" dy="0">3. 否则使用全集群</tspan></text>
+    <text x="256" y="517" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="17" font-weight="700" fill="#16a34a"><tspan x="256" dy="0">fallback 在选模式时发生</tspan></text>
+
+    <rect x="472" y="344" width="244" height="194" rx="22" fill="#e0f2fe" stroke="#0284c7" stroke-width="2.6"/>
+    <text x="594" y="382" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="26" font-weight="700" fill="#1f2937"><tspan x="594" dy="0">生成转发规则</tspan></text>
+    <text x="594" y="420" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="19" font-weight="500" fill="#334155"><tspan x="594" dy="0">iptables / nftables / IPVS</tspan></text>
+    <text x="594" y="456" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="18" font-weight="500" fill="#334155"><tspan x="594" dy="0">只写入当前节点</tspan></text>
+    <text x="594" y="484" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="18" font-weight="500" fill="#334155"><tspan x="594" dy="0">应该使用的 Endpoint 集合</tspan></text>
+
+    <rect x="812" y="344" width="334" height="194" rx="22" fill="#fff7ed" stroke="#ea580c" stroke-width="2.6"/>
+    <text x="979" y="382" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="26" font-weight="700" fill="#1f2937"><tspan x="979" dy="0">数据面请求路径</tspan></text>
+    <text x="979" y="420" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="19" font-weight="500" fill="#334155"><tspan x="979" dy="0">Client Pod → Service ClusterIP</tspan></text>
+    <text x="979" y="456" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="19" font-weight="500" fill="#334155"><tspan x="979" dy="0">节点本地转发规则</tspan></text>
+    <text x="979" y="490" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="18" font-weight="700" fill="#ea580c"><tspan x="979" dy="0">same-node / same-zone</tspan></text>
+    <text x="979" y="518" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="18" font-weight="700" fill="#ea580c"><tspan x="979" dy="0">cluster-wide Endpoint</tspan></text>
+
+    <path d="M 1053 258 C 1010 322, 645 335, 379 397" fill="none" stroke="#64748b" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="8 8" marker-end="url(#arrow-muted)"/>
+    <line x1="379" y1="441" x2="472" y2="441" stroke="#1f2937" stroke-width="3" stroke-linecap="round" marker-end="url(#arrow)"/>
+    <line x1="716" y1="441" x2="812" y2="441" stroke="#1f2937" stroke-width="3" stroke-linecap="round" marker-end="url(#arrow)"/>
+
+    <path d="M 244 530 C 250 612, 860 638, 1000 538" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" marker-end="url(#arrow-green)"/>
+    <text x="650" y="692" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="21" font-weight="700" fill="#16a34a"><tspan x="650" dy="0">PreferSameNode → PreferSameZone → 全集群 Endpoint</tspan></text>
+
+    <rect x="55" y="582" width="340" height="80" rx="18" fill="#f8fafc" stroke="#94a3b8" stroke-width="2.4"/>
+    <text x="225" y="615" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="19" font-weight="700" fill="#1f2937"><tspan x="225" dy="0">没有 hints 或没有命中时</tspan></text>
+    <text x="225" y="642" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="19" font-weight="700" fill="#1f2937"><tspan x="225" dy="0">不丢请求，回退</tspan></text>
+  </g>
+</svg>

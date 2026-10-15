@@ -1,0 +1,136 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="810" viewBox="0 0 1440 810" role="img" aria-labelledby="title desc">
+  <title id="title">跨集群复制与查询故障切换</title>
+  <desc id="desc">日志源经 vlagent 复制到两套独立的 VictoriaLogs 集群，查询入口通过负载均衡和故障切换选择一个健康集群。</desc>
+  <defs>
+    <style>
+      text { font-family: Inter, "PingFang SC", "Microsoft YaHei", Helvetica, Arial, sans-serif; letter-spacing: 0; }
+      .title { font-size: 40px; font-weight: 700; fill: #1F2937; }
+      .subtitle { font-size: 20px; fill: #64748B; }
+      .section { font-size: 24px; font-weight: 700; fill: #4E7CF6; }
+      .cluster-title { font-size: 24px; font-weight: 700; fill: #1F2937; }
+      .label { font-size: 21px; font-weight: 600; fill: #1F2937; text-anchor: middle; }
+      .small { font-size: 18px; fill: #374151; }
+      .note { font-size: 18px; fill: #64748B; }
+      .query-note { font-size: 18px; font-weight: 600; fill: #8C72D6; text-anchor: middle; }
+      .outline { stroke: #1F2937; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+      .data-flow { fill: none; stroke: #4E7CF6; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow-blue); }
+      .query-flow { fill: none; stroke: #8C72D6; stroke-width: 2.5; stroke-dasharray: 9 8; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow-purple); }
+      .internal-query { fill: none; stroke: #8C72D6; stroke-width: 2.5; stroke-linecap: round; marker-end: url(#arrow-purple); }
+    </style>
+    <marker id="arrow-blue" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto-start-reverse">
+      <path d="M1 1 11 6 1 11Z" fill="#4E7CF6"/>
+    </marker>
+    <marker id="arrow-purple" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M1 1 11 6 1 11Z" fill="#8C72D6"/>
+    </marker>
+  </defs>
+
+  <rect width="1440" height="810" fill="#FFFFFF"/>
+
+  <text class="title" x="72" y="82">跨集群复制与查询故障切换</text>
+  <text class="subtitle" x="72" y="126">副本边界是集群；基础集群内部不复制 vlstorage 数据</text>
+  <text class="section" x="72" y="202">写入路径</text>
+
+  <rect x="520" y="160" width="660" height="250" rx="18" fill="#F8FAFC" stroke="#55B685" stroke-width="2" stroke-dasharray="9 8"/>
+  <text class="cluster-title" x="548" y="203">VictoriaLogs 集群 A</text>
+  <circle cx="1016" cy="192" r="8" fill="#55B685" stroke="#1F2937"/>
+  <text class="small" x="1034" y="198">独立故障域</text>
+
+  <rect x="520" y="450" width="660" height="250" rx="18" fill="#F8FAFC" stroke="#55B685" stroke-width="2" stroke-dasharray="9 8"/>
+  <text class="cluster-title" x="548" y="493">VictoriaLogs 集群 B</text>
+  <circle cx="1016" cy="482" r="8" fill="#55B685" stroke="#1F2937"/>
+  <text class="small" x="1034" y="488">独立故障域</text>
+
+  <g aria-label="日志源">
+    <rect x="72" y="270" width="160" height="128" rx="16" fill="#EAF7F0" class="outline"/>
+    <path d="M98 350 110 338 122 344 136 324 148 316" fill="none" stroke="#55B685" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M102 362v-8h10v8h10v-14h10v14h10v-18" fill="none" stroke="#1F2937" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="156" y="304" width="48" height="70" rx="8" fill="#FFFFFF" class="outline"/>
+    <path d="M166 322h28v16h-28v16h22" fill="none" stroke="#55B685" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <text class="label" x="152" y="430">日志源</text>
+  </g>
+
+  <g aria-label="vlagent">
+    <rect x="282" y="270" width="160" height="128" rx="16" fill="#F1EDFB" class="outline"/>
+    <circle cx="362" cy="334" r="36" fill="#FFFFFF" stroke="#8C72D6" stroke-width="2"/>
+    <path d="M342 316h14v17h12v17h14" fill="none" stroke="#8C72D6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="342" cy="316" r="5" fill="#4E7CF6" stroke="#1F2937"/>
+    <circle cx="356" cy="333" r="5" fill="#2AB7CA" stroke="#1F2937"/>
+    <circle cx="368" cy="350" r="5" fill="#8C72D6" stroke="#1F2937"/>
+    <text class="label" x="362" y="430">vlagent</text>
+  </g>
+
+  <path class="data-flow" d="M232 334H282"/>
+  <path class="data-flow" d="M442 334H570"/>
+  <path class="data-flow" d="M442 350H490V624H570"/>
+  <rect x="448" y="296" width="104" height="30" rx="6" fill="#FFFFFF"/>
+  <text x="500" y="317" font-size="18" font-weight="600" fill="#4E7CF6" text-anchor="middle">复制写入</text>
+
+  <g aria-label="集群 A 内部">
+    <rect x="570" y="268" width="120" height="88" rx="12" fill="#EAF0FF" class="outline"/>
+    <text class="label" x="630" y="320">vlinsert</text>
+
+    <rect x="790" y="248" width="130" height="128" rx="14" fill="#EAF7F0" class="outline"/>
+    <rect x="819" y="278" width="72" height="40" fill="#EAF7F0" class="outline"/>
+    <ellipse cx="855" cy="278" rx="36" ry="12" fill="#55B685" class="outline"/>
+    <ellipse cx="855" cy="318" rx="36" ry="12" fill="#55B685" class="outline"/>
+    <text x="855" y="359" font-size="18" font-weight="600" fill="#1F2937" text-anchor="middle">vlstorage ×3</text>
+
+    <rect x="1010" y="268" width="120" height="88" rx="12" fill="#F1EDFB" class="outline"/>
+    <text class="label" x="1070" y="320">vlselect</text>
+
+    <path class="data-flow" d="M690 294H790"/>
+    <path class="internal-query" d="M1010 338H920"/>
+    <text x="740" y="283" font-size="16" fill="#4E7CF6" text-anchor="middle">路由</text>
+    <text x="965" y="330" font-size="16" fill="#8C72D6" text-anchor="middle">扇出查询</text>
+  </g>
+
+  <g aria-label="集群 B 内部">
+    <rect x="570" y="558" width="120" height="88" rx="12" fill="#EAF0FF" class="outline"/>
+    <text class="label" x="630" y="610">vlinsert</text>
+
+    <rect x="790" y="538" width="130" height="128" rx="14" fill="#EAF7F0" class="outline"/>
+    <rect x="819" y="568" width="72" height="40" fill="#EAF7F0" class="outline"/>
+    <ellipse cx="855" cy="568" rx="36" ry="12" fill="#55B685" class="outline"/>
+    <ellipse cx="855" cy="608" rx="36" ry="12" fill="#55B685" class="outline"/>
+    <text x="855" y="649" font-size="18" font-weight="600" fill="#1F2937" text-anchor="middle">vlstorage ×3</text>
+
+    <rect x="1010" y="558" width="120" height="88" rx="12" fill="#F1EDFB" class="outline"/>
+    <text class="label" x="1070" y="610">vlselect</text>
+
+    <path class="data-flow" d="M690 584H790"/>
+    <path class="internal-query" d="M1010 628H920"/>
+    <text x="740" y="573" font-size="16" fill="#4E7CF6" text-anchor="middle">路由</text>
+    <text x="965" y="620" font-size="16" fill="#8C72D6" text-anchor="middle">扇出查询</text>
+  </g>
+
+  <g aria-label="查询客户端">
+    <rect x="1220" y="170" width="160" height="128" rx="16" fill="#EAF0FF" class="outline"/>
+    <rect x="1268" y="206" width="64" height="48" rx="8" fill="#FFFFFF" class="outline"/>
+    <path d="M1268 220h64" fill="none" stroke="#1F2937" stroke-width="2"/>
+    <circle cx="1278" cy="213" r="3" fill="#4E7CF6"/>
+    <circle cx="1288" cy="213" r="3" fill="#2AB7CA"/>
+    <text class="label" x="1300" y="322">查询客户端</text>
+  </g>
+
+  <g aria-label="负载均衡与故障切换">
+    <rect x="1220" y="412" width="160" height="128" rx="16" fill="#FFF6DD" class="outline"/>
+    <circle cx="1269" cy="447" r="11" fill="#F2BD4D" class="outline"/>
+    <circle cx="1331" cy="447" r="11" fill="#F2BD4D" class="outline"/>
+    <circle cx="1300" cy="493" r="11" fill="#8C72D6" class="outline"/>
+    <path d="M1269 458v12h62v-12M1300 470v12" fill="none" stroke="#1F2937" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <text class="label" x="1300" y="568">负载均衡</text>
+    <text class="small" x="1300" y="595" text-anchor="middle">故障切换</text>
+  </g>
+
+  <path class="internal-query" d="M1300 333V412"/>
+  <path class="query-flow" d="M1220 450H1200V312H1130"/>
+  <path class="query-flow" d="M1220 500H1200V602H1130"/>
+  <text class="query-note" x="1300" y="642">每次选择一个</text>
+  <text class="query-note" x="1300" y="667">健康集群</text>
+
+  <line x1="72" y1="744" x2="126" y2="744" stroke="#4E7CF6" stroke-width="4" stroke-linecap="round"/>
+  <text class="note" x="140" y="750">日志写入</text>
+  <line x1="300" y1="744" x2="354" y2="744" stroke="#8C72D6" stroke-width="2.5" stroke-dasharray="9 8" stroke-linecap="round"/>
+  <text class="note" x="368" y="750">查询选择 / 控制</text>
+</svg>

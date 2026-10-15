@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
+  <defs>
+    <style>
+      .bg { fill: #0b1020; }
+      .grid { stroke: rgba(148,163,184,.12); stroke-width: 1; }
+      .title { fill: #e2e8f0; font: 700 24px 'JetBrains Mono', monospace; }
+      .sub { fill: #94a3b8; font: 12px 'JetBrains Mono', monospace; }
+      .box { stroke-width: 2; rx: 14; ry: 14; }
+      .label { fill: #e2e8f0; font: 600 15px 'JetBrains Mono', monospace; }
+      .small { fill: #cbd5e1; font: 12px 'JetBrains Mono', monospace; }
+      .tiny { fill: #94a3b8; font: 11px 'JetBrains Mono', monospace; }
+      .arrow { stroke: #94a3b8; stroke-width: 2.2; fill: none; marker-end: url(#arrow); }
+      .line { stroke: #64748b; stroke-width: 1.5; fill: none; }
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L8,3 z" fill="#94a3b8"/>
+    </marker>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(148,163,184,.10)" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="760"/>
+  <rect x="0" y="0" width="1200" height="760" fill="url(#grid)"/>
+
+  <text class="title" x="60" y="52">Part 内部结构</text>
+  <text class="sub" x="60" y="76">wide part：每列独立存储，配合 mark / primary.idx / minmax.idx 做裁剪</text>
+
+  <rect x="60" y="120" width="1080" height="560" rx="18" ry="18" fill="rgba(15,23,42,.9)" stroke="#334155"/>
+
+  <rect x="100" y="160" width="210" height="480" class="box" fill="rgba(6,78,59,.35)" stroke="#34d399"/>
+  <text class="label" x="205" y="195" text-anchor="middle">part-xxx</text>
+  <text class="tiny" x="205" y="220" text-anchor="middle">不可变数据分片</text>
+
+  <rect x="360" y="160" width="250" height="180" class="box" fill="rgba(76,29,149,.35)" stroke="#a78bfa"/>
+  <text class="label" x="485" y="195" text-anchor="middle">列数据</text>
+  <text class="small" x="485" y="225" text-anchor="middle">id.bin</text>
+  <text class="small" x="485" y="250" text-anchor="middle">name.bin</text>
+  <text class="small" x="485" y="275" text-anchor="middle">age.bin</text>
+  <text class="tiny" x="485" y="308" text-anchor="middle">连续存储，便于压缩和按列读取</text>
+
+  <rect x="360" y="370" width="250" height="120" class="box" fill="rgba(120,53,15,.28)" stroke="#fbbf24"/>
+  <text class="label" x="485" y="404" text-anchor="middle">mark 文件</text>
+  <text class="small" x="485" y="430" text-anchor="middle">id.mark / name.mark / age.mark</text>
+  <text class="tiny" x="485" y="454" text-anchor="middle">granule → blockOffset / rowOffset / rows</text>
+
+  <rect x="360" y="520" width="250" height="120" class="box" fill="rgba(8,51,68,.35)" stroke="#22d3ee"/>
+  <text class="label" x="485" y="554" text-anchor="middle">索引文件</text>
+  <text class="small" x="485" y="580" text-anchor="middle">primary.idx / minmax.idx</text>
+  <text class="tiny" x="485" y="604" text-anchor="middle">先过滤 part，再过滤 granule</text>
+
+  <line class="arrow" x1="310" y1="210" x2="360" y2="210"/>
+  <line class="arrow" x1="310" y1="420" x2="360" y2="420"/>
+  <line class="arrow" x1="310" y1="570" x2="360" y2="570"/>
+
+  <rect x="680" y="160" width="380" height="180" class="box" fill="rgba(6,78,59,.20)" stroke="#34d399"/>
+  <text class="label" x="870" y="195" text-anchor="middle">granule 0 / granule 1 / granule 2</text>
+  <text class="small" x="870" y="228" text-anchor="middle">每个 granule 默认 8192 行</text>
+  <text class="small" x="870" y="254" text-anchor="middle">查询不会直接扫完整列文件</text>
+  <text class="small" x="870" y="280" text-anchor="middle">而是通过 mark 定位到目标块</text>
+  <text class="small" x="870" y="306" text-anchor="middle">再按主键范围决定是否继续读取</text>
+
+  <rect x="680" y="380" width="380" height="120" class="box" fill="rgba(120,53,15,.20)" stroke="#fbbf24"/>
+  <text class="label" x="870" y="414" text-anchor="middle">索引粒度</text>
+  <text class="small" x="870" y="440" text-anchor="middle">Partition → Part → Granule → Row</text>
+  <text class="tiny" x="870" y="466" text-anchor="middle">粒度越往后越精确，代价也越高</text>
+
+  <rect x="680" y="530" width="380" height="100" class="box" fill="rgba(136,19,55,.18)" stroke="#fb7185"/>
+  <text class="label" x="870" y="564" text-anchor="middle">不可变写入</text>
+  <text class="small" x="870" y="590" text-anchor="middle">写入新 part，旧 part 保留，之后靠 merge 回收</text>
+
+  <line class="arrow" x1="610" y1="240" x2="680" y2="240"/>
+  <line class="arrow" x1="610" y1="430" x2="680" y2="430"/>
+  <line class="arrow" x1="610" y1="580" x2="680" y2="580"/>
+
+</svg>

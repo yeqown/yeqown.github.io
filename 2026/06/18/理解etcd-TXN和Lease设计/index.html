@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en-US" dir="ltr">
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="本文从分布式锁、服务注册和 Leader 选举等场景出发，理解 etcd TXN 与 Lease 的设计：TXN 负责条件原子更新，Lease 负责状态生命周期，两者组合形成分布式协调能力。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#2e3440">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="http://localhost:1313/2026/06/18/%E7%90%86%E8%A7%A3etcd-TXN%E5%92%8CLease%E8%AE%BE%E8%AE%A1/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="理解 etcd TXN 和 Lease 设计">
+  <meta property="og:description" content="本文从分布式锁、服务注册和 Leader 选举等场景出发，理解 etcd TXN 与 Lease 的设计：TXN 负责条件原子更新，Lease 负责状态生命周期，两者组合形成分布式协调能力。">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2026-06-18T00:00:00+08:00">
+    <meta property="article:modified_time" content="2026-06-18T00:00:00+08:00">
+    <meta property="article:tag" content="Etcd">
+    <meta property="article:tag" content="分布式">
+    <meta property="article:tag" content="MVCC">
+    <meta property="article:tag" content="Lease">
+
+
+  <meta itemprop="name" content="理解 etcd TXN 和 Lease 设计">
+  <meta itemprop="description" content="本文从分布式锁、服务注册和 Leader 选举等场景出发，理解 etcd TXN 与 Lease 的设计：TXN 负责条件原子更新，Lease 负责状态生命周期，两者组合形成分布式协调能力。">
+  <meta itemprop="datePublished" content="2026-06-18T00:00:00+08:00">
+  <meta itemprop="dateModified" content="2026-06-18T00:00:00+08:00">
+  <meta itemprop="wordCount" content="361">
+  <meta itemprop="keywords" content="Etcd,分布式,MVCC,Lease">
+
+<title>理解 etcd TXN 和 Lease 设计 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="http://localhost:1313/2026/06/18/%E7%90%86%E8%A7%A3etcd-TXN%E5%92%8CLease%E8%AE%BE%E8%AE%A1/">
+<link rel="stylesheet" href="/book.min.c40223b1e1a5ffa9f6a0fe48797821424561eff06762ee5c75071bda9d009477.css" integrity="sha256-xAIjseGl/6n2oP5IeXghQkVh7/BnYu5cdQcb2p0AlHc=" crossorigin="anonymous">
+
+
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.fc083b83b9c4c02bba9524180d581c3d841404ca11ea39e9d9517080828fb23a.js" integrity="sha256-/Ag7g7nEwCu6lSQYDVgcPYQUBMoR6jnp2VFwgIKPsjo=" crossorigin="anonymous"></script>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade">
+  
+</head>
+<body dir="ltr" class="book-kind-page book-type-posts">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    
+<aside class="book-menu">
+  <div class="book-menu-content">
+    
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input id="book-search-input" type="text" 
+    placeholder="Search"
+    aria-label="Search"
+    maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+<ul><li><a href="/categories">Categories</a></li><li><a href="/tags">Tags</a></li></ul>
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">
+      About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+
+  </div>
+</aside>
+ 
+
+    <div class="book-page">
+      <header class="book-header hidden">
+        
+<div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/icons/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>理解 etcd TXN 和 Lease 设计</h3>
+
+  <label for="toc-control">
+    
+    <img src="/icons/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-为什么需要-txn--lease">1. 为什么需要 TXN + Lease</a></li>
+    <li><a href="#2-txn把判断和写入放进同一个原子操作">2. TXN：把判断和写入放进同一个原子操作</a></li>
+    <li><a href="#3-lease给-key-绑定生命周期">3. Lease：给 key 绑定生命周期</a></li>
+    <li><a href="#4-txn--lease-的组合模式">4. TXN + Lease 的组合模式</a>
+      <ul>
+        <li><a href="#41-服务注册">4.1 服务注册</a></li>
+        <li><a href="#42-分布式锁">4.2 分布式锁</a></li>
+        <li><a href="#43-leader-选举">4.3 Leader 选举</a></li>
+      </ul>
+    </li>
+    <li><a href="#5-边界与误区">5. 边界与误区</a></li>
+    <li><a href="#6-后续阅读清单">6. 后续阅读清单</a></li>
+    <li><a href="#小结">小结</a></li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h1>
+    理解 etcd TXN 和 Lease 设计
+  </h1>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/icons/calendar.svg" class="book-icon" alt="Calendar" />
+    <span>June 18, 2026</span>
+    
+      <span class="book-draft-badge">DRAFT</span>
+    
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F/">分布式</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/etcd/">Etcd</a>, 
+      <a href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F/">分布式</a>, 
+      <a href="/tags/MVCC/">MVCC</a>, 
+      <a href="/tags/Lease/">Lease</a>
+  </div>
+  
+
+
+  <div class="book-post-content markdown-inner"><p>etcd 经常出现在服务注册、分布式锁、Leader 选举这些场景里。表面上看，业务只是在 etcd 里写入几个 key，再监听这些 key 的变化；但真正让这些场景成立的，不是普通的 <code>Put</code> 和 <code>Get</code>，而是两个更底层的能力：<code>TXN</code> 和 <code>Lease</code>。</p>
+<p><code>TXN</code> 解决的是 <strong>条件原子更新</strong>：只有当某个 key 的状态仍然符合预期时，才允许继续写入。<code>Lease</code> 解决的是 <strong>状态生命周期</strong>：当客户端失联、进程崩溃或者主动退出时，绑定在租约上的 key 能够自动失效。</p>
+<p>这篇文章先记录一个设计理解版本，后续再补源码链路。核心结论先放在前面：<strong>TXN 决定一个状态能不能被写进去，Lease 决定写进去的状态能活多久。</strong></p>
+<!-- more -->
+<h2 id="1-为什么需要-txn--lease">1. 为什么需要 TXN + Lease<a class="anchor" href="#1-%e4%b8%ba%e4%bb%80%e4%b9%88%e9%9c%80%e8%a6%81-txn--lease">#</a></h2>
+<p>如果只把 etcd 当作一个分布式 KV，那么服务注册可以非常简单：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>PUT /services/order/instance-1 10.0.0.1:8080</span></span></code></pre></div><p>服务消费者再监听 <code>/services/order/</code> 这个前缀，就能得到当前可用实例列表。问题在于，分布式系统里很少只有“写进去”这么简单。</p>
+<p>第一个问题是 <strong>条件是否仍然成立</strong>。比如分布式锁中，客户端只有在锁不存在时才能创建锁；Leader 选举中，候选者只有在自己仍然具备资格时才能确认身份。如果判断和写入被拆成两步，两个客户端可能先后读到相同状态，再同时写入冲突结果。</p>
+<p>第二个问题是 <strong>状态是否还活着</strong>。服务实例可能崩溃，持锁客户端可能卡死，Leader 进程可能失联。如果这些状态只靠客户端主动删除，那么异常退出后就会留下脏数据。</p>
+<p>因此，etcd 需要两类能力组合：</p>
+<ul>
+<li><code>TXN</code>：把“判断条件”和“执行写入”放进同一次原子操作。</li>
+<li><code>Lease</code>：给临时 key 绑定 TTL，让状态随着租约过期自动消失。</li>
+</ul>
+<h2 id="2-txn把判断和写入放进同一个原子操作">2. TXN：把判断和写入放进同一个原子操作<a class="anchor" href="#2-txn%e6%8a%8a%e5%88%a4%e6%96%ad%e5%92%8c%e5%86%99%e5%85%a5%e6%94%be%e8%bf%9b%e5%90%8c%e4%b8%80%e4%b8%aa%e5%8e%9f%e5%ad%90%e6%93%8d%e4%bd%9c">#</a></h2>
+<p>etcd 的 TXN 可以理解为一个条件表达式：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>if Compare:
+</span></span><span style="display:flex;"><span>    Then
+</span></span><span style="display:flex;"><span>else:
+</span></span><span style="display:flex;"><span>    Else</span></span></code></pre></div><p>它不是 SQL 意义上的长事务，也不是让客户端开启一个事务上下文后慢慢执行多条语句。它更像一次原子决策：客户端把判断条件、成功分支、失败分支一起交给 etcd，由 etcd 在同一个请求里完成判断和执行。</p>
+<p>常见的 Compare 条件包括：</p>
+<ul>
+<li><code>version</code>：key 被修改的次数。不存在时通常可用 <code>version == 0</code> 判断。</li>
+<li><code>create_revision</code>：key 第一次创建时的全局 revision。</li>
+<li><code>mod_revision</code>：key 最近一次修改时的全局 revision。</li>
+<li><code>value</code>：key 当前值。</li>
+</ul>
+<p>例如“只有锁不存在时才创建锁”，可以表达为：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>if version(&#34;/locks/job-a&#34;) == 0:
+</span></span><span style="display:flex;"><span>    put(&#34;/locks/job-a&#34;, owner, lease)
+</span></span><span style="display:flex;"><span>else:
+</span></span><span style="display:flex;"><span>    get(&#34;/locks/job-a&#34;)</span></span></code></pre></div><p>这里关键点不在语法，而在语义：<code>version == 0</code> 和 <code>put</code> 不会被其他写入插入打断。判断成立时，写入基于同一个状态完成；判断失败时，客户端也能从 Else 分支拿到当前锁信息，用于决定等待、重试或退出。</p>
+<p>TXN 背后还依赖 revision。etcd 的 key 空间每次发生写入，都会推进全局 revision。这个 revision 描述了变化顺序，也让客户端能基于 <code>create_revision</code> 或 <code>mod_revision</code> 做并发判断。Watch 也依赖 revision 来从某个版本之后继续观察变化。</p>
+<p>后续补充：这里还需要继续梳理一次 TXN 请求从 gRPC 进入 etcd，到经过 Raft 提交，再落到 MVCC 存储的完整链路。</p>
+<h2 id="3-lease给-key-绑定生命周期">3. Lease：给 key 绑定生命周期<a class="anchor" href="#3-lease%e7%bb%99-key-%e7%bb%91%e5%ae%9a%e7%94%9f%e5%91%bd%e5%91%a8%e6%9c%9f">#</a></h2>
+<p>TXN 解决“能不能写”，但不解决“写入后没人清理怎么办”。Lease 负责这个问题。</p>
+<p>Lease 的基本流程是：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>lease = Grant(ttl)
+</span></span><span style="display:flex;"><span>Put(key, value, lease)
+</span></span><span style="display:flex;"><span>KeepAlive(lease)</span></span></code></pre></div><p>客户端先创建一个带 TTL 的租约，再写入 key 时绑定这个租约。只要客户端持续 KeepAlive，租约就会续期；如果客户端崩溃、网络断开或者停止续约，租约最终过期，etcd 会删除绑定在这个 Lease 上的 key。</p>
+<p>这使得服务注册非常自然：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Grant(ttl = 10s)
+</span></span><span style="display:flex;"><span>Put(&#34;/services/order/instance-1&#34;, &#34;10.0.0.1:8080&#34;, lease)
+</span></span><span style="display:flex;"><span>KeepAlive(lease)</span></span></code></pre></div><p>当实例还活着，它持续续约；当实例消失，租约过期后注册信息自动删除。服务消费者通过 Watch 观察前缀变化，就能感知实例上下线。</p>
+<p>需要注意，Lease 不是锁。Lease 只负责生命周期，不负责互斥。一个 Lease 可以绑定多个 key，这些 key 会共享同一组续约和过期行为。是否允许写入某个 key，仍然要靠 TXN 的 Compare 判断。</p>
+<p>KeepAlive 也不等于业务状态永远有效。它只能说明某个时间点续约成功。如果 KeepAlive 失败、连接中断或者客户端重连，业务应该重新确认关键 key 是否还存在，不能只靠本地记忆继续执行。</p>
+<p>后续补充：这里还需要继续阅读 lessor 的实现，包括过期扫描、Lease checkpoint、租约恢复等细节。</p>
+<h2 id="4-txn--lease-的组合模式">4. TXN + Lease 的组合模式<a class="anchor" href="#4-txn--lease-%e7%9a%84%e7%bb%84%e5%90%88%e6%a8%a1%e5%bc%8f">#</a></h2>
+<h3 id="41-服务注册">4.1 服务注册<a class="anchor" href="#41-%e6%9c%8d%e5%8a%a1%e6%b3%a8%e5%86%8c">#</a></h3>
+<p>服务注册主要依赖 Lease。</p>
+<p>服务实例启动后创建 Lease，把自己的地址写入 <code>/services/&lt;name&gt;/&lt;instance-id&gt;</code>，然后持续 KeepAlive。消费者 Watch 服务前缀，得到实例增删事件。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Grant(ttl)
+</span></span><span style="display:flex;"><span>Put(&#34;/services/order/instance-1&#34;, address, lease)
+</span></span><span style="display:flex;"><span>KeepAlive(lease)</span></span></code></pre></div><p>这里 TXN 不是必选，但在需要防止实例 ID 冲突时可以加入 Compare：只有当 <code>/services/order/instance-1</code> 不存在时才允许注册。这样可以避免两个进程误用同一个 instance id。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>if version(&#34;/services/order/instance-1&#34;) == 0:
+</span></span><span style="display:flex;"><span>    put(&#34;/services/order/instance-1&#34;, address, lease)
+</span></span><span style="display:flex;"><span>else:
+</span></span><span style="display:flex;"><span>    fail(&#34;instance id conflict&#34;)</span></span></code></pre></div><h3 id="42-分布式锁">4.2 分布式锁<a class="anchor" href="#42-%e5%88%86%e5%b8%83%e5%bc%8f%e9%94%81">#</a></h3>
+<p>分布式锁必须同时依赖 TXN 和 Lease。</p>
+<p>TXN 用来保证只有一个客户端能创建锁 key：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>if version(&#34;/locks/job-a&#34;) == 0:
+</span></span><span style="display:flex;"><span>    put(&#34;/locks/job-a&#34;, owner, lease)
+</span></span><span style="display:flex;"><span>else:
+</span></span><span style="display:flex;"><span>    get(&#34;/locks/job-a&#34;)</span></span></code></pre></div><p>Lease 用来避免死锁。如果持锁客户端崩溃，锁 key 会随着 Lease 过期被删除，其他客户端才有机会继续竞争。</p>
+<p>这里也能看出职责边界：TXN 保证“抢锁”动作原子，Lease 保证“持锁者死掉后锁会释放”。缺少 TXN，会出现多个客户端同时认为自己拿到锁；缺少 Lease，会出现客户端崩溃后锁永远不释放。</p>
+<h3 id="43-leader-选举">4.3 Leader 选举<a class="anchor" href="#43-leader-%e9%80%89%e4%b8%be">#</a></h3>
+<p>Leader 选举通常不只是写一个固定 key。更常见的方式是每个候选者写入带 Lease 的唯一 key，再根据 <code>create_revision</code> 或类似顺序判断谁排在最前面。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Grant(ttl)
+</span></span><span style="display:flex;"><span>Put(&#34;/election/app/member-1&#34;, candidate, lease)
+</span></span><span style="display:flex;"><span>List(&#34;/election/app/&#34;) by create_revision</span></span></code></pre></div><p>排在最前面的候选者成为 Leader。Lease 表示候选者是否还活着；revision 表示候选者进入队列的顺序。Leader 失联后，它的 Lease 过期，对应 key 被删除，后面的候选者通过 Watch 感知变化并重新判断顺序。</p>
+<p>这个模式里，TXN 仍然用于关键状态确认，例如确认自己的 key 仍然存在、确认当前观察到的 leader 状态没有被并发变化打断。</p>
+<h2 id="5-边界与误区">5. 边界与误区<a class="anchor" href="#5-%e8%be%b9%e7%95%8c%e4%b8%8e%e8%af%af%e5%8c%ba">#</a></h2>
+<p>第一，Lease 不是锁。它不会阻止其他客户端写同一个 key，也不会保证互斥。互斥必须来自 TXN Compare。</p>
+<p>第二，TXN 不是 SQL 事务。它适合表达一次请求内的条件原子更新，不适合承载跨网络、跨业务步骤的长流程。</p>
+<p>第三，KeepAlive 成功不代表业务动作成功。它只说明租约续期成功。业务仍然需要在关键步骤前后确认自己依赖的 key 和 revision 是否符合预期。</p>
+<p>第四，Watch 不是可以无限回放的消息队列。Watch 依赖 revision，但历史 revision 可能被 compaction 清理。客户端需要能处理 Watch 中断、revision 被压缩后的恢复逻辑。</p>
+<h2 id="6-后续阅读清单">6. 后续阅读清单<a class="anchor" href="#6-%e5%90%8e%e7%bb%ad%e9%98%85%e8%af%bb%e6%b8%85%e5%8d%95">#</a></h2>
+<p>这篇先把 TXN 与 Lease 的设计关系写清楚。后续继续补下面几块：</p>
+<ul>
+<li>MVCC 与 revision 的实现关系。</li>
+<li>TXN 请求在 etcd server 内部的执行链路。</li>
+<li>Lease lessor 的过期扫描与 checkpoint 机制。</li>
+<li>Watch 与 compaction 对客户端恢复逻辑的影响。</li>
+<li><code>etcd/client/v3/concurrency</code> 中 Mutex、Election 的封装方式。</li>
+</ul>
+<h2 id="小结">小结<a class="anchor" href="#%e5%b0%8f%e7%bb%93">#</a></h2>
+<p>etcd 的分布式协调能力，很多时候来自 TXN 与 Lease 的组合。</p>
+<p><code>TXN</code> 让客户端能把“判断”和“写入”合成一次原子决策，避免并发条件下基于旧状态写入。<code>Lease</code> 让写入的临时状态具备生命周期，避免客户端异常退出后留下脏状态。</p>
+<p>因此，理解 etcd 的锁、选举、服务注册时，可以先问两个问题：</p>
+<ul>
+<li>这个状态由谁通过什么条件写入？答案通常在 TXN。</li>
+<li>这个状态在客户端失联后如何消失？答案通常在 Lease。</li>
+</ul>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "understanding-etcd-txn-and-lease", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+  <div>
+  
+    <a href="/2026/07/08/Kubernetes%E6%8B%93%E6%89%91%E6%84%9F%E7%9F%A5%E8%B0%83%E5%BA%A6%E4%B8%8E%E5%B0%B1%E8%BF%91%E8%AE%BF%E9%97%AE/" class="flex align-center">
+      <img src="/icons/backward.svg" class="book-icon" alt="Backward" />
+      <span>Kubernetes 拓扑感知调度与就近访问</span>
+    </a>
+  
+  </div>
+  <div>
+  
+    <a href="/2026/03/31/%E5%88%97%E5%BC%8F%E6%95%B0%E6%8D%AE%E5%BA%93%E6%98%AF%E6%80%8E%E4%B9%88%E7%82%BC%E6%88%90%E7%9A%84/" class="flex align-center">
+      <span>列式数据库是怎么炼成的</span>
+      <img src="/icons/forward.svg" class="book-icon" alt="Forward" />
+    </a>
+  
+  </div>
+</div>
+ 
+        
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+        
+<div class="flex align-center" style="margin-top: 1rem;">
+  <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+    访问量<span id="busuanzi_value_site_pv"></span>
+  </span>
+  <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+    访客数<span id="busuanzi_value_site_uv"></span>
+  </span>
+</div>
+        
+  
+ 
+        
+  
+  
+    <script>(function(){document.querySelectorAll("pre:has(code)").forEach(e=>{e.addEventListener("click",e.focus),e.addEventListener("copy",function(t){if(t.preventDefault(),navigator.clipboard){const t=window.getSelection().toString()||e.textContent;navigator.clipboard.writeText(t)}})})})()</script>
+  
+
+      </footer>
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+  
+  <aside class="book-toc">
+    <div class="book-toc-content">
+      
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-为什么需要-txn--lease">1. 为什么需要 TXN + Lease</a></li>
+    <li><a href="#2-txn把判断和写入放进同一个原子操作">2. TXN：把判断和写入放进同一个原子操作</a></li>
+    <li><a href="#3-lease给-key-绑定生命周期">3. Lease：给 key 绑定生命周期</a></li>
+    <li><a href="#4-txn--lease-的组合模式">4. TXN + Lease 的组合模式</a>
+      <ul>
+        <li><a href="#41-服务注册">4.1 服务注册</a></li>
+        <li><a href="#42-分布式锁">4.2 分布式锁</a></li>
+        <li><a href="#43-leader-选举">4.3 Leader 选举</a></li>
+      </ul>
+    </li>
+    <li><a href="#5-边界与误区">5. 边界与误区</a></li>
+    <li><a href="#6-后续阅读清单">6. 后续阅读清单</a></li>
+    <li><a href="#小结">小结</a></li>
+  </ul>
+</nav>
+
+
+
+    </div>
+  </aside>
+  
+ 
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

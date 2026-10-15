@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>故障转移 on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/%E6%95%85%E9%9A%9C%E8%BD%AC%E7%A7%BB/</link>
+    <description>Recent content in 故障转移 on Yeqown</description>
+    <generator>Hugo</generator>
+    <language>en-US</language>
+    <lastBuildDate>Mon, 03 Aug 2026 00:00:00 +0800</lastBuildDate>
+    <atom:link href="https://www.yeqown.xyz/tags/%E6%95%85%E9%9A%9C%E8%BD%AC%E7%A7%BB/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Redis Sentinel：故障检测、自动切主与参数调优</title>
+      <link>https://www.yeqown.xyz/2026/08/03/redis%E5%93%A8%E5%85%B5%E6%9C%BA%E5%88%B6/</link>
+      <pubDate>Mon, 03 Aug 2026 00:00:00 +0800</pubDate>
+      <guid>https://www.yeqown.xyz/2026/08/03/redis%E5%93%A8%E5%85%B5%E6%9C%BA%E5%88%B6/</guid>
+      <description>&lt;p&gt;一个 Redis Master 宕机，两个 Replica 却都还健康。数据明明有副本，服务却不会自己恢复：Replica 不会主动接管，客户端也不会凭空找到新的写入地址。主从复制的工作到这里已经结束，Sentinel 要处理的，正是故障发生后的这段空白。&lt;/p&gt;&#xA;&lt;figure&gt;&#xA;  &lt;img&#xA;    src=&#34;https://www.yeqown.xyz/images/redis-sentinel/no-sentinel-master-failure.svg&#34;&#xA;    alt=&#34;没有部署 Sentinel 时，客户端对已宕机 Master 的 GET、SET 和 INCR 请求均不可达；Master 到 Replica A、Replica B 的复制连接已断开，但两个 Replica 仍然存活且没有被晋升&#34;&#xA;    style=&#34;display: block; width: 100%; height: auto;&#34;&#xA;  /&gt;&#xA;&lt;/figure&gt;&#xA;&lt;p&gt;要看懂 Sentinel，可以跟着一次完整的故障转移往下走：多个 Sentinel 如何交换判断并授权其中一个执行切换，新 Master 怎样被选出，整个复制组又如何接受新拓扑。本文先划清职责边界，再沿这条路径拆解原理；第三节转向 Sentinel 本身，说明这些独立进程如何发现同伴并协调行动。随后用本地三 Redis、三 Sentinel 环境观察关键状态，最后落到参数取舍和生产排障。&lt;/p&gt;&#xA;&lt;p&gt;如果还不熟悉主从复制，可以先读&lt;a href=&#34;https://www.yeqown.xyz/2020/03/29/redis%e4%b8%bb%e4%bb%8e%e5%a4%8d%e5%88%b6/&#34;&gt;《Redis 主从复制》&lt;/a&gt;。本文的机制说明基于 Redis 8.10.0 和源码 commit &lt;code&gt;5279a8d44818a5ca51e9abb91a9b8ce481d3c88b&lt;/code&gt;；实验结果均按实际操作记录，避免把依赖运行环境的现象写成定论。&lt;/p&gt;&#xA;&lt;h2 id=&#34;1-sentinel-解决什么问题&#34;&gt;1. Sentinel 解决什么问题&lt;a class=&#34;anchor&#34; href=&#34;#1-sentinel-%e8%a7%a3%e5%86%b3%e4%bb%80%e4%b9%88%e9%97%ae%e9%a2%98&#34;&gt;#&lt;/a&gt;&lt;/h2&gt;&#xA;&lt;p&gt;主从复制负责把 Master 的数据变化传给 Replicas。它解决的是“故障后有没有副本”，没有回答以下问题：&lt;/p&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;谁判断 Master 已经不可用；&lt;/li&gt;&#xA;&lt;li&gt;哪个 Replica 应该接管；&lt;/li&gt;&#xA;&lt;li&gt;谁修改其余 Replicas 的上游；&lt;/li&gt;&#xA;&lt;li&gt;客户端到哪里查询新的写入地址。&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;p&gt;如果这些动作依赖人工处理，服务恢复时间就取决于告警、判断和操作速度。Sentinel 把这条控制链自动化，但不改变 Redis 异步复制的性质。&lt;/p&gt;&#xA;&lt;p&gt;这条控制链决定了 Sentinel 的职责范围。Sentinel 是独立于 Redis 数据节点的控制面：一个 Sentinel 进程可以监控多个 Master 复制组，同一个复制组通常由多个 Sentinel 共同管理。&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

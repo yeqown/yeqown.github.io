@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xl="http://www.w3.org/1999/xlink" version="1.1" viewBox="141.5 247.5 587 217" width="587" height="217">
+  <defs>
+    <font-face font-family="Helvetica Neue" font-size="16" panose-1="2 0 5 3 0 0 0 2 0 4" units-per-em="1000" underline-position="-100" underline-thickness="50" slope="0" x-height="517" cap-height="714" ascent="951.9958" descent="-212.99744" font-weight="400">
+      <font-face-src>
+        <font-face-name name="HelveticaNeue"/>
+      </font-face-src>
+    </font-face>
+    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="FilledArrow_Marker" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-9 -4 10 8" markerWidth="10" markerHeight="8" color="black">
+      <g>
+        <path d="M -8 0 L 0 3 L 0 -3 Z" fill="currentColor" stroke="currentColor" stroke-width="1"/>
+      </g>
+    </marker>
+    <font-face font-family="PingFang SC" font-size="12" panose-1="2 11 4 0 0 0 0 0 0 0" units-per-em="1000" underline-position="-150" underline-thickness="58" slope="0" x-height="600" cap-height="860" ascent="1060.0021" descent="-340.0007" font-weight="400">
+      <font-face-src>
+        <font-face-name name="PingFangSC-Regular"/>
+      </font-face-src>
+    </font-face>
+  </defs>
+  <metadata> Produced by OmniGraffle 7.14.1 
+    <dc:date>2020-03-29 02:13:40 +0000</dc:date>
+  </metadata>
+  <g id="Canvas_1" fill-opacity="1" stroke="none" stroke-opacity="1" fill="none" stroke-dasharray="none">
+    <title>Canvas 1</title>
+    <g id="Canvas_1: Layer 1">
+      <title>Layer 1</title>
+      <g id="Graphic_2">
+        <rect x="289" y="249" width="136" height="65" fill="#999"/>
+        <rect x="289" y="249" width="136" height="65" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+        <text transform="translate(294 272.276)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="38.256" y="15">Master</tspan>
+        </text>
+      </g>
+      <g id="Graphic_3">
+        <ellipse cx="210" cy="431.5" rx="68.0001086573289" ry="32.5000519318116" fill="#ccc"/>
+        <ellipse cx="210" cy="431.5" rx="68.0001086573289" ry="32.5000519318116" stroke="gray" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(160.6 422.276)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="21.552002" y="15">Slave-A</tspan>
+        </text>
+      </g>
+      <g id="Graphic_4">
+        <ellipse cx="435" cy="431.5" rx="68.000108657329" ry="32.5000519318116" fill="#ccc"/>
+        <ellipse cx="435" cy="431.5" rx="68.000108657329" ry="32.5000519318116" stroke="gray" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(385.6 422.276)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="21.256002" y="15">Slave-B</tspan>
+        </text>
+      </g>
+      <g id="Line_5">
+        <path d="M 311.51782 322.08852 C 293.9509 337.76533 278 352 278 352 C 278 352 254.98854 378.9031 235.7383 401.4089" marker-start="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4.0,4.0" stroke-width="1"/>
+      </g>
+      <g id="Line_6">
+        <path d="M 379.24737 324.2834 C 391.78143 348.38737 407.1658 377.97266 418.5965 399.95477" marker-start="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_7">
+        <ellipse cx="660" cy="431.5" rx="68.0001086573289" ry="32.5000519318116" fill="#ccc"/>
+        <ellipse cx="660" cy="431.5" rx="68.0001086573289" ry="32.5000519318116" stroke="gray" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(610.6 422.276)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" font-weight="400" fill="black" x="20.960002" y="15">Slave-C</tspan>
+        </text>
+      </g>
+      <g id="Line_8">
+        <path d="M 436.1625 293.96903 C 541.8509 318.717 604.3409 368.78556 635.37804 401.19656" marker-start="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_15">
+        <path d="M 205.65918 389.1693 C 206.8869 364.1194 215.60498 333.56122 246.32422 314 C 260.75648 304.8099 274.6813 298.16408 287.5 293.3694" marker-start="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4.0,4.0" stroke-width="1"/>
+      </g>
+      <g id="Graphic_17">
+        <rect x="226.3771" y="366.77967" width="54.868" height="27" fill="white"/>
+        <text transform="translate(231.3771 371.77967)" fill="black">
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="0" y="13">1. SYNC</tspan>
+        </text>
+      </g>
+      <g id="Graphic_18">
+        <rect x="210.41772" y="309.06866" width="49.072" height="27" fill="white"/>
+        <text transform="translate(215.41771 314.06866)" fill="black">
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="5684342e-20" y="13">2. RDB</tspan>
+        </text>
+      </g>
+      <g id="Line_22">
+        <path d="M 283.88138 417.75956 C 309.84423 406.04024 333.689 384.496 338 345 C 339.27288 333.33833 340.526 323.6052 341.7442 315.5" marker-start="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4.0,4.0" stroke-width="1"/>
+      </g>
+      <g id="Graphic_23">
+        <rect x="280.32852" y="364.01533" width="96.364" height="27" fill="white"/>
+        <text transform="translate(285.32852 369.01533)" fill="black">
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="6963319e-19" y="13">3. 缓冲区写命令</tspan>
+        </text>
+      </g>
+      <g id="Graphic_24">
+        <rect x="483.1735" y="326.18086" width="143.956" height="27" fill="white"/>
+        <text transform="translate(488.1735 331.18086)" fill="black">
+          <tspan font-family="PingFang SC" font-size="12" font-weight="400" fill="black" x="0" y="13">SLAVE OF 后，全量同步</tspan>
+        </text>
+      </g>
+    </g>
+  </g>
+</svg>

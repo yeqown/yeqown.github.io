@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="en-US" dir="ltr">
+<head>
+  <!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="从可用区和跨区流量问题出发，介绍 Kubernetes topologySpreadConstraints 与 trafficDistribution 的使用方式，并进一步分析它们在 kube-scheduler、EndpointSlice 控制器和 kube-proxy 中的实现原理。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#2e3440">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2026/07/08/Kubernetes%E6%8B%93%E6%89%91%E6%84%9F%E7%9F%A5%E8%B0%83%E5%BA%A6%E4%B8%8E%E5%B0%B1%E8%BF%91%E8%AE%BF%E9%97%AE/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="Kubernetes 拓扑感知调度与就近访问">
+  <meta property="og:description" content="从可用区和跨区流量问题出发，介绍 Kubernetes topologySpreadConstraints 与 trafficDistribution 的使用方式，并进一步分析它们在 kube-scheduler、EndpointSlice 控制器和 kube-proxy 中的实现原理。">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2026-07-08T09:38:56+08:00">
+    <meta property="article:modified_time" content="2026-07-08T09:38:56+08:00">
+    <meta property="article:tag" content="Kubernetes">
+    <meta property="article:tag" content="Scheduler">
+    <meta property="article:tag" content="Service">
+    <meta property="article:tag" content="EndpointSlice">
+    <meta property="article:tag" content="TopologySpreadConstraints">
+    <meta property="article:tag" content="TrafficDistribution">
+
+
+  <meta itemprop="name" content="Kubernetes 拓扑感知调度与就近访问">
+  <meta itemprop="description" content="从可用区和跨区流量问题出发，介绍 Kubernetes topologySpreadConstraints 与 trafficDistribution 的使用方式，并进一步分析它们在 kube-scheduler、EndpointSlice 控制器和 kube-proxy 中的实现原理。">
+  <meta itemprop="datePublished" content="2026-07-08T09:38:56+08:00">
+  <meta itemprop="dateModified" content="2026-07-08T09:38:56+08:00">
+  <meta itemprop="wordCount" content="1855">
+  <meta itemprop="keywords" content="Kubernetes,Scheduler,Service,EndpointSlice,TopologySpreadConstraints,TrafficDistribution">
+
+<title>Kubernetes 拓扑感知调度与就近访问 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2026/07/08/Kubernetes%E6%8B%93%E6%89%91%E6%84%9F%E7%9F%A5%E8%B0%83%E5%BA%A6%E4%B8%8E%E5%B0%B1%E8%BF%91%E8%AE%BF%E9%97%AE/">
+<link rel="stylesheet" href="/book.min.c40223b1e1a5ffa9f6a0fe48797821424561eff06762ee5c75071bda9d009477.css" integrity="sha256-xAIjseGl/6n2oP5IeXghQkVh7/BnYu5cdQcb2p0AlHc=" crossorigin="anonymous">
+
+
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.99ce27de54629b271c4277001097f0e183ca5eaedb015e65542b29ce1c90db30.js" integrity="sha256-mc4n3lRimyccQncAEJfw4YPKXq7bAV5lVCspzhyQ2zA=" crossorigin="anonymous"></script>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade">
+  
+</head>
+<body dir="ltr" class="book-kind-page book-type-posts">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    
+<aside class="book-menu">
+  <div class="book-menu-content">
+    
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input id="book-search-input" type="text" 
+    placeholder="Search"
+    aria-label="Search"
+    maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+<ul><li><a href="/categories">Categories</a></li><li><a href="/tags">Tags</a></li></ul>
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">
+      About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+
+  </div>
+</aside>
+ 
+
+    <div class="book-page">
+      <header class="book-header hidden">
+        
+<div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/icons/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>Kubernetes 拓扑感知调度与就近访问</h3>
+
+  <label for="toc-control">
+    
+    <img src="/icons/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-背景可用区和跨区流量">1. 背景：可用区和跨区流量</a>
+      <ul>
+        <li><a href="#11-可用区是什么">1.1 可用区是什么</a></li>
+        <li><a href="#12-跨区流量会带来哪些问题">1.2 跨区流量会带来哪些问题</a></li>
+        <li><a href="#13-kubernetes-中的拓扑信息来自哪里">1.3 Kubernetes 中的拓扑信息来自哪里</a></li>
+      </ul>
+    </li>
+    <li><a href="#2-kubernetes-中的解决方案">2. Kubernetes 中的解决方案</a>
+      <ul>
+        <li><a href="#21-topologyspreadconstraints">2.1 topologySpreadConstraints</a></li>
+        <li><a href="#22-trafficdistribution">2.2 trafficDistribution</a></li>
+        <li><a href="#23-落地验证与常见误区">2.3 落地验证与常见误区</a></li>
+      </ul>
+    </li>
+    <li><a href="#3-原理剖析">3. 原理剖析</a>
+      <ul>
+        <li><a href="#31-topologyspreadconstraints-的实现">3.1 topologySpreadConstraints 的实现</a></li>
+        <li><a href="#32-trafficdistribution-的实现">3.2 trafficDistribution 的实现</a></li>
+      </ul>
+    </li>
+    <li><a href="#4-service-mesh-场景下的边界">4. Service Mesh 场景下的边界</a></li>
+    <li><a href="#5-总结">5. 总结</a>
+      <ul>
+        <li><a href="#51-控制-pod-分布">5.1 控制 Pod 分布</a></li>
+        <li><a href="#52-控制请求转发">5.2 控制请求转发</a></li>
+      </ul>
+    </li>
+    <li><a href="#参考资料">参考资料</a></li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h1>
+    Kubernetes 拓扑感知调度与就近访问
+  </h1>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/icons/calendar.svg" class="book-icon" alt="Calendar" />
+    <span>July 8, 2026</span>
+    
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Kubernetes/">Kubernetes</a>, 
+      <a href="/categories/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/">源码分析</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Kubernetes/">Kubernetes</a>, 
+      <a href="/tags/Scheduler/">Scheduler</a>, 
+      <a href="/tags/Service/">Service</a>, 
+      <a href="/tags/EndpointSlice/">EndpointSlice</a>, 
+      <a href="/tags/topologySpreadConstraints/">TopologySpreadConstraints</a>, 
+      <a href="/tags/trafficDistribution/">TrafficDistribution</a>
+  </div>
+  
+
+
+  <div class="book-post-content markdown-inner"><p><code>topologySpreadConstraints</code> 和 <code>trafficDistribution</code> 都在解决 Kubernetes 集群里的拓扑感知问题，但它们所在的层次不同：</p>
+<ul>
+<li><code>topologySpreadConstraints</code> 作用在调度阶段，决定 Pod 应该如何分散到不同的可用区（zone）、节点（node）或自定义拓扑域。</li>
+<li><code>trafficDistribution</code> 作用在 Service 转发阶段，决定客户端访问 Service 时是否优先选择同可用区或同节点的 Endpoint。</li>
+</ul>
+<p>前者解决“后端是否按拓扑域铺开”，后者解决“流量是否优先走近端后端”。如果只配置就近访问，而没有保证各个拓扑域内都有足够 Endpoint，最终很容易把局部流量压到少量 Pod 上。</p>
+<!-- more -->
+<p>本文基于 Kubernetes v1.36 的文档和上游源码，先从使用方式讲起，再进入实现细节。</p>
+<blockquote class='book-hint '>
+<p><strong>阅读说明</strong></p>
+<p>为了避免把不同版本和不同转发实现混在一起，本文先约定几个边界：</p>
+<ul>
+<li>Kubernetes 版本以 <code>v1.36.0</code> 为准，源码片段也对应这个版本。其他小版本的字段状态、feature gate 和源码路径可能存在差异。</li>
+<li><code>trafficDistribution</code> 依赖 EndpointSlice hints，以及 kube-proxy 或兼容实现对这些 hints 的支持。若集群使用 eBPF dataplane、第三方 Service 实现或云厂商托管代理，需要以对应实现和实测结果为准。</li>
+<li>本文主要讨论 Kubernetes 原生的 Service 转发路径；Service Mesh 场景会单独说明，因为 mesh 数据面可能绕过 kube-proxy 自行选择 Endpoint。</li>
+<li>下文中的 API 字段和值保留英文，例如 <code>topologySpreadConstraints</code>、<code>PreferSameZone</code>；概念性表述优先使用中文，例如“可用区”“节点”“同可用区”“同节点”。第一次出现时会保留常见英文缩写，便于和官方文档对应。</li>
+</ul>
+</blockquote><h2 id="1-背景可用区和跨区流量">1. 背景：可用区和跨区流量<a class="anchor" href="#1-%e8%83%8c%e6%99%af%e5%8f%af%e7%94%a8%e5%8c%ba%e5%92%8c%e8%b7%a8%e5%8c%ba%e6%b5%81%e9%87%8f">#</a></h2>
+<h3 id="11-可用区是什么">1.1 可用区是什么<a class="anchor" href="#11-%e5%8f%af%e7%94%a8%e5%8c%ba%e6%98%af%e4%bb%80%e4%b9%88">#</a></h3>
+<p>在云厂商的基础设施里，Region 通常表示一个地理区域，Availability Zone 表示 Region 内相互隔离的一组机房资源。不同可用区之间一般具备独立的供电、网络和故障边界，但仍然可以通过区域内网络互通。</p>
+<p>Kubernetes 并不直接理解云厂商的可用区模型，它看到的是节点上的标签（label）。常见的拓扑标签包括：</p>
+<ul>
+<li><code>topology.kubernetes.io/region</code>：节点所在 Region。</li>
+<li><code>topology.kubernetes.io/zone</code>：节点所在可用区。</li>
+<li><code>kubernetes.io/hostname</code>：节点名称，通常用于表示节点级拓扑域。</li>
+</ul>
+<p>这些标签可能由云控制器、集群安装器或运维系统写入。对 Kubernetes 来说，拓扑域就是一组拥有相同 <code>topologyKey=value</code> 的节点。例如 <code>topology.kubernetes.io/zone=cn-hangzhou-a</code> 就是一个可用区级拓扑域。</p>
+<figure>
+  <img
+    src="/images/kubernetes-topology-aware-scheduling-and-routing/availability-zones.svg"
+    alt="Kubernetes 可用区拓扑域示意图"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>可用区拓扑域</figcaption>
+</figure>
+<h3 id="12-跨区流量会带来哪些问题">1.2 跨区流量会带来哪些问题<a class="anchor" href="#12-%e8%b7%a8%e5%8c%ba%e6%b5%81%e9%87%8f%e4%bc%9a%e5%b8%a6%e6%9d%a5%e5%93%aa%e4%ba%9b%e9%97%ae%e9%a2%98">#</a></h3>
+<p>假设一个业务部署在三个可用区中，客户端 Pod 在 <code>zone-a</code>，Service 后端 Pod 却主要集中在 <code>zone-b</code> 和 <code>zone-c</code>。此时请求可以正常访问，但会引入几个隐性问题：</p>
+<figure>
+  <img
+    src="/images/kubernetes-topology-aware-scheduling-and-routing/cross-zone-traffic.svg"
+    alt="Kubernetes 跨可用区 Service 流量示意图"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>跨区流量问题</figcaption>
+</figure>
+<ol>
+<li>
+<p>延迟。跨可用区网络通常比同可用区网络多一跳，单次调用可能只多几毫秒，但在微服务链路里会被多次放大。对网关、缓存、数据库代理、日志采集这类高频调用路径来说，差异会更明显。</p>
+</li>
+<li>
+<p>流量成本。很多云厂商会对跨可用区流量收费，尤其是大流量服务、日志链路、对象存储代理、消息队列代理等场景，跨区流量可能成为持续性成本。</p>
+</li>
+<li>
+<p>故障影响面。可用区的意义在于隔离故障，如果业务流量大量跨区，一旦某个可用区的网络链路抖动，受影响的就不只是这个可用区内的客户端，还包括依赖它作为后端的其他可用区。</p>
+</li>
+<li>
+<p>负载不均。如果某个可用区内没有足够的后端，配置了就近访问也只能回退到其他可用区；如果某个可用区内后端太少，本地流量又可能集中到少量 Pod 上。</p>
+</li>
+</ol>
+<p>很多业务上线初期更关注功能可用性，跨可用区成本和故障边界通常不会马上暴露。随着流量增长，延迟、费用和故障影响面会逐渐变成需要治理的问题。此时可以通过拓扑分布约束和就近访问降低跨区调用比例；但能否完全消除跨区流量，还取决于副本分布、流量分布和故障回退策略。</p>
+<h3 id="13-kubernetes-中的拓扑信息来自哪里">1.3 Kubernetes 中的拓扑信息来自哪里<a class="anchor" href="#13-kubernetes-%e4%b8%ad%e7%9a%84%e6%8b%93%e6%89%91%e4%bf%a1%e6%81%af%e6%9d%a5%e8%87%aa%e5%93%aa%e9%87%8c">#</a></h3>
+<p>Kubernetes 的拓扑感知能力主要依赖节点标签（Node label）和 EndpointSlice。</p>
+<p>调度阶段，kube-scheduler 会读取节点标签，并根据 Pod 的 <code>topologySpreadConstraints</code> 计算某个 Pod 放到某个节点后，各个拓扑域之间是否仍然满足均衡约束。</p>
+<p>转发阶段，EndpointSlice 控制器会把 Pod 所在节点、可用区等信息写入 EndpointSlice。Service 配置了 <code>trafficDistribution</code> 后，控制器还会在 EndpointSlice 的 Endpoint 上写入拓扑提示（hints），kube-proxy 再根据本节点的拓扑信息选择更合适的 Endpoint 集合。</p>
+<p>可以把链路理解成：</p>
+<figure>
+  <img
+    src="/images/kubernetes-topology-aware-scheduling-and-routing/topology-info-flow.svg"
+    alt="Kubernetes 拓扑信息在调度器、EndpointSlice 控制器和 kube-proxy 之间的流转"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>拓扑信息流转</figcaption>
+</figure>
+<h2 id="2-kubernetes-中的解决方案">2. Kubernetes 中的解决方案<a class="anchor" href="#2-kubernetes-%e4%b8%ad%e7%9a%84%e8%a7%a3%e5%86%b3%e6%96%b9%e6%a1%88">#</a></h2>
+<p>Kubernetes 在这个问题上提供了两个互补能力：</p>
+<ul>
+<li><code>topologySpreadConstraints</code>：控制 Pod 调度结果，让副本尽量分散到不同拓扑域。</li>
+<li><code>trafficDistribution</code>：控制 Service 流量偏好，让客户端优先访问同可用区或同节点 Endpoint。</li>
+</ul>
+<p>前者是工作负载层面的放置策略，后者是 Service 层面的转发策略。一个常见组合是：Deployment 使用 <code>topologySpreadConstraints</code> 保证每个可用区都有近似数量的 Pod，Service 使用 <code>trafficDistribution: PreferSameZone</code> 让请求优先在本可用区内闭环。</p>
+<figure>
+  <img
+    src="/images/kubernetes-topology-aware-scheduling-and-routing/solution-map.svg"
+    alt="topologySpreadConstraints 和 trafficDistribution 的职责分工"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>调度与转发分工</figcaption>
+</figure>
+<h3 id="21-topologyspreadconstraints">2.1 topologySpreadConstraints<a class="anchor" href="#21-topologyspreadconstraints">#</a></h3>
+<p><code>topologySpreadConstraints</code> 定义在 PodSpec 中，Deployment、StatefulSet、Job 等工作负载通常写在 <code>spec.template.spec.topologySpreadConstraints</code> 下。它的目标不是指定“必须调度到哪个节点”，而是告诉调度器：同一组 Pod 在不同拓扑域里的数量差应该控制在什么范围内。</p>
+<p>一个常见配置如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#f92672">spec</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">template</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">metadata</span>:
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">labels</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">app</span>: <span style="color:#ae81ff">checkout</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">spec</span>:
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">topologySpreadConstraints</span>:
+</span></span><span style="display:flex;"><span>        - <span style="color:#f92672">maxSkew</span>: <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">topologyKey</span>: <span style="color:#ae81ff">topology.kubernetes.io/zone</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">whenUnsatisfiable</span>: <span style="color:#ae81ff">DoNotSchedule</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">labelSelector</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">matchLabels</span>:
+</span></span><span style="display:flex;"><span>              <span style="color:#f92672">app</span>: <span style="color:#ae81ff">checkout</span>
+</span></span><span style="display:flex;"><span>        - <span style="color:#f92672">maxSkew</span>: <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">topologyKey</span>: <span style="color:#ae81ff">kubernetes.io/hostname</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">whenUnsatisfiable</span>: <span style="color:#ae81ff">ScheduleAnyway</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">labelSelector</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">matchLabels</span>:
+</span></span><span style="display:flex;"><span>              <span style="color:#f92672">app</span>: <span style="color:#ae81ff">checkout</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">containers</span>:
+</span></span><span style="display:flex;"><span>        - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">app</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">image</span>: <span style="color:#ae81ff">nginx:1.27</span></span></span></code></pre></div><p>这段配置表达两层约束：在可用区级别尽量做到强均衡，不满足就不调度；在节点级别只作为倾向，资源紧张时允许调度器继续调度。</p>
+<p>字段不需要死记硬背，可以先抓住下面几个关键点。完整说明建议以 <a href="https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/">官方文档</a> 和 <code>kubectl explain pod.spec.topologySpreadConstraints</code> 为准。</p>
+<table>
+  <thead>
+      <tr>
+          <th>字段</th>
+          <th>作用</th>
+          <th>常见用法</th>
+          <th>注意事项</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>topologyKey</code></td>
+          <td>选择用哪个节点标签划分拓扑域</td>
+          <td><code>topology.kubernetes.io/zone</code> 表示按可用区分散，<code>kubernetes.io/hostname</code> 表示按节点分散</td>
+          <td>节点缺少该标签时，调度结果可能和预期不一致</td>
+      </tr>
+      <tr>
+          <td><code>labelSelector</code></td>
+          <td>定义参与统计的是哪一组 Pod</td>
+          <td>通常和工作负载的 selector 保持一致，例如 <code>app: checkout</code></td>
+          <td>如果不能匹配 Pod 模板自身，后续计数会失真</td>
+      </tr>
+      <tr>
+          <td><code>maxSkew</code></td>
+          <td>允许不同拓扑域之间最多相差多少个匹配 Pod</td>
+          <td>高可用服务常用 <code>1</code>，表示尽量平均分布</td>
+          <td>值越小，越容易因为容量不足导致新 Pod 无法调度</td>
+      </tr>
+      <tr>
+          <td><code>whenUnsatisfiable</code></td>
+          <td>约束无法满足时如何处理</td>
+          <td>可用区级别常用 <code>DoNotSchedule</code>，节点级别可用 <code>ScheduleAnyway</code></td>
+          <td>前者是硬约束，后者只影响打分排序</td>
+      </tr>
+      <tr>
+          <td><code>minDomains</code></td>
+          <td>期望至少有多少个可用拓扑域</td>
+          <td>三可用区服务可设置 <code>3</code>，避免只在少数可用区内继续堆副本</td>
+          <td>通常和 <code>DoNotSchedule</code> 一起使用，需要确认可用区容量</td>
+      </tr>
+      <tr>
+          <td><code>matchLabelKeys</code></td>
+          <td>用 Pod 自身标签扩展 selector</td>
+          <td>滚动发布时可用 <code>pod-template-hash</code> 让新旧 ReplicaSet 分开统计</td>
+          <td>适合发布场景，使用前要确认标签是否稳定存在</td>
+      </tr>
+      <tr>
+          <td><code>nodeAffinityPolicy</code> / <code>nodeTaintsPolicy</code></td>
+          <td>计算 skew 时是否考虑 affinity 和 taint 过滤后的节点集合</td>
+          <td>使用专用节点池时通常让统计范围和实际可调度范围保持一致</td>
+          <td>设置不当会让统计范围大于或小于真实可调度范围</td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="调度示例">调度示例<a class="anchor" href="#%e8%b0%83%e5%ba%a6%e7%a4%ba%e4%be%8b">#</a></h4>
+<p>假设集群有三个可用区，每个可用区两个节点。现在创建一个 <code>checkout</code> Deployment，副本数为 6，并配置 <code>topologyKey: topology.kubernetes.io/zone</code>、<code>maxSkew: 1</code>、<code>whenUnsatisfiable: DoNotSchedule</code>。</p>
+<figure>
+  <img
+    src="/images/kubernetes-topology-aware-scheduling-and-routing/topology-spread-schedule.svg"
+    alt="topologySpreadConstraints 按可用区依次调度 Pod 的示意图"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>调度顺序</figcaption>
+</figure>
+<p>调度器会在每次调度前统计已有 <code>app=checkout</code> Pod 在各可用区的数量。在三个可用区都具备可调度节点、且 <code>maxSkew: 1</code> 能被满足的情况下，6 个副本通常会形成 <code>2/2/2</code> 的分布。如果同时配置节点级别的 <code>ScheduleAnyway</code>，调度器会在满足可用区硬约束的前提下尽量分散到不同节点，但不会因为节点维度不均衡而阻塞调度。</p>
+<h4 id="使用注意">使用注意<a class="anchor" href="#%e4%bd%bf%e7%94%a8%e6%b3%a8%e6%84%8f">#</a></h4>
+<p>使用时有几个注意点：</p>
+<ul>
+<li>节点必须有完整、稳定的拓扑标签；缺少 <code>topologyKey</code> 的节点不会被正常纳入这个约束。</li>
+<li>多个 <code>topologySpreadConstraints</code> 是逻辑 AND 关系，Pod 必须同时满足所有约束。</li>
+<li><code>DoNotSchedule + maxSkew: 1 + minDomains</code> 很适合核心多可用区服务，但也更容易让 Pod 进入 <code>Pending</code> 状态。</li>
+<li><code>labelSelector</code> 要能匹配 Pod 模板自身的标签，否则这个 Pod 会遵守约束，却不一定参与后续计数。</li>
+<li>它只影响新 Pod 的调度结果，不会主动驱逐或重排已经运行的 Pod。</li>
+</ul>
+<h3 id="22-trafficdistribution">2.2 trafficDistribution<a class="anchor" href="#22-trafficdistribution">#</a></h3>
+<p><code>trafficDistribution</code> 定义在 ServiceSpec 中，用来表达 Service 转发偏好。它不负责创建 Endpoint，也不会改变 Pod 的调度位置，只是在 kube-proxy 选择 Endpoint 时优先使用“更近”的后端。</p>
+<p>基础配置很简单：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">v1</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">kind</span>: <span style="color:#ae81ff">Service</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">checkout</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">spec</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">selector</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">app</span>: <span style="color:#ae81ff">checkout</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">trafficDistribution</span>: <span style="color:#ae81ff">PreferSameZone</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">ports</span>:
+</span></span><span style="display:flex;"><span>    - <span style="color:#f92672">port</span>: <span style="color:#ae81ff">80</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">targetPort</span>: <span style="color:#ae81ff">80</span></span></span></code></pre></div><p>如果客户端 Pod 位于 <code>zone-a</code>，并且 <code>zone-a</code> 内有就绪 Endpoint，流量会优先转发到 <code>zone-a</code>；如果没有，再回退到集群范围。完整语义可以参考官方的 <a href="https://kubernetes.io/docs/reference/networking/virtual-ips/#traffic-distribution-control">Traffic distribution control</a>。</p>
+<p>当前常见取值如下：</p>
+<table>
+  <thead>
+      <tr>
+          <th>取值</th>
+          <th>作用</th>
+          <th>适用场景</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>PreferSameZone</code></td>
+          <td>优先选择同可用区 Endpoint</td>
+          <td>多可用区在线服务，减少跨可用区延迟和费用</td>
+      </tr>
+      <tr>
+          <td><code>PreferSameNode</code></td>
+          <td>优先选择同节点 Endpoint，没有时回退到同可用区，再回退到全集群</td>
+          <td>DaemonSet、节点级代理、日志采集、缓存代理等节点本地场景</td>
+      </tr>
+      <tr>
+          <td><code>PreferClose</code></td>
+          <td><code>PreferSameZone</code> 的旧别名，语义不够直观</td>
+          <td>新配置不建议继续使用</td>
+      </tr>
+  </tbody>
+</table>
+<h4 id="转发示例">转发示例<a class="anchor" href="#%e8%bd%ac%e5%8f%91%e7%a4%ba%e4%be%8b">#</a></h4>
+<p>下面用两个客户端和三个 Service 对比不同配置下的转发路径。<code>C1</code> 运行在 <code>zone-a/node-a1</code>，<code>C2</code> 运行在 <code>zone-b/node-b1</code>。<code>S1</code> 不设置 <code>trafficDistribution</code>，请求会在所有就绪 Endpoint 中按代理实现的负载均衡策略分发；<code>S2</code> 设置 <code>PreferSameNode</code>，<code>C1</code> 有同节点 Endpoint，<code>C2</code> 没有；<code>S3</code> 设置 <code>PreferSameZone</code>，<code>C1</code> 有同可用区 Endpoint，<code>C2</code> 所在可用区没有。</p>
+<figure>
+  <img
+    src="/images/kubernetes-topology-aware-scheduling-and-routing/traffic-distribution-flow.svg"
+    alt="C1 和 C2 访问不同 trafficDistribution Service 时的 Endpoint 选择路径"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>trafficDistribution 在未设置、PreferSameNode 和 PreferSameZone 下的转发路径</figcaption>
+</figure>
+<p>图里的实线表示优先候选集，虚线表示回退候选集，或未设置时的全局候选集。<code>trafficDistribution</code> 解决的是“请求优先发给谁”，不是“后端应该部署在哪里”。如果某个可用区或节点没有可用 Endpoint，kube-proxy 会根据对应配置回退到更大的候选集；要减少跨区回退，仍然需要前面的 <code>topologySpreadConstraints</code> 先把 Endpoint 铺开。</p>
+<h4 id="使用注意-1">使用注意<a class="anchor" href="#%e4%bd%bf%e7%94%a8%e6%b3%a8%e6%84%8f-1">#</a></h4>
+<p>它和 <code>internalTrafficPolicy</code> / <code>externalTrafficPolicy</code> 的核心区别是强度不同：<code>trafficDistribution</code> 是偏好，找不到同拓扑 Endpoint 时可以回退；<code>internalTrafficPolicy: Local</code> 和 <code>externalTrafficPolicy: Local</code> 是更强的本地性要求，没有本节点 Endpoint 时不会继续转发对应流量。</p>
+<blockquote class='book-hint '>
+<p>Kubernetes 官方文档在 <a href="https://kubernetes.io/docs/reference/networking/virtual-ips/#interaction-with-traffic-policies">Interaction with Traffic Policies</a> 中说明：当 <code>externalTrafficPolicy</code> 或 <code>internalTrafficPolicy</code> 设置为 <code>Local</code> 时，它会优先于 <code>trafficDistribution</code>，作用于对应的外部或内部流量；当这些字段为 <code>Cluster</code> 或未设置时，<code>trafficDistribution</code> 才指导对应流量类型的路由。</p>
+</blockquote><p>两类 <code>Local</code> 策略的差异可以简单对比为：</p>
+<table>
+  <thead>
+      <tr>
+          <th>策略</th>
+          <th>流量来源</th>
+          <th>流量分发规则</th>
+          <th>典型用途</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>internalTrafficPolicy: Local</code></td>
+          <td>集群内部 Pod</td>
+          <td>只转发到本节点 Pod</td>
+          <td>DaemonSet、本地代理、低延迟</td>
+      </tr>
+      <tr>
+          <td><code>externalTrafficPolicy: Local</code></td>
+          <td>外部客户端</td>
+          <td>只转发到本节点 Pod，保留源 IP</td>
+          <td>NodePort/LoadBalancer 保留源 IP、边缘节点流量</td>
+      </tr>
+  </tbody>
+</table>
+<p>使用时要注意：</p>
+<ul>
+<li><code>trafficDistribution</code> 依赖 EndpointSlice hints 和 kube-proxy 支持，集群版本与实现要匹配。</li>
+<li>它会把同可用区或同节点流量尽量导向本地 Endpoint，但不保证负载一定均匀。</li>
+<li>如果某个可用区内 Endpoint 太少，本地流量可能集中到少量 Pod，反而制造热点。</li>
+<li>不要把 <code>service.kubernetes.io/topology-mode: Auto</code> 和它混用；如果 annotation 设置为 <code>Auto</code>，官方文档说明 annotation 会优先生效。</li>
+<li>对无 selector 的 Service，需要确认外部维护的 EndpointSlice 是否带有可用于 hints 的拓扑信息。</li>
+</ul>
+<p>因此更稳妥的实践是把两者组合起来：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">apps/v1</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">kind</span>: <span style="color:#ae81ff">Deployment</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">checkout</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">spec</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">replicas</span>: <span style="color:#ae81ff">6</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">selector</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">matchLabels</span>:
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">app</span>: <span style="color:#ae81ff">checkout</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">template</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">metadata</span>:
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">labels</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">app</span>: <span style="color:#ae81ff">checkout</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">spec</span>:
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">topologySpreadConstraints</span>:
+</span></span><span style="display:flex;"><span>        - <span style="color:#f92672">maxSkew</span>: <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">topologyKey</span>: <span style="color:#ae81ff">topology.kubernetes.io/zone</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">whenUnsatisfiable</span>: <span style="color:#ae81ff">DoNotSchedule</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">labelSelector</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">matchLabels</span>:
+</span></span><span style="display:flex;"><span>              <span style="color:#f92672">app</span>: <span style="color:#ae81ff">checkout</span>
+</span></span><span style="display:flex;"><span>        - <span style="color:#f92672">maxSkew</span>: <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">topologyKey</span>: <span style="color:#ae81ff">kubernetes.io/hostname</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">whenUnsatisfiable</span>: <span style="color:#ae81ff">ScheduleAnyway</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">labelSelector</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#f92672">matchLabels</span>:
+</span></span><span style="display:flex;"><span>              <span style="color:#f92672">app</span>: <span style="color:#ae81ff">checkout</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">containers</span>:
+</span></span><span style="display:flex;"><span>        - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">app</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">image</span>: <span style="color:#ae81ff">nginx:1.27</span>
+</span></span><span style="display:flex;"><span>---
+</span></span><span style="display:flex;"><span><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">v1</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">kind</span>: <span style="color:#ae81ff">Service</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">checkout</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">spec</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">selector</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">app</span>: <span style="color:#ae81ff">checkout</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">trafficDistribution</span>: <span style="color:#ae81ff">PreferSameZone</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">ports</span>:
+</span></span><span style="display:flex;"><span>    - <span style="color:#f92672">port</span>: <span style="color:#ae81ff">80</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">targetPort</span>: <span style="color:#ae81ff">80</span></span></span></code></pre></div><p>这段配置的重点不是 YAML 本身，而是分工：Deployment 保证各可用区都有后端，Service 保证流量优先走本可用区。</p>
+<h3 id="23-落地验证与常见误区">2.3 落地验证与常见误区<a class="anchor" href="#23-%e8%90%bd%e5%9c%b0%e9%aa%8c%e8%af%81%e4%b8%8e%e5%b8%b8%e8%a7%81%e8%af%af%e5%8c%ba">#</a></h3>
+<p>配置生效后，建议从节点标签、Pod 分布和 EndpointSlice hints 三个层面验证，而不是只看 YAML 是否提交成功：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl get nodes -L topology.kubernetes.io/zone
+</span></span><span style="display:flex;"><span>kubectl get pod -l app<span style="color:#f92672">=</span>checkout -o wide
+</span></span><span style="display:flex;"><span>kubectl get endpointslice -l kubernetes.io/service-name<span style="color:#f92672">=</span>checkout -o yaml</span></span></code></pre></div><p>重点确认几件事：</p>
+<ul>
+<li>节点是否都带有稳定的 <code>topology.kubernetes.io/zone</code> 和 <code>kubernetes.io/hostname</code> 标签。</li>
+<li>Pod 是否真的分布到了预期的可用区和节点上。</li>
+<li>EndpointSlice 中的 Endpoint 是否按配置带有 <code>zone</code>、<code>nodeName</code> 和 <code>hints</code>。</li>
+<li>业务指标中的跨可用区调用比例是否下降，而不只是配置字段看起来正确。</li>
+</ul>
+<p>常见误区也值得提前避开：</p>
+<table>
+  <thead>
+      <tr>
+          <th>误区</th>
+          <th>更准确的理解</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>配了 <code>trafficDistribution</code> 就不会跨可用区</td>
+          <td>它是偏好而不是强制；本可用区没有就绪 Endpoint 时会回退</td>
+      </tr>
+      <tr>
+          <td>配了 <code>topologySpreadConstraints</code> 就会自动重排旧 Pod</td>
+          <td>它只影响新 Pod 的调度，不会主动驱逐或迁移已运行 Pod</td>
+      </tr>
+      <tr>
+          <td><code>maxSkew: 1</code> 总是更好</td>
+          <td>约束越严格，对可用容量和节点标签质量的要求越高，失败时更容易 <code>Pending</code></td>
+      </tr>
+      <tr>
+          <td>同节点优先适合所有服务</td>
+          <td><code>PreferSameNode</code> 更适合节点本地模型，普通 Deployment 可能因此形成热点</td>
+      </tr>
+      <tr>
+          <td>Service Mesh 内流量一定受 kube-proxy 控制</td>
+          <td>mesh 数据面可能自行选择 Endpoint，需要看实际流量路径</td>
+      </tr>
+  </tbody>
+</table>
+<h2 id="3-原理剖析">3. 原理剖析<a class="anchor" href="#3-%e5%8e%9f%e7%90%86%e5%89%96%e6%9e%90">#</a></h2>
+<p>下面的源码路径和代码片段都基于 Kubernetes <code>v1.36.0</code>，对应源码提交 <code>ecf6decece6a6de25a57aad9ba90b6ce580f6f78</code>。如果看 <code>master</code> 或其他小版本，路径和 feature gate 状态可能会有差异。为了突出主流程，下面的代码片段会省略部分错误处理、日志和非关键参数。</p>
+<h3 id="31-topologyspreadconstraints-的实现">3.1 topologySpreadConstraints 的实现<a class="anchor" href="#31-topologyspreadconstraints-%e7%9a%84%e5%ae%9e%e7%8e%b0">#</a></h3>
+<h4 id="调度框架中的-podtopologyspread-插件">调度框架中的 PodTopologySpread 插件<a class="anchor" href="#%e8%b0%83%e5%ba%a6%e6%a1%86%e6%9e%b6%e4%b8%ad%e7%9a%84-podtopologyspread-%e6%8f%92%e4%bb%b6">#</a></h4>
+<p><code>topologySpreadConstraints</code> 由 kube-scheduler 的 <code>PodTopologySpread</code> 插件实现。核心代码在 <code>pkg/scheduler/framework/plugins/podtopologyspread/</code> 下，主要参与 <code>PreFilter</code>、<code>Filter</code>、<code>PreScore</code>、<code>Score</code> 和 <code>NormalizeScore</code> 这几个扩展点。</p>
+<figure>
+  <img
+    src="/images/kubernetes-topology-aware-scheduling-and-routing/scheduler-topology-spread-flow.svg"
+    alt="kube-scheduler 调度流程中 topologySpreadConstraints 在 PreFilter、Filter 和 Score 阶段的作用环节"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>topologySpreadConstraints 在 kube-scheduler 调度流程中的作用环节</figcaption>
+</figure>
+<p>调度一个新 Pod 时，可以重点看两个阶段分界：硬约束会在 <code>Filter</code> 阶段直接淘汰节点，软约束则只在 <code>Score</code> 阶段影响节点排序。</p>
+<p>硬约束判断的关键公式可以简化为：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>skew = 当前拓扑域已有匹配 Pod 数 + 新 Pod 是否匹配 selector - 全局最小匹配数
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>if skew &gt; maxSkew:
+</span></span><span style="display:flex;"><span>    该节点不可调度</span></span></code></pre></div><p>这里的“全局最小匹配数”不是简单地取所有可用区的最小值，而是会结合 <code>minDomains</code>、节点亲和性（node affinity）、taints、节点是否具备对应拓扑标签等条件。源码里的 <code>preFilterState</code> 会维护 <code>TpValueToMatchNum</code> 和 <code>CriticalPaths</code>，前者记录每个拓扑值的 Pod 计数，后者记录最小计数路径，避免每次 <code>Filter</code> 都重新扫描整个集群。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// Kubernetes v1.36.0: pkg/scheduler/framework/plugins/podtopologyspread/filtering.go</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 下面中文注释为辅助理解，不是源码中的原始注释。</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">type</span> <span style="color:#a6e22e">preFilterState</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 当前 Pod 上解析出来的硬拓扑分布约束。</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// CriticalPaths 和 TpValueToMatchNum 都按 constraint 下标索引。</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">Constraints</span> []<span style="color:#a6e22e">topologySpreadConstraint</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// CriticalPaths[i] 只记录第 i 个 constraint 的两条关键路径，</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 不保存 TpValueToMatchNum[i] 的完整排序结果。</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">    // CriticalPaths[i][0].MatchNum 一定是该 constraint 下的最小匹配数；</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// CriticalPaths[i][1].MatchNum 只保证 &gt;= [0]，不保证是第二小匹配数。</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">CriticalPaths</span> []<span style="color:#f92672">*</span><span style="color:#a6e22e">criticalPaths</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// TpValueToMatchNum[i] 表示第 i 个 constraint 下：</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// topology value -&gt; 已有匹配 Pod 数。</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">    // 例如 constraints[0].TopologyKey == &#34;topology.kubernetes.io/zone&#34;：</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">//   TpValueToMatchNum[0][&#34;zone-a&#34;] == 2</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">//   TpValueToMatchNum[0][&#34;zone-b&#34;] == 1</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">//   TpValueToMatchNum[0][&#34;zone-c&#34;] == 1</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">    // 如果 constraints[1].TopologyKey == &#34;kubernetes.io/hostname&#34;：</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">//   TpValueToMatchNum[1][&#34;worker-1&#34;] == 1</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">//   TpValueToMatchNum[1][&#34;worker-3&#34;] == 2</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">//   TpValueToMatchNum[1][&#34;worker-4&#34;] == 0</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">    // 这里统计的是能被 constraint.Selector 匹配到的已有 Pod 数，</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 不是节点数量。map key 来自本轮约束计算中合格节点上的 topology label value。</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">TpValueToMatchNum</span> []<span style="color:#66d9ef">map</span>[<span style="color:#66d9ef">string</span>]<span style="color:#66d9ef">int</span>
+</span></span><span style="display:flex;"><span>}</span></span></code></pre></div><p>软约束的实现思路则不同。<code>ScheduleAnyway</code> 不会淘汰节点，而是在 <code>Score</code> 阶段计算每个节点所在拓扑域的匹配 Pod 数，再通过 <code>NormalizeScore</code> 反转分数：Pod 越少的拓扑域，节点分数越高。这样它不会阻塞调度，但会影响最终选点。</p>
+<h4 id="prefilter统计拓扑域内已有-pod">PreFilter：统计拓扑域内已有 Pod<a class="anchor" href="#prefilter%e7%bb%9f%e8%ae%a1%e6%8b%93%e6%89%91%e5%9f%9f%e5%86%85%e5%b7%b2%e6%9c%89-pod">#</a></h4>
+<p><code>PreFilter</code> 阶段会解析 Pod 上的 constraints，并基于 <code>labelSelector</code> 找出要统计的 Pod 集合。随后调度器遍历已有 Pod 和节点，把匹配 Pod 按拓扑键值对（topology pair）聚合，例如：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>topology.kubernetes.io/zone=zone-a -&gt; 2
+</span></span><span style="display:flex;"><span>topology.kubernetes.io/zone=zone-b -&gt; 1
+</span></span><span style="display:flex;"><span>topology.kubernetes.io/zone=zone-c -&gt; 1</span></span></code></pre></div><p>这一步的关键是把后续 <code>Filter</code> 需要的全局信息提前算好，避免每个候选节点都重复扫描全部 Pod。</p>
+<h4 id="filter根据-maxskew-判断节点是否可调度">Filter：根据 maxSkew 判断节点是否可调度<a class="anchor" href="#filter%e6%a0%b9%e6%8d%ae-maxskew-%e5%88%a4%e6%96%ad%e8%8a%82%e7%82%b9%e6%98%af%e5%90%a6%e5%8f%af%e8%b0%83%e5%ba%a6">#</a></h4>
+<p><code>Filter</code> 阶段会对每个候选节点执行硬约束判断。它会检查节点是否具备 constraint 要求的 <code>topologyKey</code>，再计算新 Pod 放上去后的 skew。如果任何一个硬约束不满足，该节点就会被过滤。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// Kubernetes v1.36.0: pkg/scheduler/framework/plugins/podtopologyspread/filtering.go</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 下面中文注释为辅助理解，不是源码中的原始注释。</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">// tpVal 来自候选节点的 node.Labels[c.TopologyKey]。</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 如果 c.TopologyKey == &#34;topology.kubernetes.io/zone&#34;，且候选节点在 zone-a，</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// matchNum 就是 TpValueToMatchNum[i][&#34;zone-a&#34;]。</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 如果 c.TopologyKey == &#34;kubernetes.io/hostname&#34;，且候选节点是 worker-4，</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// matchNum 就是 TpValueToMatchNum[i][&#34;worker-4&#34;]。</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">matchNum</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">TpValueToMatchNum</span>[<span style="color:#a6e22e">i</span>][<span style="color:#a6e22e">tpVal</span>]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// selfMatchNum 表示新 Pod 自己是否也会被该 constraint 的 selector 匹配到。</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 同一个 Deployment 创建出来的 Pod，通常这里是 1。</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">skew</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">matchNum</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">selfMatchNum</span> <span style="color:#f92672">-</span> <span style="color:#a6e22e">minMatchNum</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> <span style="color:#a6e22e">skew</span> &gt; int(<span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">MaxSkew</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">fwk</span>.<span style="color:#a6e22e">NewStatus</span>(<span style="color:#a6e22e">fwk</span>.<span style="color:#a6e22e">Unschedulable</span>, <span style="color:#a6e22e">ErrReasonConstraintsNotMatch</span>)
+</span></span><span style="display:flex;"><span>}</span></span></code></pre></div><p>多个 constraint 之间是逻辑 AND 关系，所以可用区和节点两层约束都配置为 <code>DoNotSchedule</code> 时，候选节点必须同时满足两个维度的均衡要求。</p>
+<h4 id="score为更均衡的节点加分">Score：为更均衡的节点加分<a class="anchor" href="#score%e4%b8%ba%e6%9b%b4%e5%9d%87%e8%a1%a1%e7%9a%84%e8%8a%82%e7%82%b9%e5%8a%a0%e5%88%86">#</a></h4>
+<p><code>ScheduleAnyway</code> 对应的约束主要在打分阶段发挥作用。调度器会给更有助于降低 skew 的节点更高分，再和资源、亲和性等其他插件的分数一起归一化。最终选中的节点不一定是拓扑上最优的节点，而是所有调度插件综合打分后的结果。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// Kubernetes v1.36.0: pkg/scheduler/framework/plugins/podtopologyspread/scoring.go</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 下面中文注释为辅助理解，不是源码中的原始注释。</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> <span style="color:#a6e22e">tpVal</span>, <span style="color:#a6e22e">ok</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">node</span>.<span style="color:#a6e22e">Labels</span>[<span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">TopologyKey</span>]; <span style="color:#a6e22e">ok</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">var</span> <span style="color:#a6e22e">cnt</span> <span style="color:#66d9ef">int64</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">TopologyKey</span> <span style="color:#f92672">==</span> <span style="color:#a6e22e">v1</span>.<span style="color:#a6e22e">LabelHostname</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 如果按 hostname 打散，拓扑域就是当前节点本身，</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 所以直接统计当前节点上已有多少个 selector 匹配 Pod。</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">cnt</span> = int64(<span style="color:#a6e22e">countPodsMatchSelector</span>(<span style="color:#a6e22e">nodeInfo</span>.<span style="color:#a6e22e">GetPods</span>(), <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">Selector</span>, <span style="color:#a6e22e">pod</span>.<span style="color:#a6e22e">Namespace</span>))
+</span></span><span style="display:flex;"><span>    } <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 如果按 zone、region 等更大的拓扑域打散，</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// PreScore 已经把匹配 Pod 数按 topology value 聚合到 TopologyValueToPodCounts。</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">//
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e">        // 例如 c.TopologyKey == &#34;topology.kubernetes.io/zone&#34;，</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 当前候选节点的 tpVal == &#34;zone-a&#34;，</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// s.TopologyValueToPodCounts[i][&#34;zone-a&#34;] == 3，</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 那么 cnt 就是 3。</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">cnt</span> = <span style="color:#f92672">*</span><span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">TopologyValueToPodCounts</span>[<span style="color:#a6e22e">i</span>][<span style="color:#a6e22e">tpVal</span>]
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// scoreForCount 会把 cnt、maxSkew 和拓扑域权重合成一个原始分。</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 这里 cnt 越大，原始分越高；后面的 NormalizeScore 会再把分数反转。</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">score</span> <span style="color:#f92672">+=</span> <span style="color:#a6e22e">scoreForCount</span>(<span style="color:#a6e22e">cnt</span>, <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">MaxSkew</span>, <span style="color:#a6e22e">s</span>.<span style="color:#a6e22e">TopologyNormalizingWeight</span>[<span style="color:#a6e22e">i</span>])
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// NormalizeScore 阶段会反转原始分：</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 原始分越低，说明该拓扑域里的匹配 Pod 越少，最终得分越高。</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 这也是 ScheduleAnyway 表达“倾向于更均衡”而不是“直接过滤节点”的位置。</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">s</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">scores</span>[<span style="color:#a6e22e">i</span>].<span style="color:#a6e22e">Score</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">scores</span>[<span style="color:#a6e22e">i</span>].<span style="color:#a6e22e">Score</span> = <span style="color:#a6e22e">fwk</span>.<span style="color:#a6e22e">MaxNodeScore</span> <span style="color:#f92672">*</span> (<span style="color:#a6e22e">maxScore</span> <span style="color:#f92672">+</span> <span style="color:#a6e22e">minScore</span> <span style="color:#f92672">-</span> <span style="color:#a6e22e">s</span>) <span style="color:#f92672">/</span> <span style="color:#a6e22e">maxScore</span></span></span></code></pre></div><p>这也是为什么软约束适合表达倾向，而不适合承载强可用性目标。</p>
+<h3 id="32-trafficdistribution-的实现">3.2 trafficDistribution 的实现<a class="anchor" href="#32-trafficdistribution-%e7%9a%84%e5%ae%9e%e7%8e%b0">#</a></h3>
+<p><code>trafficDistribution</code> 不是在请求到来时才临时计算，而是在 Service 或 EndpointSlice 变化后先写入 hints，再由每个节点上的 kube-proxy 同步成本地转发规则。</p>
+<figure>
+  <img
+    src="/images/kubernetes-topology-aware-scheduling-and-routing/traffic-distribution-proxy-flow.svg"
+    alt="trafficDistribution 从 Service 到 EndpointSlice hints，再到 kube-proxy 生成转发规则并选择就近 Endpoint 的生效链路"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>trafficDistribution 生效时机与 kube-proxy 转发路径</figcaption>
+</figure>
+<h4 id="endpointslice-控制器如何生成-hints">EndpointSlice 控制器如何生成 hints<a class="anchor" href="#endpointslice-%e6%8e%a7%e5%88%b6%e5%99%a8%e5%a6%82%e4%bd%95%e7%94%9f%e6%88%90-hints">#</a></h4>
+<p>EndpointSlice 控制器会在 reconcile EndpointSlice 时处理 hints。源码里的 <code>staging/src/k8s.io/endpointslice/trafficdist/trafficdist.go</code> 定义了 <code>ReconcileHints</code>。在 <code>trafficDistribution</code> 生效路径下，控制器会根据字段生成或清理 hints；如果设置了 <code>PreferSameZone</code> 或 <code>PreferClose</code>，就给就绪 Endpoint 写入 <code>ForZones</code>；如果设置了 <code>PreferSameNode</code>，还会写入 <code>ForNodes</code>。</p>
+<blockquote class='book-hint '>
+<p>引用说明：在 Kubernetes <code>v1.36.0</code> 中，<code>PreferSameZone</code> 和 <code>PreferSameNode</code> 的 Service API 常量定义在 <a href="https://github.com/kubernetes/kubernetes/blob/v1.36.0/staging/src/k8s.io/api/core/v1/types.go#L5849-L5868"><code>staging/src/k8s.io/api/core/v1/types.go</code></a>。对应 feature gate 是 <a href="https://github.com/kubernetes/kubernetes/blob/v1.36.0/pkg/features/kube_features.go#L833-L837"><code>PreferSameTrafficDistribution</code></a>，其生命周期状态表显示它从 <code>1.35</code> 开始是 GA、默认开启，并设置了 <code>LockToDefault: true</code>（见 <a href="https://github.com/kubernetes/kubernetes/blob/v1.36.0/pkg/features/kube_features.go#L1832-L1836"><code>pkg/features/kube_features.go</code></a>）。</p>
+</blockquote><p>EndpointSlice 控制器初始化 reconciler 时会把 feature gate 状态传进去：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// Kubernetes v1.36.0: pkg/controller/endpointslice/endpointslice_controller.go</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">endpointslicerec</span>.<span style="color:#a6e22e">WithPreferSameTrafficDistributionEnabled</span>(
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">utilfeature</span>.<span style="color:#a6e22e">DefaultFeatureGate</span>.<span style="color:#a6e22e">Enabled</span>(<span style="color:#a6e22e">features</span>.<span style="color:#a6e22e">PreferSameTrafficDistribution</span>),
+</span></span><span style="display:flex;"><span>)</span></span></code></pre></div><p>reconciler 先判断当前 Service 的 <code>trafficDistribution</code> 是否可用；如果可用并且未使用旧的 topology hints annotation，就调用 <code>trafficdist.ReconcileHints</code>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// Kubernetes v1.36.0: staging/src/k8s.io/endpointslice/reconciler.go</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">canUseTrafficDistribution</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">r</span>.<span style="color:#a6e22e">validTrafficDistribution</span>(<span style="color:#a6e22e">service</span>.<span style="color:#a6e22e">Spec</span>.<span style="color:#a6e22e">TrafficDistribution</span>) <span style="color:#f92672">&amp;&amp;</span>
+</span></span><span style="display:flex;"><span>    !<span style="color:#a6e22e">hintsEnabled</span>(<span style="color:#a6e22e">service</span>.<span style="color:#a6e22e">Annotations</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> <span style="color:#a6e22e">canUseTrafficDistribution</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">trafficdist</span>.<span style="color:#a6e22e">ReconcileHints</span>(<span style="color:#a6e22e">service</span>.<span style="color:#a6e22e">Spec</span>.<span style="color:#a6e22e">TrafficDistribution</span>, <span style="color:#a6e22e">slicesToCreate</span>, <span style="color:#a6e22e">slicesToUpdate</span>, <span style="color:#a6e22e">unchangedSlices</span>(<span style="color:#f92672">...</span>))
+</span></span><span style="display:flex;"><span>}</span></span></code></pre></div><p><code>ReconcileHints</code> 本身只负责选择 heuristic，真正写 hints 时再看 Endpoint 是否有 <code>zone</code> 和 <code>nodeName</code>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// Kubernetes v1.36.0: staging/src/k8s.io/endpointslice/trafficdist/trafficdist.go</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> <span style="color:#a6e22e">trafficDistribution</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> <span style="color:#f92672">&amp;&amp;</span> <span style="color:#a6e22e">closeTrafficDistribution</span>.<span style="color:#a6e22e">Has</span>(<span style="color:#f92672">*</span><span style="color:#a6e22e">trafficDistribution</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">h</span> = <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">preferCloseHeuristic</span>{<span style="color:#f92672">*</span><span style="color:#a6e22e">trafficDistribution</span> <span style="color:#f92672">==</span> <span style="color:#a6e22e">corev1</span>.<span style="color:#a6e22e">ServiceTrafficDistributionPreferSameNode</span>}
+</span></span><span style="display:flex;"><span>}</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// Kubernetes v1.36.0: staging/src/k8s.io/endpointslice/trafficdist/trafficdist.go</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> <span style="color:#a6e22e">endpoint</span>.<span style="color:#a6e22e">Zone</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">forZones</span> = []<span style="color:#a6e22e">discoveryv1</span>.<span style="color:#a6e22e">ForZone</span>{{<span style="color:#a6e22e">Name</span>: <span style="color:#f92672">*</span><span style="color:#a6e22e">endpoint</span>.<span style="color:#a6e22e">Zone</span>}}
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> <span style="color:#a6e22e">endpoint</span>.<span style="color:#a6e22e">NodeName</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> <span style="color:#f92672">&amp;&amp;</span> <span style="color:#a6e22e">h</span>.<span style="color:#a6e22e">generateNodeHints</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">forNodes</span> = []<span style="color:#a6e22e">discoveryv1</span>.<span style="color:#a6e22e">ForNode</span>{{<span style="color:#a6e22e">Name</span>: <span style="color:#f92672">*</span><span style="color:#a6e22e">endpoint</span>.<span style="color:#a6e22e">NodeName</span>}}
+</span></span><span style="display:flex;"><span>}</span></span></code></pre></div><h4 id="endpointslice-hints-的数据结构">EndpointSlice hints 的数据结构<a class="anchor" href="#endpointslice-hints-%e7%9a%84%e6%95%b0%e6%8d%ae%e7%bb%93%e6%9e%84">#</a></h4>
+<p>一个 EndpointSlice 中的 Endpoint 可能长这样：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#f92672">endpoints</span>:
+</span></span><span style="display:flex;"><span>  - <span style="color:#f92672">addresses</span>:
+</span></span><span style="display:flex;"><span>      - <span style="color:#ae81ff">10.244.1.23</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">nodeName</span>: <span style="color:#ae81ff">node-a</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">zone</span>: <span style="color:#ae81ff">cn-hangzhou-a</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">hints</span>:
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">forZones</span>:
+</span></span><span style="display:flex;"><span>        - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">cn-hangzhou-a</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">forNodes</span>:
+</span></span><span style="display:flex;"><span>        - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">node-a</span></span></span></code></pre></div><p>这里的 <code>zone</code> 和 <code>nodeName</code> 描述 Endpoint 自身位于哪里，<code>hints</code> 描述这个 Endpoint 更适合被哪些可用区或节点的客户端使用。</p>
+<h4 id="kube-proxy-如何按节点--可用区选择-endpoint">kube-proxy 如何按节点 / 可用区选择 Endpoint<a class="anchor" href="#kube-proxy-%e5%a6%82%e4%bd%95%e6%8c%89%e8%8a%82%e7%82%b9--%e5%8f%af%e7%94%a8%e5%8c%ba%e9%80%89%e6%8b%a9-endpoint">#</a></h4>
+<p>kube-proxy 侧会 watch EndpointSlice 和本节点标签。<code>pkg/proxy/topology.go</code> 中的 <code>CategorizeEndpoints</code> 会先根据 hints 判断当前 Service 应该使用哪种拓扑模式：</p>
+<ol>
+<li>如果同节点 hints 可用，并且本节点命中至少一个就绪 Endpoint，就使用 <code>PreferSameNode</code>。</li>
+<li>否则，如果所有就绪 Endpoint 都有可用区 hints，并且本节点所在可用区命中至少一个 Endpoint，就使用 <code>PreferSameZone</code>。</li>
+<li>否则退回默认模式，使用集群内所有就绪 Endpoint。</li>
+</ol>
+<p>真正过滤 Endpoint 时，逻辑很直接：<code>PreferSameNode</code> 要求 Endpoint 的 node hint 命中当前节点；<code>PreferSameZone</code> 要求 zone hint 命中当前节点所在可用区。回退发生在“选择拓扑模式”阶段，而不是对每个 Endpoint 单独兜底。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// Kubernetes v1.36.0: pkg/proxy/topology.go</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">topologyMode</span> = <span style="color:#a6e22e">topologyModeFromHints</span>(<span style="color:#a6e22e">svcInfo</span>, <span style="color:#a6e22e">endpoints</span>, <span style="color:#a6e22e">nodeName</span>, <span style="color:#a6e22e">zone</span>)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">availableForTopology</span>(<span style="color:#a6e22e">ep</span>, <span style="color:#a6e22e">topologyMode</span>, <span style="color:#a6e22e">nodeName</span>, <span style="color:#a6e22e">zone</span>) {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">false</span>
+</span></span><span style="display:flex;"><span>}</span></span></code></pre></div><p><code>topologyModeFromHints</code> 的优先级是先看同节点 hints，再看同可用区 hints，最后退回默认模式：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// Kubernetes v1.36.0: pkg/proxy/topology.go</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 下面中文注释为辅助理解，日志分支有省略。</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">topologyModeFromHints</span>(<span style="color:#a6e22e">svcInfo</span> <span style="color:#a6e22e">ServicePort</span>, <span style="color:#a6e22e">endpoints</span> []<span style="color:#a6e22e">Endpoint</span>, <span style="color:#a6e22e">nodeName</span>, <span style="color:#a6e22e">zone</span> <span style="color:#66d9ef">string</span>) <span style="color:#66d9ef">string</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">hasReadyEndpoints</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">false</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">hasEndpointForNode</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">false</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">allEndpointsHaveNodeHints</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">hasEndpointForZone</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">false</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">allEndpointsHaveZoneHints</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">endpoint</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">endpoints</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">endpoint</span>.<span style="color:#a6e22e">IsReady</span>() {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">continue</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#a6e22e">hasReadyEndpoints</span> = <span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 只有所有 ready Endpoint 都带 node hints，</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 并且至少有一个 Endpoint 命中当前 nodeName，</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 后面才可能选择 PreferSameNode。</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">endpoint</span>.<span style="color:#a6e22e">NodeHints</span>().<span style="color:#a6e22e">Len</span>() <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">allEndpointsHaveNodeHints</span> = <span style="color:#66d9ef">false</span>
+</span></span><span style="display:flex;"><span>        } <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">endpoint</span>.<span style="color:#a6e22e">NodeHints</span>().<span style="color:#a6e22e">Has</span>(<span style="color:#a6e22e">nodeName</span>) {
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">hasEndpointForNode</span> = <span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 同理，只有所有 ready Endpoint 都带 zone hints，</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 并且至少有一个 Endpoint 命中当前节点所在 zone，</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 后面才可能选择 PreferSameZone。</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">endpoint</span>.<span style="color:#a6e22e">ZoneHints</span>().<span style="color:#a6e22e">Len</span>() <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">allEndpointsHaveZoneHints</span> = <span style="color:#66d9ef">false</span>
+</span></span><span style="display:flex;"><span>        } <span style="color:#66d9ef">else</span> <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">endpoint</span>.<span style="color:#a6e22e">ZoneHints</span>().<span style="color:#a6e22e">Has</span>(<span style="color:#a6e22e">zone</span>) {
+</span></span><span style="display:flex;"><span>            <span style="color:#a6e22e">hasEndpointForZone</span> = <span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> !<span style="color:#a6e22e">hasReadyEndpoints</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#e6db74">&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">utilfeature</span>.<span style="color:#a6e22e">DefaultFeatureGate</span>.<span style="color:#a6e22e">Enabled</span>(<span style="color:#a6e22e">features</span>.<span style="color:#a6e22e">PreferSameTrafficDistribution</span>) {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">allEndpointsHaveNodeHints</span> <span style="color:#f92672">&amp;&amp;</span> <span style="color:#a6e22e">hasEndpointForNode</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">v1</span>.<span style="color:#a6e22e">ServiceTrafficDistributionPreferSameNode</span>
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#a6e22e">allEndpointsHaveZoneHints</span> <span style="color:#f92672">&amp;&amp;</span> <span style="color:#a6e22e">hasEndpointForZone</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">v1</span>.<span style="color:#a6e22e">ServiceTrafficDistributionPreferSameZone</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// 空字符串表示不启用拓扑过滤，回到默认的集群范围转发。</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#e6db74">&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>}</span></span></code></pre></div><p>过滤函数也体现了“mode 选择阶段回退，执行阶段不再回退”的特点：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// Kubernetes v1.36.0: pkg/proxy/topology.go</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">// 下面中文注释为辅助理解。</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">availableForTopology</span>(<span style="color:#a6e22e">endpoint</span> <span style="color:#a6e22e">Endpoint</span>, <span style="color:#a6e22e">topologyMode</span>, <span style="color:#a6e22e">nodeName</span>, <span style="color:#a6e22e">zone</span> <span style="color:#66d9ef">string</span>) <span style="color:#66d9ef">bool</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">switch</span> <span style="color:#a6e22e">topologyMode</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">case</span> <span style="color:#e6db74">&#34;&#34;</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// topologyModeFromHints 已经决定不使用拓扑过滤，</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 所以所有 ready Endpoint 都可以进入候选集。</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">true</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">case</span> <span style="color:#a6e22e">v1</span>.<span style="color:#a6e22e">ServiceTrafficDistributionPreferSameNode</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// mode 已经确定为 PreferSameNode 后，这里只检查 node hint。</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// 如果当前 Endpoint 不命中当前节点，不会在这里回退到 zone。</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">endpoint</span>.<span style="color:#a6e22e">NodeHints</span>().<span style="color:#a6e22e">Has</span>(<span style="color:#a6e22e">nodeName</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">case</span> <span style="color:#a6e22e">v1</span>.<span style="color:#a6e22e">ServiceTrafficDistributionPreferSameZone</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e">// mode 已经确定为 PreferSameZone 后，这里只检查 zone hint。</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#a6e22e">endpoint</span>.<span style="color:#a6e22e">ZoneHints</span>().<span style="color:#a6e22e">Has</span>(<span style="color:#a6e22e">zone</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">default</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">false</span>
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>}</span></span></code></pre></div><h4 id="回退行为什么时候回退到全集群转发">回退行为：什么时候回退到全集群转发<a class="anchor" href="#%e5%9b%9e%e9%80%80%e8%a1%8c%e4%b8%ba%e4%bb%80%e4%b9%88%e6%97%b6%e5%80%99%e5%9b%9e%e9%80%80%e5%88%b0%e5%85%a8%e9%9b%86%e7%be%a4%e8%bd%ac%e5%8f%91">#</a></h4>
+<p><code>trafficDistribution</code> 的回退行为是它和 <code>Local</code> traffic policy 的核心区别。</p>
+<p>以 <code>PreferSameZone</code> 为例，如果当前节点所在可用区存在命中的就绪 Endpoint，kube-proxy 就只使用这些 Endpoint；如果没有命中，才回退到全集群就绪 Endpoint。</p>
+<p>以 <code>PreferSameNode</code> 为例，优先级是：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>同节点 Endpoint
+</span></span><span style="display:flex;"><span>    -&gt; 同可用区 Endpoint
+</span></span><span style="display:flex;"><span>        -&gt; 集群范围 Endpoint</span></span></code></pre></div><p>这说明它是可用性优先的就近访问，而不是严格本地访问。</p>
+<h2 id="4-service-mesh-场景下的边界">4. Service Mesh 场景下的边界<a class="anchor" href="#4-service-mesh-%e5%9c%ba%e6%99%af%e4%b8%8b%e7%9a%84%e8%be%b9%e7%95%8c">#</a></h2>
+<p>如果集群里已经接入 Service Mesh，就近访问还要再看一层：这条请求最终是由 kube-proxy 选择 Endpoint，还是由 mesh 数据面选择 Endpoint。</p>
+<p>原生 <code>trafficDistribution</code> 作用于 Kubernetes Service 转发层。它依赖 EndpointSlice hints，并由 kube-proxy 在节点上生成转发规则，适合不经过 mesh 的普通 Service 访问，或者作为集群的基础兜底能力。</p>
+<p>Service Mesh 通常会在数据面代理里做自己的 Endpoint 负载均衡。以 Istio 为例：</p>
+<ul>
+<li>Sidecar 模式下，Envoy 可以基于 locality 信息做本地优先、跨 locality failover 或权重分配；locality 来自 region、zone、sub-zone，其中 Kubernetes 的 <code>topology.kubernetes.io/region</code> 和 <code>topology.kubernetes.io/zone</code> 是常用输入。</li>
+<li>Ambient 模式下，Istio 提供了 <code>networking.istio.io/traffic-distribution</code> annotation，让 ztunnel 按 <code>PreferSameZone</code> 或 <code>PreferSameNode</code> 分发流量；它还可以配置在 Namespace 或 ServiceEntry 上，用来覆盖一组服务或外部服务。</li>
+<li>如果同一个 Service 同时设置了 Kubernetes <code>spec.trafficDistribution</code> 和 Istio 的 traffic distribution annotation，Istio 文档说明 Service spec 字段的优先级更高。</li>
+</ul>
+<blockquote class='book-hint '>
+<p>引用说明：Istio <code>1.27.0</code> Change Notes 在 Traffic Management 中明确列出：开始支持 Kubernetes Service <code>trafficDistribution</code> 字段中的 <code>PreferSameNode</code> 和 <code>PreferSameZone</code>（见 <a href="https://istio.io/latest/news/releases/1.27.x/announcing-1.27/change-notes/">Istio 1.27.0 Change Notes</a>）。</p>
+</blockquote><p>因此，mesh 环境里不要把 <code>trafficDistribution</code> 理解成“所有流量一定都会按 kube-proxy 规则走”。更稳妥的做法是先确认流量路径：</p>
+<table>
+  <thead>
+      <tr>
+          <th>流量路径</th>
+          <th>推荐控制点</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>普通 Pod 访问 Kubernetes Service VIP</td>
+          <td><code>spec.trafficDistribution</code> + kube-proxy</td>
+      </tr>
+      <tr>
+          <td>Mesh 内部服务互访，代理负责 Endpoint 选择</td>
+          <td>Mesh 的 locality / traffic distribution 配置</td>
+      </tr>
+      <tr>
+          <td>Mesh 与非 Mesh 工作负载混合</td>
+          <td>两边都要配置一致的 locality 目标，并用指标确认实际跨区比例</td>
+      </tr>
+      <tr>
+          <td>外部服务或 ServiceEntry</td>
+          <td>使用 Mesh 的 locality 能力，Kubernetes Service 字段通常覆盖不到</td>
+      </tr>
+  </tbody>
+</table>
+<p>不管由哪一层做就近转发，前提都一样：目标拓扑里必须有足够就绪 Endpoint。Service Mesh 可以提供更细的 L7 策略、健康检测、熔断、灰度和可观测性，但它不能替代 <code>topologySpreadConstraints</code> 把 Pod 铺到合适的可用区或节点上。</p>
+<h2 id="5-总结">5. 总结<a class="anchor" href="#5-%e6%80%bb%e7%bb%93">#</a></h2>
+<p>这些能力可以按控制目标拆成两类：一类控制 Pod 分布，一类控制请求如何选择 Endpoint。实际落地时，通常先让后端分布足够健康，再叠加流量侧的就近偏好。</p>
+<h3 id="51-控制-pod-分布">5.1 控制 Pod 分布<a class="anchor" href="#51-%e6%8e%a7%e5%88%b6-pod-%e5%88%86%e5%b8%83">#</a></h3>
+<p><code>topologySpreadConstraints</code> 作用在调度阶段，适合解决“副本不要集中在同一个可用区、节点或机架”这类问题。它的收益是从源头让 Endpoint 分布更均衡，为多可用区高可用和后续就近访问打基础。代价是它只影响新创建或重新调度的 Pod；如果使用 <code>DoNotSchedule</code> 这类硬约束，还需要提前确认每个拓扑域容量足够，否则 Pod 可能进入 <code>Pending</code> 状态。配置时也要保证 <code>topologyKey</code>、Pod 标签和 <code>labelSelector</code> 能正确匹配。</p>
+<h3 id="52-控制请求转发">5.2 控制请求转发<a class="anchor" href="#52-%e6%8e%a7%e5%88%b6%e8%af%b7%e6%b1%82%e8%bd%ac%e5%8f%91">#</a></h3>
+<p><code>trafficDistribution</code> 作用在流量选择阶段，解决的是“请求应该优先打到哪个 Endpoint”。</p>
+<p><code>trafficDistribution: PreferSameZone</code> 适合多可用区服务，希望优先访问本可用区后端以降低延迟和跨区费用。它是偏好而不是强制，优点是没有本可用区 Endpoint 时会回退到全集群，优先保证可用性；代价是如果本可用区 Endpoint 太少，仍可能形成热点。</p>
+<p><code>trafficDistribution: PreferSameNode</code> 更适合 DaemonSet、节点级缓存、日志/监控 agent、node-local proxy 这类节点本地模型。它可以减少节点间跳转，又不会像 <code>Local</code> policy 那样在没有本节点 Endpoint 时直接失败。代价是它对后端分布要求更高，如果服务并不是节点本地模型，可能把流量压到少量同节点 Endpoint 上。</p>
+<p>已经接入 Service Mesh 时，mesh 内部流量的 locality 通常应该放到 mesh 策略里统一管理，例如 Istio 的 locality load balancing 或 ambient traffic distribution。它适合需要 L7 灰度、mTLS、重试、熔断、外部服务和细粒度 failover 的场景；代价是引入额外数据面和控制面复杂度，并且要明确哪些流量经过 mesh，哪些仍然走 Kubernetes 原生 Service 路径。</p>
+<h2 id="参考资料">参考资料<a class="anchor" href="#%e5%8f%82%e8%80%83%e8%b5%84%e6%96%99">#</a></h2>
+<ul>
+<li><a href="https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/">Pod Topology Spread Constraints</a></li>
+<li><a href="https://kubernetes.io/docs/reference/networking/virtual-ips/#traffic-distribution-control">Virtual IPs and Service Proxies: Traffic distribution control</a></li>
+<li><a href="https://github.com/kubernetes/kubernetes/tree/v1.36.0/staging/src/k8s.io/api/core/v1">Kubernetes v1.36.0: Service API</a></li>
+<li><a href="https://github.com/kubernetes/kubernetes/tree/v1.36.0/pkg/features">Kubernetes v1.36.0: feature gates</a></li>
+<li><a href="https://github.com/kubernetes/kubernetes/tree/v1.36.0/pkg/scheduler/framework/plugins/podtopologyspread">Kubernetes v1.36.0: PodTopologySpread</a></li>
+<li><a href="https://github.com/kubernetes/kubernetes/tree/v1.36.0/pkg/controller/endpointslice">Kubernetes v1.36.0: EndpointSlice controller</a></li>
+<li><a href="https://github.com/kubernetes/kubernetes/tree/v1.36.0/staging/src/k8s.io/endpointslice">Kubernetes v1.36.0: EndpointSlice staging</a></li>
+<li><a href="https://github.com/kubernetes/kubernetes/tree/v1.36.0/pkg/proxy">Kubernetes v1.36.0: kube-proxy</a></li>
+<li><a href="https://kubernetes.io/docs/reference/labels-annotations-taints/">Well-Known Labels, Annotations and Taints</a></li>
+<li><a href="https://istio.io/latest/docs/ambient/usage/traffic-distribution/">Istio Traffic Distribution</a></li>
+<li><a href="https://istio.io/latest/news/releases/1.27.x/announcing-1.27/change-notes/">Istio 1.27.0 Change Notes</a></li>
+<li><a href="https://istio.io/latest/docs/tasks/traffic-management/locality-load-balancing/">Istio Locality Load Balancing</a></li>
+</ul>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+  <div>
+  
+    <a href="/2026/07/23/Kubernetes-VPA-%E7%9A%84%E8%AE%BE%E8%AE%A1%E5%92%8C%E5%AE%9E%E7%8E%B0/" class="flex align-center">
+      <img src="/icons/backward.svg" class="book-icon" alt="Backward" />
+      <span>Kubernetes VPA 的设计和实现</span>
+    </a>
+  
+  </div>
+  <div>
+  
+    <a href="/2026/03/31/%E5%88%97%E5%BC%8F%E6%95%B0%E6%8D%AE%E5%BA%93%E6%98%AF%E6%80%8E%E4%B9%88%E7%82%BC%E6%88%90%E7%9A%84/" class="flex align-center">
+      <span>列式数据库是怎么炼成的</span>
+      <img src="/icons/forward.svg" class="book-icon" alt="Forward" />
+    </a>
+  
+  </div>
+</div>
+ 
+        
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+        
+<div class="flex align-center" style="margin-top: 1rem;">
+  <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+    访问量<span id="busuanzi_value_site_pv"></span>
+  </span>
+  <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+    访客数<span id="busuanzi_value_site_uv"></span>
+  </span>
+</div>
+        
+  
+ 
+        
+  
+  
+    <script>(function(){document.querySelectorAll("pre:has(code)").forEach(e=>{e.addEventListener("click",e.focus),e.addEventListener("copy",function(t){if(t.preventDefault(),navigator.clipboard){const t=window.getSelection().toString()||e.textContent;navigator.clipboard.writeText(t)}})})})()</script>
+  
+
+      </footer>
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+  
+  <aside class="book-toc">
+    <div class="book-toc-content">
+      
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-背景可用区和跨区流量">1. 背景：可用区和跨区流量</a>
+      <ul>
+        <li><a href="#11-可用区是什么">1.1 可用区是什么</a></li>
+        <li><a href="#12-跨区流量会带来哪些问题">1.2 跨区流量会带来哪些问题</a></li>
+        <li><a href="#13-kubernetes-中的拓扑信息来自哪里">1.3 Kubernetes 中的拓扑信息来自哪里</a></li>
+      </ul>
+    </li>
+    <li><a href="#2-kubernetes-中的解决方案">2. Kubernetes 中的解决方案</a>
+      <ul>
+        <li><a href="#21-topologyspreadconstraints">2.1 topologySpreadConstraints</a></li>
+        <li><a href="#22-trafficdistribution">2.2 trafficDistribution</a></li>
+        <li><a href="#23-落地验证与常见误区">2.3 落地验证与常见误区</a></li>
+      </ul>
+    </li>
+    <li><a href="#3-原理剖析">3. 原理剖析</a>
+      <ul>
+        <li><a href="#31-topologyspreadconstraints-的实现">3.1 topologySpreadConstraints 的实现</a></li>
+        <li><a href="#32-trafficdistribution-的实现">3.2 trafficDistribution 的实现</a></li>
+      </ul>
+    </li>
+    <li><a href="#4-service-mesh-场景下的边界">4. Service Mesh 场景下的边界</a></li>
+    <li><a href="#5-总结">5. 总结</a>
+      <ul>
+        <li><a href="#51-控制-pod-分布">5.1 控制 Pod 分布</a></li>
+        <li><a href="#52-控制请求转发">5.2 控制请求转发</a></li>
+      </ul>
+    </li>
+    <li><a href="#参考资料">参考资料</a></li>
+  </ul>
+</nav>
+
+
+
+    </div>
+  </aside>
+  
+ 
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

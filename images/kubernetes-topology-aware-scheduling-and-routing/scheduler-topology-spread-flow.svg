@@ -1,0 +1,86 @@
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720">
+  <!-- svg-source:manual -->
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#1f2937"/>
+    </marker>
+    <marker id="arrow-muted" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+    </marker>
+    <filter id="paper" x="-2%" y="-2%" width="104%" height="104%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" result="noise"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer><feFuncA type="table" tableValues="0 0.025"/></feComponentTransfer>
+      <feBlend in="SourceGraphic" mode="multiply"/>
+    </filter>
+  </defs>
+  <rect x="0" y="0" width="1280" height="720" fill="#ffffff"/>
+  <g filter="url(#paper)">
+    <text x="640" y="56" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="34" font-weight="700" fill="#1f2937"><tspan x="640" dy="0">kube-scheduler 中 topologySpreadConstraints 的作用环节</tspan></text>
+
+    <rect x="55" y="132" width="210" height="116" rx="20" fill="#f8fafc" stroke="#1f2937" stroke-width="2.4"/>
+    <text x="160" y="176" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="27" font-weight="700" fill="#1f2937"><tspan x="160" dy="0">待调度 Pod</tspan></text>
+    <text x="160" y="213" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="20" font-weight="500" fill="#64748b"><tspan x="160" dy="0">PodSpec</tspan></text>
+    <text x="160" y="239" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="18" font-weight="500" fill="#64748b"><tspan x="160" dy="0">spread constraints</tspan></text>
+
+    <rect x="55" y="330" width="210" height="142" rx="20" fill="#f8fafc" stroke="#94a3b8" stroke-width="2.4"/>
+    <text x="160" y="373" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="26" font-weight="700" fill="#1f2937"><tspan x="160" dy="0">集群状态</tspan></text>
+    <text x="160" y="412" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="20" font-weight="500" fill="#64748b"><tspan x="160" dy="0">Node labels</tspan></text>
+    <text x="160" y="440" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="20" font-weight="500" fill="#64748b"><tspan x="160" dy="0">已有匹配 Pod</tspan></text>
+
+    <rect x="335" y="126" width="192" height="138" rx="22" fill="#dbeafe" stroke="#2563eb" stroke-width="2.6"/>
+    <text x="431" y="166" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="27" font-weight="700" fill="#1f2937"><tspan x="431" dy="0">PreFilter</tspan></text>
+    <text x="431" y="198" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="19" font-weight="500" fill="#334155"><tspan x="431" dy="0">解析硬约束</tspan></text>
+    <text x="431" y="224" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="18" font-weight="500" fill="#334155"><tspan x="431" dy="0">按 topologyKey</tspan></text>
+    <text x="431" y="248" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="18" font-weight="500" fill="#334155"><tspan x="431" dy="0">计数</tspan></text>
+
+    <rect x="598" y="126" width="192" height="138" rx="22" fill="#fee2e2" stroke="#dc2626" stroke-width="2.6"/>
+    <text x="694" y="166" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="27" font-weight="700" fill="#1f2937"><tspan x="694" dy="0">Filter</tspan></text>
+    <text x="694" y="200" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="19" font-weight="500" fill="#334155"><tspan x="694" dy="0">DoNotSchedule</tspan></text>
+    <text x="694" y="226" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="18" font-weight="500" fill="#334155"><tspan x="694" dy="0">skew &gt; maxSkew</tspan></text>
+    <text x="694" y="250" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="18" font-weight="500" fill="#334155"><tspan x="694" dy="0">则拒绝</tspan></text>
+
+    <rect x="861" y="126" width="192" height="138" rx="22" fill="#dcfce7" stroke="#16a34a" stroke-width="2.6"/>
+    <text x="957" y="158" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="24" font-weight="700" fill="#1f2937"><tspan x="957" dy="0">PreScore</tspan></text>
+    <text x="957" y="184" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="24" font-weight="700" fill="#1f2937"><tspan x="957" dy="0">Score</tspan></text>
+    <text x="957" y="216" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="18" font-weight="500" fill="#334155"><tspan x="957" dy="0">ScheduleAnyway</tspan></text>
+    <text x="957" y="242" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="18" font-weight="500" fill="#334155"><tspan x="957" dy="0">更均衡节点加分</tspan></text>
+
+    <rect x="1110" y="148" width="128" height="94" rx="20" fill="#fef3c7" stroke="#d97706" stroke-width="2.6"/>
+    <text x="1174" y="185" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="25" font-weight="700" fill="#1f2937"><tspan x="1174" dy="0">Bind</tspan></text>
+    <text x="1174" y="218" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="18" font-weight="500" fill="#334155"><tspan x="1174" dy="0">Pod 落位</tspan></text>
+
+    <line x1="265" y1="190" x2="335" y2="190" stroke="#1f2937" stroke-width="3" stroke-linecap="round" marker-end="url(#arrow)"/>
+    <line x1="527" y1="190" x2="598" y2="190" stroke="#1f2937" stroke-width="3" stroke-linecap="round" marker-end="url(#arrow)"/>
+    <line x1="790" y1="190" x2="861" y2="190" stroke="#1f2937" stroke-width="3" stroke-linecap="round" marker-end="url(#arrow)"/>
+    <line x1="1053" y1="190" x2="1110" y2="190" stroke="#1f2937" stroke-width="3" stroke-linecap="round" marker-end="url(#arrow)"/>
+    <path d="M 265 400 C 306 376, 318 250, 335 225" fill="none" stroke="#64748b" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="7 7" marker-end="url(#arrow-muted)"/>
+    <path d="M 265 430 C 448 500, 643 358, 654 264" fill="none" stroke="#64748b" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="7 7" marker-end="url(#arrow-muted)"/>
+    <path d="M 265 455 C 590 615, 927 390, 941 264" fill="none" stroke="#64748b" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="7 7" marker-end="url(#arrow-muted)"/>
+
+    <rect x="335" y="332" width="250" height="154" rx="20" fill="#eff6ff" stroke="#2563eb" stroke-width="2.2"/>
+    <text x="460" y="371" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="23" font-weight="700" fill="#1f2937"><tspan x="460" dy="0">PreFilter state</tspan></text>
+    <text x="460" y="410" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="18" font-weight="500" fill="#334155"><tspan x="460" dy="0">zone-a: 2</tspan></text>
+    <text x="460" y="438" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="18" font-weight="500" fill="#334155"><tspan x="460" dy="0">zone-b: 1</tspan></text>
+    <text x="460" y="466" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="18" font-weight="500" fill="#334155"><tspan x="460" dy="0">zone-c: 1，min=1</tspan></text>
+
+    <rect x="654" y="336" width="286" height="150" rx="20" fill="#fff7ed" stroke="#ea580c" stroke-width="2.2"/>
+    <text x="797" y="374" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="23" font-weight="700" fill="#1f2937"><tspan x="797" dy="0">硬约束判断</tspan></text>
+    <text x="797" y="414" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="18" font-weight="500" fill="#334155"><tspan x="797" dy="0">已有匹配数 + 1 - min</tspan></text>
+    <text x="797" y="444" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="18" font-weight="500" fill="#334155"><tspan x="797" dy="0">超过 maxSkew</tspan></text>
+    <text x="797" y="472" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="18" font-weight="700" fill="#dc2626"><tspan x="797" dy="0">节点不可调度</tspan></text>
+
+    <rect x="998" y="332" width="210" height="154" rx="20" fill="#f0fdf4" stroke="#16a34a" stroke-width="2.2"/>
+    <text x="1103" y="371" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="23" font-weight="700" fill="#1f2937"><tspan x="1103" dy="0">软约束打分</tspan></text>
+    <text x="1103" y="410" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="18" font-weight="500" fill="#334155"><tspan x="1103" dy="0">Pod 少的拓扑域</tspan></text>
+    <text x="1103" y="438" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="18" font-weight="500" fill="#334155"><tspan x="1103" dy="0">得分更高</tspan></text>
+    <text x="1103" y="466" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="18" font-weight="500" fill="#334155"><tspan x="1103" dy="0">但不会阻塞调度</tspan></text>
+
+    <path d="M 478 332 C 504 300, 522 265, 526 228" fill="none" stroke="#2563eb" stroke-width="2.4" stroke-linecap="round" marker-end="url(#arrow)"/>
+    <path d="M 797 336 C 782 300, 760 270, 742 252" fill="none" stroke="#ea580c" stroke-width="2.4" stroke-linecap="round" marker-end="url(#arrow)"/>
+    <path d="M 1103 332 C 1086 294, 1049 252, 1026 230" fill="none" stroke="#16a34a" stroke-width="2.4" stroke-linecap="round" marker-end="url(#arrow)"/>
+
+    <rect x="278" y="570" width="724" height="70" rx="18" fill="#f8fafc" stroke="#1f2937" stroke-width="2.4"/>
+    <text x="640" y="613" text-anchor="middle" font-family="Virgil, 'Comic Sans MS', 'Noto Sans SC', sans-serif" font-size="24" font-weight="700" fill="#1f2937"><tspan x="640" dy="0">它只影响“新 Pod 放到哪里”，不会改变 Service 的流量转发</tspan></text>
+  </g>
+</svg>

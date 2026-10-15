@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en-US" dir="ltr">
+<head>
+  <!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="介绍 Kubernetes VPA 的常用配置、推荐算法、Checkpoint、Pod 更新闭环和生产边界，并基于 VPA v1.7.0 分析三个核心组件的关键实现。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#2e3440">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2026/07/23/Kubernetes-VPA-%E7%9A%84%E8%AE%BE%E8%AE%A1%E5%92%8C%E5%AE%9E%E7%8E%B0/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="Kubernetes VPA 的设计和实现">
+  <meta property="og:description" content="介绍 Kubernetes VPA 的常用配置、推荐算法、Checkpoint、Pod 更新闭环和生产边界，并基于 VPA v1.7.0 分析三个核心组件的关键实现。">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2026-07-23T00:00:00+08:00">
+    <meta property="article:modified_time" content="2026-07-23T00:00:00+08:00">
+    <meta property="article:tag" content="Kubernetes">
+    <meta property="article:tag" content="VPA">
+    <meta property="article:tag" content="Autoscaling">
+    <meta property="article:tag" content="资源管理">
+
+
+  <meta itemprop="name" content="Kubernetes VPA 的设计和实现">
+  <meta itemprop="description" content="介绍 Kubernetes VPA 的常用配置、推荐算法、Checkpoint、Pod 更新闭环和生产边界，并基于 VPA v1.7.0 分析三个核心组件的关键实现。">
+  <meta itemprop="datePublished" content="2026-07-23T00:00:00+08:00">
+  <meta itemprop="dateModified" content="2026-07-23T00:00:00+08:00">
+  <meta itemprop="wordCount" content="1296">
+  <meta itemprop="keywords" content="Kubernetes,VPA,Autoscaling,资源管理">
+
+<title>Kubernetes VPA 的设计和实现 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2026/07/23/Kubernetes-VPA-%E7%9A%84%E8%AE%BE%E8%AE%A1%E5%92%8C%E5%AE%9E%E7%8E%B0/">
+<link rel="stylesheet" href="/book.min.c40223b1e1a5ffa9f6a0fe48797821424561eff06762ee5c75071bda9d009477.css" integrity="sha256-xAIjseGl/6n2oP5IeXghQkVh7/BnYu5cdQcb2p0AlHc=" crossorigin="anonymous">
+
+
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.99ce27de54629b271c4277001097f0e183ca5eaedb015e65542b29ce1c90db30.js" integrity="sha256-mc4n3lRimyccQncAEJfw4YPKXq7bAV5lVCspzhyQ2zA=" crossorigin="anonymous"></script>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade">
+  
+</head>
+<body dir="ltr" class="book-kind-page book-type-posts">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    
+<aside class="book-menu">
+  <div class="book-menu-content">
+    
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input id="book-search-input" type="text" 
+    placeholder="Search"
+    aria-label="Search"
+    maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+<ul><li><a href="/categories">Categories</a></li><li><a href="/tags">Tags</a></li></ul>
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">
+      About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+
+  </div>
+</aside>
+ 
+
+    <div class="book-page">
+      <header class="book-header hidden">
+        
+<div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/icons/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>Kubernetes VPA 的设计和实现</h3>
+
+  <label for="toc-control">
+    
+    <img src="/icons/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-vpa-解决什么问题">1. VPA 解决什么问题</a></li>
+    <li><a href="#2-常用配置与-recommendation">2. 常用配置与 recommendation</a>
+      <ul>
+        <li><a href="#21-updatemode">2.1 updateMode</a></li>
+        <li><a href="#22-recommendation-怎么读">2.2 recommendation 怎么读</a></li>
+      </ul>
+    </li>
+    <li><a href="#3-vpa-的控制闭环">3. VPA 的控制闭环</a></li>
+    <li><a href="#4-recommender-与-checkpoint">4. Recommender 与 Checkpoint</a>
+      <ul>
+        <li><a href="#41-从样本到-recommendation">4.1 从样本到 recommendation</a></li>
+        <li><a href="#42-checkpoint-保存什么">4.2 Checkpoint 保存什么</a></li>
+      </ul>
+    </li>
+    <li><a href="#5-recommendation-如何作用于-pod">5. Recommendation 如何作用于 Pod</a>
+      <ul>
+        <li><a href="#51-updater处理存量-pod">5.1 Updater：处理存量 Pod</a></li>
+        <li><a href="#52-admission-controller处理新-pod">5.2 Admission Controller：处理新 Pod</a></li>
+      </ul>
+    </li>
+    <li><a href="#6-生产接入与边界">6. 生产接入与边界</a>
+      <ul>
+        <li><a href="#61-从-off-开始">6.1 从 <code>Off</code> 开始</a></li>
+        <li><a href="#62-生产边界">6.2 生产边界</a></li>
+      </ul>
+    </li>
+    <li><a href="#7-总结">7. 总结</a></li>
+    <li><a href="#参考资料">参考资料</a></li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h1>
+    Kubernetes VPA 的设计和实现
+  </h1>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/icons/calendar.svg" class="book-icon" alt="Calendar" />
+    <span>July 23, 2026</span>
+    
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Kubernetes/">Kubernetes</a>, 
+      <a href="/categories/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/">源码分析</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Kubernetes/">Kubernetes</a>, 
+      <a href="/tags/VPA/">VPA</a>, 
+      <a href="/tags/Autoscaling/">Autoscaling</a>, 
+      <a href="/tags/%E8%B5%84%E6%BA%90%E7%AE%A1%E7%90%86/">资源管理</a>
+  </div>
+  
+
+
+  <div class="book-post-content markdown-inner"><p><code>requests</code> 决定 Pod 能否被调度，也影响节点的装箱密度和资源抢占时的保障。它写进 PodSpec 后通常不会自行变化，工作负载却会随着业务迭代、流量起伏、缓存预热和依赖延迟不断改变。完全靠人工维护一组固定值，很快就会出现偏差，进而影响集群的资源利用率和稳定性。</p>
+<blockquote class='book-hint '>
+<p>如果团队内无预算控制～ 那么恭喜你，已经解决了这个问题 🎉</p>
+</blockquote><p>VPA（Vertical Pod Autoscaler）会持续观察工作负载，为容器生成 CPU 和内存 recommendation，并根据策略决定是否应用到 Pod。本文关注 recommendation 怎样产生并作用到 Pod，以及生产接入前需要确认哪些限制。常用配置放在前面，便于后文说明各组件的行为。</p>
+<!-- more -->
+<blockquote class='book-hint '>
+<p><strong>版本说明</strong></p>
+<p>本文基于 VPA <code>vertical-pod-autoscaler-1.7.0</code>，对应源码 commit <code>6a616ea0c5ea0cb6111240073a9273b3467c064e</code>。字段、默认值、更新模式和源码路径均以该版本为准。</p>
+</blockquote><figure>
+  <img
+    src="/images/kubernetes-vpa-design-and-implementation/requests-vs-actual-usage.svg"
+    alt="同一组订单服务 Pod 的 requests 合计只占 Node 可分配 CPU 和内存的 40% 与 75%，调度时可以放入；应用变化后实际用量约占 120% 与 132%，越过容量线并造成 CPU 争用和内存压力"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>Scheduler 根据 requests 装箱；工作负载变化后，节点承担的真实用量可能已经超过可分配资源。</figcaption>
+</figure>
+<h2 id="1-vpa-解决什么问题">1. VPA 解决什么问题<a class="anchor" href="#1-vpa-%e8%a7%a3%e5%86%b3%e4%bb%80%e4%b9%88%e9%97%ae%e9%a2%98">#</a></h2>
+<p>Kubernetes 调度器根据 Pod 的 <code>requests</code> 判断节点是否有足够资源，它不会预测容器之后的真实用量。requests 因此会影响调度位置、节点装箱密度，以及资源抢占时的保障。</p>
+<p>requests 过低时，节点可能被调度进过多 Pod，CPU 抢占和内存压力会在运行时才暴露；requests 过高时，Pod 会占用过多可调度容量，造成节点利用率下降、Pod Pending，甚至触发不必要的节点扩容。固定值还会随工作负载变化逐渐偏离实际需求。</p>
+<p>假设一个订单服务最初为每个 Pod 配置了 <code>200m CPU / 512Mi</code> 的 requests。当时这个值能够覆盖日常用量；后来版本升级并启用了本地缓存，单副本的稳定用量升到约 <code>600m CPU / 900Mi</code>，requests 却没有同步调整。调度器仍按旧值为 Pod 选择节点，多个副本被放到同一节点后，实际总用量可能超过节点能够提供的资源，最终出现 CPU 争用和节点内存压力。配置本身没有变化，但它已经不再代表应用的真实需求。</p>
+<p>如果单个 Pod 的 CPU、内存需求经常变化，人工又很难长期维护准确的 requests，就可以考虑 VPA。Recommender 根据历史用量和策略限制计算建议；Updater 与 Admission Controller 再按 <code>updateMode</code> 处理存量或新建 Pod。</p>
+<table>
+  <thead>
+      <tr>
+          <th>组件</th>
+          <th>调整对象</th>
+          <th>回答的问题</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>VPA</td>
+          <td>单个 Pod 中容器的 CPU / 内存</td>
+          <td>一个副本应该申请多少资源</td>
+      </tr>
+      <tr>
+          <td>HPA</td>
+          <td>工作负载副本数</td>
+          <td>当前负载需要多少个副本</td>
+      </tr>
+      <tr>
+          <td>Cluster Autoscaler</td>
+          <td>集群节点数</td>
+          <td>集群是否需要增减节点</td>
+      </tr>
+  </tbody>
+</table>
+<p>三者可以组合起来使用，但要注意避免控制环互相影响。例如 HPA 按 CPU 利用率扩缩容时，利用率的分母与 CPU request 有关；VPA 同时修改这个 request，就会改变 HPA 看到的信号。实践中通常让 VPA 和 HPA 控制不同资源（根据 cpu -&gt; HPA, mem -&gt; VPA），或者让 HPA 使用业务中的自定义指标。</p>
+<p>需要强调的是，VPA 不了解业务延迟目标，不提供集群的承载力保证，也不能保证 recommendation 一定能被当前节点、ResourceQuota 或其他资源约束接受。一定不要完全的依赖 VPA 来进行调控，一定需要人工进行审查调优。</p>
+<h2 id="2-常用配置与-recommendation">2. 常用配置与 recommendation<a class="anchor" href="#2-%e5%b8%b8%e7%94%a8%e9%85%8d%e7%bd%ae%e4%b8%8e-recommendation">#</a></h2>
+<p>VPA v1.7.0 的完整字段可以查阅官方 <a href="https://github.com/kubernetes/autoscaler/blob/6a616ea0c5ea0cb6111240073a9273b3467c064e/vertical-pod-autoscaler/docs/api.md">VPA API 文档</a>。日常配置不需要把所有可选项都写进去。下面这个对象只用于观察 recommendation，适合作为接入起点：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">autoscaling.k8s.io/v1</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">kind</span>: <span style="color:#ae81ff">VerticalPodAutoscaler</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">checkout</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">spec</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">targetRef</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">apps/v1</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">kind</span>: <span style="color:#ae81ff">Deployment</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">name</span>: <span style="color:#ae81ff">checkout</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">updatePolicy</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">updateMode</span>: <span style="color:#e6db74">&#34;Off&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">resourcePolicy</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">containerPolicies</span>:
+</span></span><span style="display:flex;"><span>      - <span style="color:#f92672">containerName</span>: <span style="color:#ae81ff">app</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">minAllowed</span>:
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">cpu</span>: <span style="color:#ae81ff">100m</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">memory</span>: <span style="color:#ae81ff">128Mi</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">maxAllowed</span>:
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">cpu</span>: <span style="color:#e6db74">&#34;2&#34;</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">memory</span>: <span style="color:#ae81ff">2Gi</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">controlledResources</span>: [<span style="color:#e6db74">&#34;cpu&#34;</span>, <span style="color:#e6db74">&#34;memory&#34;</span>]
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">controlledValues</span>: <span style="color:#ae81ff">RequestsOnly</span>
+</span></span><span style="display:flex;"><span>      - <span style="color:#f92672">containerName</span>: <span style="color:#ae81ff">sidecar</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">mode</span>: <span style="color:#e6db74">&#34;Off&#34;</span></span></span></code></pre></div><p><code>targetRef</code> 指向被管理的工作负载，VPA 通过目标 selector 匹配 Pod，但不会修改副本数。<code>updateMode: Off</code> 让它只生成 recommendation，暂时不应用普通资源更新。</p>
+<p><code>minAllowed</code> 和 <code>maxAllowed</code> 限制推荐范围，取值需要结合应用的最小可运行规格、成本约束和最大节点容量。<code>controlledResources</code> 决定要管理 CPU、内存中的哪些资源。</p>
+<p>这里显式使用 <code>controlledValues: RequestsOnly</code>，所以只修改 requests。默认值 <code>RequestsAndLimits</code> 还会按原有 request/limit 比例调整 limits。sidecar 通过 <code>mode: Off</code> 排除；容器很多时，可以再用 <code>containerName: &quot;*&quot;</code> 补一条兜底策略。</p>
+<h3 id="21-updatemode">2.1 updateMode<a class="anchor" href="#21-updatemode">#</a></h3>
+<p><code>updateMode</code> 只控制 recommendation 怎样作用到 Pod。即使设为 <code>Off</code>，Recommender 也会继续计算并更新 Status。</p>
+<table>
+  <thead>
+      <tr>
+          <th>模式</th>
+          <th>新建 Pod</th>
+          <th>存量 Pod</th>
+          <th>关键边界</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>Off</code></td>
+          <td>不应用普通 recommendation</td>
+          <td>不更新</td>
+          <td>Recommender 仍写入 Status</td>
+      </tr>
+      <tr>
+          <td><code>Initial</code></td>
+          <td>CREATE 时应用</td>
+          <td>不做普通存量更新</td>
+          <td>适合随自然发布逐步生效</td>
+      </tr>
+      <tr>
+          <td><code>Recreate</code></td>
+          <td>CREATE 时应用</td>
+          <td>Updater 驱逐并触发重建</td>
+          <td>省略 <code>updateMode</code> 时的默认值</td>
+      </tr>
+      <tr>
+          <td><code>InPlaceOrRecreate</code></td>
+          <td>CREATE 时应用</td>
+          <td>先尝试 <code>/resize</code>，确认无法完成后可回退驱逐</td>
+          <td>依赖集群 Pod resize 能力</td>
+      </tr>
+      <tr>
+          <td><code>InPlace</code></td>
+          <td>CREATE 时应用</td>
+          <td>只尝试 <code>/resize</code></td>
+          <td>还需要 VPA <code>InPlace</code> feature gate；失败不驱逐</td>
+      </tr>
+  </tbody>
+</table>
+<p><code>Auto</code> 在 v1.7.0 已弃用，执行上等价于 <code>Recreate</code>。生产配置最好写明具体模式。省略 <code>updateMode</code> 时会使用 <code>Recreate</code>，这个默认行为可以从公共辅助函数中确认：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// pkg/utils/vpa/api.go</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">GetUpdateMode</span>(<span style="color:#a6e22e">vpa</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">vpa_types</span>.<span style="color:#a6e22e">VerticalPodAutoscaler</span>) <span style="color:#a6e22e">vpa_types</span>.<span style="color:#a6e22e">UpdateMode</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">vpa</span>.<span style="color:#a6e22e">Spec</span>.<span style="color:#a6e22e">UpdatePolicy</span> <span style="color:#f92672">==</span> <span style="color:#66d9ef">nil</span> <span style="color:#f92672">||</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">vpa</span>.<span style="color:#a6e22e">Spec</span>.<span style="color:#a6e22e">UpdatePolicy</span>.<span style="color:#a6e22e">UpdateMode</span> <span style="color:#f92672">==</span> <span style="color:#66d9ef">nil</span> <span style="color:#f92672">||</span>
+</span></span><span style="display:flex;"><span>		<span style="color:#f92672">*</span><span style="color:#a6e22e">vpa</span>.<span style="color:#a6e22e">Spec</span>.<span style="color:#a6e22e">UpdatePolicy</span>.<span style="color:#a6e22e">UpdateMode</span> <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;&#34;</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">vpa_types</span>.<span style="color:#a6e22e">UpdateModeRecreate</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">vpa</span>.<span style="color:#a6e22e">Spec</span>.<span style="color:#a6e22e">UpdatePolicy</span>.<span style="color:#a6e22e">UpdateMode</span>
+</span></span><span style="display:flex;"><span>}</span></span></code></pre></div><p>完整实现见固定版本的 <a href="https://github.com/kubernetes/autoscaler/blob/6a616ea0c5ea0cb6111240073a9273b3467c064e/vertical-pod-autoscaler/pkg/utils/vpa/api.go">API helper</a>。</p>
+<h3 id="22-recommendation-怎么读">2.2 recommendation 怎么读<a class="anchor" href="#22-recommendation-%e6%80%8e%e4%b9%88%e8%af%bb">#</a></h3>
+<p>Recommender 把结果写入 <code>status.recommendation.containerRecommendations</code>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#f92672">status</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">recommendation</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">containerRecommendations</span>:
+</span></span><span style="display:flex;"><span>      - <span style="color:#f92672">containerName</span>: <span style="color:#ae81ff">app</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">lowerBound</span>:
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">cpu</span>: <span style="color:#ae81ff">120m</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">memory</span>: <span style="color:#ae81ff">256Mi</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">target</span>:
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">cpu</span>: <span style="color:#ae81ff">300m</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">memory</span>: <span style="color:#ae81ff">512Mi</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">upperBound</span>:
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">cpu</span>: <span style="color:#ae81ff">800m</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">memory</span>: <span style="color:#ae81ff">1Gi</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">uncappedTarget</span>:
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">cpu</span>: <span style="color:#ae81ff">340m</span>
+</span></span><span style="display:flex;"><span>          <span style="color:#f92672">memory</span>: <span style="color:#ae81ff">560Mi</span></span></span></code></pre></div><ul>
+<li><code>target</code> 经过 ResourcePolicy 裁剪，是准备应用到 Pod 的目标值。</li>
+<li><code>[lowerBound, upperBound]</code> 是推荐区间。当前 requests 落到区间外时，Updater 会把它视为更新信号；这个区间不代表性能承诺。</li>
+<li><code>uncappedTarget</code> 保留策略裁剪前的 target，适合用来判断 min/max 是否长期限制推荐。它已经经过分位数估算、margin 和格式化，不能当作原始用量。</li>
+</ul>
+<p>这些值来自同一份聚合历史，差别出现在估算和策略处理阶段。下一节先看 CPU、内存样本怎样进入 Recommender，以及 Checkpoint 保存了哪部分历史。</p>
+<h2 id="3-vpa-的控制闭环">3. VPA 的控制闭环<a class="anchor" href="#3-vpa-%e7%9a%84%e6%8e%a7%e5%88%b6%e9%97%ad%e7%8e%af">#</a></h2>
+<p>VPA 由三个独立运行的组件组成。它们通过 API Server 中的 VPA Status 传递 recommendation，Checkpoint 则让 Recommender 重启后仍能接上之前的聚合历史。</p>
+<figure>
+  <img
+    src="/images/kubernetes-vpa-design-and-implementation/vpa-architecture.svg"
+    alt="VPA v1.7.0 中 API Server 管理的 VPA 与 Checkpoint 资源、三个 VPA 组件、Workload Controller 和 Kubelet 之间的端到端数据流"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>VPA v1.7.0 架构与端到端数据流</figcaption>
+</figure>
+<p>Recommender 读取 VPA、Pod、指标和 OOM 事件，聚合历史后写入 <code>status.recommendation</code>。默认配置下，它也负责保存和恢复 Checkpoint，但不会修改 Pod。</p>
+<p>Updater 面向已经运行的 Pod。它读取 recommendation，再结合更新模式、预期收益和可用性限制，决定保持现状、请求 <code>/resize</code>，还是发起 eviction。</p>
+<p>Admission Controller 只处理 Pod CREATE。它在准入阶段读取已有 recommendation，返回修改 requests/limits 的 JSON Patch；recommendation 的计算和 Pod 的持久化都不在这里完成。</p>
+<p>走 recreate 路径时，Updater 只负责驱逐旧 Pod。Deployment、StatefulSet 等工作负载控制器补足副本，新 Pod 的 CREATE 请求经过 Admission Controller 后，recommendation 才会进入 PodSpec。</p>
+<blockquote class='book-hint '>
+<p>注意：VPA 不会修改 workload template，也就是 Deployment、StatefulSet、CronJob 等中的 PodTemplateSpec。</p>
+</blockquote><h2 id="4-recommender-与-checkpoint">4. Recommender 与 Checkpoint<a class="anchor" href="#4-recommender-%e4%b8%8e-checkpoint">#</a></h2>
+<p>Recommender 以同一 VPA 下、同名容器的历史分布为计算对象，单个瞬时指标只是一条样本。每轮循环会刷新 VPA 与 Pod 的对应关系，加载最新指标并计算 recommendation，最后维护 Checkpoint：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// pkg/recommender/routines/recommender.go</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">r</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">recommender</span>) <span style="color:#a6e22e">RunOnce</span>() {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">ctx</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Background</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">r</span>.<span style="color:#a6e22e">clusterStateFeeder</span>.<span style="color:#a6e22e">LoadVPAs</span>(<span style="color:#a6e22e">ctx</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">r</span>.<span style="color:#a6e22e">clusterStateFeeder</span>.<span style="color:#a6e22e">LoadPods</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">r</span>.<span style="color:#a6e22e">clusterStateFeeder</span>.<span style="color:#a6e22e">LoadRealTimeMetrics</span>(<span style="color:#a6e22e">ctx</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">r</span>.<span style="color:#a6e22e">UpdateVPAs</span>()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">stepCtx</span>, <span style="color:#a6e22e">cancelFunc</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">WithDeadline</span>(
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Now</span>().<span style="color:#a6e22e">Add</span>(<span style="color:#a6e22e">r</span>.<span style="color:#a6e22e">checkpointsWriteTimeout</span>))
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">cancelFunc</span>()
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">r</span>.<span style="color:#a6e22e">MaintainCheckpoints</span>(<span style="color:#a6e22e">stepCtx</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#75715e">// Aggregate state garbage collection omitted.</span>
+</span></span><span style="display:flex;"><span>}</span></span></code></pre></div><p>完整入口见 <a href="https://github.com/kubernetes/autoscaler/blob/6a616ea0c5ea0cb6111240073a9273b3467c064e/vertical-pod-autoscaler/pkg/recommender/routines/recommender.go">Recommender 周期循环</a>。当 <code>--storage=prometheus</code> 时，启动历史改从 Prometheus History Provider 获取；它与默认 Checkpoint 存储是替代关系，不会叠加两份历史。</p>
+<figure>
+  <img
+    src="/images/kubernetes-vpa-design-and-implementation/recommendation-pipeline.svg"
+    alt="VPA 从 CPU、内存和 OOM 样本经过聚合、衰减直方图、分位数估算与 ResourcePolicy 得到 recommendation，并通过 Checkpoint 保存历史"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>recommendation 计算与 Checkpoint 恢复链路</figcaption>
+</figure>
+<h3 id="41-从样本到-recommendation">4.1 从样本到 recommendation<a class="anchor" href="#41-%e4%bb%8e%e6%a0%b7%e6%9c%ac%e5%88%b0-recommendation">#</a></h3>
+<p>CPU 和内存面对的问题不同，采样方式也不一样：</p>
+<ul>
+<li>CPU 消耗适合用分布描述，每个有效 usage sample 都会进入 CPU 直方图。</li>
+<li>内存侧更关注峰值和 OOM。同一聚合区间内只保留内存峰值，默认区间为 24 小时。OOM 事件还会补一条高于当前 request 或近期峰值的人工样本，避免推荐继续停在已经证实不足的位置。</li>
+</ul>
+<p>聚合入口把两类样本写入各自的衰减直方图：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// pkg/recommender/model/aggregate_container_state.go</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">func</span> (<span style="color:#a6e22e">a</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">AggregateContainerState</span>) <span style="color:#a6e22e">AddSample</span>(<span style="color:#a6e22e">sample</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">ContainerUsageSample</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">switch</span> <span style="color:#a6e22e">sample</span>.<span style="color:#a6e22e">Resource</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">ResourceCPU</span>:
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">a</span>.<span style="color:#a6e22e">addCPUSample</span>(<span style="color:#a6e22e">sample</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">ResourceMemory</span>:
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">a</span>.<span style="color:#a6e22e">AggregateMemoryPeaks</span>.<span style="color:#a6e22e">AddSample</span>(
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">BytesFromMemoryAmount</span>(<span style="color:#a6e22e">sample</span>.<span style="color:#a6e22e">Usage</span>), <span style="color:#ae81ff">1.0</span>, <span style="color:#a6e22e">sample</span>.<span style="color:#a6e22e">MeasureStart</span>)
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>}</span></span></code></pre></div><p>CPU 与内存默认都使用 24 小时的衰减半衰期。旧样本不会到期后一次性删除，它们的影响力（权重）会随时间降低。样本入口和状态字段可以从 <a href="https://github.com/kubernetes/autoscaler/blob/6a616ea0c5ea0cb6111240073a9273b3467c064e/vertical-pod-autoscaler/pkg/recommender/model/aggregate_container_state.go">AggregateContainerState</a> 继续追踪。</p>
+<p>v1.7.0 默认用 90 分位生成 target，再增加 15% 安全冗余。lower/upper bound 分别取 50/95 分位，并根据历史充分程度调整；历史较短时区间会更宽，少量样本因此不容易触发更新。估算完成后，<code>controlledResources</code> 先过滤不由 VPA 管理的资源，<code>minAllowed</code> / <code>maxAllowed</code> 再裁剪结果。</p>
+<p>这些默认值可以通过 Recommender 参数调整。<a href="https://github.com/kubernetes/autoscaler/blob/6a616ea0c5ea0cb6111240073a9273b3467c064e/vertical-pod-autoscaler/pkg/recommender/logic/recommender.go">Estimator 组合</a> 中可以看到分位数、margin 和 confidence 的包装顺序，其他入口列在文末源码索引中。</p>
+<h3 id="42-checkpoint-保存什么">4.2 Checkpoint 保存什么<a class="anchor" href="#42-checkpoint-%e4%bf%9d%e5%ad%98%e4%bb%80%e4%b9%88">#</a></h3>
+<p>默认存储模式下，<code>CheckpointWriter</code> 会为每个 VPA、每个聚合后的容器名维护一个 <code>VerticalPodAutoscalerCheckpoint</code>。正常循环写入衰减后的 CPU/内存直方图和样本元数据。Recommender 重启后，<code>InitFromCheckpoints</code> 先恢复 <code>AggregateContainerState</code>，新样本再接着写入。</p>
+<p>序列化结构列出了实际保存的字段：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// pkg/recommender/model/aggregate_container_state.go</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">return</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">vpa_types</span>.<span style="color:#a6e22e">VerticalPodAutoscalerCheckpointStatus</span>{
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">LastUpdateTime</span>:    <span style="color:#a6e22e">metav1</span>.<span style="color:#a6e22e">NewTime</span>(<span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Now</span>()),
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">FirstSampleStart</span>:  <span style="color:#a6e22e">metav1</span>.<span style="color:#a6e22e">NewTime</span>(<span style="color:#a6e22e">a</span>.<span style="color:#a6e22e">FirstSampleStart</span>),
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">LastSampleStart</span>:   <span style="color:#a6e22e">metav1</span>.<span style="color:#a6e22e">NewTime</span>(<span style="color:#a6e22e">a</span>.<span style="color:#a6e22e">LastSampleStart</span>),
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">TotalSamplesCount</span>: <span style="color:#a6e22e">a</span>.<span style="color:#a6e22e">TotalSamplesCount</span>,
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">MemoryHistogram</span>:   <span style="color:#f92672">*</span><span style="color:#a6e22e">memory</span>,
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">CPUHistogram</span>:      <span style="color:#f92672">*</span><span style="color:#a6e22e">cpu</span>,
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">Version</span>:           <span style="color:#a6e22e">SupportedCheckpointVersion</span>,
+</span></span><span style="display:flex;"><span>}, <span style="color:#66d9ef">nil</span></span></span></code></pre></div><p>一份实际的 Checkpoint Status 如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#f92672">status</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">cpuHistogram</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">bucketWeights</span>:
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">&#34;0&#34;: </span><span style="color:#ae81ff">10000</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">&#34;1&#34;: </span><span style="color:#ae81ff">473</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">referenceTimestamp</span>: <span style="color:#e6db74">&#34;2026-07-27T00:00:00Z&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">totalWeight</span>: <span style="color:#ae81ff">654.46878060585</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">firstSampleStart</span>: <span style="color:#e6db74">&#34;2026-07-27T03:34:07Z&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">lastSampleStart</span>: <span style="color:#e6db74">&#34;2026-07-28T10:10:21Z&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">lastUpdateTime</span>: <span style="color:#e6db74">&#34;2026-07-28T10:10:30Z&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">memoryHistogram</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">bucketWeights</span>:
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">&#34;10&#34;: </span><span style="color:#ae81ff">10000</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">referenceTimestamp</span>: <span style="color:#e6db74">&#34;2026-07-28T00:00:00Z&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">totalWeight</span>: <span style="color:#ae81ff">4.4441318936248315</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">totalSamplesCount</span>: <span style="color:#ae81ff">3674</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">version</span>: <span style="color:#ae81ff">v3</span></span></span></code></pre></div><table>
+  <thead>
+      <tr>
+          <th>字段</th>
+          <th>含义</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>cpuHistogram</code> / <code>memoryHistogram</code></td>
+          <td>CPU usage sample 与内存区间峰值各自形成的衰减直方图。两个直方图独立保存。</td>
+      </tr>
+      <tr>
+          <td><code>bucketWeights</code></td>
+          <td>键是内部指数直方图的桶编号，值是量化后的相对权重。保存时最重的桶会缩放为 <code>10000</code>，所以这里的整数不是样本数。</td>
+      </tr>
+      <tr>
+          <td><code>totalWeight</code></td>
+          <td>直方图中所有样本经过时间衰减后的浮点总权重。恢复时用它把整数桶权重还原为近似的浮点权重。</td>
+      </tr>
+      <tr>
+          <td><code>referenceTimestamp</code></td>
+          <td>计算衰减权重时使用的时间基准。它不表示第一条样本的时间，CPU 与内存的基准也可以不同。</td>
+      </tr>
+      <tr>
+          <td><code>firstSampleStart</code> / <code>lastSampleStart</code></td>
+          <td>最早和最近的 CPU sample 时间。v1.7.0 只在写入 CPU sample 时更新这两个字段。</td>
+      </tr>
+      <tr>
+          <td><code>totalSamplesCount</code></td>
+          <td>累计接收的 CPU sample 数量，同样不包含内存峰值样本。</td>
+      </tr>
+      <tr>
+          <td><code>lastUpdateTime</code></td>
+          <td>本次 Checkpoint Status 完成序列化的时间。</td>
+      </tr>
+      <tr>
+          <td><code>version</code></td>
+          <td>序列化格式版本。v1.7.0 写入 <code>v3</code>，加载其他版本时会报错。</td>
+      </tr>
+  </tbody>
+</table>
+<p>样例中，CPU 权重落在桶 <code>0</code> 和 <code>1</code>，二者的整数权重是 <code>10000:473</code>，约占保留权重的 95.5% 和 4.5%，不是 10000 条与 473 条 CPU sample。内存权重全部落在桶 <code>10</code>。按 v1.7.0 的默认分桶，CPU 桶 <code>0</code>、<code>1</code> 分别覆盖 <code>[0, 0.01)</code> 和 <code>[0.01, 0.0205)</code> core，内存桶 <code>10</code> 约覆盖 <code>[125.8 MB, 142.1 MB)</code>。</p>
+<p><code>totalSamplesCount: 3674</code> 记录的是 CPU sample 数，而 <code>totalWeight: 654.468...</code> 是 CPU 样本经过衰减后的总权重，两者不能直接比较。内存侧的 <code>totalWeight: 4.444...</code> 也不是内存样本数。保存时会丢弃量化后为零的小权重桶，恢复过程只能近似重建原直方图。</p>
+<p>Checkpoint 只保存聚合状态，逐条原始指标和用户配置都不在其中。它让 Recommender 重启后可以延续已有历史。观察期如果没有覆盖高峰、发布或批处理周期，留下来的仍是一段不完整历史，recommendation 也就不够准确，因此实践中往往从 Off 模式开始，让观察期覆盖一个完整的业务周期，然后再切换到 Initial 模式（或直接用 InPlace）。</p>
+<blockquote class='book-hint '>
+<p>保存逻辑见 <a href="https://github.com/kubernetes/autoscaler/blob/6a616ea0c5ea0cb6111240073a9273b3467c064e/vertical-pod-autoscaler/pkg/recommender/checkpoint/checkpoint_writer.go">Checkpoint Writer</a>
+直方图的量化与恢复见 <a href="https://github.com/kubernetes/autoscaler/blob/6a616ea0c5ea0cb6111240073a9273b3467c064e/vertical-pod-autoscaler/pkg/recommender/util/histogram.go">Histogram</a>
+衰减时间基准见 <a href="https://github.com/kubernetes/autoscaler/blob/6a616ea0c5ea0cb6111240073a9273b3467c064e/vertical-pod-autoscaler/pkg/recommender/util/decaying_histogram.go">Decaying Histogram</a>
+对象结构见 <a href="https://github.com/kubernetes/autoscaler/blob/6a616ea0c5ea0cb6111240073a9273b3467c064e/vertical-pod-autoscaler/deploy/vpa-v1-crd-gen.yaml">Checkpoint CRD</a>。</p>
+</blockquote><h2 id="5-recommendation-如何作用于-pod">5. Recommendation 如何作用于 Pod<a class="anchor" href="#5-recommendation-%e5%a6%82%e4%bd%95%e4%bd%9c%e7%94%a8%e4%ba%8e-pod">#</a></h2>
+<p>Recommender 写入 Status 后，recommendation 才成为更新输入。存量 Pod 由 Updater 评估；新建或 eviction 后重建的 Pod 则由 Admission Controller 在 CREATE 时处理。</p>
+<h3 id="51-updater处理存量-pod">5.1 Updater：处理存量 Pod<a class="anchor" href="#51-updater%e5%a4%84%e7%90%86%e5%ad%98%e9%87%8f-pod">#</a></h3>
+<figure>
+  <img
+    src="/images/kubernetes-vpa-design-and-implementation/updater-decision-flow.svg"
+    alt="VPA Updater 从 recommendation 和候选筛选到原地 resize 或 eviction 重建的关键决策"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>Updater 对存量 Pod 的更新决策</figcaption>
+</figure>
+<p>有了 recommendation，Updater 也不会立刻更新 Pod。出现以下任一信号后，Pod 才会进入候选队列：</p>
+<ol>
+<li>至少一个受控容器的当前 request 落在 <code>[lowerBound, upperBound]</code> 之外。</li>
+<li>request 仍在区间内，但 Pod 已运行超过配置的生命周期阈值，且 target 与当前资源差异达到更新阈值；v1.7.0 默认分别为 12 小时和 10%。</li>
+<li>受 VPA 管理的容器发生 quick OOM，而且 recommendation 确实会改变资源。</li>
+</ol>
+<p>进入候选队列还不够。Pod 随后要通过策略方向、副本可用性和限速检查。<code>minReplicas</code> 默认是 2，所以单副本工作负载即使已有 recommendation，通常也不会被 Updater 主动处理。Updater 默认还会检查 Admission Controller 的健康状态，避免 eviction 后补出的 Pod 拿不到推荐资源。</p>
+<p>主循环按 <code>updateMode</code> 选择更新路径：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// pkg/updater/logic/updater.go</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> <span style="color:#a6e22e">updateMode</span> <span style="color:#f92672">==</span> <span style="color:#a6e22e">vpa_types</span>.<span style="color:#a6e22e">UpdateModeOff</span> <span style="color:#f92672">||</span>
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">updateMode</span> <span style="color:#f92672">==</span> <span style="color:#a6e22e">vpa_types</span>.<span style="color:#a6e22e">UpdateModeInitial</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">continue</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> <span style="color:#a6e22e">updateMode</span> <span style="color:#f92672">==</span> <span style="color:#a6e22e">vpa_types</span>.<span style="color:#a6e22e">UpdateModeInPlaceOrRecreate</span> <span style="color:#f92672">||</span>
+</span></span><span style="display:flex;"><span>	(<span style="color:#a6e22e">updateMode</span> <span style="color:#f92672">==</span> <span style="color:#a6e22e">vpa_types</span>.<span style="color:#a6e22e">UpdateModeInPlace</span> <span style="color:#f92672">&amp;&amp;</span> <span style="color:#a6e22e">inPlaceFeatureEnabled</span>) {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">podsForInPlace</span> = <span style="color:#a6e22e">u</span>.<span style="color:#a6e22e">getPodsUpdateOrder</span>(
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">filterNonInPlaceUpdatablePods</span>(
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">podsAvailableForUpdate</span>, <span style="color:#a6e22e">inPlaceLimiter</span>, <span style="color:#a6e22e">vpa</span>, <span style="color:#a6e22e">u</span>.<span style="color:#a6e22e">infeasibleAttempts</span>),
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">vpa</span>)
+</span></span><span style="display:flex;"><span>} <span style="color:#66d9ef">else</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">updateMode</span> <span style="color:#f92672">==</span> <span style="color:#a6e22e">vpa_types</span>.<span style="color:#a6e22e">UpdateModeInPlace</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">continue</span>
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">podsForEviction</span> = <span style="color:#a6e22e">u</span>.<span style="color:#a6e22e">getPodsUpdateOrder</span>(
+</span></span><span style="display:flex;"><span>		<span style="color:#a6e22e">filterNonEvictablePods</span>(<span style="color:#a6e22e">podsAvailableForUpdate</span>, <span style="color:#a6e22e">evictionLimiter</span>), <span style="color:#a6e22e">vpa</span>)
+</span></span><span style="display:flex;"><span>}</span></span></code></pre></div><p><code>InPlace</code> 失败时不会改走 eviction；<code>InPlaceOrRecreate</code> 只有在 resize 被确认无法完成后才可能回退。原地更新仍可能带来扰动，容器的 <code>resizePolicy</code> 可能要求重启，节点余量不足也会让 resize 长期无法完成。</p>
+<p>recreate 路径调用 Kubernetes Eviction API，因此会受到 PDB 约束；<code>/resize</code> 不经过 PDB，但仍受 VPA 自身的副本可用性和限速控制。候选和两类限制的入口列在文末 Updater 源码索引中。</p>
+<h3 id="52-admission-controller处理新-pod">5.2 Admission Controller：处理新 Pod<a class="anchor" href="#52-admission-controller%e5%a4%84%e7%90%86%e6%96%b0-pod">#</a></h3>
+<figure>
+  <img
+    src="/images/kubernetes-vpa-design-and-implementation/admission-flow.svg"
+    alt="VPA Admission Controller 从 Pod CREATE、VPA 匹配和策略处理到返回 JSON Patch 的关键流程"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>Admission Controller 的 Pod CREATE patch 流程</figcaption>
+</figure>
+<p>Admission Controller 接收 <code>core/v1 Pod</code> 的 CREATE 请求。它根据 Pod 的上级控制器和目标 selector，在同一 namespace 中查找 controlling VPA。没有匹配项，请求会原样放行，不添加 VPA 资源 patch。matcher 最终只会选择一个 controlling VPA，因此生产环境要避免多个 VPA 的 selector 重叠。</p>
+<p>匹配成功后，provider 读取已有的 <code>status.recommendation</code>，再应用 ResourcePolicy 和 namespace LimitRange。此时如果还没有 recommendation，普通资源 patch 就保持为空；Admission Controller 不会等待 Recommender，也不会现场估算。<code>controlledResources</code> 决定修改哪些资源，<code>controlledValues</code> 则决定只改 requests，还是让已有 limits 随 requests 按比例变化。</p>
+<p>handler 先匹配 VPA，再交给 calculators 生成 patch：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-go" data-lang="go"><span style="display:flex;"><span><span style="color:#75715e">// pkg/admission-controller/resource/pod/handler.go</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">controllingVpa</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">h</span>.<span style="color:#a6e22e">vpaMatcher</span>.<span style="color:#a6e22e">GetMatchingVPA</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">pod</span>)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> <span style="color:#a6e22e">controllingVpa</span> <span style="color:#f92672">==</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">return</span> []<span style="color:#a6e22e">resource_admission</span>.<span style="color:#a6e22e">PatchRecord</span>{}, <span style="color:#66d9ef">nil</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">for</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">c</span> <span style="color:#f92672">:=</span> <span style="color:#66d9ef">range</span> <span style="color:#a6e22e">h</span>.<span style="color:#a6e22e">patchCalculators</span> {
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">partialPatches</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">c</span>.<span style="color:#a6e22e">CalculatePatches</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">pod</span>, <span style="color:#a6e22e">controllingVpa</span>)
+</span></span><span style="display:flex;"><span>	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+</span></span><span style="display:flex;"><span>		<span style="color:#66d9ef">return</span> []<span style="color:#a6e22e">resource_admission</span>.<span style="color:#a6e22e">PatchRecord</span>{}, <span style="color:#a6e22e">field</span>.<span style="color:#a6e22e">ErrorList</span>{
+</span></span><span style="display:flex;"><span>			<span style="color:#a6e22e">field</span>.<span style="color:#a6e22e">InternalError</span>(<span style="color:#a6e22e">field</span>.<span style="color:#a6e22e">NewPath</span>(<span style="color:#e6db74">&#34;.&#34;</span>), <span style="color:#a6e22e">err</span>)}
+</span></span><span style="display:flex;"><span>	}
+</span></span><span style="display:flex;"><span>	<span style="color:#a6e22e">patches</span> = append(<span style="color:#a6e22e">patches</span>, <span style="color:#a6e22e">partialPatches</span><span style="color:#f92672">...</span>)
+</span></span><span style="display:flex;"><span>}</span></span></code></pre></div><p>calculators 的结果会组成 AdmissionResponse 中的 JSON Patch。API Server 应用 patch 后，再校验并持久化 Pod。Admission Controller 不修改 Deployment/StatefulSet template，也不回写 recommendation；matcher 和 provider 的入口列在文末源码索引中。</p>
+<p>recreate 因此依赖 Admission Controller 保持健康。即使 eviction 已经成功、工作负载控制器也补出了 Pod，只要准入 patch 失效，新 Pod 仍会沿用 workload template 中的旧 requests。</p>
+<h2 id="6-生产接入与边界">6. 生产接入与边界<a class="anchor" href="#6-%e7%94%9f%e4%ba%a7%e6%8e%a5%e5%85%a5%e4%b8%8e%e8%be%b9%e7%95%8c">#</a></h2>
+<h3 id="61-从-off-开始">6.1 从 <code>Off</code> 开始<a class="anchor" href="#61-%e4%bb%8e-off-%e5%bc%80%e5%a7%8b">#</a></h3>
+<p>如果要把 VPA 接入生产，我会显式从 <code>Off</code> 开始，而不是创建对象后依赖默认的 <code>Recreate</code>。</p>
+<ol>
+<li>先检查 VPA Condition、Recommender 日志，确认所有目标容器都有 recommendation。</li>
+<li>观察高低峰、工作日/周末、发布、缓存预热和批处理。业务周期是否覆盖，比“已经运行 N 天”更有参考价值。</li>
+<li>把 target 与 CPU throttling、OOM、延迟、错误率、Pod Pending 和节点 allocatable 一起看。recommendation 稳定，并不能说明它满足 SLO。</li>
+<li>根据应用的最小可运行规格和最大节点容量设置 min/max。若目标只是调整调度申请量，优先显式使用 <code>RequestsOnly</code>。</li>
+<li>先在无状态、多副本、启动快且 readiness probe 可靠的服务上灰度，再评估 PDB、节点余量和回滚路径。</li>
+<li>把基线资源留在 workload template 中。切回 <code>Off</code> 只会停止后续普通更新，已经改变的 Pod 仍要通过正常发布回滚。</li>
+</ol>
+<p>观察期常用命令如下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>kubectl get vpa checkout -n shop -o yaml
+</span></span><span style="display:flex;"><span>kubectl describe vpa checkout -n shop
+</span></span><span style="display:flex;"><span>kubectl get pod -n shop -l app<span style="color:#f92672">=</span>checkout <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  -o custom-columns<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;NAME:.metadata.name,CPU:.spec.containers[0].resources.requests.cpu,MEM:.spec.containers[0].resources.requests.memory&#39;</span></span></span></code></pre></div><p><code>target</code> 和 <code>uncappedTarget</code> 需要放在一起看。二者长期不相等，说明策略限制一直在裁剪推荐。此时要检查护栏是否合理，以及 workload 是否已经超出原设计容量。切换更新模式后，还要核对实际 Pod requests、Events 和 Admission annotations；Status 中出现 recommendation，只能证明推荐已经生成，不能证明它成功作用到了 Pod。</p>
+<p>排查 Checkpoint 时，先确认对象对应的 VPA 和容器，再看 <code>lastUpdateTime</code> 是否推进、CPU 样本的起止时间和数量是否符合预期。然后检查指标链路，以及 Recommender 的版本、RBAC 和写入错误。Checkpoint 不是原始指标审计记录，其中的直方图状态也不适合手工修正。</p>
+<h3 id="62-生产边界">6.2 生产边界<a class="anchor" href="#62-%e7%94%9f%e4%ba%a7%e8%be%b9%e7%95%8c">#</a></h3>
+<table>
+  <thead>
+      <tr>
+          <th>边界</th>
+          <th>实践建议</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>VPA 与 HPA</td>
+          <td>不要让两者同时控制同一个 CPU/内存信号。可让 VPA 只管内存、HPA 按 CPU 扩副本，或让 HPA 使用业务指标。</td>
+      </tr>
+      <tr>
+          <td>节点容量</td>
+          <td>recommendation 可能超过节点 allocatable、ResourceQuota 或 Pod 级约束。<code>maxAllowed</code> 应考虑 Pod 内所有容器之和和最大节点规格。</td>
+      </tr>
+      <tr>
+          <td>更新可用性</td>
+          <td>Recreate 同时受 PDB、VPA <code>minReplicas</code>、副本状态和启动时长影响。单副本服务通常不适合自动驱逐。</td>
+      </tr>
+      <tr>
+          <td>in-place</td>
+          <td>它减少而非消除扰动。容器可能按 <code>resizePolicy</code> 重启；节点余量和内存缩容限制也可能让 resize 无法完成。</td>
+      </tr>
+      <tr>
+          <td>控制器与模板</td>
+          <td>Recreate 依赖上级控制器补 Pod。VPA 不修改 workload template，GitOps 中仍需维护清晰的资源基线。</td>
+      </tr>
+      <tr>
+          <td>多 VPA 匹配</td>
+          <td>v1.7.0 将重叠匹配视为未定义行为。一个 workload 应保持一个 controlling VPA，并审查 selector。</td>
+      </tr>
+      <tr>
+          <td>Admission 与策略</td>
+          <td>其他 mutating webhook、LimitRange 和 ResourceQuota 可能与 VPA patch 交互或冲突；v1.7.0 也明确不兼容 Pod-level resources。启用更新前应验证最终 PodSpec。</td>
+      </tr>
+      <tr>
+          <td>指标与 Checkpoint</td>
+          <td>Checkpoint 只能延续已经采集的聚合历史，不能修复缺指标、错误 selector 或没有覆盖代表性负载的问题。</td>
+      </tr>
+  </tbody>
+</table>
+<h2 id="7-总结">7. 总结<a class="anchor" href="#7-%e6%80%bb%e7%bb%93">#</a></h2>
+<p>Recommender 产出 recommendation，Checkpoint 延续采样历史。需要改变 Pod 时，Updater 处理存量实例，Admission Controller 则覆盖新建路径。</p>
+<table>
+  <thead>
+      <tr>
+          <th>组件</th>
+          <th>输入</th>
+          <th>输出 / 动作</th>
+          <th>不负责什么</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Recommender</td>
+          <td>VPA、Pod、指标、OOM、历史状态</td>
+          <td><code>status.recommendation</code></td>
+          <td>不修改 Pod</td>
+      </tr>
+      <tr>
+          <td>Checkpoint</td>
+          <td>聚合后的 CPU/内存直方图状态</td>
+          <td>跨 Recommender 重启恢复历史</td>
+          <td>不保存原始指标，不保证样本有代表性</td>
+      </tr>
+      <tr>
+          <td>Updater</td>
+          <td>recommendation、存量 Pod、更新策略与限制</td>
+          <td><code>/resize</code> 或 Eviction API</td>
+          <td>不修改 workload template，不创建替代 Pod</td>
+      </tr>
+      <tr>
+          <td>Admission Controller</td>
+          <td>Pod CREATE、VPA、recommendation、ResourcePolicy、LimitRange</td>
+          <td>requests/limits 与 annotations JSON Patch</td>
+          <td>不计算 recommendation，不更新 VPA Status</td>
+      </tr>
+  </tbody>
+</table>
+<p><code>Off</code> 阶段先验证数据链路和样本代表性，再用业务与基础设施信号审查 recommendation。确认护栏有效后，才逐步允许 VPA 改变 Pod。</p>
+<h2 id="参考资料">参考资料<a class="anchor" href="#%e5%8f%82%e8%80%83%e8%b5%84%e6%96%99">#</a></h2>
+<p>官方文档：</p>
+<ul>
+<li><a href="https://github.com/kubernetes/autoscaler/releases/tag/vertical-pod-autoscaler-1.7.0">VPA v1.7.0 Release</a></li>
+<li><a href="https://github.com/kubernetes/autoscaler/tree/6a616ea0c5ea0cb6111240073a9273b3467c064e/vertical-pod-autoscaler">VPA v1.7.0 固定源码快照</a></li>
+<li><a href="https://github.com/kubernetes/autoscaler/blob/6a616ea0c5ea0cb6111240073a9273b3467c064e/vertical-pod-autoscaler/README.md">VPA README</a></li>
+<li><a href="https://github.com/kubernetes/autoscaler/blob/6a616ea0c5ea0cb6111240073a9273b3467c064e/vertical-pod-autoscaler/docs/api.md">VPA API</a></li>
+<li><a href="https://github.com/kubernetes/autoscaler/blob/6a616ea0c5ea0cb6111240073a9273b3467c064e/vertical-pod-autoscaler/docs/faq.md">VPA FAQ</a></li>
+<li><a href="https://github.com/kubernetes/autoscaler/blob/6a616ea0c5ea0cb6111240073a9273b3467c064e/vertical-pod-autoscaler/docs/known-limitations.md">VPA Known Limitations</a></li>
+<li><a href="https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/">Resource Management for Pods and Containers</a></li>
+<li><a href="https://kubernetes.io/docs/tasks/configure-pod-container/resize-container-resources/">Resize CPU and Memory Resources assigned to Containers</a></li>
+<li><a href="https://kubernetes.io/docs/concepts/workloads/pods/disruptions/">Disruptions and Pod Disruption Budgets</a></li>
+<li><a href="https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/">Horizontal Pod Autoscaling</a></li>
+</ul>
+<p>关键源码索引：</p>
+<ul>
+<li><strong>Recommender</strong>：<a href="https://github.com/kubernetes/autoscaler/blob/6a616ea0c5ea0cb6111240073a9273b3467c064e/vertical-pod-autoscaler/pkg/recommender/routines/recommender.go">周期循环</a>、<a href="https://github.com/kubernetes/autoscaler/blob/6a616ea0c5ea0cb6111240073a9273b3467c064e/vertical-pod-autoscaler/pkg/recommender/model/aggregate_container_state.go">样本聚合</a>、<a href="https://github.com/kubernetes/autoscaler/blob/6a616ea0c5ea0cb6111240073a9273b3467c064e/vertical-pod-autoscaler/pkg/recommender/logic/recommender.go">Estimator 组合</a>、<a href="https://github.com/kubernetes/autoscaler/blob/6a616ea0c5ea0cb6111240073a9273b3467c064e/vertical-pod-autoscaler/pkg/recommender/routines/capping_post_processor.go">策略裁剪</a></li>
+<li><strong>Checkpoint</strong>：<a href="https://github.com/kubernetes/autoscaler/blob/6a616ea0c5ea0cb6111240073a9273b3467c064e/vertical-pod-autoscaler/pkg/recommender/checkpoint/checkpoint_writer.go">Writer</a>、<a href="https://github.com/kubernetes/autoscaler/blob/6a616ea0c5ea0cb6111240073a9273b3467c064e/vertical-pod-autoscaler/pkg/recommender/model/aggregate_container_state.go">序列化状态</a>、<a href="https://github.com/kubernetes/autoscaler/blob/6a616ea0c5ea0cb6111240073a9273b3467c064e/vertical-pod-autoscaler/deploy/vpa-v1-crd-gen.yaml">CRD</a></li>
+<li><strong>Updater</strong>：<a href="https://github.com/kubernetes/autoscaler/blob/6a616ea0c5ea0cb6111240073a9273b3467c064e/vertical-pod-autoscaler/pkg/updater/logic/updater.go">主循环</a>、<a href="https://github.com/kubernetes/autoscaler/blob/6a616ea0c5ea0cb6111240073a9273b3467c064e/vertical-pod-autoscaler/pkg/updater/priority/update_priority_calculator.go">候选与优先级</a>、<a href="https://github.com/kubernetes/autoscaler/blob/6a616ea0c5ea0cb6111240073a9273b3467c064e/vertical-pod-autoscaler/pkg/updater/restriction/pods_inplace_restriction.go">In-place restriction</a>、<a href="https://github.com/kubernetes/autoscaler/blob/6a616ea0c5ea0cb6111240073a9273b3467c064e/vertical-pod-autoscaler/pkg/updater/restriction/pods_eviction_restriction.go">Eviction restriction</a></li>
+<li><strong>Admission Controller</strong>：<a href="https://github.com/kubernetes/autoscaler/blob/6a616ea0c5ea0cb6111240073a9273b3467c064e/vertical-pod-autoscaler/pkg/admission-controller/resource/pod/handler.go">Pod handler</a>、<a href="https://github.com/kubernetes/autoscaler/blob/6a616ea0c5ea0cb6111240073a9273b3467c064e/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa/matcher.go">VPA matcher</a>、<a href="https://github.com/kubernetes/autoscaler/blob/6a616ea0c5ea0cb6111240073a9273b3467c064e/vertical-pod-autoscaler/pkg/admission-controller/resource/pod/recommendation/recommendation_provider.go">Recommendation provider</a></li>
+</ul>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+  <div>
+  
+    <a href="/2026/08/03/redis%E5%93%A8%E5%85%B5%E6%9C%BA%E5%88%B6/" class="flex align-center">
+      <img src="/icons/backward.svg" class="book-icon" alt="Backward" />
+      <span>Redis Sentinel：故障检测、自动切主与参数调优</span>
+    </a>
+  
+  </div>
+  <div>
+  
+    <a href="/2026/07/08/Kubernetes%E6%8B%93%E6%89%91%E6%84%9F%E7%9F%A5%E8%B0%83%E5%BA%A6%E4%B8%8E%E5%B0%B1%E8%BF%91%E8%AE%BF%E9%97%AE/" class="flex align-center">
+      <span>Kubernetes 拓扑感知调度与就近访问</span>
+      <img src="/icons/forward.svg" class="book-icon" alt="Forward" />
+    </a>
+  
+  </div>
+</div>
+ 
+        
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+        
+<div class="flex align-center" style="margin-top: 1rem;">
+  <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+    访问量<span id="busuanzi_value_site_pv"></span>
+  </span>
+  <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+    访客数<span id="busuanzi_value_site_uv"></span>
+  </span>
+</div>
+        
+  
+ 
+        
+  
+  
+    <script>(function(){document.querySelectorAll("pre:has(code)").forEach(e=>{e.addEventListener("click",e.focus),e.addEventListener("copy",function(t){if(t.preventDefault(),navigator.clipboard){const t=window.getSelection().toString()||e.textContent;navigator.clipboard.writeText(t)}})})})()</script>
+  
+
+      </footer>
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+  
+  <aside class="book-toc">
+    <div class="book-toc-content">
+      
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-vpa-解决什么问题">1. VPA 解决什么问题</a></li>
+    <li><a href="#2-常用配置与-recommendation">2. 常用配置与 recommendation</a>
+      <ul>
+        <li><a href="#21-updatemode">2.1 updateMode</a></li>
+        <li><a href="#22-recommendation-怎么读">2.2 recommendation 怎么读</a></li>
+      </ul>
+    </li>
+    <li><a href="#3-vpa-的控制闭环">3. VPA 的控制闭环</a></li>
+    <li><a href="#4-recommender-与-checkpoint">4. Recommender 与 Checkpoint</a>
+      <ul>
+        <li><a href="#41-从样本到-recommendation">4.1 从样本到 recommendation</a></li>
+        <li><a href="#42-checkpoint-保存什么">4.2 Checkpoint 保存什么</a></li>
+      </ul>
+    </li>
+    <li><a href="#5-recommendation-如何作用于-pod">5. Recommendation 如何作用于 Pod</a>
+      <ul>
+        <li><a href="#51-updater处理存量-pod">5.1 Updater：处理存量 Pod</a></li>
+        <li><a href="#52-admission-controller处理新-pod">5.2 Admission Controller：处理新 Pod</a></li>
+      </ul>
+    </li>
+    <li><a href="#6-生产接入与边界">6. 生产接入与边界</a>
+      <ul>
+        <li><a href="#61-从-off-开始">6.1 从 <code>Off</code> 开始</a></li>
+        <li><a href="#62-生产边界">6.2 生产边界</a></li>
+      </ul>
+    </li>
+    <li><a href="#7-总结">7. 总结</a></li>
+    <li><a href="#参考资料">参考资料</a></li>
+  </ul>
+</nav>
+
+
+
+    </div>
+  </aside>
+  
+ 
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

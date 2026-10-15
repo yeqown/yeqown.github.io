@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Cgroup on Yeqown</title>
+    <link>http://localhost:1313/tags/cgroup/</link>
+    <description>Recent content in Cgroup on Yeqown</description>
+    <generator>Hugo</generator>
+    <language>en-US</language>
+    <lastBuildDate>Wed, 09 Sep 2026 00:00:00 +0800</lastBuildDate>
+    <atom:link href="http://localhost:1313/tags/cgroup/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>cgroup 自上而下</title>
+      <link>http://localhost:1313/2026/09/09/cgroup-top-down/</link>
+      <pubDate>Wed, 09 Sep 2026 00:00:00 +0800</pubDate>
+      <guid>http://localhost:1313/2026/09/09/cgroup-top-down/</guid>
+      <description>&lt;p&gt;我最初只把 cgroup 理解成 Kubernetes &lt;code&gt;resources.requests&lt;/code&gt; 和 &lt;code&gt;resources.limits&lt;/code&gt; 背后的实现。这个理解没有错，但它跳过了真正有意思的部分：为什么 CPU request 最后成了一个相对权重，CPU limit 却是一段时间配额；为什么内存达到上限会触发回收甚至 OOM，而不是像 CPU 一样暂停一会儿；如果自己写一个任务编排器，又该把哪些概念放进公开 API？&lt;/p&gt;&#xA;&lt;p&gt;Kubernetes 的版本变化把这些问题推到了眼前。cgroup v2 在 Kubernetes v1.25 进入 Stable；v1.31 将 cgroup v1 支持转入维护模式；从 v1.35 开始，cgroup v1 被正式标记为 deprecated，kubelet 默认不再在 v1 节点启动。&lt;/p&gt;&#xA;&lt;p&gt;本文从一个自研工作负载系统开始，依次回答三个问题：上层资源 API 应该表达什么，cgroup 在 Linux 内核里怎样完成这些约束，以及 v1 的哪些设计最终把整个生态推向了 v2。&lt;/p&gt;&#xA;&lt;!-- more --&gt;&#xA;&lt;blockquote class=&#39;book-hint &#39;&gt;&#xA;&lt;p&gt;&lt;strong&gt;阅读边界&lt;/strong&gt;&lt;/p&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;cgroup v2 的接口和源码入口以 Linux v6.16 为参照；这些核心语义在相邻版本中较稳定，但具体文件仍取决于内核配置和启用的 controller。&lt;/li&gt;&#xA;&lt;li&gt;本文不依赖手边已有 Linux 环境。命令用于说明接口和观测方法，展示的值来自文中的配置推导，不冒充性能实测。&lt;/li&gt;&#xA;&lt;li&gt;Kubernetes 只用来引出问题并提供一个对照。正文讨论的设计同样适用于批处理系统、容器管理器、进程托管服务和 systemd unit。&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;/blockquote&gt;&lt;h2 id=&#34;1-先站到-cgroup-上面&#34;&gt;1. 先站到 cgroup 上面&lt;a class=&#34;anchor&#34; href=&#34;#1-%e5%85%88%e7%ab%99%e5%88%b0-cgroup-%e4%b8%8a%e9%9d%a2&#34;&gt;#&lt;/a&gt;&lt;/h2&gt;&#xA;&lt;h3 id=&#34;11-资源配置与职责边界&#34;&gt;1.1 资源配置与职责边界&lt;a class=&#34;anchor&#34; href=&#34;#11-%e8%b5%84%e6%ba%90%e9%85%8d%e7%bd%ae%e4%b8%8e%e8%81%8c%e8%b4%a3%e8%be%b9%e7%95%8c&#34;&gt;#&lt;/a&gt;&lt;/h3&gt;&#xA;&lt;p&gt;先看最熟悉的配置：&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

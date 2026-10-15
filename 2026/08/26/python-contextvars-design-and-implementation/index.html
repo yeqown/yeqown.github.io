@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en-US" dir="ltr">
+<head>
+  <!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="从链路追踪中的上下文传递出发，说明 contextvars 在同步代码、线程、asyncio 和多进程中的语义，并分析 CPython 3.14.2 的实现。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#2e3440">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2026/08/26/python-contextvars-design-and-implementation/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="Python 的上下文管理">
+  <meta property="og:description" content="从链路追踪中的上下文传递出发，说明 contextvars 在同步代码、线程、asyncio 和多进程中的语义，并分析 CPython 3.14.2 的实现。">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2026-08-26T00:00:00+08:00">
+    <meta property="article:modified_time" content="2026-08-26T00:00:00+08:00">
+    <meta property="article:tag" content="Python">
+    <meta property="article:tag" content="Contextvars">
+    <meta property="article:tag" content="Asyncio">
+    <meta property="article:tag" content="协程">
+
+
+  <meta itemprop="name" content="Python 的上下文管理">
+  <meta itemprop="description" content="从链路追踪中的上下文传递出发，说明 contextvars 在同步代码、线程、asyncio 和多进程中的语义，并分析 CPython 3.14.2 的实现。">
+  <meta itemprop="datePublished" content="2026-08-26T00:00:00+08:00">
+  <meta itemprop="dateModified" content="2026-08-26T00:00:00+08:00">
+  <meta itemprop="wordCount" content="1453">
+  <meta itemprop="keywords" content="Python,Contextvars,Asyncio,协程">
+
+<title>Python 的上下文管理 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2026/08/26/python-contextvars-design-and-implementation/">
+<link rel="stylesheet" href="/book.min.c40223b1e1a5ffa9f6a0fe48797821424561eff06762ee5c75071bda9d009477.css" integrity="sha256-xAIjseGl/6n2oP5IeXghQkVh7/BnYu5cdQcb2p0AlHc=" crossorigin="anonymous">
+
+
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.99ce27de54629b271c4277001097f0e183ca5eaedb015e65542b29ce1c90db30.js" integrity="sha256-mc4n3lRimyccQncAEJfw4YPKXq7bAV5lVCspzhyQ2zA=" crossorigin="anonymous"></script>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade">
+  
+</head>
+<body dir="ltr" class="book-kind-page book-type-posts">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    
+<aside class="book-menu">
+  <div class="book-menu-content">
+    
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input id="book-search-input" type="text" 
+    placeholder="Search"
+    aria-label="Search"
+    maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+<ul><li><a href="/categories">Categories</a></li><li><a href="/tags">Tags</a></li></ul>
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">
+      About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+
+  </div>
+</aside>
+ 
+
+    <div class="book-page">
+      <header class="book-header hidden">
+        
+<div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/icons/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>Python 的上下文管理</h3>
+
+  <label for="toc-control">
+    
+    <img src="/icons/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-contextvars-的设计语义">1. <code>contextvars</code> 的设计语义</a>
+      <ul>
+        <li><a href="#11-简单同步场景">1.1 简单同步场景</a></li>
+        <li><a href="#12-多线程场景">1.2 多线程场景</a></li>
+        <li><a href="#13-asyncio-场景">1.3 asyncio 场景</a></li>
+        <li><a href="#14-多进程场景">1.4 多进程场景</a></li>
+      </ul>
+    </li>
+    <li><a href="#2-cpython-如何实现这些语义">2. CPython 如何实现这些语义</a>
+      <ul>
+        <li><a href="#21-共同底座contextcontextvar-与-hamt">2.1 共同底座：Context、ContextVar 与 HAMT</a></li>
+        <li><a href="#22-同步代码进入和退出当前-context">2.2 同步代码：进入和退出当前 Context</a></li>
+        <li><a href="#23-多线程每个-pythreadstate-有自己的入口">2.3 多线程：每个 PyThreadState 有自己的入口</a></li>
+        <li><a href="#24-asynciotask-保存handle-恢复">2.4 asyncio：Task 保存，Handle 恢复</a></li>
+        <li><a href="#25-多进程没有可以恢复的共享运行时">2.5 多进程：没有可以恢复的共享运行时</a></li>
+      </ul>
+    </li>
+    <li><a href="#3-最佳实践与使用限制">3. 最佳实践与使用限制</a>
+      <ul>
+        <li><a href="#31-在并发边界明确选择">3.1 在并发边界明确选择</a></li>
+        <li><a href="#32-实践准则">3.2 实践准则</a></li>
+        <li><a href="#33-使用限制">3.3 使用限制</a></li>
+      </ul>
+    </li>
+    <li><a href="#4-参考资料">4. 参考资料</a></li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h1>
+    Python 的上下文管理
+  </h1>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/icons/calendar.svg" class="book-icon" alt="Calendar" />
+    <span>August 26, 2026</span>
+    
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/">源码分析</a>, 
+      <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Python/">Python</a>, 
+      <a href="/tags/contextvars/">Contextvars</a>, 
+      <a href="/tags/asyncio/">Asyncio</a>, 
+      <a href="/tags/%E5%8D%8F%E7%A8%8B/">协程</a>
+  </div>
+  
+
+
+  <div class="book-post-content markdown-inner"><p>一次请求经过网关、订单服务、库存服务和数据库时，链路追踪系统需要用 trace ID、span ID 等信息把各段调用关联起来。跨服务时，这些信息通常放在 HTTP <code>traceparent</code>、gRPC metadata 或消息头中；请求进入 Python 服务后，日志、指标和下游客户端仍要随时读到当前链路信息。</p>
+<p>最直接的办法是显式传参：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">handle_request</span>(trace_id: str) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    load_user(trace_id)
+</span></span><span style="display:flex;"><span>    create_order(trace_id)</span></span></code></pre></div><p>调用链一长，<code>trace_id</code> 就会穿过许多本来不关心它的函数。全局变量也不合适，因为并发请求会覆盖彼此的值。<code>threading.local()</code> 能隔离线程，却分不清同一事件循环线程上的多个 asyncio Task。</p>
+<p>Python 3.7 根据 <a href="https://peps.python.org/pep-0567/">PEP 567</a> 引入 <a href="https://docs.python.org/3.14/library/contextvars.html"><code>contextvars</code></a>，用来保存“属于当前执行上下文”的状态。日志函数可以直接读取当前 trace ID，调用链不必层层转发它；asyncio 在切换 Task 时也会切换对应的 Context，避免请求之间串值。</p>
+<p><code>contextvars</code> 的作用域止于当前 Python 进程。跨进程、跨服务的传播仍要由追踪库把完整的 <a href="https://www.w3.org/TR/trace-context/">W3C Trace Context</a> 注入载体，在接收端提取后再写入本地 Context。</p>
+<figure>
+  <img
+    src="/images/python-contextvars-design-and-implementation/contextvars-execution-model.svg"
+    alt="Python frame 与当前 Context 相互独立；普通调用沿用当前 Context，线程、asyncio Task 和进程在各自边界选择复制、恢复或显式传递"
+    style="display: block; width: 100%; height: auto;"
+  />
+</figure>
+<p>本文先从公开 API 建立行为模型，再用 CPython 3.14.2 解释不同并发场景为何表现不同。源码固定在 <a href="https://github.com/python/cpython/commit/df793163d5821791d4e7caf88885a2c11a107986">CPython commit <code>df793163d5821791d4e7caf88885a2c11a107986</code></a>。对象字段、缓存和 C 函数属于这一版 CPython；其他 Python 实现只需遵守公开语义。</p>
+<!-- more -->
+<h2 id="1-contextvars-的设计语义">1. <code>contextvars</code> 的设计语义<a class="anchor" href="#1-contextvars-%e7%9a%84%e8%ae%be%e8%ae%a1%e8%af%ad%e4%b9%89">#</a></h2>
+<p><code>ContextVar</code> 不是保存当前值的容器，而是 Context 映射中的键。这一点决定了后面的所有行为。</p>
+<table>
+  <thead>
+      <tr>
+          <th>对象</th>
+          <th>作用</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>ContextVar</code></td>
+          <td>定义一个上下文变量，保存名称和可选默认值</td>
+      </tr>
+      <tr>
+          <td><code>Context</code></td>
+          <td>保存 <code>ContextVar -&gt; value</code> 的映射，并可通过 <code>run()</code> 临时成为当前 Context</td>
+      </tr>
+      <tr>
+          <td><code>Token</code></td>
+          <td>记录一次 <code>set()</code> 前的绑定，用于精确恢复</td>
+      </tr>
+  </tbody>
+</table>
+<p><code>ContextVar.get(default)</code> 按以下顺序取值：</p>
+<ol>
+<li>当前 Context 中的绑定；</li>
+<li>本次 <code>get(default)</code> 传入的默认值；</li>
+<li>创建 <code>ContextVar</code> 时给出的默认值；</li>
+<li>都不存在时抛出 <code>LookupError</code>。</li>
+</ol>
+<p>两种默认值都只影响读取，不会被写进 Context。<code>set()</code> 改变当前 Context 中的绑定，并返回一个 Token；<code>reset(token)</code> 恢复写入前的状态。如果变量原先不存在，reset 会删除绑定，而不是写入 <code>None</code> 或默认值。</p>
+<h3 id="11-简单同步场景">1.1 简单同步场景<a class="anchor" href="#11-%e7%ae%80%e5%8d%95%e5%90%8c%e6%ad%a5%e5%9c%ba%e6%99%af">#</a></h3>
+<p>下面用 trace ID 模拟一次请求。业务函数没有接收 <code>trace_id</code> 参数，但日志仍能读到当前请求的值：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#f92672">from</span> contextvars <span style="color:#f92672">import</span> ContextVar
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>trace_id: ContextVar[str] <span style="color:#f92672">=</span> ContextVar(<span style="color:#e6db74">&#34;trace_id&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">write_log</span>(message: str) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    print(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;[</span><span style="color:#e6db74">{</span>trace_id<span style="color:#f92672">.</span>get(<span style="color:#e6db74">&#39;unknown&#39;</span>)<span style="color:#e6db74">}</span><span style="color:#e6db74">] </span><span style="color:#e6db74">{</span>message<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">load_order</span>() <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    write_log(<span style="color:#e6db74">&#34;load order&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">handle_request</span>(incoming_trace_id: str) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    token <span style="color:#f92672">=</span> trace_id<span style="color:#f92672">.</span>set(incoming_trace_id)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">try</span>:
+</span></span><span style="display:flex;"><span>        write_log(<span style="color:#e6db74">&#34;request started&#34;</span>)
+</span></span><span style="display:flex;"><span>        load_order()
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">finally</span>:
+</span></span><span style="display:flex;"><span>        trace_id<span style="color:#f92672">.</span>reset(token)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>handle_request(<span style="color:#e6db74">&#34;4bf92f3577b34da6&#34;</span>)
+</span></span><span style="display:flex;"><span>print(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;outside: </span><span style="color:#e6db74">{</span>trace_id<span style="color:#f92672">.</span>get(<span style="color:#e6db74">&#39;MISSING&#39;</span>)<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>)</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>[4bf92f3577b34da6] request started
+</span></span><span style="display:flex;"><span>[4bf92f3577b34da6] load order
+</span></span><span style="display:flex;"><span>outside: MISSING</span></span></code></pre></div><p><code>finally</code> 保证正常返回、异常和取消都能恢复进入请求前的绑定。<a href="https://docs.python.org/3.14/library/contextvars.html#contextvars.Token">Python 3.14 起，Token 支持上下文管理器协议</a>，因此也可以写成 <code>with trace_id.set(&quot;...&quot;):</code>，语义与 Token 配合 <code>finally</code> 相同。</p>
+<p>调用 <code>Context.run(callable, ...)</code> 时，指定的 Context 会在 callable 执行期间成为当前 Context，返回或抛出异常后再恢复先前的 Context。<code>run()</code> 只负责进入和退出，不会回滚 callable 对该 Context 做出的写入。</p>
+<p>普通函数调用不会创建或复制 Context。只要代码仍在同一个执行流中，嵌套函数就沿用当前 Context。</p>
+<h3 id="12-多线程场景">1.2 多线程场景<a class="anchor" href="#12-%e5%a4%9a%e7%ba%bf%e7%a8%8b%e5%9c%ba%e6%99%af">#</a></h3>
+<p>每个线程有自己的当前 Context。要让新线程看到调用方的值，需要在启动边界明确选择复制还是隔离：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#f92672">from</span> contextvars <span style="color:#f92672">import</span> Context, ContextVar, copy_context
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> threading <span style="color:#f92672">import</span> Thread
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>trace_id: ContextVar[str] <span style="color:#f92672">=</span> ContextVar(<span style="color:#e6db74">&#34;trace_id&#34;</span>, default<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;MISS&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">show_trace</span>(name: str) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    print(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">{</span>name<span style="color:#e6db74">}</span><span style="color:#e6db74">: </span><span style="color:#e6db74">{</span>trace_id<span style="color:#f92672">.</span>get()<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>trace_id<span style="color:#f92672">.</span>set(<span style="color:#e6db74">&#34;req-42&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 场景一：复制主线程的当前 Context，让新线程继承 trace_id。</span>
+</span></span><span style="display:flex;"><span>copied_context <span style="color:#f92672">=</span> copy_context()
+</span></span><span style="display:flex;"><span>copied <span style="color:#f92672">=</span> Thread(
+</span></span><span style="display:flex;"><span>    target<span style="color:#f92672">=</span>copied_context<span style="color:#f92672">.</span>run,  <span style="color:#75715e"># target：新线程启动后调用的函数</span>
+</span></span><span style="display:flex;"><span>    args<span style="color:#f92672">=</span>(show_trace, <span style="color:#e6db74">&#34;copied&#34;</span>),  <span style="color:#75715e"># args：传给 Context.run 的位置参数</span>
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>copied<span style="color:#f92672">.</span>start()
+</span></span><span style="display:flex;"><span>copied<span style="color:#f92672">.</span>join()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 场景二：从空 Context 启动，新线程看不到主线程的 trace_id。</span>
+</span></span><span style="display:flex;"><span>empty_context <span style="color:#f92672">=</span> Context()
+</span></span><span style="display:flex;"><span>isolated <span style="color:#f92672">=</span> Thread(
+</span></span><span style="display:flex;"><span>    target<span style="color:#f92672">=</span>empty_context<span style="color:#f92672">.</span>run,
+</span></span><span style="display:flex;"><span>    args<span style="color:#f92672">=</span>(show_trace, <span style="color:#e6db74">&#34;isolated&#34;</span>),
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>isolated<span style="color:#f92672">.</span>start()
+</span></span><span style="display:flex;"><span>isolated<span style="color:#f92672">.</span>join()</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>copied: req-42  <span style="color:#75715e"># 复制的 Context 已包含主线程的 trace_id</span>
+</span></span><span style="display:flex;"><span>isolated: MISS  <span style="color:#75715e"># 空 Context 没有绑定，返回 ContextVar 的默认值</span></span></span></code></pre></div><p><code>Thread</code> 启动后会执行 <code>target(*args)</code>。因此 <code>copied</code> 实际调用 <code>copied_context.run(show_trace, &quot;copied&quot;)</code>：先进入复制出的 Context，再执行 <code>show_trace(&quot;copied&quot;)</code>。<code>isolated</code> 的调用结构相同，只是进入的是空 Context。</p>
+<p><a href="https://docs.python.org/3.14/library/threading.html#threading.Thread">Python 3.14 的 <code>Thread</code> 构造器</a> 可以直接接收 Context：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>Thread(target<span style="color:#f92672">=</span>show_trace, args<span style="color:#f92672">=</span>(<span style="color:#e6db74">&#34;copied&#34;</span>,), context<span style="color:#f92672">=</span>copy_context())
+</span></span><span style="display:flex;"><span>Thread(target<span style="color:#f92672">=</span>show_trace, args<span style="color:#f92672">=</span>(<span style="color:#e6db74">&#34;isolated&#34;</span>,), context<span style="color:#f92672">=</span>Context())</span></span></code></pre></div><p>如果 <code>context=None</code>，初始 Context 由 <a href="https://docs.python.org/3.14/library/sys.html#sys.flags.thread_inherit_context"><code>sys.flags.thread_inherit_context</code></a> 决定。这个标志在普通 GIL 构建和 free-threaded 构建中的默认值不同，因此库和生产代码不应依赖隐式默认值。</p>
+<p>线程池还多一层复用。<code>ThreadPoolExecutor.submit()</code> 不会为每个任务自动捕获提交方的 Context，可以在提交时包一层：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#f92672">from</span> concurrent.futures <span style="color:#f92672">import</span> ThreadPoolExecutor
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> contextvars <span style="color:#f92672">import</span> copy_context
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> typing <span style="color:#f92672">import</span> Any, Callable
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">submit_with_context</span>(
+</span></span><span style="display:flex;"><span>    executor: ThreadPoolExecutor,
+</span></span><span style="display:flex;"><span>    func: Callable[<span style="color:#f92672">...</span>, Any],
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">/</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">*</span>args: Any,
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">**</span>kwargs: Any,
+</span></span><span style="display:flex;"><span>):
+</span></span><span style="display:flex;"><span>    context <span style="color:#f92672">=</span> copy_context()
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> executor<span style="color:#f92672">.</span>submit(context<span style="color:#f92672">.</span>run, func, <span style="color:#f92672">*</span>args, <span style="color:#f92672">**</span>kwargs)</span></span></code></pre></div><p>每次提交都要创建自己的 Context 副本。同一个 Context 不能被两个线程同时进入。</p>
+<h3 id="13-asyncio-场景">1.3 asyncio 场景<a class="anchor" href="#13-asyncio-%e5%9c%ba%e6%99%af">#</a></h3>
+<p>asyncio 的传播边界是 Task，而不是协程对象或 <code>await</code> 关键字。直接 <code>await</code> 仍在当前 Task 中运行；<code>asyncio.create_task()</code> 默认在创建 Task 时复制当前 Context：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#f92672">import</span> asyncio
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> contextvars <span style="color:#f92672">import</span> ContextVar
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>value: ContextVar[str] <span style="color:#f92672">=</span> ContextVar(<span style="color:#e6db74">&#34;value&#34;</span>, default<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;MISS&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">direct</span>() <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    print(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;direct before: </span><span style="color:#e6db74">{</span>value<span style="color:#f92672">.</span>get()<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>    value<span style="color:#f92672">.</span>set(<span style="color:#e6db74">&#34;direct&#34;</span>)  <span style="color:#75715e"># 故意不 reset，用来观察与调用方共享的绑定</span>
+</span></span><span style="display:flex;"><span>    print(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;direct after: </span><span style="color:#e6db74">{</span>value<span style="color:#f92672">.</span>get()<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">child</span>(start: asyncio<span style="color:#f92672">.</span>Event) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">await</span> start<span style="color:#f92672">.</span>wait()  <span style="color:#75715e"># 等父 Task 写入 parent-2 后再读取</span>
+</span></span><span style="display:flex;"><span>    print(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;child before: </span><span style="color:#e6db74">{</span>value<span style="color:#f92672">.</span>get()<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>    value<span style="color:#f92672">.</span>set(<span style="color:#e6db74">&#34;child&#34;</span>)
+</span></span><span style="display:flex;"><span>    print(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;child after: </span><span style="color:#e6db74">{</span>value<span style="color:#f92672">.</span>get()<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">main</span>() <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 场景一：直接 await 不创建新 Task，direct() 沿用当前 Context。</span>
+</span></span><span style="display:flex;"><span>    value<span style="color:#f92672">.</span>set(<span style="color:#e6db74">&#34;parent&#34;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">await</span> direct()
+</span></span><span style="display:flex;"><span>    print(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;parent after direct: </span><span style="color:#e6db74">{</span>value<span style="color:#f92672">.</span>get()<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 场景二：create_task() 在此处复制当前 Context，其中 value 为 direct。</span>
+</span></span><span style="display:flex;"><span>    start <span style="color:#f92672">=</span> asyncio<span style="color:#f92672">.</span>Event()
+</span></span><span style="display:flex;"><span>    task <span style="color:#f92672">=</span> asyncio<span style="color:#f92672">.</span>create_task(child(start))
+</span></span><span style="display:flex;"><span>    value<span style="color:#f92672">.</span>set(<span style="color:#e6db74">&#34;parent-2&#34;</span>)  <span style="color:#75715e"># 只修改父 Task 的 Context</span>
+</span></span><span style="display:flex;"><span>    start<span style="color:#f92672">.</span>set()  <span style="color:#75715e"># 放行子 Task，让它读取创建时捕获的 Context</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">await</span> task
+</span></span><span style="display:flex;"><span>    print(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;parent after task: </span><span style="color:#e6db74">{</span>value<span style="color:#f92672">.</span>get()<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>asyncio<span style="color:#f92672">.</span>run(main())</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>direct before: parent       <span style="color:#75715e"># direct() 读取父 Task 当前的绑定</span>
+</span></span><span style="display:flex;"><span>direct after: direct        <span style="color:#75715e"># direct() 在同一个 Context 中写入 direct</span>
+</span></span><span style="display:flex;"><span>parent after direct: direct <span style="color:#75715e"># 直接 await 没有复制，父协程读到新值</span>
+</span></span><span style="display:flex;"><span>child before: direct        <span style="color:#75715e"># 子 Task 读取创建时捕获的 direct</span>
+</span></span><span style="display:flex;"><span>child after: child          <span style="color:#75715e"># 子 Task 只修改自己的 Context</span>
+</span></span><span style="display:flex;"><span>parent after task: parent-2 <span style="color:#75715e"># 子 Task 的写入没有回传父 Task</span></span></span></code></pre></div><p><code>direct()</code> 的写入立即成为父协程的当前值，因为两者在同一个 Task 中。子 Task 创建时捕获到 <code>direct</code>，随后父 Task 写入 <code>parent-2</code>、子 Task 写入 <code>child</code>，双方的绑定不再同步。</p>
+<p>常见 asyncio API 的行为如下：</p>
+<table>
+  <thead>
+      <tr>
+          <th>边界</th>
+          <th>Context 行为</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>直接 <code>await coroutine</code></td>
+          <td>沿用当前 Task 的 Context</td>
+      </tr>
+      <tr>
+          <td><code>asyncio.create_task()</code></td>
+          <td>创建 Task 时复制；显式 <code>context=</code> 时直接使用给定 Context</td>
+      </tr>
+      <tr>
+          <td><code>loop.call_soon()</code></td>
+          <td>注册回调时捕获；也可显式传 <code>context=</code></td>
+      </tr>
+      <tr>
+          <td><code>asyncio.to_thread()</code></td>
+          <td>协程开始执行时复制当前 Context，并通过 <code>Context.run()</code> 进入</td>
+      </tr>
+      <tr>
+          <td><code>loop.run_in_executor()</code></td>
+          <td>不为每次提交传播调用方的 Context</td>
+      </tr>
+  </tbody>
+</table>
+<p><code>asyncio.to_thread()</code> 本身是异步函数。仅创建 <code>to_thread(...)</code> 的协程对象还没有捕获 Context；当这个协程被 await 或调度、开始执行时才会复制。需要精确控制捕获时机时，应立即把它交给 <code>create_task()</code>，或自行调用 <code>copy_context()</code>。</p>
+<h3 id="14-多进程场景">1.4 多进程场景<a class="anchor" href="#14-%e5%a4%9a%e8%bf%9b%e7%a8%8b%e5%9c%ba%e6%99%af">#</a></h3>
+<p>进程之间没有共享的当前 Context。下面强制使用 <code>spawn</code>，可以看到子进程只有显式传入的值：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#f92672">from</span> concurrent.futures <span style="color:#f92672">import</span> ProcessPoolExecutor
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> contextvars <span style="color:#f92672">import</span> ContextVar
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> multiprocessing <span style="color:#f92672">import</span> get_context
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>trace_id: ContextVar[str] <span style="color:#f92672">=</span> ContextVar(<span style="color:#e6db74">&#34;trace_id&#34;</span>, default<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;MISS&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">read_implicit</span>() <span style="color:#f92672">-&gt;</span> str:
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># spawn worker 重新导入模块，本地 Context 中没有父进程的绑定。</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> trace_id<span style="color:#f92672">.</span>get()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">read_explicit</span>(incoming_trace_id: str) <span style="color:#f92672">-&gt;</span> str:
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 用普通任务参数在 worker 的 Context 中重建绑定。</span>
+</span></span><span style="display:flex;"><span>    token <span style="color:#f92672">=</span> trace_id<span style="color:#f92672">.</span>set(incoming_trace_id)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">try</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> trace_id<span style="color:#f92672">.</span>get()
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">finally</span>:
+</span></span><span style="display:flex;"><span>        trace_id<span style="color:#f92672">.</span>reset(token)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">main</span>() <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    trace_id<span style="color:#f92672">.</span>set(<span style="color:#e6db74">&#34;req-42&#34;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">with</span> ProcessPoolExecutor(
+</span></span><span style="display:flex;"><span>        max_workers<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>,
+</span></span><span style="display:flex;"><span>        mp_context<span style="color:#f92672">=</span>get_context(<span style="color:#e6db74">&#34;spawn&#34;</span>),  <span style="color:#75715e"># 启动全新的 Python 解释器</span>
+</span></span><span style="display:flex;"><span>    ) <span style="color:#66d9ef">as</span> executor:
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 场景一：任务没有接收 trace_id，只能读取 worker 的默认值。</span>
+</span></span><span style="display:flex;"><span>        implicit <span style="color:#f92672">=</span> executor<span style="color:#f92672">.</span>submit(read_implicit)<span style="color:#f92672">.</span>result()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 场景二：把 trace_id 作为可序列化参数传入 worker。</span>
+</span></span><span style="display:flex;"><span>        explicit <span style="color:#f92672">=</span> executor<span style="color:#f92672">.</span>submit(read_explicit, trace_id<span style="color:#f92672">.</span>get())<span style="color:#f92672">.</span>result()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    print(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;implicit: </span><span style="color:#e6db74">{</span>implicit<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>    print(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;explicit: </span><span style="color:#e6db74">{</span>explicit<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> __name__ <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;__main__&#34;</span>:
+</span></span><span style="display:flex;"><span>    main()</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>implicit: MISS   <span style="color:#75715e"># 没有传播父进程 Context，返回默认值</span>
+</span></span><span style="display:flex;"><span>explicit: req-42 <span style="color:#75715e"># worker 用任务参数重建了本地绑定</span></span></span></code></pre></div><p><code>Context</code> 不是可移植的 pickle 载荷。<code>fork</code> 可能让子进程暂时看到父进程内存的快照，但它取决于平台、启动方式和 fork 时机，也不会继续同步，不能当成传播协议。</p>
+<p>跨进程和跨服务应传递普通、可序列化的数据。链路追踪还应使用 <a href="https://www.w3.org/TR/trace-context/">W3C Trace Context</a> 等标准格式传递完整的 span 上下文，而不是只复制一个 trace ID 字符串。</p>
+<h2 id="2-cpython-如何实现这些语义">2. CPython 如何实现这些语义<a class="anchor" href="#2-cpython-%e5%a6%82%e4%bd%95%e5%ae%9e%e7%8e%b0%e8%bf%99%e4%ba%9b%e8%af%ad%e4%b9%89">#</a></h2>
+<p>前面的差异来自两层设计：<code>contextvars</code> 在 CPython 运行时维护当前 Context，线程库和 asyncio 再决定何时进入、复制或恢复它。多进程没有共享运行时，只能走显式的数据边界。</p>
+<h3 id="21-共同底座contextcontextvar-与-hamt">2.1 共同底座：Context、ContextVar 与 HAMT<a class="anchor" href="#21-%e5%85%b1%e5%90%8c%e5%ba%95%e5%ba%a7contextcontextvar-%e4%b8%8e-hamt">#</a></h3>
+<p>CPython 3.14.2 在 <a href="https://github.com/python/cpython/blob/df793163d5821791d4e7caf88885a2c11a107986/Include/cpython/pystate.h#L174-L178"><code>PyThreadState</code></a> 和 <a href="https://github.com/python/cpython/blob/df793163d5821791d4e7caf88885a2c11a107986/Include/internal/pycore_context.h#L23-L51"><code>pycore_context.h</code></a> 中定义了这些对象关系：</p>
+<ul>
+<li><code>PyThreadState.context</code> 指向当前 Context，初始值可以是 <code>NULL</code>；<code>context_ver</code> 在 Context 进入和退出时递增。</li>
+<li><code>PyContext.ctx_prev</code> 保存进入前的 Context，<code>ctx_vars</code> 指向不可变的 <code>PyHamtObject</code> 映射，<code>ctx_entered</code> 防止同一个 Context 被重复进入。</li>
+<li><code>PyContextVar</code> 保存名称、默认值和哈希值。普通 GIL 构建还带有按线程状态 ID 和 Context 版本校验的读取缓存。</li>
+<li><code>PyContextToken</code> 保存创建它的 Context、变量、旧值和使用状态。<code>tok_oldval == NULL</code> 对应公开 API 的 <code>Token.MISSING</code>。</li>
+</ul>
+<figure>
+  <img
+    src="/images/python-contextvars-design-and-implementation/contextvars-cpython-object-model.svg"
+    alt="CPython 中 PyThreadState 指向当前 PyContext，PyContext 引用不可变 HAMT 映射；ContextVar 带读取缓存，Token 保存创建时的 Context、变量和旧值"
+    style="display: block; width: 100%; height: auto;"
+  />
+</figure>
+<p><a href="https://github.com/python/cpython/blob/df793163d5821791d4e7caf88885a2c11a107986/Python/context.c#L273-L337"><code>PyContextVar_Get()</code></a> 的主要路径可以简化为：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">get</span>(var, argument_default<span style="color:#f92672">=</span>NO_ARGUMENT):
+</span></span><span style="display:flex;"><span>    tstate <span style="color:#f92672">=</span> current_thread_state()
+</span></span><span style="display:flex;"><span>    context <span style="color:#f92672">=</span> tstate<span style="color:#f92672">.</span>context
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 普通 GIL 构建先用线程状态 ID 和 Context 版本校验缓存。</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> cache_matches(var, tstate):
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> var<span style="color:#f92672">.</span>cached_value
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> context <span style="color:#f92672">is</span> <span style="color:#f92672">not</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">and</span> var <span style="color:#f92672">in</span> context<span style="color:#f92672">.</span>ctx_vars:
+</span></span><span style="display:flex;"><span>        value <span style="color:#f92672">=</span> context<span style="color:#f92672">.</span>ctx_vars[var]
+</span></span><span style="display:flex;"><span>        refresh_cache(var, tstate, value)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> value
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 两级默认值只参与本次读取，不会写入 Context。</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> argument_default <span style="color:#f92672">is</span> <span style="color:#f92672">not</span> NO_ARGUMENT:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> argument_default
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> var<span style="color:#f92672">.</span>has_default:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> var<span style="color:#f92672">.</span>default
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> NOT_FOUND</span></span></code></pre></div><p><code>get()</code> 不会为了读取默认值创建空 Context。Python 层在拿到 <code>NOT_FOUND</code> 后才抛出 <code>LookupError</code>。进入或退出 Context 时递增 <code>context_ver</code>，旧缓存便自然失效，不需要扫描所有 ContextVar。free-threaded 构建不使用这组缓存字段，应用代码不应依赖缓存细节。</p>
+<p><a href="https://github.com/python/cpython/blob/df793163d5821791d4e7caf88885a2c11a107986/Python/context.c#L340-L411"><code>PyContextVar_Set()</code>、<code>PyContextVar_Reset()</code></a> 和 <a href="https://github.com/python/cpython/blob/df793163d5821791d4e7caf88885a2c11a107986/Python/context.c#L91-L100"><code>PyContext_CopyCurrent()</code></a> 则共享另一条路径：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">set</span>(var, value):
+</span></span><span style="display:flex;"><span>    context <span style="color:#f92672">=</span> context_get()  <span style="color:#75715e"># 没有当前 Context 时，在此处延迟创建。</span>
+</span></span><span style="display:flex;"><span>    old <span style="color:#f92672">=</span> context<span style="color:#f92672">.</span>ctx_vars<span style="color:#f92672">.</span>get(var, MISSING)
+</span></span><span style="display:flex;"><span>    token <span style="color:#f92672">=</span> Token(context, var, old)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># assoc() 返回新的 HAMT，未变化的节点仍与旧映射共享。</span>
+</span></span><span style="display:flex;"><span>    context<span style="color:#f92672">.</span>ctx_vars <span style="color:#f92672">=</span> context<span style="color:#f92672">.</span>ctx_vars<span style="color:#f92672">.</span>assoc(var, value)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> token
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">reset</span>(var, token):
+</span></span><span style="display:flex;"><span>    context <span style="color:#f92672">=</span> context_get()
+</span></span><span style="display:flex;"><span>    validate_token(token, var, context)
+</span></span><span style="display:flex;"><span>    token<span style="color:#f92672">.</span>used <span style="color:#f92672">=</span> <span style="color:#66d9ef">True</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> token<span style="color:#f92672">.</span>old <span style="color:#f92672">is</span> MISSING:
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># set() 前没有绑定，reset() 应删除键，而不是写入默认值。</span>
+</span></span><span style="display:flex;"><span>        context<span style="color:#f92672">.</span>ctx_vars <span style="color:#f92672">=</span> context<span style="color:#f92672">.</span>ctx_vars<span style="color:#f92672">.</span>without(var)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>        context<span style="color:#f92672">.</span>ctx_vars <span style="color:#f92672">=</span> context<span style="color:#f92672">.</span>ctx_vars<span style="color:#f92672">.</span>assoc(var, token<span style="color:#f92672">.</span>old)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">copy_context</span>():
+</span></span><span style="display:flex;"><span>    context <span style="color:#f92672">=</span> context_get()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 新 Context 只共享不可变 HAMT，不逐项复制其中的绑定。</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> new_context(shared_vars<span style="color:#f92672">=</span>context<span style="color:#f92672">.</span>ctx_vars)</span></span></code></pre></div><p><code>ctx_vars</code> 是不可变 HAMT。<code>copy_context()</code> 只创建新的 Context 外壳并共享映射，因此公开文档给出的复杂度是 O(1)。某份 Context 后续写入时，HAMT 通过路径复制生成新映射，其他快照仍引用旧映射。</p>
+<p>这里复制的是绑定结构，不是值对象。两个 Context 如果都绑定到同一个 list 或 dict，看到的仍是同一个可变对象。</p>
+<h3 id="22-同步代码进入和退出当前-context">2.2 同步代码：进入和退出当前 Context<a class="anchor" href="#22-%e5%90%8c%e6%ad%a5%e4%bb%a3%e7%a0%81%e8%bf%9b%e5%85%a5%e5%92%8c%e9%80%80%e5%87%ba%e5%bd%93%e5%89%8d-context">#</a></h3>
+<p><a href="https://github.com/python/cpython/blob/df793163d5821791d4e7caf88885a2c11a107986/Python/context.c#L193-L249"><code>_PyContext_Enter()</code> 和 <code>_PyContext_Exit()</code></a> 维护一个与 Python frame 栈分离的 Context 栈：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">enter</span>(ctx):
+</span></span><span style="display:flex;"><span>    tstate <span style="color:#f92672">=</span> current_thread_state()
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> ctx<span style="color:#f92672">.</span>ctx_entered:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">raise</span> <span style="color:#a6e22e">RuntimeError</span>(<span style="color:#e6db74">&#34;Context 已经进入&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 保存旧 Context，再把 ctx 压入当前线程的 Context 栈。</span>
+</span></span><span style="display:flex;"><span>    ctx<span style="color:#f92672">.</span>ctx_prev <span style="color:#f92672">=</span> tstate<span style="color:#f92672">.</span>context
+</span></span><span style="display:flex;"><span>    tstate<span style="color:#f92672">.</span>context <span style="color:#f92672">=</span> ctx
+</span></span><span style="display:flex;"><span>    ctx<span style="color:#f92672">.</span>ctx_entered <span style="color:#f92672">=</span> <span style="color:#66d9ef">True</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 版本变化会使 ContextVar 上的旧读取缓存失效。</span>
+</span></span><span style="display:flex;"><span>    tstate<span style="color:#f92672">.</span>context_ver <span style="color:#f92672">+=</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">exit</span>(ctx):
+</span></span><span style="display:flex;"><span>    tstate <span style="color:#f92672">=</span> current_thread_state()
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#f92672">not</span> ctx<span style="color:#f92672">.</span>ctx_entered:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">raise</span> <span style="color:#a6e22e">RuntimeError</span>(<span style="color:#e6db74">&#34;Context 尚未进入&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 弹出 ctx，恢复进入前保存的 Context。</span>
+</span></span><span style="display:flex;"><span>    tstate<span style="color:#f92672">.</span>context <span style="color:#f92672">=</span> ctx<span style="color:#f92672">.</span>ctx_prev
+</span></span><span style="display:flex;"><span>    ctx<span style="color:#f92672">.</span>ctx_prev <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>
+</span></span><span style="display:flex;"><span>    ctx<span style="color:#f92672">.</span>ctx_entered <span style="color:#f92672">=</span> <span style="color:#66d9ef">False</span>
+</span></span><span style="display:flex;"><span>    tstate<span style="color:#f92672">.</span>context_ver <span style="color:#f92672">+=</span> <span style="color:#ae81ff">1</span></span></span></code></pre></div><p><code>Context.run()</code> 在调用前 enter，结束后 exit，所以异常不会把指定 Context 留在当前线程上。普通函数调用不做 enter，也不复制 Context；函数里的 <code>get()</code> 仍从同一个 <code>PyThreadState.context</code> 开始查找。</p>
+<p><code>set()</code> 和 <code>reset()</code> 也不操作 Python frame。Token 记录的是“哪个 Context 中的哪个变量原来绑定了什么”，所以跨 Context reset、拿错变量或重复使用 Token 都会报错。</p>
+<h3 id="23-多线程每个-pythreadstate-有自己的入口">2.3 多线程：每个 PyThreadState 有自己的入口<a class="anchor" href="#23-%e5%a4%9a%e7%ba%bf%e7%a8%8b%e6%af%8f%e4%b8%aa-pythreadstate-%e6%9c%89%e8%87%aa%e5%b7%b1%e7%9a%84%e5%85%a5%e5%8f%a3">#</a></h3>
+<p>每个活跃线程都有自己的 <code>PyThreadState</code>，当前 Context 指针也随之隔离。这就是两个线程可以给同一个 <code>ContextVar</code> 绑定不同值的原因。</p>
+<p>Python 3.14 的 <a href="https://github.com/python/cpython/blob/df793163d5821791d4e7caf88885a2c11a107986/Lib/threading.py#L975-L1001"><code>Thread.start()</code></a> 根据显式 <code>context=</code> 或 <code>thread_inherit_context</code> 选择线程的初始 Context，<a href="https://github.com/python/cpython/blob/df793163d5821791d4e7caf88885a2c11a107986/Lib/threading.py#L1065-L1084"><code>_bootstrap_inner()</code></a> 再通过该 Context 运行线程目标。旧版本没有构造器参数时，调用方可以手动提交 <code>copy_context().run</code>，公开语义相同。</p>
+<p>线程池的 worker 会长期复用自己的 <code>PyThreadState</code>。一次 <code>executor.submit()</code> 只是把函数放进队列，不会自动替 worker 进入提交方的 Context；用 <code>copy_context().run</code> 包装任务，才会在执行期间切换并在结束后恢复 worker 原来的 Context。</p>
+<p><code>ctx_entered</code> 还解释了另一个限制：同一个 Context 不能同时进入两个线程。每个并发工作单元必须使用自己的 <code>copy_context()</code> 结果。</p>
+<h3 id="24-asynciotask-保存handle-恢复">2.4 asyncio：Task 保存，Handle 恢复<a class="anchor" href="#24-asynciotask-%e4%bf%9d%e5%ad%98handle-%e6%81%a2%e5%a4%8d">#</a></h3>
+<p>asyncio 没有改变 <code>contextvars</code> 的底层存储。它在调度层给每个 Task 保存 Context，并在推进协程前进入它。</p>
+<p>以默认 Task factory、内置 C Task 和标准事件循环为例，<a href="https://github.com/python/cpython/blob/df793163d5821791d4e7caf88885a2c11a107986/Lib/asyncio/tasks.py#L389-L395"><code>asyncio.create_task()</code></a> 的主要路径是：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">create_task</span>(coro, context<span style="color:#f92672">=</span><span style="color:#66d9ef">None</span>):
+</span></span><span style="display:flex;"><span>    task <span style="color:#f92672">=</span> allocate_task(coro)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 未显式传 context 时，只在 Task 创建阶段复制一次。</span>
+</span></span><span style="display:flex;"><span>    task<span style="color:#f92672">.</span>task_context <span style="color:#f92672">=</span> (
+</span></span><span style="display:flex;"><span>        copy_current_context()
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> context <span style="color:#f92672">is</span> <span style="color:#66d9ef">None</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">else</span> context
+</span></span><span style="display:flex;"><span>    )
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># Handle 保存 task_context，等事件循环调度时再进入它。</span>
+</span></span><span style="display:flex;"><span>    loop<span style="color:#f92672">.</span>call_soon(task_step, task, context<span style="color:#f92672">=</span>task<span style="color:#f92672">.</span>task_context)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> task
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">run_handle</span>(handle):
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 标准 Handle._run() 通过 Context.run() 恢复注册时的 Context。</span>
+</span></span><span style="display:flex;"><span>    handle<span style="color:#f92672">.</span>context<span style="color:#f92672">.</span>run(handle<span style="color:#f92672">.</span>callback, <span style="color:#f92672">*</span>handle<span style="color:#f92672">.</span>args)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">task_step</span>(task, error<span style="color:#f92672">=</span><span style="color:#66d9ef">None</span>):
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> error <span style="color:#f92672">is</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># C 加速路径在这里调用 PyIter_Send(task.coro, None)。</span>
+</span></span><span style="display:flex;"><span>        task<span style="color:#f92672">.</span>coro<span style="color:#f92672">.</span>send(<span style="color:#66d9ef">None</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># Future 的异常或取消会通过 throw() 注入协程。</span>
+</span></span><span style="display:flex;"><span>        task<span style="color:#f92672">.</span>coro<span style="color:#f92672">.</span>throw(error)</span></span></code></pre></div><figure>
+  <img
+    src="/images/python-contextvars-design-and-implementation/contextvars-asyncio-scheduling.svg"
+    alt="asyncio 创建 Task 时复制当前 Context，Handle 进入 Task 保存的 Context 后推进协程；Future 完成时携带同一 Context 调度唤醒回调"
+    style="display: block; width: 100%; height: auto;"
+  />
+</figure>
+<p>C 实现的 <a href="https://github.com/python/cpython/blob/df793163d5821791d4e7caf88885a2c11a107986/Modules/_asynciomodule.c#L2314-L2405"><code>Task.__init__</code></a> 把 <code>PyContext_CopyCurrent()</code> 的结果保存为 <code>task_context</code>；<a href="https://github.com/python/cpython/blob/df793163d5821791d4e7caf88885a2c11a107986/Modules/_asynciomodule.c#L3015-L3028"><code>task_call_step_soon()</code></a> 将它传给 <code>loop.call_soon()</code>。标准 <a href="https://github.com/python/cpython/blob/df793163d5821791d4e7caf88885a2c11a107986/Lib/asyncio/events.py#L34-L95"><code>Handle._run()</code></a> 通过 <code>Context.run()</code> 进入该 Context，然后 Task 才调用 <code>PyIter_Send()</code> 推进协程。</p>
+<p>Task 等待 Future 时，同一个 <code>task_context</code> 会跟随完成回调：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">wait_for_future</span>(task, future):
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># Task 挂起时，把唤醒回调和同一个 task_context 一起注册。</span>
+</span></span><span style="display:flex;"><span>    future<span style="color:#f92672">.</span>add_done_callback(
+</span></span><span style="display:flex;"><span>        task<span style="color:#f92672">.</span>wakeup,
+</span></span><span style="display:flex;"><span>        context<span style="color:#f92672">=</span>task<span style="color:#f92672">.</span>task_context,
+</span></span><span style="display:flex;"><span>    )
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">schedule_future_callbacks</span>(future):
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> callback, context <span style="color:#f92672">in</span> future<span style="color:#f92672">.</span>callbacks:
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># Future 完成后，Context 会随回调进入事件循环队列。</span>
+</span></span><span style="display:flex;"><span>        loop<span style="color:#f92672">.</span>call_soon(callback, future, context<span style="color:#f92672">=</span>context)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">task_wakeup</span>(task, future):
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># Handle 已进入 task_context，此处只需检查结果并恢复 Task。</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">try</span>:
+</span></span><span style="display:flex;"><span>        future<span style="color:#f92672">.</span>result()
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">except</span> <span style="color:#a6e22e">BaseException</span> <span style="color:#66d9ef">as</span> error:
+</span></span><span style="display:flex;"><span>        task_step(task, error)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>        task_step(task, <span style="color:#66d9ef">None</span>)</span></span></code></pre></div><p>Task 的 Context 只在创建时复制一次，之后每次调度都恢复同一个对象。因此 Task 内部的写入能跨过 <code>await</code>，但不会反向更新父 Task 创建后继续使用的 Context。直接 <code>await</code> 没有创建 Task，自然也没有复制步骤。</p>
+<p>纯 Python <code>_PyTask</code> 用 <code>self._context</code>、<code>loop.call_soon(..., context=self._context)</code> 和 <code>Context.run()</code> 完成同样的工作。<code>eager_start</code> 会让第一次推进发生在 Task 构造期间，但仍先进入 Task 保存的 Context，所有公开语义不变。</p>
+<h3 id="25-多进程没有可以恢复的共享运行时">2.5 多进程：没有可以恢复的共享运行时<a class="anchor" href="#25-%e5%a4%9a%e8%bf%9b%e7%a8%8b%e6%b2%a1%e6%9c%89%e5%8f%af%e4%bb%a5%e6%81%a2%e5%a4%8d%e7%9a%84%e5%85%b1%e4%ba%ab%e8%bf%90%e8%a1%8c%e6%97%b6">#</a></h3>
+<p>新进程有自己的解释器状态、<code>PyThreadState</code>、Context 对象和地址空间。父进程的 <code>tstate-&gt;context</code> 指针以及 HAMT 节点对它都没有可用意义，asyncio 的 Task 集成也只存在于各自进程内。</p>
+<p>因此 CPython 没有在 ProcessPool 边界复制 Context。启动方式为 <code>spawn</code> 时，worker 重新导入模块；使用 <code>fork</code> 时，worker 得到的是某一时刻的内存副本。两种方式都不构成后续传播。任务参数、消息头或 RPC metadata 才是进程间的稳定接口。</p>
+<h2 id="3-最佳实践与使用限制">3. 最佳实践与使用限制<a class="anchor" href="#3-%e6%9c%80%e4%bd%b3%e5%ae%9e%e8%b7%b5%e4%b8%8e%e4%bd%bf%e7%94%a8%e9%99%90%e5%88%b6">#</a></h2>
+<p>服务端通常在请求入口绑定，在唯一的退出点恢复。下面假设追踪库已经从入站载体中验证并提取了 trace ID：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#f92672">from</span> contextvars <span style="color:#f92672">import</span> ContextVar
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> typing <span style="color:#f92672">import</span> Awaitable, Callable, TypeVar
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Response <span style="color:#f92672">=</span> TypeVar(<span style="color:#e6db74">&#34;Response&#34;</span>)
+</span></span><span style="display:flex;"><span>trace_id: ContextVar[str] <span style="color:#f92672">=</span> ContextVar(<span style="color:#e6db74">&#34;trace_id&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">run_request</span>(
+</span></span><span style="display:flex;"><span>    incoming_trace_id: str,
+</span></span><span style="display:flex;"><span>    handler: Callable[[], Awaitable[Response]],
+</span></span><span style="display:flex;"><span>) <span style="color:#f92672">-&gt;</span> Response:
+</span></span><span style="display:flex;"><span>    token <span style="color:#f92672">=</span> trace_id<span style="color:#f92672">.</span>set(incoming_trace_id)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">try</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">await</span> handler()
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">finally</span>:
+</span></span><span style="display:flex;"><span>        trace_id<span style="color:#f92672">.</span>reset(token)</span></span></code></pre></div><h3 id="31-在并发边界明确选择">3.1 在并发边界明确选择<a class="anchor" href="#31-%e5%9c%a8%e5%b9%b6%e5%8f%91%e8%be%b9%e7%95%8c%e6%98%8e%e7%a1%ae%e9%80%89%e6%8b%a9">#</a></h3>
+<table>
+  <thead>
+      <tr>
+          <th>边界</th>
+          <th>默认行为</th>
+          <th>建议</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>普通调用 / 直接 <code>await</code></td>
+          <td>沿用当前 Context</td>
+          <td>用 Token 限定临时写入</td>
+      </tr>
+      <tr>
+          <td><code>asyncio.create_task()</code></td>
+          <td>创建 Task 时复制</td>
+          <td>需要覆盖时显式传 <code>context=</code></td>
+      </tr>
+      <tr>
+          <td><code>loop.call_soon()</code></td>
+          <td>注册回调时捕获</td>
+          <td>需要覆盖时显式传 <code>context=</code></td>
+      </tr>
+      <tr>
+          <td><code>asyncio.to_thread()</code></td>
+          <td>每次执行复制并传播</td>
+          <td>asyncio 中卸载阻塞调用时优先使用</td>
+      </tr>
+      <tr>
+          <td><code>threading.Thread</code> 3.14</td>
+          <td>由 <code>context=</code> 或运行时标志决定</td>
+          <td>显式传 <code>copy_context()</code> 或空 <code>Context()</code></td>
+      </tr>
+      <tr>
+          <td><code>loop.run_in_executor()</code> / ThreadPool</td>
+          <td>不按任务自动传播</td>
+          <td>每个任务使用新的 <code>copy_context().run</code></td>
+      </tr>
+      <tr>
+          <td>ProcessPool / 多进程 / RPC</td>
+          <td>没有可移植的自动传播</td>
+          <td>序列化所需元数据，并在接收端重新绑定</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="32-实践准则">3.2 实践准则<a class="anchor" href="#32-%e5%ae%9e%e8%b7%b5%e5%87%86%e5%88%99">#</a></h3>
+<ul>
+<li>在模块顶层定义 <code>ContextVar</code>，不要在闭包或每次请求中动态创建。Context 会强引用映射中的 ContextVar 键，动态创建可能让它们长期无法回收。</li>
+<li>把 <code>set()</code> 返回的 Token 与 <code>finally</code> 中的 <code>reset()</code> 配对。不要用 <code>set(old_value)</code> 冒充恢复，因为“原先没有绑定”和“原先绑定了某个默认值”不是同一状态。</li>
+<li>Context 中只放请求范围的环境信息，例如当前 span、trace ID、租户 ID、认证主体或日志字段。业务必需参数、全局配置和大块可变状态继续显式传递。</li>
+<li>优先绑定字符串、数字、不可变记录等值。<code>copy_context()</code> 不会深拷贝值；若绑定 list 或 dict，多个 Context 仍可能修改同一个对象。</li>
+<li>在线程池的每次提交、Task 创建、进程任务和 RPC 边界决定一次传播策略。不要依赖线程创建时机、fork 快照或执行器内部状态。</li>
+<li>使用追踪库提供的注入和提取 API 处理跨服务 Trace Context。只传 trace ID 会丢失父 span、采样标志和厂商状态。</li>
+<li>并发测试应同时运行至少两个使用不同值的工作单元，并用 Event 或 Barrier 控制切换点。单请求测试发现不了串值问题。</li>
+</ul>
+<h3 id="33-使用限制">3.3 使用限制<a class="anchor" href="#33-%e4%bd%bf%e7%94%a8%e9%99%90%e5%88%b6">#</a></h3>
+<ul>
+<li>Token 只属于创建它的 ContextVar 和当时的 Context，而且只能 reset 一次。</li>
+<li>同一个 Context 不能在多个线程中并发进入；退出后可以再次进入。</li>
+<li>Task 默认得到创建时的快照。父子 Task 后续不会持续同步绑定。</li>
+<li>显式把同一个 <code>context=</code> 交给多个 Task 会让它们共享后续绑定，应只在确实需要共享时使用。</li>
+<li>Context 的复制是浅层结构共享。可变值仍需自行复制或同步。</li>
+<li><code>contextvars</code> 不负责网络传播、进程通信、访问控制或资源生命周期。它只是让当前执行上下文中的代码能够找到同一份绑定。</li>
+<li>自定义调度器如果要支持 <code>contextvars</code>，必须在调度边界捕获 Context，并在回调执行期间通过 <code>Context.run()</code> 进入，异常路径也要正确退出。</li>
+</ul>
+<p><code>ContextVar</code> 负责命名，Context 保存绑定，调度器在并发边界复制或恢复。同步调用没有 Context 切换；线程各自持有 <code>PyThreadState</code>；asyncio Task 显式保存 Context；进程之间只能传数据。这四种执行边界，正是使用方式不同的原因。</p>
+<h2 id="4-参考资料">4. 参考资料<a class="anchor" href="#4-%e5%8f%82%e8%80%83%e8%b5%84%e6%96%99">#</a></h2>
+<ul>
+<li><a href="https://docs.python.org/3.14/library/contextvars.html">Python 3.14 文档：<code>contextvars</code> - Context Variables</a></li>
+<li><a href="https://docs.python.org/3.14/library/asyncio-task.html">Python 3.14 文档：Coroutines and Tasks</a></li>
+<li><a href="https://docs.python.org/3.14/library/asyncio-eventloop.html">Python 3.14 文档：Event Loop</a></li>
+<li><a href="https://docs.python.org/3.14/library/threading.html">Python 3.14 文档：<code>threading</code> - Thread-based parallelism</a></li>
+<li><a href="https://docs.python.org/3.14/library/multiprocessing.html">Python 3.14 文档：<code>multiprocessing</code> - Process-based parallelism</a></li>
+<li><a href="https://peps.python.org/pep-0567/">PEP 567 - Context Variables</a></li>
+<li><a href="https://www.w3.org/TR/trace-context/">W3C Trace Context</a></li>
+<li><a href="https://github.com/python/cpython/tree/v3.14.2">CPython v3.14.2 源码树</a></li>
+<li><a href="https://github.com/python/cpython/blob/df793163d5821791d4e7caf88885a2c11a107986/Python/context.c">CPython v3.14.2：<code>Python/context.c</code></a></li>
+<li><a href="https://github.com/python/cpython/blob/df793163d5821791d4e7caf88885a2c11a107986/Python/hamt.c">CPython v3.14.2：<code>Python/hamt.c</code></a></li>
+<li><a href="https://github.com/python/cpython/blob/df793163d5821791d4e7caf88885a2c11a107986/Modules/_asynciomodule.c">CPython v3.14.2：<code>Modules/_asynciomodule.c</code></a></li>
+</ul>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+  <div>
+  
+    <a href="/2026/10/13/local-https-with-mkcert/" class="flex align-center">
+      <img src="/icons/backward.svg" class="book-icon" alt="Backward" />
+      <span>本地快速启用 HTTPS</span>
+    </a>
+  
+  </div>
+  <div>
+  
+    <a href="/2026/08/07/Parquet%E6%96%87%E4%BB%B6%E6%A0%BC%E5%BC%8F%E5%8E%9F%E7%90%86/" class="flex align-center">
+      <span>Parquet 文件格式解析</span>
+      <img src="/icons/forward.svg" class="book-icon" alt="Forward" />
+    </a>
+  
+  </div>
+</div>
+ 
+        
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+        
+<div class="flex align-center" style="margin-top: 1rem;">
+  <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+    访问量<span id="busuanzi_value_site_pv"></span>
+  </span>
+  <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+    访客数<span id="busuanzi_value_site_uv"></span>
+  </span>
+</div>
+        
+  
+ 
+        
+  
+  
+    <script>(function(){document.querySelectorAll("pre:has(code)").forEach(e=>{e.addEventListener("click",e.focus),e.addEventListener("copy",function(t){if(t.preventDefault(),navigator.clipboard){const t=window.getSelection().toString()||e.textContent;navigator.clipboard.writeText(t)}})})})()</script>
+  
+
+      </footer>
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+  
+  <aside class="book-toc">
+    <div class="book-toc-content">
+      
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-contextvars-的设计语义">1. <code>contextvars</code> 的设计语义</a>
+      <ul>
+        <li><a href="#11-简单同步场景">1.1 简单同步场景</a></li>
+        <li><a href="#12-多线程场景">1.2 多线程场景</a></li>
+        <li><a href="#13-asyncio-场景">1.3 asyncio 场景</a></li>
+        <li><a href="#14-多进程场景">1.4 多进程场景</a></li>
+      </ul>
+    </li>
+    <li><a href="#2-cpython-如何实现这些语义">2. CPython 如何实现这些语义</a>
+      <ul>
+        <li><a href="#21-共同底座contextcontextvar-与-hamt">2.1 共同底座：Context、ContextVar 与 HAMT</a></li>
+        <li><a href="#22-同步代码进入和退出当前-context">2.2 同步代码：进入和退出当前 Context</a></li>
+        <li><a href="#23-多线程每个-pythreadstate-有自己的入口">2.3 多线程：每个 PyThreadState 有自己的入口</a></li>
+        <li><a href="#24-asynciotask-保存handle-恢复">2.4 asyncio：Task 保存，Handle 恢复</a></li>
+        <li><a href="#25-多进程没有可以恢复的共享运行时">2.5 多进程：没有可以恢复的共享运行时</a></li>
+      </ul>
+    </li>
+    <li><a href="#3-最佳实践与使用限制">3. 最佳实践与使用限制</a>
+      <ul>
+        <li><a href="#31-在并发边界明确选择">3.1 在并发边界明确选择</a></li>
+        <li><a href="#32-实践准则">3.2 实践准则</a></li>
+        <li><a href="#33-使用限制">3.3 使用限制</a></li>
+      </ul>
+    </li>
+    <li><a href="#4-参考资料">4. 参考资料</a></li>
+  </ul>
+</nav>
+
+
+
+    </div>
+  </aside>
+  
+ 
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Contextvars on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/contextvars/</link>
+    <description>Recent content in Contextvars on Yeqown</description>
+    <generator>Hugo</generator>
+    <language>en-US</language>
+    <lastBuildDate>Wed, 26 Aug 2026 00:00:00 +0800</lastBuildDate>
+    <atom:link href="https://www.yeqown.xyz/tags/contextvars/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Python 的上下文管理</title>
+      <link>https://www.yeqown.xyz/2026/08/26/python-contextvars-design-and-implementation/</link>
+      <pubDate>Wed, 26 Aug 2026 00:00:00 +0800</pubDate>
+      <guid>https://www.yeqown.xyz/2026/08/26/python-contextvars-design-and-implementation/</guid>
+      <description>&lt;p&gt;一次请求经过网关、订单服务、库存服务和数据库时，链路追踪系统需要用 trace ID、span ID 等信息把各段调用关联起来。跨服务时，这些信息通常放在 HTTP &lt;code&gt;traceparent&lt;/code&gt;、gRPC metadata 或消息头中；请求进入 Python 服务后，日志、指标和下游客户端仍要随时读到当前链路信息。&lt;/p&gt;&#xA;&lt;p&gt;最直接的办法是显式传参：&lt;/p&gt;&#xA;&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;handle_request&lt;/span&gt;(trace_id: str) &lt;span style=&#34;color:#f92672&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;None&lt;/span&gt;:&#xA;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    load_user(trace_id)&#xA;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    create_order(trace_id)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;调用链一长，&lt;code&gt;trace_id&lt;/code&gt; 就会穿过许多本来不关心它的函数。全局变量也不合适，因为并发请求会覆盖彼此的值。&lt;code&gt;threading.local()&lt;/code&gt; 能隔离线程，却分不清同一事件循环线程上的多个 asyncio Task。&lt;/p&gt;&#xA;&lt;p&gt;Python 3.7 根据 &lt;a href=&#34;https://peps.python.org/pep-0567/&#34;&gt;PEP 567&lt;/a&gt; 引入 &lt;a href=&#34;https://docs.python.org/3.14/library/contextvars.html&#34;&gt;&lt;code&gt;contextvars&lt;/code&gt;&lt;/a&gt;，用来保存“属于当前执行上下文”的状态。日志函数可以直接读取当前 trace ID，调用链不必层层转发它；asyncio 在切换 Task 时也会切换对应的 Context，避免请求之间串值。&lt;/p&gt;&#xA;&lt;p&gt;&lt;code&gt;contextvars&lt;/code&gt; 的作用域止于当前 Python 进程。跨进程、跨服务的传播仍要由追踪库把完整的 &lt;a href=&#34;https://www.w3.org/TR/trace-context/&#34;&gt;W3C Trace Context&lt;/a&gt; 注入载体，在接收端提取后再写入本地 Context。&lt;/p&gt;&#xA;&lt;figure&gt;&#xA;  &lt;img&#xA;    src=&#34;https://www.yeqown.xyz/images/python-contextvars-design-and-implementation/contextvars-execution-model.svg&#34;&#xA;    alt=&#34;Python frame 与当前 Context 相互独立；普通调用沿用当前 Context，线程、asyncio Task 和进程在各自边界选择复制、恢复或显式传递&#34;&#xA;    style=&#34;display: block; width: 100%; height: auto;&#34;&#xA;  /&gt;&#xA;&lt;/figure&gt;&#xA;&lt;p&gt;本文先从公开 API 建立行为模型，再用 CPython 3.14.2 解释不同并发场景为何表现不同。源码固定在 &lt;a href=&#34;https://github.com/python/cpython/commit/df793163d5821791d4e7caf88885a2c11a107986&#34;&gt;CPython commit &lt;code&gt;df793163d5821791d4e7caf88885a2c11a107986&lt;/code&gt;&lt;/a&gt;。对象字段、缓存和 C 函数属于这一版 CPython；其他 Python 实现只需遵守公开语义。&lt;/p&gt;&#xA;&lt;!-- more --&gt;&#xA;&lt;h2 id=&#34;1-contextvars-的设计语义&#34;&gt;1. &lt;code&gt;contextvars&lt;/code&gt; 的设计语义&lt;a class=&#34;anchor&#34; href=&#34;#1-contextvars-%e7%9a%84%e8%ae%be%e8%ae%a1%e8%af%ad%e4%b9%89&#34;&gt;#&lt;/a&gt;&lt;/h2&gt;&#xA;&lt;p&gt;&lt;code&gt;ContextVar&lt;/code&gt; 不是保存当前值的容器，而是 Context 映射中的键。这一点决定了后面的所有行为。&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

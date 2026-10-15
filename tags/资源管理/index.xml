@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>资源管理 on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/%E8%B5%84%E6%BA%90%E7%AE%A1%E7%90%86/</link>
+    <description>Recent content in 资源管理 on Yeqown</description>
+    <generator>Hugo</generator>
+    <language>en-US</language>
+    <lastBuildDate>Thu, 23 Jul 2026 00:00:00 +0800</lastBuildDate>
+    <atom:link href="https://www.yeqown.xyz/tags/%E8%B5%84%E6%BA%90%E7%AE%A1%E7%90%86/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Kubernetes VPA 的设计和实现</title>
+      <link>https://www.yeqown.xyz/2026/07/23/Kubernetes-VPA-%E7%9A%84%E8%AE%BE%E8%AE%A1%E5%92%8C%E5%AE%9E%E7%8E%B0/</link>
+      <pubDate>Thu, 23 Jul 2026 00:00:00 +0800</pubDate>
+      <guid>https://www.yeqown.xyz/2026/07/23/Kubernetes-VPA-%E7%9A%84%E8%AE%BE%E8%AE%A1%E5%92%8C%E5%AE%9E%E7%8E%B0/</guid>
+      <description>&lt;p&gt;&lt;code&gt;requests&lt;/code&gt; 决定 Pod 能否被调度，也影响节点的装箱密度和资源抢占时的保障。它写进 PodSpec 后通常不会自行变化，工作负载却会随着业务迭代、流量起伏、缓存预热和依赖延迟不断改变。完全靠人工维护一组固定值，很快就会出现偏差，进而影响集群的资源利用率和稳定性。&lt;/p&gt;&#xA;&lt;blockquote class=&#39;book-hint &#39;&gt;&#xA;&lt;p&gt;如果团队内无预算控制～ 那么恭喜你，已经解决了这个问题 🎉&lt;/p&gt;&#xA;&lt;/blockquote&gt;&lt;p&gt;VPA（Vertical Pod Autoscaler）会持续观察工作负载，为容器生成 CPU 和内存 recommendation，并根据策略决定是否应用到 Pod。本文关注 recommendation 怎样产生并作用到 Pod，以及生产接入前需要确认哪些限制。常用配置放在前面，便于后文说明各组件的行为。&lt;/p&gt;&#xA;&lt;!-- more --&gt;&#xA;&lt;blockquote class=&#39;book-hint &#39;&gt;&#xA;&lt;p&gt;&lt;strong&gt;版本说明&lt;/strong&gt;&lt;/p&gt;&#xA;&lt;p&gt;本文基于 VPA &lt;code&gt;vertical-pod-autoscaler-1.7.0&lt;/code&gt;，对应源码 commit &lt;code&gt;6a616ea0c5ea0cb6111240073a9273b3467c064e&lt;/code&gt;。字段、默认值、更新模式和源码路径均以该版本为准。&lt;/p&gt;&#xA;&lt;/blockquote&gt;&lt;figure&gt;&#xA;  &lt;img&#xA;    src=&#34;https://www.yeqown.xyz/images/kubernetes-vpa-design-and-implementation/requests-vs-actual-usage.svg&#34;&#xA;    alt=&#34;同一组订单服务 Pod 的 requests 合计只占 Node 可分配 CPU 和内存的 40% 与 75%，调度时可以放入；应用变化后实际用量约占 120% 与 132%，越过容量线并造成 CPU 争用和内存压力&#34;&#xA;    style=&#34;display: block; width: 100%; height: auto;&#34;&#xA;  /&gt;&#xA;  &lt;figcaption&gt;Scheduler 根据 requests 装箱；工作负载变化后，节点承担的真实用量可能已经超过可分配资源。&lt;/figcaption&gt;&#xA;&lt;/figure&gt;&#xA;&lt;h2 id=&#34;1-vpa-解决什么问题&#34;&gt;1. VPA 解决什么问题&lt;a class=&#34;anchor&#34; href=&#34;#1-vpa-%e8%a7%a3%e5%86%b3%e4%bb%80%e4%b9%88%e9%97%ae%e9%a2%98&#34;&gt;#&lt;/a&gt;&lt;/h2&gt;&#xA;&lt;p&gt;Kubernetes 调度器根据 Pod 的 &lt;code&gt;requests&lt;/code&gt; 判断节点是否有足够资源，它不会预测容器之后的真实用量。requests 因此会影响调度位置、节点装箱密度，以及资源抢占时的保障。&lt;/p&gt;&#xA;&lt;p&gt;requests 过低时，节点可能被调度进过多 Pod，CPU 抢占和内存压力会在运行时才暴露；requests 过高时，Pod 会占用过多可调度容量，造成节点利用率下降、Pod Pending，甚至触发不必要的节点扩容。固定值还会随工作负载变化逐渐偏离实际需求。&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

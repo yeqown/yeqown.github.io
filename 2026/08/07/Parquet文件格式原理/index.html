@@ -1,0 +1,1726 @@
+<!DOCTYPE html>
+<html lang="en-US" dir="ltr">
+<head>
+  <!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="从真实 Parquet 文件出发，解释 Row Group、Column Chunk、Page、FileMetaData、嵌套数据与查询裁剪，并用可复现实验验证物理结构。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#2e3440">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2026/08/07/Parquet%E6%96%87%E4%BB%B6%E6%A0%BC%E5%BC%8F%E5%8E%9F%E7%90%86/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="Parquet 文件格式解析">
+  <meta property="og:description" content="从真实 Parquet 文件出发，解释 Row Group、Column Chunk、Page、FileMetaData、嵌套数据与查询裁剪，并用可复现实验验证物理结构。">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2026-08-07T00:00:00+08:00">
+    <meta property="article:modified_time" content="2026-08-07T00:00:00+08:00">
+    <meta property="article:tag" content="Apache Parquet">
+    <meta property="article:tag" content="列式">
+    <meta property="article:tag" content="存储">
+    <meta property="article:tag" content="编码">
+    <meta property="article:tag" content="压缩">
+
+
+  <meta itemprop="name" content="Parquet 文件格式解析">
+  <meta itemprop="description" content="从真实 Parquet 文件出发，解释 Row Group、Column Chunk、Page、FileMetaData、嵌套数据与查询裁剪，并用可复现实验验证物理结构。">
+  <meta itemprop="datePublished" content="2026-08-07T00:00:00+08:00">
+  <meta itemprop="dateModified" content="2026-08-07T00:00:00+08:00">
+  <meta itemprop="wordCount" content="3711">
+  <meta itemprop="keywords" content="Apache Parquet,列式,存储,编码,压缩">
+
+<title>Parquet 文件格式解析 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2026/08/07/Parquet%E6%96%87%E4%BB%B6%E6%A0%BC%E5%BC%8F%E5%8E%9F%E7%90%86/">
+<link rel="stylesheet" href="/book.min.c40223b1e1a5ffa9f6a0fe48797821424561eff06762ee5c75071bda9d009477.css" integrity="sha256-xAIjseGl/6n2oP5IeXghQkVh7/BnYu5cdQcb2p0AlHc=" crossorigin="anonymous">
+
+
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.99ce27de54629b271c4277001097f0e183ca5eaedb015e65542b29ce1c90db30.js" integrity="sha256-mc4n3lRimyccQncAEJfw4YPKXq7bAV5lVCspzhyQ2zA=" crossorigin="anonymous"></script>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade">
+  
+</head>
+<body dir="ltr" class="book-kind-page book-type-posts">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    
+<aside class="book-menu">
+  <div class="book-menu-content">
+    
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input id="book-search-input" type="text" 
+    placeholder="Search"
+    aria-label="Search"
+    maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+<ul><li><a href="/categories">Categories</a></li><li><a href="/tags">Tags</a></li></ul>
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">
+      About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+
+  </div>
+</aside>
+ 
+
+    <div class="book-page">
+      <header class="book-header hidden">
+        
+<div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/icons/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>Parquet 文件格式解析</h3>
+
+  <label for="toc-control">
+    
+    <img src="/icons/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-parquet-文件结构">1. Parquet 文件结构</a></li>
+    <li><a href="#2-用-sql-驱动一次读取">2. 用 SQL 驱动一次读取</a></li>
+    <li><a href="#3-filemetadata从文件尾开始">3. FileMetaData：从文件尾开始</a>
+      <ul>
+        <li><a href="#31-定位并解析-filemetadata">3.1 定位并解析 FileMetaData</a></li>
+        <li><a href="#32-用-schema-解析-sql-中的列">3.2 用 Schema 解析 SQL 中的列</a></li>
+      </ul>
+    </li>
+    <li><a href="#4-谓词下推statistics-与-bloom-filter">4. 谓词下推：Statistics 与 Bloom Filter</a>
+      <ul>
+        <li><a href="#41-statistics-的字段结构">4.1 Statistics 的字段结构</a></li>
+        <li><a href="#42-用-statistics-裁剪-row-group">4.2 用 Statistics 裁剪 Row Group</a></li>
+        <li><a href="#43-bloom-filter另一条排除路径">4.3 Bloom Filter：另一条排除路径</a></li>
+      </ul>
+    </li>
+    <li><a href="#5-row-group">5. Row Group</a></li>
+    <li><a href="#6-column-chunk列裁剪">6. Column Chunk：列裁剪</a></li>
+    <li><a href="#7-page编码与解压边界">7. Page：编码与解压边界</a>
+      <ul>
+        <li><a href="#71-page-序列与通用-pageheader">7.1 Page 序列与通用 PageHeader</a></li>
+        <li><a href="#72-page-indexcolumnindex-与-offsetindex">7.2 Page Index：<code>ColumnIndex</code> 与 <code>OffsetIndex</code></a></li>
+        <li><a href="#73-读取-dictionary-page-与-data-page">7.3 读取 Dictionary Page 与 Data Page</a></li>
+        <li><a href="#74-编码与压缩">7.4 编码与压缩</a></li>
+      </ul>
+    </li>
+    <li><a href="#8-完整-parquet-文件与查询结果">8. 完整 Parquet 文件与查询结果</a></li>
+    <li><a href="#9-总结">9. 总结</a></li>
+    <li><a href="#附录-a嵌套数据与-dlrl">附录 A：嵌套数据与 DL/RL</a></li>
+    <li><a href="#附录-b可复现实验与检查清单">附录 B：可复现实验与检查清单</a>
+      <ul>
+        <li><a href="#样例字节与偏移明细">样例字节与偏移明细</a></li>
+        <li><a href="#环境与样本生成">环境与样本生成</a></li>
+        <li><a href="#复现清单">复现清单</a></li>
+      </ul>
+    </li>
+    <li><a href="#附录-crandom-access-parquetrap">附录 C：Random Access Parquet（RAP）</a>
+      <ul>
+        <li><a href="#用外部索引替代文件内查找">用外部索引替代文件内查找</a></li>
+        <li><a href="#适用边界与准备型优化">适用边界与准备型优化</a></li>
+      </ul>
+    </li>
+    <li><a href="#参考资料">参考资料</a></li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h1>
+    Parquet 文件格式解析
+  </h1>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/icons/calendar.svg" class="book-icon" alt="Calendar" />
+    <span>August 7, 2026</span>
+    
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Database/">Database</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Apache-Parquet/">Apache Parquet</a>, 
+      <a href="/tags/%E5%88%97%E5%BC%8F/">列式</a>, 
+      <a href="/tags/%E5%AD%98%E5%82%A8/">存储</a>, 
+      <a href="/tags/%E7%BC%96%E7%A0%81/">编码</a>, 
+      <a href="/tags/%E5%8E%8B%E7%BC%A9/">压缩</a>
+  </div>
+  
+
+
+  <div class="book-post-content markdown-inner"><p>Parquet 诞生时，Hadoop 生态中的数据处理框架正在快速增多。同一份数据会被不同工具反复读取，却缺少一种独立于计算框架的高效列式格式。分析查询通常只需要少数几列；按完整记录读取，会把大量 I/O 浪费在无关字段上。</p>
+<p>Parquet 并非第一个列式存储格式。它的价值在于把列式表示、编码和压缩写进一套公开的文件规范，并借鉴 Google Dremel 的记录拆分与重组算法来表示嵌套数据。项目最初由 Twitter、Cloudera 等贡献者开发，2014 年进入 Apache Incubator，次年毕业成为 Apache 顶级项目。现在，多种语言和分析工具都能直接读写 Parquet。</p>
+<p>正文固定读取 <code>parquet-lab/transactions-small.parquet</code>。这是一份未加密的普通 Parquet 文件，由<a href="#%e9%99%84%e5%bd%95-b%e5%8f%af%e5%a4%8d%e7%8e%b0%e5%ae%9e%e9%aa%8c%e4%b8%8e%e6%a3%80%e6%9f%a5%e6%b8%85%e5%8d%95">附录 B</a>中的脚本生成。样例有 30,000 行、3 个 Row Group 和 8 个叶子列。精确大小与校验值集中列在附录中。除附录 A 的嵌套示例外，正文中的 <code>parquet</code> 与 DuckDB 命令都读取这份文件。</p>
+<p>现在给查询引擎一个具体问题：从这份交易文件中，按用户汇总 2026 年 5 月 8 日 03:00 到 04:00 的交易净额。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-sql" data-lang="sql"><span style="display:flex;"><span><span style="color:#66d9ef">SELECT</span> user_id, <span style="color:#66d9ef">SUM</span>(amount)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">FROM</span> transactions
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">WHERE</span> created_at <span style="color:#f92672">&gt;=</span> <span style="color:#66d9ef">TIMESTAMP</span> <span style="color:#e6db74">&#39;2026-05-08 03:00:00&#39;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">AND</span> created_at <span style="color:#f92672">&lt;</span>  <span style="color:#66d9ef">TIMESTAMP</span> <span style="color:#e6db74">&#39;2026-05-08 04:00:00&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">GROUP</span> <span style="color:#66d9ef">BY</span> user_id;</span></span></code></pre></div><p>通过 SQL 可得到结果列、过滤条件和聚合方式，却无法告诉读取器这些列数据在文件中的具体位置。执行查询前还要回答三个问题：</p>
+<ol>
+<li>Schema 如何定义，<code>user_id</code>、<code>amount</code> 和 <code>created_at</code> 对应哪些叶子列？</li>
+<li>哪些 Row Group 和 Page 不可能满足时间条件，可以直接跳过？</li>
+<li>候选列采用什么编码和压缩，读取器怎样找到并解码它们？</li>
+</ol>
+<!-- more -->
+<h2 id="1-parquet-文件结构">1. Parquet 文件结构<a class="anchor" href="#1-parquet-%e6%96%87%e4%bb%b6%e7%bb%93%e6%9e%84">#</a></h2>
+<p>先看完整文件，再模拟查询。图中的粗边界表示 <code>File -&gt; Row Group -&gt; Column Chunk -&gt; Page</code>。细线只表示局部放大，不是数据流。</p>
+<p>这几层各有分工。Row Group 划分一批行，Column Chunk 保存这批行中的一个叶子列，Page 再保存该列的一小段编码数据。每层的大小都由写入器选择，不是格式常量。</p>
+<p>Bloom Filter 和 Page Index 不在这条包含链中。Bloom Filter 用来快速判断“某个值一定不存在”。Page Index 由 <code>ColumnIndex</code> 和 <code>OffsetIndex</code> 组成：前者像页级范围目录，记录每页的边界；后者像位置表，记录页所在的字节范围和行区间。</p>
+<figure>
+  <img
+    src="/images/parquet-file-format/parquet-file-overview.svg"
+    alt="Parquet 文件包含多个 Row Group；图中展开 Row Group 1 的 Column 1、Column 2 到 Column 8，再展开 Column 1 的可选 Dictionary Page 和多个 Data Page；文件尾的 FileMetaData、4 字节长度和末尾 PAR1 用于定位这些结构"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>Parquet 的文件层级</figcaption>
+</figure>
+<p>这个样例写入器的物理布局如下；它描述的是本文件的写入顺序，而不是规范强制的可选辅助结构排列顺序。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>PAR1
+</span></span><span style="display:flex;"><span>Row Group 0 ... Row Group N
+</span></span><span style="display:flex;"><span>optional Bloom Filter / ColumnIndex / OffsetIndex byte ranges
+</span></span><span style="display:flex;"><span>serialized FileMetaData
+</span></span><span style="display:flex;"><span>4-byte FileMetaData length
+</span></span><span style="display:flex;"><span>PAR1</span></span></code></pre></div><p>本文样例以 <code>PAR1</code> 开头和结尾。数据区保存一个或多个 Row Group，每个 Row Group 又为每个 Schema 叶子列保存一个 Column Chunk。Column Chunk 是连续的字节区，里面可以先写 Dictionary Page，再写多个 Data Page。Page 是局部编码、压缩、解压和校验的边界。</p>
+<p>这里的布局只适用于未加密文件。Parquet Modular Encryption 的 plaintext-footer 模式仍使用 <code>PAR1</code>。encrypted-footer 模式在文件首尾使用 <code>PARE</code>，并在加密 Footer 前增加 <code>FileCryptoMetaData</code>。后文读取末尾 8 字节并验证 <code>PAR1</code>，说的都是本文样例。</p>
+<blockquote class='book-hint '>
+<p>叶子列是嵌套结构展开后的存储路径。例如，<code>a: {b: {c: 1}}</code> 会展开成 <code>a.b.c</code>，这样底层的值才能按列保存。</p>
+</blockquote><p>Bloom Filter、<code>ColumnIndex</code> 和 <code>OffsetIndex</code> 都服务于单个 Column Chunk，但字节不在该 Chunk 的连续 Page 区域内。读取器要先解析文件尾的 FileMetaData，再根据其中的引用找到它们。因此，这张图描述文件层级，不描述读取顺序。</p>
+<h2 id="2-用-sql-驱动一次读取">2. 用 SQL 驱动一次读取<a class="anchor" href="#2-%e7%94%a8-sql-%e9%a9%b1%e5%8a%a8%e4%b8%80%e6%ac%a1%e8%af%bb%e5%8f%96">#</a></h2>
+<p>查询引擎解析开篇 SQL 后，会把投影和过滤条件交给 Parquet 扫描算子。投影需要 <code>user_id</code> 和 <code>amount</code>，过滤需要 <code>created_at</code>，因此扫描阶段要读三个叶子列。</p>
+<p><code>GROUP BY user_id</code> 和 <code>SUM(amount)</code> 由上层执行算子完成。Parquet 读取器只负责返回通过时间条件的列数据，不负责聚合。</p>
+<figure>
+  <img
+    src="/images/parquet-file-format/parquet-read-path.svg"
+    alt="未加密 Parquet 文件的读取路径：读取器从文件尾解析 FileMetaData，根据 Schema 选择投影列和谓词列，以 Statistics、Bloom Filter 以及实现支持时的 Page Index 排除候选范围，解码后执行剩余谓词"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>Parquet 读取路径</figcaption>
+</figure>
+<p>先区分格式能力与工具的实际行为。样例生成器会写出 Page Index，<code>parquet-cli</code> 也能解析它。不过，<a href="https://arrow.apache.org/docs/25.0/python/generated/pyarrow.parquet.write_table.html">PyArrow 25.0.0 文档</a>明确说明，其读取端尚不使用 Page Index。</p>
+<p><a href="https://github.com/duckdb/duckdb/blob/v1.5.5/extension/parquet/parquet_reader.cpp#L1207-L1255">DuckDB 1.5.5 的 Parquet 扫描器</a>会用 Row Group Statistics 和 Bloom Filter 做裁剪。它没有读取 <code>column_index_offset</code> 或 <code>offset_index_offset</code>。因此，下表第 5 阶段只是格式层模拟，不是本次 DuckDB 查询的执行跟踪。</p>
+<p>读取过程可以按下面的阶段理解：</p>
+<table>
+  <thead>
+      <tr>
+          <th>阶段</th>
+          <th>开篇 SQL 带来的要求</th>
+          <th>读取器的动作</th>
+          <th>本样例的结果</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>1</td>
+          <td>打开 <code>transactions</code> 文件</td>
+          <td>读取末尾 8 字节，定位并解析 FileMetaData</td>
+          <td>得到 Schema、3 个 Row Group 及其物理引用</td>
+      </tr>
+      <tr>
+          <td>2</td>
+          <td><code>WHERE created_at &gt;= 03:00 AND created_at &lt; 04:00</code></td>
+          <td>比较 <code>created_at</code> 的 Column Chunk Statistics</td>
+          <td>排除 RG0 和 RG2，只保留 RG1</td>
+      </tr>
+      <tr>
+          <td>3</td>
+          <td>读取候选记录批次</td>
+          <td>进入 RG1，并按 Schema 解析其中的叶子列</td>
+          <td>RG1 对应 10,000 条候选记录</td>
+      </tr>
+      <tr>
+          <td>4</td>
+          <td>输出 <code>user_id</code>，聚合 <code>amount</code>，过滤 <code>created_at</code></td>
+          <td>只选择这三个 Column Chunk</td>
+          <td>其余五列不进入本次扫描</td>
+      </tr>
+      <tr>
+          <td>5</td>
+          <td>继续执行时间过滤</td>
+          <td>若读取器支持 Page Index，用 <code>ColumnIndex</code> 筛选 Page，再按 <code>OffsetIndex</code> 定位字节和行区间</td>
+          <td>格式元数据表明 Page 0 至 Page 4 仍可能命中；这不是 DuckDB 实测路径</td>
+      </tr>
+      <tr>
+          <td>6</td>
+          <td><code>GROUP BY user_id</code>、<code>SUM(amount)</code></td>
+          <td>解码候选数据，执行原始时间谓词，再把投影列交给聚合算子</td>
+          <td>DuckDB 实测有 3,597 行进入聚合，得到 180 个用户</td>
+      </tr>
+  </tbody>
+</table>
+<p>后面的章节沿这条路径展开：FileMetaData -&gt; 谓词下推 -&gt; Row Group -&gt; Column Chunk -&gt; Page。Statistics、Bloom Filter 和 Page Index 会在各自参与裁剪的位置解释。</p>
+<h2 id="3-filemetadata从文件尾开始">3. FileMetaData：从文件尾开始<a class="anchor" href="#3-filemetadata%e4%bb%8e%e6%96%87%e4%bb%b6%e5%b0%be%e5%bc%80%e5%a7%8b">#</a></h2>
+<p>读取这份未加密文件时，不必从文件头一路扫描到目标列。读取器先取最后 8 字节：前 4 字节记录 FileMetaData 的长度，后 4 字节是末尾魔数 <code>PAR1</code>。文件大小减去这 8 字节，再减去元数据长度，就是 FileMetaData 的起点。</p>
+<p>encrypted-footer 模式使用 <code>PARE</code> 和另一套 Footer 解析流程，不适用下面的步骤。</p>
+<h3 id="31-定位并解析-filemetadata">3.1 定位并解析 FileMetaData<a class="anchor" href="#31-%e5%ae%9a%e4%bd%8d%e5%b9%b6%e8%a7%a3%e6%9e%90-filemetadata">#</a></h3>
+<figure>
+  <img
+    src="/images/parquet-file-format/file-metadata-location.svg"
+    alt="文件最后依次保存 4186 字节 FileMetaData、4 字节小端 FileMetaData length 和 4 字节 PAR1；读取器按 file_metadata_start = file_size - 8 - file_metadata_length 计算 FileMetaData 起点"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>从文件尾定位 FileMetaData</figcaption>
+</figure>
+<p>长度字段使用小端序。本文样例解析出的 FileMetaData 长度是 4,186 字节，起点是 <code>1,484,874</code>。原始尾部字节、换算公式和命令集中列在<a href="#%e6%a0%b7%e4%be%8b%e5%ad%97%e8%8a%82%e4%b8%8e%e5%81%8f%e7%a7%bb%e6%98%8e%e7%bb%86">附录 B</a>。</p>
+<p>FileMetaData 使用 Thrift Compact Protocol 序列化。<code>parquet-cli</code> 将读取并解析 FileMetaData 的子命令命名为 <code>footer</code>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>parquet footer --raw parquet-lab/transactions-small.parquet</span></span></code></pre></div><p>解析后的结构可以概括为：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>FileMetaData
+</span></span><span style="display:flex;"><span>├── schema: SchemaElement[]
+</span></span><span style="display:flex;"><span>└── row_groups: RowGroup[]
+</span></span><span style="display:flex;"><span>    └── columns: ColumnChunk[]
+</span></span><span style="display:flex;"><span>        ├── meta_data: ColumnMetaData
+</span></span><span style="display:flex;"><span>        │   ├── type / encodings / codec / num_values / sizes
+</span></span><span style="display:flex;"><span>        │   ├── data_page_offset / dictionary_page_offset
+</span></span><span style="display:flex;"><span>        │   ├── statistics: Statistics
+</span></span><span style="display:flex;"><span>        │   └── bloom_filter_offset / bloom_filter_length
+</span></span><span style="display:flex;"><span>        ├── column_index_offset / column_index_length
+</span></span><span style="display:flex;"><span>        └── offset_index_offset / offset_index_length</span></span></code></pre></div><p>FileMetaData 不直接装入所有辅助结构。它主要保存 Schema、Row Group、Column Chunk，以及通往其他字节区域的引用。读取器解析这些引用后，才会跳到具体的 Page 或索引。</p>
+<p>引用分属两个层次：</p>
+<table>
+  <thead>
+      <tr>
+          <th>所属结构</th>
+          <th>保存的内容</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>ColumnChunk</code></td>
+          <td><code>ColumnIndex</code> 与 <code>OffsetIndex</code> 的 offset/length</td>
+      </tr>
+      <tr>
+          <td><code>ColumnMetaData</code></td>
+          <td>Dictionary/Data Page 的 offset、Chunk 大小、Statistics 和 Bloom Filter 引用</td>
+      </tr>
+  </tbody>
+</table>
+<p><code>file_offset</code> 是已废弃字段，历史实现对其含义并不一致。读取器不能把样例中的 <code>file_offset = 0</code> 当作 Column Chunk 起点，而应使用内层的 Page offset 与 Chunk 大小。RG1 / <code>created_at</code> 的相关引用值见<a href="#%e6%a0%b7%e4%be%8b%e5%ad%97%e8%8a%82%e4%b8%8e%e5%81%8f%e7%a7%bb%e6%98%8e%e7%bb%86">附录 B</a>。</p>
+<p>到这里，读取器只拿到了 Schema、Statistics 和物理引用，还没有读取任何 Data Page。</p>
+<h3 id="32-用-schema-解析-sql-中的列">3.2 用 Schema 解析 SQL 中的列<a class="anchor" href="#32-%e7%94%a8-schema-%e8%a7%a3%e6%9e%90-sql-%e4%b8%ad%e7%9a%84%e5%88%97">#</a></h3>
+<p><code>parquet schema</code> 从刚刚解析的 FileMetaData 中读取 <code>schema: SchemaElement[]</code>，将结果打印成便于阅读的 message 结构：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>parquet schema --parquet parquet-lab/transactions-small.parquet</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>message schema {
+</span></span><span style="display:flex;"><span>  required int64 id;
+</span></span><span style="display:flex;"><span>  required int32 mch_id;
+</span></span><span style="display:flex;"><span>  required int64 user_id;
+</span></span><span style="display:flex;"><span>  required binary out_trans_no (STRING);
+</span></span><span style="display:flex;"><span>  required int64 amount;
+</span></span><span style="display:flex;"><span>  required int64 balance;
+</span></span><span style="display:flex;"><span>  optional int64 created_at (TIMESTAMP(MICROS,false));
+</span></span><span style="display:flex;"><span>  optional int64 updated_at (TIMESTAMP(MICROS,false));
+</span></span><span style="display:flex;"><span>}</span></span></code></pre></div><p>开篇 SQL 投影列为 <code>user_id</code> 和 <code>amount</code>，使用 <code>created_at</code> 谓词过滤，因此扫描算子只需继续追踪这三条叶子路径即可。</p>
+<p>Schema 还规定字段是否可空，以及它的物理表示和逻辑语义。<code>created_at</code> 的 Physical Type 是 <code>INT64</code>，Logical Type 是 <code>TIMESTAMP(MICROS,false)</code>。读取器因此把整数解释为微秒精度、无 UTC 调整语义的时间戳。<code>out_trans_no</code> 的 Physical Type 是 <code>BYTE_ARRAY</code>，其 <code>STRING</code> 注解表示这些字节采用 UTF-8。</p>
+<figure>
+  <img
+    src="/images/parquet-file-format/schema-type-mapping.svg"
+    alt="Schema 将 created_at、out_trans_no 和 mch_id 的字段语义映射到 INT64、BYTE_ARRAY 与 INT32 等叶子物理类型"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>Schema 到叶子物理类型的映射</figcaption>
+</figure>
+<p>扫描算子现在已经确定 <code>created_at</code>、<code>user_id</code> 和 <code>amount</code> 三条叶子路径。下一步先看 <code>created_at</code> 的 Statistics 能否排除整批记录。</p>
+<h2 id="4-谓词下推statistics-与-bloom-filter">4. 谓词下推：Statistics 与 Bloom Filter<a class="anchor" href="#4-%e8%b0%93%e8%af%8d%e4%b8%8b%e6%8e%a8statistics-%e4%b8%8e-bloom-filter">#</a></h2>
+<p>查询引擎会把开篇 SQL 中的 <code>created_at</code> 条件下推给 Parquet 扫描算子。“下推”不是让文件执行 SQL，而是让读取器在解码前先看元数据，排除肯定不可能命中的 Row Group。剩余候选仍要读取，并执行原始谓词。</p>
+<h3 id="41-statistics-的字段结构">4.1 Statistics 的字段结构<a class="anchor" href="#41-statistics-%e7%9a%84%e5%ad%97%e6%ae%b5%e7%bb%93%e6%9e%84">#</a></h3>
+<p><code>Statistics</code> 可以理解成一段列数据的摘要。读取器先看摘要中的边界和空值数量，再决定是否值得读取数据本身。它是一个所有字段都可选的 Thrift 结构，主要字段如下：</p>
+<table>
+  <thead>
+      <tr>
+          <th>字段</th>
+          <th>含义</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>min_value</code> / <code>max_value</code></td>
+          <td>首选的最小、最大边界；新写入器使用这组字段</td>
+      </tr>
+      <tr>
+          <td><code>null_count</code></td>
+          <td>null 数量；字段缺失不等于 0</td>
+      </tr>
+      <tr>
+          <td><code>distinct_count</code></td>
+          <td>不同值数量，主要用于基数估算</td>
+      </tr>
+      <tr>
+          <td><code>is_min_value_exact</code> / <code>is_max_value_exact</code></td>
+          <td>对应边界是否为数据中实际出现的极值</td>
+      </tr>
+      <tr>
+          <td><code>nan_count</code></td>
+          <td>浮点列中的 NaN 数量；字段缺失时要假定可能存在 NaN</td>
+      </tr>
+      <tr>
+          <td><code>min</code> / <code>max</code></td>
+          <td>已废弃的旧边界字段</td>
+      </tr>
+  </tbody>
+</table>
+<p>边界值使用 PLAIN 编码。读取器还要结合物理类型、逻辑类型和 <code>ColumnOrder</code> 解释它们，不能把所有原始字节按同一种方式排序。完整 Thrift 定义见 <a href="https://github.com/apache/parquet-format/blob/apache-parquet-format-2.13.0/src/main/thrift/parquet.thrift#L263-L319">Parquet Format 2.13.0</a>。</p>
+<p>Statistics 有两种常见粒度。<code>ColumnMetaData.statistics</code> 描述整个 Column Chunk，也就是一个 Row Group 中的某个叶子列。Data Page Header 中的 Statistics 只描述单页。</p>
+<p>开篇查询先用前者裁剪 Row Group。第 7 章的 <code>ColumnIndex</code> 是另一套逐页结构，不是 Statistics 的别名。</p>
+<h3 id="42-用-statistics-裁剪-row-group">4.2 用 Statistics 裁剪 Row Group<a class="anchor" href="#42-%e7%94%a8-statistics-%e8%a3%81%e5%89%aa-row-group">#</a></h3>
+<p><code>created_at</code> 的 Statistics 位于每个 Row Group 对应的 <code>ColumnMetaData</code> 中。<code>parquet meta</code> 会把物理时间戳解码成人能直接比较的 min/max。完整输出还包含另外七列，下面只摘录 Row Group 标题和 <code>created_at</code>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>parquet meta parquet-lab/transactions-small.parquet</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Row group 0:  count: 10000  47.53 B records  start: 4  total(compressed): 464.189 kB total(uncompressed):941.346 kB
+</span></span><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>created_at  INT64  S _ R  10000  7.65 B  10  &#34;2026-05-08T00:00:00.000000&#34; / &#34;2026-05-08T02:46:39.000000&#34;
+</span></span><span style="display:flex;"><span>Row group 1:  count: 10000  47.52 B records  start: 475334  total(compressed): 464.092 kB total(uncompressed):946.834 kB
+</span></span><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>created_at  INT64  S _ R  10000  7.65 B  10  &#34;2026-05-08T02:46:40.000000&#34; / &#34;2026-05-08T05:33:19.000000&#34;
+</span></span><span style="display:flex;"><span>Row group 2:  count: 10000  47.47 B records  start: 950564  total(compressed): 463.551 kB total(uncompressed):951.110 kB
+</span></span><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>created_at  INT64  S _ R  10000  7.65 B  10  &#34;2026-05-08T05:33:20.000000&#34; / &#34;2026-05-08T08:19:59.000000&#34;</span></span></code></pre></div><p><code>S _ R</code> 不是 Parquet 规范里的字段，而是 <code>parquet-cli</code> 的紧凑显示：</p>
+<table>
+  <thead>
+      <tr>
+          <th>符号</th>
+          <th>在这段输出中的含义</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>S</code></td>
+          <td>Column Chunk 使用 SNAPPY</td>
+      </tr>
+      <tr>
+          <td><code>_</code></td>
+          <td>Dictionary Page 使用 PLAIN</td>
+      </tr>
+      <tr>
+          <td><code>R</code></td>
+          <td>Data Page 使用 RLE_DICTIONARY</td>
+      </tr>
+  </tbody>
+</table>
+<p>下划线在其他输出位置也可能表示“未压缩”，所以不能脱离列头单独解读。第 7.4 节还会看到这种情况。</p>
+<p>将这些范围与 SQL 的半开区间 <code>[03:00:00, 04:00:00)</code> 比较：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Row Group 0: 00:00:00 .. 02:46:39  -&gt; skip
+</span></span><span style="display:flex;"><span>Row Group 1: 02:46:40 .. 05:33:19  -&gt; candidate
+</span></span><span style="display:flex;"><span>Row Group 2: 05:33:20 .. 08:19:59  -&gt; skip
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Predicate:   03:00:00 .. 04:00:00</span></span></code></pre></div><p>RG0 的最大值早于查询下界，RG2 的最小值不小于查询上界，因此两组都不可能命中。RG1 的范围与谓词相交，只能标记为候选。读取器仍要检查其中的记录。<code>nulls = 10</code> 不会改变结论，因为 SQL 的范围比较不会让 null 通过过滤。</p>
+<p>Statistics 只能用于排除，min/max 相交并不证明数据一定命中。字段缺失，或者边界经过截断且不再可信时，读取器必须回退到读取数据，再执行剩余过滤。</p>
+<h3 id="43-bloom-filter另一条排除路径">4.3 Bloom Filter：另一条排除路径<a class="anchor" href="#43-bloom-filter%e5%8f%a6%e4%b8%80%e6%9d%a1%e6%8e%92%e9%99%a4%e8%b7%af%e5%be%84">#</a></h3>
+<p>Bloom Filter 是一种概率型成员测试结构。它能确定某个值不存在，却只能说某个值“可能存在”，因此适合等值过滤，不适合这里的时间范围条件。</p>
+<p>开篇 SQL 没有按 <code>out_trans_no</code> 做等值过滤，所以 Bloom Filter 不参与这次执行。样例仍为该列写入了 Bloom Filter，下面用它观察这两种返回结果：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>parquet bloom-filter <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  -c out_trans_no <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  -v <span style="color:#e6db74">&#39;102117463212-017782057860228-1-0-281-1778205786-0,missing-transaction-000&#39;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  parquet-lab/transactions-small.parquet</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Row group 0:
+</span></span><span style="display:flex;"><span>value 102117463212-017782057860228-1-0-281-1778205786-0 maybe exists.
+</span></span><span style="display:flex;"><span>value missing-transaction-000 NOT exists.
+</span></span><span style="display:flex;"><span>Row group 1:
+</span></span><span style="display:flex;"><span>value 102117463212-017782057860228-1-0-281-1778205786-0 NOT exists.
+</span></span><span style="display:flex;"><span>value missing-transaction-000 NOT exists.
+</span></span><span style="display:flex;"><span>Row group 2:
+</span></span><span style="display:flex;"><span>value 102117463212-017782057860228-1-0-281-1778205786-0 NOT exists.
+</span></span><span style="display:flex;"><span>value missing-transaction-000 NOT exists.</span></span></code></pre></div><p><code>maybe exists</code> 不能证明值存在，<code>NOT exists</code> 才允许读取器排除对应 Row Group。范围查询仍依赖 Statistics 或 Page Index，不使用 Bloom Filter。</p>
+<h2 id="5-row-group">5. Row Group<a class="anchor" href="#5-row-group">#</a></h2>
+<p>Statistics 已经把候选范围缩小到 RG1。Row Group 是一批完整记录的物理边界。组内包含同一段行号范围的全部叶子列，不同 Row Group 可以独立读取。</p>
+<figure>
+  <img
+    src="/images/parquet-file-format/rows-to-column-storage.svg"
+    alt="30,000 条完整记录按写入顺序横向切成三个 Row Group，每组 10,000 行，并各自保留相同的八个叶子列"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>完整记录按行切成三个 Row Group</figcaption>
+</figure>
+<p><code>parquet meta</code> 报告 RG1 有 10,000 条记录，压缩后的全部 Column Chunk 合计约 464.092 kB：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>parquet meta parquet-lab/transactions-small.parquet</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Row group 1:  count: 10000  47.52 B records  start: 475334  total(compressed): 464.092 kB total(uncompressed):946.834 kB</span></span></code></pre></div><p>样例生成器按顺序写入三个 RecordBatch，因此 RG1 对应逻辑行 <code>10,000..19,999</code>。这个范围来自生成顺序，Parquet 并没有额外保存一列全局行号。<code>start: 475334</code> 也是 <code>parquet-cli</code> 针对本文件报告的位置，不是规范要求的固定布局。</p>
+<p>RG1 仍然包含八个叶子列。查询不需要把它们全部读入内存，下一步会按 SQL 的投影和谓词选出三个 Column Chunk。</p>
+<h2 id="6-column-chunk列裁剪">6. Column Chunk：列裁剪<a class="anchor" href="#6-column-chunk%e5%88%97%e8%a3%81%e5%89%aa">#</a></h2>
+<p>RG1 按 Schema 拆成八个 Column Chunk，每个 Chunk 连续保存一个叶子列的 Page。开篇 SQL 只需要 <code>user_id</code>、<code>amount</code> 和 <code>created_at</code>。其余五列可以跳过。</p>
+<figure>
+  <img
+    src="/images/parquet-file-format/row-group-column-chunk-layout.svg"
+    alt="逻辑上每个 Row Group 都有 8 个叶子 Column Chunk；右侧只摘录 RG0 物理顺序中的第 1、3、4、7 列，说明同一 Row Group 内各 Column Chunk 依次连续存放"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>Column Chunk 的逻辑与物理布局</figcaption>
+</figure>
+<p>同一条 <code>parquet meta</code> 命令会列出 RG1 的八个 Column Chunk。下面只保留本次扫描涉及的三行：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>parquet meta parquet-lab/transactions-small.parquet</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Row group 1:  count: 10000  47.52 B records  start: 475334  total(compressed): 464.092 kB total(uncompressed):946.834 kB
+</span></span><span style="display:flex;"><span>--------------------------------------------------------------------------------
+</span></span><span style="display:flex;"><span>              type      encodings count     avg size   nulls   min / max
+</span></span><span style="display:flex;"><span>user_id       INT64     S _ R     10000     0.36 B     0       &#34;102117463712&#34; / &#34;102117464211&#34;
+</span></span><span style="display:flex;"><span>amount        INT64     S _ R     10000     0.12 B     0       &#34;-250000&#34; / &#34;1250000&#34;
+</span></span><span style="display:flex;"><span>created_at    INT64     S _ R     10000     7.65 B     10      &#34;2026-05-08T02:46:40.000000&#34; / &#34;2026-05-08T05:33:19.000000&#34;</span></span></code></pre></div><p>这里的 <code>S _ R</code> 与上一节含义相同：SNAPPY、PLAIN Dictionary Page 和 RLE_DICTIONARY Data Page。三个 Chunk 的压缩后大小差异很大，但读取器不必靠顺序扫描猜测边界。它会分别使用 <code>dictPageOffset</code>、<code>dataPageOffset</code> 和 <code>totalSize</code> 定位。本文样例的具体值集中列在<a href="#%e6%a0%b7%e4%be%8b%e5%ad%97%e8%8a%82%e4%b8%8e%e5%81%8f%e7%a7%bb%e6%98%8e%e7%bb%86">附录 B</a>。</p>
+<h2 id="7-page编码与解压边界">7. Page：编码与解压边界<a class="anchor" href="#7-page%e7%bc%96%e7%a0%81%e4%b8%8e%e8%a7%a3%e5%8e%8b%e8%be%b9%e7%95%8c">#</a></h2>
+<p>Page 是 Column Chunk 内的编码、压缩、解压和校验边界，但它不等于一次 I/O 请求。顺序扫描时，读取器常会合并读取多个 Page，甚至预取更大的连续区间。只有实现支持 Page Index 等定位信息时，Range Read 才可能收窄到少数 Page。</p>
+<p>还要区分 Page 的外层结构和页内类型。所有 Page 都采用 <code>PageHeader + Page body</code>，再由 <code>PageHeader.type</code> 决定页专属 Header 和页体布局。Page Index 是用于裁剪 Data Page 的独立元数据，不是另一层 Page 容器。</p>
+<h3 id="71-page-序列与通用-pageheader">7.1 Page 序列与通用 PageHeader<a class="anchor" href="#71-page-%e5%ba%8f%e5%88%97%e4%b8%8e%e9%80%9a%e7%94%a8-pageheader">#</a></h3>
+<p>一个 Column Chunk 在物理上是一串连续的 Page。使用字典编码时，开头最多有一张 Dictionary Page，后面是一张或多张 Data Page。没有字典时，Column Chunk 可以直接从 Data Page 开始。Page 数量和目标大小由写入器决定，不是格式常量。</p>
+<p>每张 Page 都由两段连续字节组成。前面是 Thrift 序列化的 <code>PageHeader</code>，后面是长度为 <code>compressed_page_size</code> 的 Page body。<code>PageHeader</code> 不是定长结构，读取器必须先完成反序列化，才能知道它占了多少字节。</p>
+<blockquote class='book-hint note'>
+<p><strong>没有 <code>headerSize</code>，读取器怎么知道 <code>PageHeader</code> 在哪里结束？</strong></p>
+<p>Thrift Compact Protocol 会逐字段解析 <code>PageHeader</code>，并在当前 struct 的 <code>T_STOP</code> 处结束。它不是在原始字节中搜索某个分隔符。字段的 wire type 还允许读取器跳过不认识的可选字段。</p>
+<p>解析结束时，输入游标正好指向 Page body。工具显示的 <code>headerSize</code> 是“当前游标减去 Page 起点”的结果，不是文件里另存的字段。逐步验算见<a href="#%e6%a0%b7%e4%be%8b%e5%ad%97%e8%8a%82%e4%b8%8e%e5%81%8f%e7%a7%bb%e6%98%8e%e7%bb%86">附录 B</a>。</p></blockquote><figure>
+  <img
+    src="/images/parquet-file-format/page-compression-boundary.svg"
+    alt="一个 Column Chunk 由可选的 Dictionary Page 和连续 Data Page 组成；每张 Page 都使用变长 PageHeader 加 Page body 的通用结构，type 决定 Dictionary、Data V1 或 Data V2 专属 Header 和页体布局"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>Column Chunk 中的 Page 序列、通用 PageHeader 与 type 分支</figcaption>
+</figure>
+<p><code>PageHeader</code> 保存 <code>type</code>、页体压缩前后的大小、可选 CRC，以及与 <code>type</code> 对应的页专属 Header。这里的大小不包含 <code>PageHeader</code> 自身。页专属 Header 是嵌套字段，不是紧跟在通用 Header 后面的另一段物理 Header。</p>
+<table>
+  <thead>
+      <tr>
+          <th><code>PageType</code></th>
+          <th><code>PageHeader</code> 中设置的字段</th>
+          <th>Page body 的含义</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>DATA_PAGE = 0</code></td>
+          <td><code>data_page_header</code></td>
+          <td>Data Page V1 的 RL、DL 和编码值</td>
+      </tr>
+      <tr>
+          <td><code>INDEX_PAGE = 1</code></td>
+          <td><code>index_page_header</code></td>
+          <td>格式枚举中的 Index Page；本文样例未使用</td>
+      </tr>
+      <tr>
+          <td><code>DICTIONARY_PAGE = 2</code></td>
+          <td><code>dictionary_page_header</code></td>
+          <td>编码后的字典值</td>
+      </tr>
+      <tr>
+          <td><code>DATA_PAGE_V2 = 3</code></td>
+          <td><code>data_page_header_v2</code></td>
+          <td>分段保存的 RL、DL 和编码值</td>
+      </tr>
+  </tbody>
+</table>
+<p><code>INDEX_PAGE</code> 不能与下一节的 Page Index 混为一谈。用于裁剪的 Page Index 指 <code>ColumnIndex</code> 和 <code>OffsetIndex</code> 两个独立结构，它们的位置和长度由 <code>ColumnChunk</code> 元数据引用。</p>
+<p>CRC 字段位于 <code>PageHeader</code> 内，校验范围却只覆盖写入磁盘的 Page body，不包含 Header。读取器先反序列化通用 Header，再根据 <code>type</code> 解释页专属 Header 和后续 <code>compressed_page_size</code> 字节。</p>
+<h3 id="72-page-indexcolumnindex-与-offsetindex">7.2 Page Index：<code>ColumnIndex</code> 与 <code>OffsetIndex</code><a class="anchor" href="#72-page-indexcolumnindex-%e4%b8%8e-offsetindex">#</a></h3>
+<p>格式层已经把范围缩小到 RG1 的三个 Column Chunk。支持 Page Index 的读取器还能继续裁剪；不支持的读取器会读取整个候选 Chunk，再执行原始谓词。</p>
+<p>Page Index 是服务于单个 Column Chunk 的可选逐页元数据。两个组成部分分工如下：</p>
+<table>
+  <thead>
+      <tr>
+          <th>结构</th>
+          <th>保存什么</th>
+          <th>解决的问题</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>ColumnIndex</code></td>
+          <td>各 Data Page 的 min/max、null 和边界顺序</td>
+          <td>哪些 Page 仍可能命中</td>
+      </tr>
+      <tr>
+          <td><code>OffsetIndex</code></td>
+          <td>各 Data Page 的偏移、总长度和首行索引</td>
+          <td>Page 在哪里、覆盖哪些行</td>
+      </tr>
+  </tbody>
+</table>
+<p><code>ColumnIndex</code> 若存在，对应的 <code>OffsetIndex</code> 必须存在；<code>OffsetIndex</code> 也可以单独出现。两者都只描述 Data Page，不包含开头可能存在的 Dictionary Page。</p>
+<p>查询区间是 <code>[03:00:00, 04:00:00)</code>。样例的 Page 0 至 Page 4 与它相交，仍是候选。Page 5 从 04:10:00 开始，后面的页都可以排除。这里展示的是格式能提供的信息；DuckDB 1.5.5 并没有执行这一步。</p>
+<figure>
+  <img
+    src="/images/parquet-file-format/statistics-page-index-pruning.svg"
+    alt="支持 Page Index 的读取器可以先用 Column Chunk Statistics 排除 RG0 和 RG2，再用可选 Page Index 将 RG1 缩小到 Data Page 0 至 Page 4；Bloom Filter 只为等值条件提供确定不存在或可能存在的判断"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>支持 Page Index 的读取器可执行两级裁剪</figcaption>
+</figure>
+<p><code>ColumnIndex</code> 中与边界相邻的几页可以简化成下面这张表：</p>
+<table>
+  <thead>
+      <tr>
+          <th>Data Page</th>
+          <th>min</th>
+          <th>max</th>
+          <th>与查询区间的关系</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Page 0</td>
+          <td>02:46:40</td>
+          <td>03:03:19</td>
+          <td>相交，保留</td>
+      </tr>
+      <tr>
+          <td>Page 4</td>
+          <td>03:53:20</td>
+          <td>04:09:59</td>
+          <td>相交，保留</td>
+      </tr>
+      <tr>
+          <td>Page 5</td>
+          <td>04:10:00</td>
+          <td>04:26:39</td>
+          <td>不相交，排除</td>
+      </tr>
+  </tbody>
+</table>
+<p>读取器先用 <code>ColumnIndex</code> 找候选页，再用 <code>OffsetIndex</code> 把页号换成字节范围和 RG 内行区间。它还可以据此寻找 <code>user_id</code>、<code>amount</code> 中覆盖相同行区间的 Page。完整的 offset、压缩长度和首行索引见<a href="#%e6%a0%b7%e4%be%8b%e5%ad%97%e8%8a%82%e4%b8%8e%e5%81%8f%e7%a7%bb%e6%98%8e%e7%bb%86">附录 B</a>。</p>
+<p>Page Index 缺失，或者读取器没有实现这条路径，都不会影响正确性。代价只是读取更大的候选范围，并在解码后执行原始谓词。</p>
+<h3 id="73-读取-dictionary-page-与-data-page">7.3 读取 Dictionary Page 与 Data Page<a class="anchor" href="#73-%e8%af%bb%e5%8f%96-dictionary-page-%e4%b8%8e-data-page">#</a></h3>
+<p>沿 RG1 / <code>created_at</code> 的 Column Chunk 往里看，先是一张 Dictionary Page，随后是十张 Data Page。<code>pages --raw</code> 会解析共用的 <code>PageHeader</code>，再按 <code>type</code> 展开对应的页专属 Header。</p>
+<table>
+  <thead>
+      <tr>
+          <th>物理顺序</th>
+          <th><code>type</code></th>
+          <th>页专属 Header</th>
+          <th>作用</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Page 0</td>
+          <td><code>2</code></td>
+          <td><code>dictionary_page_header</code></td>
+          <td>保存按 PLAIN 编码的字典值</td>
+      </tr>
+      <tr>
+          <td>Page 1</td>
+          <td><code>3</code></td>
+          <td><code>data_page_header_v2</code></td>
+          <td>保存 levels 和字典 ID</td>
+      </tr>
+  </tbody>
+</table>
+<p>两张 Page 的 Header 序列化后长度不同，说明 <code>PageHeader</code> 不是固定宽度前缀。Header 大小、Page 起点和页体长度见<a href="#%e6%a0%b7%e4%be%8b%e5%ad%97%e8%8a%82%e4%b8%8e%e5%81%8f%e7%a7%bb%e6%98%8e%e7%bb%86">附录 B</a>。</p>
+<p><code>created_at</code> 有 10,000 个逻辑位置，其中 10 个是 null，其余 9,990 个时间戳互不相同。这是高基数数据。样例统一设置了 <code>use_dictionary=True</code>，因此仍然写出 Dictionary Page，方便观察字典 ID 与 Page offset。这不代表生产环境也该这样配置。写入器可以关闭字典，也可以在字典达到限制后让后续 Data Page 回退到 PLAIN。</p>
+<p>Data Page V2 的页体依次保存 RL、DL 和 encoded values。前两段的长度直接写在 <code>DataPageHeaderV2</code> 中，并保持未压缩；<code>is_compressed</code> 只控制 values 区。即使 values 没有压缩，<code>compressed_page_size</code> 这个字段名也不会改变，它仍表示磁盘上的整个 Page body 长度。</p>
+<p>CRC 用于发现意外损坏，不提供加密、签名或真实性证明。CRC 值写在 Header 中，校验范围则是 Page body。样例中的分段字节数和 CRC 值也放在附录表格中。</p>
+<p>本文样例通过 PyArrow 的 <code>data_page_version=&quot;2.0&quot;</code> 选择 V2。V1 与 V2 共用 <code>PageHeader + Page body</code> 外层结构，主要差别如下：</p>
+<table>
+  <thead>
+      <tr>
+          <th>对比项</th>
+          <th>Data Page V1</th>
+          <th>Data Page V2</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>levels</td>
+          <td>RL、DL 与 values 连续写入页体</td>
+          <td>Header 直接记录 RL、DL 的字节长度</td>
+      </tr>
+      <tr>
+          <td>Codec 范围</td>
+          <td>启用后整体压缩</td>
+          <td>RL/DL 不压缩，只有 values 受 <code>is_compressed</code> 控制</td>
+      </tr>
+      <tr>
+          <td>提前读 levels</td>
+          <td>通常要先解压整个页体</td>
+          <td>可以不解压 values，先读取 levels</td>
+      </tr>
+  </tbody>
+</table>
+<p>V2 没有取代 V1。两者是 <code>PageType</code> 中并存的 Data Page 类型，V2 也并非在所有场景都更合适。</p>
+<h3 id="74-编码与压缩">7.4 编码与压缩<a class="anchor" href="#74-%e7%bc%96%e7%a0%81%e4%b8%8e%e5%8e%8b%e7%bc%a9">#</a></h3>
+<p>编码改变值的表示，例如把重复值换成较短的字典 ID。Codec 再压缩编码后的字节。两步可以独立选择：<code>SNAPPY</code> 不是 <code>RLE_DICTIONARY</code>，使用 Dictionary 编码也不代表页体一定经过压缩。</p>
+<figure>
+  <img
+    src="/images/parquet-file-format/parquet-encoding-patterns.svg"
+    alt="Parquet 先按数据形状选择 PLAIN、RLE 或 Dictionary 编码，再把编码后的 Page 页体交给压缩 Codec"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>编码与 Codec 压缩</figcaption>
+</figure>
+<table>
+  <thead>
+      <tr>
+          <th>编码</th>
+          <th>保存什么</th>
+          <th>适用场景</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>PLAIN</td>
+          <td>按 Physical Type 直接表示值；Dictionary Page 也用它保存字典值</td>
+          <td>通用回退、字典本体</td>
+      </tr>
+      <tr>
+          <td>RLE / Bit Packing</td>
+          <td>连续相同值或窄位宽整数</td>
+          <td>Definition/Repetition Level、小整数 ID</td>
+      </tr>
+      <tr>
+          <td>Dictionary + RLE_DICTIONARY</td>
+          <td>Dictionary Page 存去重值，Data Page 存字典 ID</td>
+          <td>低基数字符串、枚举式数据</td>
+      </tr>
+  </tbody>
+</table>
+<p><code>mch_id</code> 是最直观的例子。样例的 30,000 行都属于商户 <code>102</code>，因此每个 Row Group 的 Dictionary Page 只有一个值。后面的十张 Data Page 各保存 1,000 个字典 ID。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>parquet pages -c mch_id parquet-lab/transactions-small.parquet</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>page   type  enc  count   size       rows
+</span></span><span style="display:flex;"><span>0-D    dict  S _  1       4 B
+</span></span><span style="display:flex;"><span>0-1    data  _ R  1000    4 B        1000
+</span></span><span style="display:flex;"><span>0-2    data  _ R  1000    4 B        1000
+</span></span><span style="display:flex;"><span>...
+</span></span><span style="display:flex;"><span>0-10   data  _ R  1000    4 B        1000</span></span></code></pre></div><p>这段 Page 输出把 Codec 状态和值编码并排缩写。Dictionary Page 的 <code>S _</code> 表示 SNAPPY + PLAIN。Data Page V2 的 <code>_ R</code> 表示 values 区未压缩，并使用 RLE_DICTIONARY。这里的下划线含义取决于所在列，不能单独解读。</p>
+<p>还有几种常见但不必逐项展开的值编码：</p>
+<table>
+  <thead>
+      <tr>
+          <th>编码</th>
+          <th>典型数据形状</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>DELTA_BINARY_PACKED</code></td>
+          <td>相邻差值较小的整数、递增序列</td>
+      </tr>
+      <tr>
+          <td><code>DELTA_BYTE_ARRAY</code></td>
+          <td>相邻值共享较长前缀的字节串</td>
+      </tr>
+      <tr>
+          <td><code>BYTE_STREAM_SPLIT</code></td>
+          <td>浮点数或定长字节值，便于后续压缩</td>
+      </tr>
+  </tbody>
+</table>
+<p>这些编码属于格式能力，本样例没有实际使用它们。样例能够直接验证的是 Dictionary Page、RLE_DICTIONARY、Data Page V2 及其 Page 数。</p>
+<p>本文样例通过 <code>max_rows_per_page=1000</code> 限制每页的最大行数，这不是 Parquet 格式的固定值。CRC 也是可选功能；未开启时，读取器仍须正确读取文件。</p>
+<h2 id="8-完整-parquet-文件与查询结果">8. 完整 Parquet 文件与查询结果<a class="anchor" href="#8-%e5%ae%8c%e6%95%b4-parquet-%e6%96%87%e4%bb%b6%e4%b8%8e%e6%9f%a5%e8%af%a2%e7%bb%93%e6%9e%9c">#</a></h2>
+<p>前面依次查看了 FileMetaData、Statistics、Row Group、Column Chunk 和 Page。现在把物理层级与元数据引用放回同一张图。左侧是文件包含关系，右侧是 FileMetaData 字段树；中间的虚线表示引用，不是数据流。</p>
+<figure>
+  <img
+    src="/images/parquet-file-format/parquet-file-detailed-map.svg"
+    alt="Parquet 完整文件结构：左侧展开 Row Group 0、created_at Column Chunk 和 Data Page 0，右侧展开 FileMetaData、RowGroup、ColumnChunk 与 ColumnMetaData，中间引用线连接 Bloom Filter、ColumnIndex 和 OffsetIndex"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>物理数据与 FileMetaData 引用</figcaption>
+</figure>
+<p>样例文件的精确偏移图和对应数值放在<a href="#%e6%a0%b7%e4%be%8b%e5%ad%97%e8%8a%82%e4%b8%8e%e5%81%8f%e7%a7%bb%e6%98%8e%e7%bb%86">附录 B</a>，避免在主线中反复穿插字节验算。</p>
+<p>开篇 SQL 对这些结构的使用顺序可以压缩成一条完整链路：</p>
+<ol>
+<li>读取末尾 8 字节，根据长度字段定位 FileMetaData。</li>
+<li>从 Schema 解析 <code>created_at</code>、<code>user_id</code> 和 <code>amount</code>，其余五个叶子列不进入扫描。</li>
+<li>用 <code>created_at</code> Statistics 排除 RG0、RG2，保留 RG1。</li>
+<li>沿 RG1 的三个 Column Chunk 引用跳到各自的 Page 区域。</li>
+<li>若读取器实现 Page Index 裁剪，可用 <code>ColumnIndex</code> 保留 <code>created_at</code> 的 Data Page 0 至 Page 4。随后用 <code>OffsetIndex</code> 取得字节范围和行区间。本文的 DuckDB 1.5.5 查询没有走这条路径。</li>
+<li>读取器校验、解压、解码候选页，执行剩余时间过滤，再把 <code>user_id</code> 与 <code>amount</code> 交给聚合算子。</li>
+</ol>
+<p>物理元数据只能说明哪些数据可以读取或跳过。最后还要用独立实现核对查询结果。下面的 CTE 保留开篇 SQL 的过滤和聚合，同时把结果压成一行，便于复现时比较：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>duckdb -csv -c <span style="color:#e6db74">&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">WITH filtered AS (
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">  SELECT user_id, amount
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">  FROM read_parquet(&#39;parquet-lab/transactions-small.parquet&#39;)
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">  WHERE created_at &gt;= TIMESTAMP &#39;2026-05-08 03:00:00&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    AND created_at &lt;  TIMESTAMP &#39;2026-05-08 04:00:00&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">), result AS (
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">  SELECT user_id, SUM(amount) AS net_amount
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">  FROM filtered
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">  GROUP BY user_id
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">)
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">SELECT (SELECT COUNT(*) FROM filtered) AS matched_rows,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">       COUNT(*) AS users,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">       SUM(net_amount) AS total_net_amount,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">       MIN(user_id) AS min_user_id,
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">       MAX(user_id) AS max_user_id
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">FROM result;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;</span></span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-csv" data-lang="csv"><span style="display:flex;"><span><span style="color:#e6db74">matched_rows</span>,<span style="color:#e6db74">users</span>,<span style="color:#e6db74">total_net_amount</span>,<span style="color:#e6db74">min_user_id</span>,<span style="color:#e6db74">max_user_id</span>
+</span></span><span style="display:flex;"><span><span style="color:#e6db74">3597</span>,<span style="color:#e6db74">180</span>,<span style="color:#e6db74">449165000</span>,<span style="color:#e6db74">102117463752</span>,<span style="color:#e6db74">102117463931</span></span></span></code></pre></div><p>时间条件命中 3,597 行，聚合后得到 180 个用户。DuckDB 用来核对逻辑结果，<code>parquet-cli</code> 用来检查 Schema、Statistics、偏移和 Page Header。两类证据解决的问题不同。</p>
+<h2 id="9-总结">9. 总结<a class="anchor" href="#9-%e6%80%bb%e7%bb%93">#</a></h2>
+<p>Parquet 的读取过程可以归纳为以下几点：</p>
+<ul>
+<li>Parquet 是面向分析型负载的列式文件格式。它定义文件结构，不负责事务、查询执行或存储管理。</li>
+<li>单个文件按 File、Row Group、Column Chunk 和 Page 分层。Row Group 划分记录批次，Column Chunk 保存一个叶子列，Page 是局部编码、压缩和校验的边界。</li>
+<li>FileMetaData 写在数据之后，使未加密 Parquet 可以单遍顺序写入。文件完成并写出尾部长度与魔数后，读取器才能定位 Footer。</li>
+<li>Statistics 与 Bloom Filter 先排除不可能命中的范围。Page Index 再用 <code>ColumnIndex</code> 选择页，用 <code>OffsetIndex</code> 定位字节和行区间。这些结构都是优化，缺失或未被读取器使用都不能改变查询结果。</li>
+<li>编码和压缩是两个步骤。Dictionary、RLE 与 Delta 改变值的表示，SNAPPY、ZSTD 等 Codec 再压缩编码后的字节。</li>
+</ul>
+<h2 id="附录-a嵌套数据与-dlrl">附录 A：嵌套数据与 DL/RL<a class="anchor" href="#%e9%99%84%e5%bd%95-a%e5%b5%8c%e5%a5%97%e6%95%b0%e6%8d%ae%e4%b8%8e-dlrl">#</a></h2>
+<p>正文查询只涉及扁平列。遇到 struct 或 list 时，仅保存叶子值还不够，读取器还要知道 null 出现在哪一层，以及多个值是否属于同一条记录。Parquet 用 Definition Level（DL）和 Repetition Level（RL）保存这些边界。</p>
+<p>嵌套样例只有四条逻辑记录，但每一种“空”都不同：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-json" data-lang="json"><span style="display:flex;"><span>{<span style="color:#f92672">&#34;event_id&#34;</span>: <span style="color:#ae81ff">1</span>, <span style="color:#f92672">&#34;user&#34;</span>: {<span style="color:#f92672">&#34;city&#34;</span>: <span style="color:#e6db74">&#34;Shanghai&#34;</span>}, <span style="color:#f92672">&#34;actions&#34;</span>: [{<span style="color:#f92672">&#34;type&#34;</span>: <span style="color:#e6db74">&#34;bet&#34;</span>, <span style="color:#f92672">&#34;amount&#34;</span>: <span style="color:#ae81ff">-100</span>}, {<span style="color:#f92672">&#34;type&#34;</span>: <span style="color:#e6db74">&#34;win&#34;</span>, <span style="color:#f92672">&#34;amount&#34;</span>: <span style="color:#ae81ff">250</span>}]}
+</span></span><span style="display:flex;"><span>{<span style="color:#f92672">&#34;event_id&#34;</span>: <span style="color:#ae81ff">2</span>, <span style="color:#f92672">&#34;user&#34;</span>: <span style="color:#66d9ef">null</span>, <span style="color:#f92672">&#34;actions&#34;</span>: []}
+</span></span><span style="display:flex;"><span>{<span style="color:#f92672">&#34;event_id&#34;</span>: <span style="color:#ae81ff">3</span>, <span style="color:#f92672">&#34;user&#34;</span>: {<span style="color:#f92672">&#34;city&#34;</span>: <span style="color:#66d9ef">null</span>}, <span style="color:#f92672">&#34;actions&#34;</span>: <span style="color:#66d9ef">null</span>}
+</span></span><span style="display:flex;"><span>{<span style="color:#f92672">&#34;event_id&#34;</span>: <span style="color:#ae81ff">4</span>, <span style="color:#f92672">&#34;user&#34;</span>: {<span style="color:#f92672">&#34;city&#34;</span>: <span style="color:#e6db74">&#34;Beijing&#34;</span>}, <span style="color:#f92672">&#34;actions&#34;</span>: [{<span style="color:#f92672">&#34;type&#34;</span>: <span style="color:#e6db74">&#34;bet&#34;</span>, <span style="color:#f92672">&#34;amount&#34;</span>: <span style="color:#66d9ef">null</span>}]}</span></span></code></pre></div><p>这四条记录覆盖了几种容易混淆的状态：<code>user=null</code> 是 null struct，<code>city=null</code> 是 struct 存在但 leaf 为空。<code>actions=[]</code> 是 empty list，<code>actions=null</code> 则是 null list。最后一条记录还有一个存在但 <code>amount=null</code> 的元素。只把值排成数组，会丢失这些差别。</p>
+<p>先看 <code>parquet-cli</code> 从 FileMetaData 还原的三层 LIST Schema：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>parquet schema --parquet parquet-lab/nested-events.parquet</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>message schema {
+</span></span><span style="display:flex;"><span>  required int64 event_id;
+</span></span><span style="display:flex;"><span>  optional group user {
+</span></span><span style="display:flex;"><span>    optional binary city (STRING);
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>  optional group actions (LIST) {
+</span></span><span style="display:flex;"><span>    repeated group list {
+</span></span><span style="display:flex;"><span>      required group element {
+</span></span><span style="display:flex;"><span>        required binary type (STRING);
+</span></span><span style="display:flex;"><span>        optional int64 amount;
+</span></span><span style="display:flex;"><span>      }
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>  }
+</span></span><span style="display:flex;"><span>}</span></span></code></pre></div><p>最终写入的是四条叶子路径，而不是一个不可拆分的 <code>actions</code> blob：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>event_id
+</span></span><span style="display:flex;"><span>user.city
+</span></span><span style="display:flex;"><span>actions.list.element.type
+</span></span><span style="display:flex;"><span>actions.list.element.amount</span></span></code></pre></div><p>DL 表示从根走到叶子时，可选或重复节点定义到了多深。RL 表示当前条目与前一个条目共享到哪一层重复路径。</p>
+<p>null、empty list 等情况仍会产生 level 条目，但不会向物理 values 区写入占位值。按上面四条记录展开，得到：</p>
+<figure>
+  <img
+    src="/images/parquet-file-format/nested-definition-repetition-levels.svg"
+    alt="四条嵌套记录被拆成三个叶子流；每个流分别列出 level 条目数、真正写入的非 null 物理值以及 DL 和 RL，说明 null、空列表和 null 列表只占 level 条目，不会写入空值占位符"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>嵌套数据的 DL/RL 编码</figcaption>
+</figure>
+<table>
+  <thead>
+      <tr>
+          <th>叶子列</th>
+          <th>max DL / RL</th>
+          <th>DL 序列</th>
+          <th>RL 序列</th>
+          <th>编码后的非 null 值流</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>user.city</code></td>
+          <td><code>2 / 0</code></td>
+          <td><code>2, 0, 1, 2</code></td>
+          <td><code>0, 0, 0, 0</code></td>
+          <td><code>Shanghai, Beijing</code></td>
+      </tr>
+      <tr>
+          <td><code>actions.list.element.type</code></td>
+          <td><code>2 / 1</code></td>
+          <td><code>2, 2, 1, 0, 2</code></td>
+          <td><code>0, 1, 0, 0, 0</code></td>
+          <td><code>bet, win, bet</code></td>
+      </tr>
+      <tr>
+          <td><code>actions.list.element.amount</code></td>
+          <td><code>3 / 1</code></td>
+          <td><code>3, 3, 1, 0, 2</code></td>
+          <td><code>0, 1, 0, 0, 0</code></td>
+          <td><code>-100, 250</code></td>
+      </tr>
+  </tbody>
+</table>
+<p>第二条记录的 list 存在但没有元素，所以停在 DL 1。第三条连 list 都不存在，只到 DL 0。第四条的 list 和 element 都存在，只缺少可选的 <code>amount</code>，因此到 DL 2，但不会向物理 values 区写入整数。</p>
+<p>Data Page 的 <code>num_values</code> 统计 level 条目，其中包含 null 和空列表标记。它不等于编码后的非 null 值数量。</p>
+<p>RL 只在第一条记录的第二个 action 变为 1，表示它仍处在同一条记录的 <code>actions</code> 重复层内。其余位置都从一条新记录开始。</p>
+<p>Page V2 确实保存了两段 level 字节流：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>parquet pages --raw <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  -c actions.list.element.amount <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  parquet-lab/nested-events.parquet</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Page 1. (offset: 374, headerSize: 28)
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>  &#34;crc&#34; : -587734138,
+</span></span><span style="display:flex;"><span>  &#34;data_page_header_v2&#34; : {
+</span></span><span style="display:flex;"><span>    &#34;definition_levels_byte_length&#34; : 3,
+</span></span><span style="display:flex;"><span>    &#34;num_rows&#34; : 2,
+</span></span><span style="display:flex;"><span>    &#34;num_values&#34; : 3,
+</span></span><span style="display:flex;"><span>    &#34;repetition_levels_byte_length&#34; : 2
+</span></span><span style="display:flex;"><span>  },
+</span></span><span style="display:flex;"><span>  &#34;type&#34; : 3
+</span></span><span style="display:flex;"><span>}</span></span></code></pre></div><p>这个输出只能证明 DL/RL 区域存在，不会打印解码后的 level 数组。表中的序列由固定 Schema 和四条记录逐项推导，再通过 DuckDB 的跨实现读取结果核对：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>duckdb -box -c <span style="color:#e6db74">&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">SELECT *
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">FROM read_parquet(&#39;parquet-lab/nested-events.parquet&#39;)
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">ORDER BY event_id;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;</span></span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>event_id  user                 actions
+</span></span><span style="display:flex;"><span>1         {&#39;city&#39;: Shanghai}   [{&#39;type&#39;: bet, &#39;amount&#39;: -100}, {&#39;type&#39;: win, &#39;amount&#39;: 250}]
+</span></span><span style="display:flex;"><span>2         NULL                 []
+</span></span><span style="display:flex;"><span>3         {&#39;city&#39;: NULL}       NULL
+</span></span><span style="display:flex;"><span>4         {&#39;city&#39;: Beijing}    [{&#39;type&#39;: bet, &#39;amount&#39;: NULL}]</span></span></code></pre></div><p><code>parquet-cli</code> 1.16.0 的 <code>cat</code> / <code>scan</code> 通过 Avro 投影读取这份三层 LIST 时，会在 <code>GroupColumnIO.getLast</code> 报错。Schema 与 Page 检查不受影响。因此，本文用 <code>parquet-cli</code> 检查物理结构，用 DuckDB 1.5.5 验证逻辑记录，不用 <code>parquet cat</code> 验证这份嵌套样例。</p>
+<h2 id="附录-b可复现实验与检查清单">附录 B：可复现实验与检查清单<a class="anchor" href="#%e9%99%84%e5%bd%95-b%e5%8f%af%e5%a4%8d%e7%8e%b0%e5%ae%9e%e9%aa%8c%e4%b8%8e%e6%a3%80%e6%9f%a5%e6%b8%85%e5%8d%95">#</a></h2>
+<h3 id="样例字节与偏移明细">样例字节与偏移明细<a class="anchor" href="#%e6%a0%b7%e4%be%8b%e5%ad%97%e8%8a%82%e4%b8%8e%e5%81%8f%e7%a7%bb%e6%98%8e%e7%bb%86">#</a></h3>
+<p>正文只保留结构与查询主线。本节集中列出样例文件的偏移、长度和校验值，供复现或排错时查阅。</p>
+<figure>
+  <img
+    src="/images/parquet-file-format/parquet-file-detailed-map-offsets.svg"
+    alt="样例文件的局部偏移图，列出 RG0 Column Chunk、RG1 Dictionary 与 Data Page，以及 Bloom Filter、ColumnIndex 和 OffsetIndex 的真实位置"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>样例文件的关键字节偏移</figcaption>
+</figure>
+<p>文件尾的定位数据如下：</p>
+<table>
+  <thead>
+      <tr>
+          <th>项目</th>
+          <th>值</th>
+          <th>计算或含义</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>文件大小</td>
+          <td><code>1,489,068</code> 字节</td>
+          <td><code>wc -c</code> 的结果</td>
+      </tr>
+      <tr>
+          <td>末尾 8 字节起点</td>
+          <td><code>1,489,060</code></td>
+          <td><code>1,489,068 - 8</code></td>
+      </tr>
+      <tr>
+          <td>末尾 8 字节</td>
+          <td><code>5a 10 00 00 50 41 52 31</code></td>
+          <td>前 4 字节是长度，后 4 字节是 <code>PAR1</code></td>
+      </tr>
+      <tr>
+          <td>FileMetaData 长度</td>
+          <td><code>4,186</code> 字节</td>
+          <td>小端序 <code>5a 10 00 00</code>，即 <code>0x105a</code></td>
+      </tr>
+      <tr>
+          <td>FileMetaData 起点</td>
+          <td><code>1,484,874</code></td>
+          <td><code>1,489,068 - 8 - 4,186</code></td>
+      </tr>
+  </tbody>
+</table>
+<p>RG1 中三个查询列的 Column Chunk 引用如下：</p>
+<table>
+  <thead>
+      <tr>
+          <th>列</th>
+          <th style="text-align: right">Dictionary Page 起点</th>
+          <th style="text-align: right">第一张 Data Page 起点</th>
+          <th style="text-align: right">Chunk 压缩后总长度</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>user_id</code></td>
+          <td style="text-align: right">561,790</td>
+          <td style="text-align: right">563,829</td>
+          <td style="text-align: right">3,619</td>
+      </tr>
+      <tr>
+          <td><code>amount</code></td>
+          <td style="text-align: right">725,493</td>
+          <td style="text-align: right">725,595</td>
+          <td style="text-align: right">1,182</td>
+      </tr>
+      <tr>
+          <td><code>created_at</code></td>
+          <td style="text-align: right">797,552</td>
+          <td style="text-align: right">858,004</td>
+          <td style="text-align: right">76,506</td>
+      </tr>
+  </tbody>
+</table>
+<p>RG1 / <code>created_at</code> 还引用了两个 Page Index 结构。它的 <code>ColumnIndex</code> 位于 <code>1,479,014</code>，长度为 244 字节；<code>OffsetIndex</code> 位于 <code>1,483,672</code>，长度为 113 字节。作为对照，RG0 / <code>out_trans_no</code> 的 Bloom Filter 位于 <code>1,425,240</code>，长度为 16,401 字节。</p>
+<p>Dictionary Page 和第一张 Data Page 可以连续验算：</p>
+<table>
+  <thead>
+      <tr>
+          <th>对象</th>
+          <th style="text-align: right">起点</th>
+          <th style="text-align: right">Header</th>
+          <th style="text-align: right">Page body</th>
+          <th>合计或下一位置</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>created_at</code> Dictionary Page</td>
+          <td style="text-align: right"><code>797,552</code></td>
+          <td style="text-align: right">26 字节</td>
+          <td style="text-align: right">60,426 字节</td>
+          <td>下一页：<code>797,552 + 26 + 60,426 = 858,004</code></td>
+      </tr>
+      <tr>
+          <td><code>created_at</code> Data Page 0</td>
+          <td style="text-align: right"><code>858,004</code></td>
+          <td style="text-align: right">32 字节</td>
+          <td style="text-align: right">1,261 字节</td>
+          <td>OffsetIndex 总长度：<code>32 + 1,261 = 1,293</code></td>
+      </tr>
+  </tbody>
+</table>
+<p><code>PageHeader</code> 的读取步骤也可以按游标位置理解：</p>
+<table>
+  <thead>
+      <tr>
+          <th>步骤</th>
+          <th>读取器动作</th>
+          <th>结果</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>1</td>
+          <td>从 Page 起点按 Thrift Compact Protocol 逐字段解析</td>
+          <td>游标跨过变长 Header</td>
+      </tr>
+      <tr>
+          <td>2</td>
+          <td>在当前 struct 的 <code>T_STOP</code> 处结束</td>
+          <td>游标指向 Page body 首字节</td>
+      </tr>
+      <tr>
+          <td>3</td>
+          <td>用“当前游标 - Page 起点”计算 <code>headerSize</code></td>
+          <td>得到 26 或 32 字节</td>
+      </tr>
+      <tr>
+          <td>4</td>
+          <td>再读取 <code>compressed_page_size</code> 字节</td>
+          <td>得到完整 Page body</td>
+      </tr>
+  </tbody>
+</table>
+<p>Dictionary Page 含 9,990 个 <code>INT64</code> 字典值。PLAIN 编码前的大小是 <code>9,990 * 8 = 79,920</code> 字节，SNAPPY 将 Page body 压缩为 60,426 字节。</p>
+<p>第一张 Data Page V2 的 Page body 分段如下：</p>
+<table>
+  <thead>
+      <tr>
+          <th>Page body 范围</th>
+          <th>内容</th>
+          <th>大小与状态</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>[0, 0)</code></td>
+          <td>Repetition Levels</td>
+          <td>0 字节；该列没有重复路径</td>
+      </tr>
+      <tr>
+          <td><code>[0, 8)</code></td>
+          <td>Definition Levels</td>
+          <td>8 字节；V2 中不压缩</td>
+      </tr>
+      <tr>
+          <td><code>[8, 1261)</code></td>
+          <td>RLE_DICTIONARY 编码的字典 ID</td>
+          <td>1,253 字节；<code>is_compressed = 0</code>，不压缩</td>
+      </tr>
+  </tbody>
+</table>
+<p>三段合计 1,261 字节，所以 <code>compressed_page_size</code> 与 <code>uncompressed_page_size</code> 都是 1,261。该页的 <code>crc = 1278766728</code>，校验范围是这 1,261 字节 Page body，不包含 Header。</p>
+<p>Page Index 中与查询边界相邻的位置如下：</p>
+<table>
+  <thead>
+      <tr>
+          <th>Data Page</th>
+          <th style="text-align: right">offset</th>
+          <th style="text-align: right">压缩后总长度</th>
+          <th style="text-align: right">RG 内首行</th>
+          <th>min</th>
+          <th>max</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Page 0</td>
+          <td style="text-align: right"><code>858,004</code></td>
+          <td style="text-align: right">1,293</td>
+          <td style="text-align: right">0</td>
+          <td>02:46:40</td>
+          <td>03:03:19</td>
+      </tr>
+      <tr>
+          <td>Page 4</td>
+          <td style="text-align: right"><code>863,800</code></td>
+          <td style="text-align: right">1,668</td>
+          <td style="text-align: right">4,000</td>
+          <td>03:53:20</td>
+          <td>04:09:59</td>
+      </tr>
+      <tr>
+          <td>Page 5</td>
+          <td style="text-align: right"><code>865,468</code></td>
+          <td style="text-align: right">1,668</td>
+          <td style="text-align: right">5,000</td>
+          <td>04:10:00</td>
+          <td>04:26:39</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="环境与样本生成">环境与样本生成<a class="anchor" href="#%e7%8e%af%e5%a2%83%e4%b8%8e%e6%a0%b7%e6%9c%ac%e7%94%9f%e6%88%90">#</a></h3>
+<p>本文固定使用 Python 3.12、uv 0.10.0、PyArrow 25.0.0、<code>parquet-cli</code> 1.16.0 和 DuckDB 1.5.5。先核对环境。PEP 723 会让 <code>uv</code> 按代码块顶部的声明选择 Python 3.12，并安装固定版本的 PyArrow。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>uv --version
+</span></span><span style="display:flex;"><span>uv run --python 3.12 python --version
+</span></span><span style="display:flex;"><span>duckdb --version
+</span></span><span style="display:flex;"><span>parquet version</span></span></code></pre></div><p><code>parquet-cli</code> 比查询引擎更适合观察 Schema、Page Header、FileMetaData 和索引。它没有独立的官方二进制发行包，本文按 1.16.0 tag 构建。</p>
+<p>构建环境需要 JDK 17 和 Apache Thrift 0.22.0。较新的 JDK 会与该版本依赖的 Hadoop 3.3.0 不兼容。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>git clone --depth <span style="color:#ae81ff">1</span> --branch apache-parquet-1.16.0 <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  https://github.com/apache/parquet-java.git
+</span></span><span style="display:flex;"><span>cd parquet-java
+</span></span><span style="display:flex;"><span>./mvnw -pl parquet-cli -am -DskipTests install
+</span></span><span style="display:flex;"><span>./mvnw -pl parquet-cli dependency:copy-dependencies
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>PARQUET_JAVA_HOME<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span><span style="color:#66d9ef">$(</span>pwd<span style="color:#66d9ef">)</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>parquet<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>  java -cp <span style="color:#e6db74">&#34;</span>$PARQUET_JAVA_HOME<span style="color:#e6db74">/parquet-cli/target/parquet-cli-1.16.0.jar:</span>$PARQUET_JAVA_HOME<span style="color:#e6db74">/parquet-cli/target/dependency/*&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>    org.apache.parquet.cli.Main --dollar-zero parquet <span style="color:#e6db74">&#34;</span>$@<span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">}</span>
+</span></span><span style="display:flex;"><span>parquet version</span></span></code></pre></div><p>这是官方 README 给出的 no-Hadoop classpath 方式。命令使用普通 jar 和依赖目录，不把 runtime jar 混进 classpath。runtime jar 会重定位 Avro 类，并可能改变方法签名。</p>
+<p>下面是本文唯一的样例生成器。正文引用的文件大小、偏移和查询结果都来自它的默认输出。</p>
+<details>
+<summary>展开 generate_parquet_samples.py</summary>
+<div class="book-codeblock-filename">
+  <a >generate_parquet_samples.py</a>
+</div><div class="highlight" filename="generate_parquet_samples.py"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># /// script</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># requires-python = &#34;&gt;=3.12,&lt;3.13&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># dependencies = [&#34;pyarrow==25.0.0&#34;]</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># ///</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> __future__ <span style="color:#f92672">import</span> annotations
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> argparse
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> hashlib
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> collections.abc <span style="color:#f92672">import</span> Callable, Sequence
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> contextlib <span style="color:#f92672">import</span> suppress
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> datetime <span style="color:#f92672">import</span> datetime, timedelta
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> pathlib <span style="color:#f92672">import</span> Path
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> pyarrow <span style="color:#66d9ef">as</span> pa
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> pyarrow.parquet <span style="color:#66d9ef">as</span> pq
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>SEED <span style="color:#f92672">=</span> <span style="color:#ae81ff">20260806</span>
+</span></span><span style="display:flex;"><span>SMALL_ROWS <span style="color:#f92672">=</span> <span style="color:#ae81ff">30_000</span>
+</span></span><span style="display:flex;"><span>SMALL_ROW_GROUP_ROWS <span style="color:#f92672">=</span> <span style="color:#ae81ff">10_000</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>_BASE_ID <span style="color:#f92672">=</span> <span style="color:#ae81ff">1_259_328_812_206_792_704</span>
+</span></span><span style="display:flex;"><span>_BASE_USER_ID <span style="color:#f92672">=</span> <span style="color:#ae81ff">102_117_463_212</span>
+</span></span><span style="display:flex;"><span>_BASE_REFERENCE_TIME <span style="color:#f92672">=</span> <span style="color:#ae81ff">1_778_205_786</span>
+</span></span><span style="display:flex;"><span>_BASE_EVENT_TIME <span style="color:#f92672">=</span> datetime(<span style="color:#ae81ff">2026</span>, <span style="color:#ae81ff">5</span>, <span style="color:#ae81ff">8</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>, <span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>_ROWS_PER_USER <span style="color:#f92672">=</span> <span style="color:#ae81ff">20</span>
+</span></span><span style="display:flex;"><span>_NULL_TIMESTAMP_OFFSET <span style="color:#f92672">=</span> <span style="color:#ae81ff">500</span>
+</span></span><span style="display:flex;"><span>_TYPE_CODES <span style="color:#f92672">=</span> (<span style="color:#ae81ff">1085</span>, <span style="color:#ae81ff">1005</span>, <span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">1032</span>)
+</span></span><span style="display:flex;"><span>_STAKE_VALUES <span style="color:#f92672">=</span> (<span style="color:#ae81ff">1_000</span>, <span style="color:#ae81ff">15_000</span>, <span style="color:#ae81ff">100_000</span>, <span style="color:#ae81ff">250_000</span>)
+</span></span><span style="display:flex;"><span>_MERCHANT_IDS <span style="color:#f92672">=</span> (<span style="color:#ae81ff">102</span>, <span style="color:#ae81ff">205</span>, <span style="color:#ae81ff">319</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">transaction_schema</span>() <span style="color:#f92672">-&gt;</span> pa<span style="color:#f92672">.</span>Schema:
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> pa<span style="color:#f92672">.</span>schema(
+</span></span><span style="display:flex;"><span>        [
+</span></span><span style="display:flex;"><span>            pa<span style="color:#f92672">.</span>field(<span style="color:#e6db74">&#34;id&#34;</span>, pa<span style="color:#f92672">.</span>int64(), nullable<span style="color:#f92672">=</span><span style="color:#66d9ef">False</span>),
+</span></span><span style="display:flex;"><span>            pa<span style="color:#f92672">.</span>field(<span style="color:#e6db74">&#34;mch_id&#34;</span>, pa<span style="color:#f92672">.</span>int32(), nullable<span style="color:#f92672">=</span><span style="color:#66d9ef">False</span>),
+</span></span><span style="display:flex;"><span>            pa<span style="color:#f92672">.</span>field(<span style="color:#e6db74">&#34;user_id&#34;</span>, pa<span style="color:#f92672">.</span>int64(), nullable<span style="color:#f92672">=</span><span style="color:#66d9ef">False</span>),
+</span></span><span style="display:flex;"><span>            pa<span style="color:#f92672">.</span>field(<span style="color:#e6db74">&#34;out_trans_no&#34;</span>, pa<span style="color:#f92672">.</span>string(), nullable<span style="color:#f92672">=</span><span style="color:#66d9ef">False</span>),
+</span></span><span style="display:flex;"><span>            pa<span style="color:#f92672">.</span>field(<span style="color:#e6db74">&#34;amount&#34;</span>, pa<span style="color:#f92672">.</span>int64(), nullable<span style="color:#f92672">=</span><span style="color:#66d9ef">False</span>),
+</span></span><span style="display:flex;"><span>            pa<span style="color:#f92672">.</span>field(<span style="color:#e6db74">&#34;balance&#34;</span>, pa<span style="color:#f92672">.</span>int64(), nullable<span style="color:#f92672">=</span><span style="color:#66d9ef">False</span>),
+</span></span><span style="display:flex;"><span>            pa<span style="color:#f92672">.</span>field(<span style="color:#e6db74">&#34;created_at&#34;</span>, pa<span style="color:#f92672">.</span>timestamp(<span style="color:#e6db74">&#34;us&#34;</span>), nullable<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>),
+</span></span><span style="display:flex;"><span>            pa<span style="color:#f92672">.</span>field(<span style="color:#e6db74">&#34;updated_at&#34;</span>, pa<span style="color:#f92672">.</span>timestamp(<span style="color:#e6db74">&#34;us&#34;</span>), nullable<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>),
+</span></span><span style="display:flex;"><span>        ]
+</span></span><span style="display:flex;"><span>    )
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">nested_schema</span>() <span style="color:#f92672">-&gt;</span> pa<span style="color:#f92672">.</span>Schema:
+</span></span><span style="display:flex;"><span>    action <span style="color:#f92672">=</span> pa<span style="color:#f92672">.</span>struct(
+</span></span><span style="display:flex;"><span>        [
+</span></span><span style="display:flex;"><span>            pa<span style="color:#f92672">.</span>field(<span style="color:#e6db74">&#34;type&#34;</span>, pa<span style="color:#f92672">.</span>string(), nullable<span style="color:#f92672">=</span><span style="color:#66d9ef">False</span>),
+</span></span><span style="display:flex;"><span>            pa<span style="color:#f92672">.</span>field(<span style="color:#e6db74">&#34;amount&#34;</span>, pa<span style="color:#f92672">.</span>int64(), nullable<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>),
+</span></span><span style="display:flex;"><span>        ]
+</span></span><span style="display:flex;"><span>    )
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> pa<span style="color:#f92672">.</span>schema(
+</span></span><span style="display:flex;"><span>        [
+</span></span><span style="display:flex;"><span>            pa<span style="color:#f92672">.</span>field(<span style="color:#e6db74">&#34;event_id&#34;</span>, pa<span style="color:#f92672">.</span>int64(), nullable<span style="color:#f92672">=</span><span style="color:#66d9ef">False</span>),
+</span></span><span style="display:flex;"><span>            pa<span style="color:#f92672">.</span>field(
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;user&#34;</span>,
+</span></span><span style="display:flex;"><span>                pa<span style="color:#f92672">.</span>struct([pa<span style="color:#f92672">.</span>field(<span style="color:#e6db74">&#34;city&#34;</span>, pa<span style="color:#f92672">.</span>string(), nullable<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>)]),
+</span></span><span style="display:flex;"><span>                nullable<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>,
+</span></span><span style="display:flex;"><span>            ),
+</span></span><span style="display:flex;"><span>            pa<span style="color:#f92672">.</span>field(
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;actions&#34;</span>,
+</span></span><span style="display:flex;"><span>                pa<span style="color:#f92672">.</span>list_(pa<span style="color:#f92672">.</span>field(<span style="color:#e6db74">&#34;element&#34;</span>, action, nullable<span style="color:#f92672">=</span><span style="color:#66d9ef">False</span>)),
+</span></span><span style="display:flex;"><span>                nullable<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>,
+</span></span><span style="display:flex;"><span>            ),
+</span></span><span style="display:flex;"><span>        ]
+</span></span><span style="display:flex;"><span>    )
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">nested_events_table</span>() <span style="color:#f92672">-&gt;</span> pa<span style="color:#f92672">.</span>Table:
+</span></span><span style="display:flex;"><span>    rows <span style="color:#f92672">=</span> [
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;event_id&#34;</span>: <span style="color:#ae81ff">1</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;user&#34;</span>: {<span style="color:#e6db74">&#34;city&#34;</span>: <span style="color:#e6db74">&#34;Shanghai&#34;</span>},
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;actions&#34;</span>: [
+</span></span><span style="display:flex;"><span>                {<span style="color:#e6db74">&#34;type&#34;</span>: <span style="color:#e6db74">&#34;bet&#34;</span>, <span style="color:#e6db74">&#34;amount&#34;</span>: <span style="color:#f92672">-</span><span style="color:#ae81ff">100</span>},
+</span></span><span style="display:flex;"><span>                {<span style="color:#e6db74">&#34;type&#34;</span>: <span style="color:#e6db74">&#34;win&#34;</span>, <span style="color:#e6db74">&#34;amount&#34;</span>: <span style="color:#ae81ff">250</span>},
+</span></span><span style="display:flex;"><span>            ],
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>        {<span style="color:#e6db74">&#34;event_id&#34;</span>: <span style="color:#ae81ff">2</span>, <span style="color:#e6db74">&#34;user&#34;</span>: <span style="color:#66d9ef">None</span>, <span style="color:#e6db74">&#34;actions&#34;</span>: []},
+</span></span><span style="display:flex;"><span>        {<span style="color:#e6db74">&#34;event_id&#34;</span>: <span style="color:#ae81ff">3</span>, <span style="color:#e6db74">&#34;user&#34;</span>: {<span style="color:#e6db74">&#34;city&#34;</span>: <span style="color:#66d9ef">None</span>}, <span style="color:#e6db74">&#34;actions&#34;</span>: <span style="color:#66d9ef">None</span>},
+</span></span><span style="display:flex;"><span>        {
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;event_id&#34;</span>: <span style="color:#ae81ff">4</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;user&#34;</span>: {<span style="color:#e6db74">&#34;city&#34;</span>: <span style="color:#e6db74">&#34;Beijing&#34;</span>},
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#34;actions&#34;</span>: [{<span style="color:#e6db74">&#34;type&#34;</span>: <span style="color:#e6db74">&#34;bet&#34;</span>, <span style="color:#e6db74">&#34;amount&#34;</span>: <span style="color:#66d9ef">None</span>}],
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>    ]
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> pa<span style="color:#f92672">.</span>Table<span style="color:#f92672">.</span>from_pylist(rows, schema<span style="color:#f92672">=</span>nested_schema())
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">_financial_value</span>(<span style="color:#f92672">*</span>, user_index: int, within_user: int, seed: int) <span style="color:#f92672">-&gt;</span> int:
+</span></span><span style="display:flex;"><span>    pair_within_user, pair_position <span style="color:#f92672">=</span> divmod(within_user, <span style="color:#ae81ff">2</span>)
+</span></span><span style="display:flex;"><span>    stake <span style="color:#f92672">=</span> _STAKE_VALUES[(user_index <span style="color:#f92672">*</span> <span style="color:#ae81ff">3</span> <span style="color:#f92672">+</span> pair_within_user <span style="color:#f92672">+</span> seed) <span style="color:#f92672">%</span> len(_STAKE_VALUES)]
+</span></span><span style="display:flex;"><span>    payout <span style="color:#f92672">=</span> <span style="color:#ae81ff">2</span> <span style="color:#f92672">+</span> (user_index <span style="color:#f92672">+</span> pair_within_user <span style="color:#f92672">+</span> seed) <span style="color:#f92672">%</span> <span style="color:#ae81ff">4</span>
+</span></span><span style="display:flex;"><span>    amount <span style="color:#f92672">=</span> stake <span style="color:#f92672">*</span> payout <span style="color:#66d9ef">if</span> pair_position <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span> <span style="color:#66d9ef">else</span> <span style="color:#f92672">-</span>stake
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> amount
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">generate_transaction_batch</span>(
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">*</span>,
+</span></span><span style="display:flex;"><span>    start_row: int,
+</span></span><span style="display:flex;"><span>    row_count: int,
+</span></span><span style="display:flex;"><span>    seed: int,
+</span></span><span style="display:flex;"><span>) <span style="color:#f92672">-&gt;</span> pa<span style="color:#f92672">.</span>RecordBatch:
+</span></span><span style="display:flex;"><span>    schema <span style="color:#f92672">=</span> transaction_schema()
+</span></span><span style="display:flex;"><span>    columns: dict[str, list[object]] <span style="color:#f92672">=</span> {field<span style="color:#f92672">.</span>name: [] <span style="color:#66d9ef">for</span> field <span style="color:#f92672">in</span> schema}
+</span></span><span style="display:flex;"><span>    seed_offset <span style="color:#f92672">=</span> seed <span style="color:#f92672">%</span> <span style="color:#ae81ff">997</span>
+</span></span><span style="display:flex;"><span>    active_user_index <span style="color:#f92672">=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>    running_balance <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> index <span style="color:#f92672">in</span> range(start_row, start_row <span style="color:#f92672">+</span> row_count):
+</span></span><span style="display:flex;"><span>        user_index, within_user <span style="color:#f92672">=</span> divmod(index, _ROWS_PER_USER)
+</span></span><span style="display:flex;"><span>        pair_within_user, pair_position <span style="color:#f92672">=</span> divmod(within_user, <span style="color:#ae81ff">2</span>)
+</span></span><span style="display:flex;"><span>        global_pair <span style="color:#f92672">=</span> user_index <span style="color:#f92672">*</span> (_ROWS_PER_USER <span style="color:#f92672">//</span> <span style="color:#ae81ff">2</span>) <span style="color:#f92672">+</span> pair_within_user
+</span></span><span style="display:flex;"><span>        is_win <span style="color:#f92672">=</span> pair_position <span style="color:#f92672">==</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>        type_code <span style="color:#f92672">=</span> _TYPE_CODES[(user_index <span style="color:#f92672">+</span> pair_within_user <span style="color:#f92672">+</span> seed) <span style="color:#f92672">%</span> len(_TYPE_CODES)]
+</span></span><span style="display:flex;"><span>        amount <span style="color:#f92672">=</span> _financial_value(
+</span></span><span style="display:flex;"><span>            user_index<span style="color:#f92672">=</span>user_index,
+</span></span><span style="display:flex;"><span>            within_user<span style="color:#f92672">=</span>within_user,
+</span></span><span style="display:flex;"><span>            seed<span style="color:#f92672">=</span>seed,
+</span></span><span style="display:flex;"><span>        )
+</span></span><span style="display:flex;"><span>        user_id <span style="color:#f92672">=</span> _BASE_USER_ID <span style="color:#f92672">+</span> user_index
+</span></span><span style="display:flex;"><span>        reference_time <span style="color:#f92672">=</span> _BASE_REFERENCE_TIME <span style="color:#f92672">+</span> global_pair <span style="color:#f92672">*</span> <span style="color:#ae81ff">6</span>
+</span></span><span style="display:flex;"><span>        game_instance <span style="color:#f92672">=</span> <span style="color:#ae81ff">281</span> <span style="color:#f92672">+</span> user_index <span style="color:#f92672">%</span> <span style="color:#ae81ff">5_000</span>
+</span></span><span style="display:flex;"><span>        reference_segment <span style="color:#f92672">=</span> <span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">{</span>type_code<span style="color:#e6db74">}</span><span style="color:#e6db74">-0-</span><span style="color:#e6db74">{</span>game_instance<span style="color:#e6db74">}</span><span style="color:#e6db74">-</span><span style="color:#e6db74">{</span>reference_time<span style="color:#e6db74">}</span><span style="color:#e6db74">-0&#34;</span>
+</span></span><span style="display:flex;"><span>        action_marker <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span> <span style="color:#66d9ef">if</span> is_win <span style="color:#66d9ef">else</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>        serial <span style="color:#f92672">=</span> <span style="color:#ae81ff">17_782_057_860_228</span> <span style="color:#f92672">+</span> global_pair <span style="color:#f92672">*</span> <span style="color:#ae81ff">317</span> <span style="color:#f92672">+</span> pair_position
+</span></span><span style="display:flex;"><span>        is_null_timestamp <span style="color:#f92672">=</span> index <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span> <span style="color:#f92672">and</span> index <span style="color:#f92672">%</span> <span style="color:#ae81ff">1_000</span> <span style="color:#f92672">==</span> _NULL_TIMESTAMP_OFFSET
+</span></span><span style="display:flex;"><span>        event_time <span style="color:#f92672">=</span> (
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">None</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> is_null_timestamp
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">else</span> _BASE_EVENT_TIME <span style="color:#f92672">+</span> timedelta(seconds<span style="color:#f92672">=</span>index)
+</span></span><span style="display:flex;"><span>        )
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> active_user_index <span style="color:#f92672">!=</span> user_index:
+</span></span><span style="display:flex;"><span>            running_balance <span style="color:#f92672">=</span> <span style="color:#ae81ff">10_000_000_000</span> <span style="color:#f92672">+</span> (user_index <span style="color:#f92672">%</span> <span style="color:#ae81ff">5_000</span>) <span style="color:#f92672">*</span> <span style="color:#ae81ff">1_000_000</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">for</span> previous_position <span style="color:#f92672">in</span> range(within_user):
+</span></span><span style="display:flex;"><span>                previous_amount <span style="color:#f92672">=</span> _financial_value(
+</span></span><span style="display:flex;"><span>                    user_index<span style="color:#f92672">=</span>user_index,
+</span></span><span style="display:flex;"><span>                    within_user<span style="color:#f92672">=</span>previous_position,
+</span></span><span style="display:flex;"><span>                    seed<span style="color:#f92672">=</span>seed,
+</span></span><span style="display:flex;"><span>                )
+</span></span><span style="display:flex;"><span>                running_balance <span style="color:#f92672">+=</span> previous_amount
+</span></span><span style="display:flex;"><span>            active_user_index <span style="color:#f92672">=</span> user_index
+</span></span><span style="display:flex;"><span>        running_balance <span style="color:#f92672">+=</span> amount
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        columns[<span style="color:#e6db74">&#34;id&#34;</span>]<span style="color:#f92672">.</span>append(_BASE_ID <span style="color:#f92672">+</span> index <span style="color:#f92672">*</span> <span style="color:#ae81ff">33_554_433</span> <span style="color:#f92672">+</span> seed_offset)
+</span></span><span style="display:flex;"><span>        columns[<span style="color:#e6db74">&#34;mch_id&#34;</span>]<span style="color:#f92672">.</span>append(_MERCHANT_IDS[(user_index <span style="color:#f92672">//</span> <span style="color:#ae81ff">5_000</span>) <span style="color:#f92672">%</span> len(_MERCHANT_IDS)])
+</span></span><span style="display:flex;"><span>        columns[<span style="color:#e6db74">&#34;user_id&#34;</span>]<span style="color:#f92672">.</span>append(user_id)
+</span></span><span style="display:flex;"><span>        columns[<span style="color:#e6db74">&#34;out_trans_no&#34;</span>]<span style="color:#f92672">.</span>append(
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">{</span>user_id<span style="color:#e6db74">}</span><span style="color:#e6db74">-</span><span style="color:#e6db74">{</span>action_marker<span style="color:#e6db74">}{</span>serial<span style="color:#e6db74">}</span><span style="color:#e6db74">-</span><span style="color:#e6db74">{</span>reference_segment<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>        )
+</span></span><span style="display:flex;"><span>        columns[<span style="color:#e6db74">&#34;amount&#34;</span>]<span style="color:#f92672">.</span>append(amount)
+</span></span><span style="display:flex;"><span>        columns[<span style="color:#e6db74">&#34;balance&#34;</span>]<span style="color:#f92672">.</span>append(running_balance)
+</span></span><span style="display:flex;"><span>        columns[<span style="color:#e6db74">&#34;created_at&#34;</span>]<span style="color:#f92672">.</span>append(event_time)
+</span></span><span style="display:flex;"><span>        columns[<span style="color:#e6db74">&#34;updated_at&#34;</span>]<span style="color:#f92672">.</span>append(event_time)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    arrays <span style="color:#f92672">=</span> [pa<span style="color:#f92672">.</span>array(columns[field<span style="color:#f92672">.</span>name], type<span style="color:#f92672">=</span>field<span style="color:#f92672">.</span>type) <span style="color:#66d9ef">for</span> field <span style="color:#f92672">in</span> schema]
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> pa<span style="color:#f92672">.</span>RecordBatch<span style="color:#f92672">.</span>from_arrays(arrays, schema<span style="color:#f92672">=</span>schema)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">_atomic_write</span>(
+</span></span><span style="display:flex;"><span>    final_path: Path,
+</span></span><span style="display:flex;"><span>    writer_profile: str,
+</span></span><span style="display:flex;"><span>    write_temporary: Callable[[Path], <span style="color:#66d9ef">None</span>],
+</span></span><span style="display:flex;"><span>) <span style="color:#f92672">-&gt;</span> Path:
+</span></span><span style="display:flex;"><span>    final_path<span style="color:#f92672">.</span>parent<span style="color:#f92672">.</span>mkdir(parents<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>, exist_ok<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>)
+</span></span><span style="display:flex;"><span>    temporary_path <span style="color:#f92672">=</span> final_path<span style="color:#f92672">.</span>with_name(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">{</span>final_path<span style="color:#f92672">.</span>name<span style="color:#e6db74">}</span><span style="color:#e6db74">.tmp&#34;</span>)
+</span></span><span style="display:flex;"><span>    temporary_path<span style="color:#f92672">.</span>unlink(missing_ok<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">try</span>:
+</span></span><span style="display:flex;"><span>        write_temporary(temporary_path)
+</span></span><span style="display:flex;"><span>        temporary_path<span style="color:#f92672">.</span>replace(final_path)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">except</span> <span style="color:#a6e22e">Exception</span> <span style="color:#66d9ef">as</span> error:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">with</span> suppress(<span style="color:#a6e22e">OSError</span>):
+</span></span><span style="display:flex;"><span>            temporary_path<span style="color:#f92672">.</span>unlink(missing_ok<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">raise</span> <span style="color:#a6e22e">RuntimeError</span>(
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;failed to write </span><span style="color:#e6db74">{</span>writer_profile<span style="color:#e6db74">}</span><span style="color:#e6db74"> Parquet file: </span><span style="color:#e6db74">{</span>final_path<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>        ) <span style="color:#f92672">from</span> error
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> final_path
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">write_transactions_small</span>(output_dir: Path) <span style="color:#f92672">-&gt;</span> Path:
+</span></span><span style="display:flex;"><span>    final_path <span style="color:#f92672">=</span> output_dir <span style="color:#f92672">/</span> <span style="color:#e6db74">&#34;transactions-small.parquet&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">write</span>(temporary_path: Path) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">with</span> pq<span style="color:#f92672">.</span>ParquetWriter(
+</span></span><span style="display:flex;"><span>            temporary_path,
+</span></span><span style="display:flex;"><span>            transaction_schema(),
+</span></span><span style="display:flex;"><span>            version<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;2.6&#34;</span>,
+</span></span><span style="display:flex;"><span>            compression<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;snappy&#34;</span>,
+</span></span><span style="display:flex;"><span>            use_dictionary<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>,
+</span></span><span style="display:flex;"><span>            write_statistics<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>,
+</span></span><span style="display:flex;"><span>            data_page_version<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;2.0&#34;</span>,
+</span></span><span style="display:flex;"><span>            use_compliant_nested_type<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>,
+</span></span><span style="display:flex;"><span>            write_page_index<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>,
+</span></span><span style="display:flex;"><span>            write_page_checksum<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>,
+</span></span><span style="display:flex;"><span>            max_rows_per_page<span style="color:#f92672">=</span><span style="color:#ae81ff">1_000</span>,
+</span></span><span style="display:flex;"><span>            bloom_filter_options<span style="color:#f92672">=</span>{
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#34;out_trans_no&#34;</span>: {<span style="color:#e6db74">&#34;ndv&#34;</span>: SMALL_ROWS, <span style="color:#e6db74">&#34;fpp&#34;</span>: <span style="color:#ae81ff">0.01</span>},
+</span></span><span style="display:flex;"><span>            },
+</span></span><span style="display:flex;"><span>        ) <span style="color:#66d9ef">as</span> writer:
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">for</span> start_row <span style="color:#f92672">in</span> range(<span style="color:#ae81ff">0</span>, SMALL_ROWS, SMALL_ROW_GROUP_ROWS):
+</span></span><span style="display:flex;"><span>                batch <span style="color:#f92672">=</span> generate_transaction_batch(
+</span></span><span style="display:flex;"><span>                    start_row<span style="color:#f92672">=</span>start_row,
+</span></span><span style="display:flex;"><span>                    row_count<span style="color:#f92672">=</span>SMALL_ROW_GROUP_ROWS,
+</span></span><span style="display:flex;"><span>                    seed<span style="color:#f92672">=</span>SEED,
+</span></span><span style="display:flex;"><span>                )
+</span></span><span style="display:flex;"><span>                writer<span style="color:#f92672">.</span>write_batch(batch, row_group_size<span style="color:#f92672">=</span>SMALL_ROW_GROUP_ROWS)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> _atomic_write(final_path, <span style="color:#e6db74">&#34;small-profile&#34;</span>, write)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">write_nested_events</span>(output_dir: Path) <span style="color:#f92672">-&gt;</span> Path:
+</span></span><span style="display:flex;"><span>    final_path <span style="color:#f92672">=</span> output_dir <span style="color:#f92672">/</span> <span style="color:#e6db74">&#34;nested-events.parquet&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">write</span>(temporary_path: Path) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>        pq<span style="color:#f92672">.</span>write_table(
+</span></span><span style="display:flex;"><span>            nested_events_table(),
+</span></span><span style="display:flex;"><span>            temporary_path,
+</span></span><span style="display:flex;"><span>            row_group_size<span style="color:#f92672">=</span><span style="color:#ae81ff">4</span>,
+</span></span><span style="display:flex;"><span>            version<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;2.6&#34;</span>,
+</span></span><span style="display:flex;"><span>            compression<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;snappy&#34;</span>,
+</span></span><span style="display:flex;"><span>            use_dictionary<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>,
+</span></span><span style="display:flex;"><span>            write_statistics<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>,
+</span></span><span style="display:flex;"><span>            data_page_version<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;2.0&#34;</span>,
+</span></span><span style="display:flex;"><span>            use_compliant_nested_type<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>,
+</span></span><span style="display:flex;"><span>            write_page_index<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>,
+</span></span><span style="display:flex;"><span>            write_page_checksum<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>,
+</span></span><span style="display:flex;"><span>            max_rows_per_page<span style="color:#f92672">=</span><span style="color:#ae81ff">2</span>,
+</span></span><span style="display:flex;"><span>        )
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> _atomic_write(final_path, <span style="color:#e6db74">&#34;nested-profile&#34;</span>, write)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">write_default_files</span>(output_dir: Path) <span style="color:#f92672">-&gt;</span> tuple[Path, Path]:
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> write_transactions_small(output_dir), write_nested_events(output_dir)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">file_sha256</span>(path: Path) <span style="color:#f92672">-&gt;</span> str:
+</span></span><span style="display:flex;"><span>    digest <span style="color:#f92672">=</span> hashlib<span style="color:#f92672">.</span>sha256()
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">with</span> path<span style="color:#f92672">.</span>open(<span style="color:#e6db74">&#34;rb&#34;</span>) <span style="color:#66d9ef">as</span> source:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> block <span style="color:#f92672">in</span> iter(<span style="color:#66d9ef">lambda</span>: source<span style="color:#f92672">.</span>read(<span style="color:#ae81ff">1024</span> <span style="color:#f92672">*</span> <span style="color:#ae81ff">1024</span>), <span style="color:#e6db74">b</span><span style="color:#e6db74">&#34;&#34;</span>):
+</span></span><span style="display:flex;"><span>            digest<span style="color:#f92672">.</span>update(block)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> digest<span style="color:#f92672">.</span>hexdigest()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">print_file</span>(path: Path) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    metadata <span style="color:#f92672">=</span> pq<span style="color:#f92672">.</span>ParquetFile(path)<span style="color:#f92672">.</span>metadata
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">assert</span> metadata <span style="color:#f92672">is</span> <span style="color:#f92672">not</span> <span style="color:#66d9ef">None</span>
+</span></span><span style="display:flex;"><span>    print(
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;</span><span style="color:#e6db74">{</span>path<span style="color:#e6db74">}</span><span style="color:#e6db74">: rows=</span><span style="color:#e6db74">{</span>metadata<span style="color:#f92672">.</span>num_rows<span style="color:#e6db74">}</span><span style="color:#e6db74"> row_groups=</span><span style="color:#e6db74">{</span>metadata<span style="color:#f92672">.</span>num_row_groups<span style="color:#e6db74">}</span><span style="color:#e6db74"> &#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">f</span><span style="color:#e6db74">&#34;bytes=</span><span style="color:#e6db74">{</span>path<span style="color:#f92672">.</span>stat()<span style="color:#f92672">.</span>st_size<span style="color:#e6db74">}</span><span style="color:#e6db74"> sha256=</span><span style="color:#e6db74">{</span>file_sha256(path)<span style="color:#e6db74">}</span><span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>    )
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">build_parser</span>() <span style="color:#f92672">-&gt;</span> argparse<span style="color:#f92672">.</span>ArgumentParser:
+</span></span><span style="display:flex;"><span>    parser <span style="color:#f92672">=</span> argparse<span style="color:#f92672">.</span>ArgumentParser(description<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;Generate reproducible Parquet samples&#34;</span>)
+</span></span><span style="display:flex;"><span>    parser<span style="color:#f92672">.</span>add_argument(<span style="color:#e6db74">&#34;--output-dir&#34;</span>, type<span style="color:#f92672">=</span>Path, default<span style="color:#f92672">=</span>Path(<span style="color:#e6db74">&#34;parquet-lab&#34;</span>))
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> parser
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">main</span>(argv: Sequence[str] <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>) <span style="color:#f92672">-&gt;</span> int:
+</span></span><span style="display:flex;"><span>    args <span style="color:#f92672">=</span> build_parser()<span style="color:#f92672">.</span>parse_args(argv)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> output <span style="color:#f92672">in</span> write_default_files(args<span style="color:#f92672">.</span>output_dir):
+</span></span><span style="display:flex;"><span>        print_file(output)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> __name__ <span style="color:#f92672">==</span> <span style="color:#e6db74">&#34;__main__&#34;</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">raise</span> <span style="color:#a6e22e">SystemExit</span>(main())</span></span></code></pre></div></details>
+<p>把展开后的代码保存为 <code>generate_parquet_samples.py</code>，默认命令会在 <code>parquet-lab/</code> 生成两个很小的结构样例：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>uv run generate_parquet_samples.py
+</span></span><span style="display:flex;"><span>shasum -a <span style="color:#ae81ff">256</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  parquet-lab/transactions-small.parquet <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  parquet-lab/nested-events.parquet</span></span></code></pre></div><p>同一环境重复运行会原子替换文件，并得到相同字节：</p>
+<table>
+  <thead>
+      <tr>
+          <th>文件</th>
+          <th style="text-align: right">行数</th>
+          <th style="text-align: right">Row Groups</th>
+          <th style="text-align: right">物理字节</th>
+          <th>SHA-256</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>transactions-small.parquet</code></td>
+          <td style="text-align: right">30,000</td>
+          <td style="text-align: right">3</td>
+          <td style="text-align: right">1,489,068</td>
+          <td><code>62a5dee8139f1e80ad4e95decbde08ba5542578999d37cb0e7695a57efaa07f3</code></td>
+      </tr>
+      <tr>
+          <td><code>nested-events.parquet</code></td>
+          <td style="text-align: right">4</td>
+          <td style="text-align: right">1</td>
+          <td style="text-align: right">2,000</td>
+          <td><code>fefbf3bfe261e10619c7bb1d48ff8ac1b37f01ce227c1461920d261275c4fd49</code></td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="复现清单">复现清单<a class="anchor" href="#%e5%a4%8d%e7%8e%b0%e6%b8%85%e5%8d%95">#</a></h3>
+<p>按“环境与样本生成”小节准备环境并生成样例后，可以用下面的命令复查文章中的结构和查询结果：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># 1. 文件尾、FileMetaData、Schema</span>
+</span></span><span style="display:flex;"><span>xxd -g <span style="color:#ae81ff">1</span> -s -8 parquet-lab/transactions-small.parquet
+</span></span><span style="display:flex;"><span>od -An -j <span style="color:#ae81ff">1489060</span> -N <span style="color:#ae81ff">4</span> -tu1 parquet-lab/transactions-small.parquet
+</span></span><span style="display:flex;"><span>parquet footer --raw parquet-lab/transactions-small.parquet
+</span></span><span style="display:flex;"><span>parquet schema --parquet parquet-lab/transactions-small.parquet
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 2. Statistics、Row Group</span>
+</span></span><span style="display:flex;"><span>parquet meta parquet-lab/transactions-small.parquet
+</span></span><span style="display:flex;"><span>parquet bloom-filter -c out_trans_no -v missing-transaction-000 <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  parquet-lab/transactions-small.parquet
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 3. Column Chunk、Page Index、Page Header</span>
+</span></span><span style="display:flex;"><span>parquet column-size parquet-lab/transactions-small.parquet
+</span></span><span style="display:flex;"><span>parquet column-index -c created_at parquet-lab/transactions-small.parquet
+</span></span><span style="display:flex;"><span>parquet pages --raw -c user_id,amount,created_at <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  parquet-lab/transactions-small.parquet
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 4. 查询结果</span>
+</span></span><span style="display:flex;"><span>duckdb -c <span style="color:#e6db74">&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">SELECT user_id, SUM(amount)
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">FROM read_parquet(&#39;parquet-lab/transactions-small.parquet&#39;)
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">WHERE created_at &gt;= TIMESTAMP &#39;2026-05-08 03:00:00&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">  AND created_at &lt;  TIMESTAMP &#39;2026-05-08 04:00:00&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">GROUP BY user_id;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">&#34;</span></span></span></code></pre></div><h2 id="附录-crandom-access-parquetrap">附录 C：Random Access Parquet（RAP）<a class="anchor" href="#%e9%99%84%e5%bd%95-crandom-access-parquetrap">#</a></h2>
+<p>Parquet 通常由 Trino、BigQuery 一类分析引擎读取。这些引擎擅长并行扫描和聚合，却不适合按一个 key 在线读取少量记录。用户历史、长尾实体详情或 AI Agent 的上下文检索都要求较低延迟。为一次点查启动分布式任务，还会增加调度和查询规划开销。</p>
+<p>分区裁剪可以缩小候选文件范围，Bloom Filter 也能排除部分 Row Group。但它们不能直接回答某个 key 位于文件中的哪一行。</p>
+<p>读取器进入候选文件后，仍要依次读取 FileMetaData、解析 Row Group 元数据、扫描 key 列，再定位 value Page。每一步都依赖上一步。文件位于对象存储时，多轮 Range Read 的往返延迟会逐次累加。</p>
+<p>Random Access Parquet（RAP）针对的正是这段文件内发现过程。它不是新的 Parquet 规范，基础方案也不复制整份 value 数据，而是在现有 Parquet 文件之外增加一条精确访问路径。</p>
+<figure>
+  <img
+    src="/images/parquet-file-format/rap-dependent-reads-vs-indexed-lookup.svg"
+    alt="标准 Parquet 点查需要依次读取 FileMetaData、解析 Row Group 元数据、扫描 key 列并定位 value Page；RAP 通过外部精确索引和缓存的 Page 映射，直接并行读取目标字节范围"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>标准 Parquet 的依赖读取链与 RAP 的索引读取路径</figcaption>
+</figure>
+<h3 id="用外部索引替代文件内查找">用外部索引替代文件内查找<a class="anchor" href="#%e7%94%a8%e5%a4%96%e9%83%a8%e7%b4%a2%e5%bc%95%e6%9b%bf%e4%bb%a3%e6%96%87%e4%bb%b6%e5%86%85%e6%9f%a5%e6%89%be">#</a></h3>
+<p>RAP 的外部索引是一个 multimap，也就是“一键对应多个位置”的映射。同一个 key 可能出现在多个时间分区和文件中，因此不能只保存一个地址。</p>
+<p>每条索引记录包含查询 <code>key</code>、Parquet 文件标识、该 key 的行号集合，以及可选的 value count。文件标识可以压缩成字典序号。value count 则让服务端在读取数据前处理分页。</p>
+<p>索引由离线任务构建。构建器读取现有文件的 FileMetaData 和目标列的 Page 位置，再扫描 key 列，生成 <code>key -&gt; file + row numbers</code> 映射。</p>
+<p>新一批 Parquet 文件到达时，只需追加对应的索引分片，不必重写旧文件。因此，RAP 可以直接用于没有特殊准备的标准 Parquet。</p>
+<h4 id="index-builder-的输出追加式-multimap">Index Builder 的输出：追加式 multimap<a class="anchor" href="#index-builder-%e7%9a%84%e8%be%93%e5%87%ba%e8%bf%bd%e5%8a%a0%e5%bc%8f-multimap">#</a></h4>
+<p>把 <code>key -&gt; file + row numbers</code> 展开后，Index Builder 的核心产物可以用下面的逻辑模型表示：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>FileDictionary: file_ordinal -&gt; Parquet URI
+</span></span><span style="display:flex;"><span>Bucket:         hash(key) -&gt; [Fragment]
+</span></span><span style="display:flex;"><span>Fragment:       key -&gt; [{file_ordinal, row_numbers[], value_count?}]</span></span></code></pre></div><p>文件路径通常很长，索引条目因此只保存字典编码后的 <code>file_ordinal</code>。索引较大时，可以按 key 做 hash 分桶；每轮离线任务只为新到达的 Parquet 追加 fragment，旧分片保持不变。</p>
+<figure>
+  <img
+    src="/images/parquet-file-format/rap-index-logical-model.svg"
+    alt="RAP 索引的参考逻辑模型：文件字典把文件序号映射到 Parquet 路径，同一 hash bucket 下的追加分片分别保存 key 对应的文件序号、行号集合和可选计数，查询时合并这些位置后再通过元数据缓存定位 Page"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>根据 Spotify 原文抽象的索引逻辑模型</figcaption>
+</figure>
+<p>以图中的 <code>user-123</code> 为例，第一个 fragment 指向 file 17 的第 120、121 行。下一批数据又追加了 file 42 的第 8 行。查询时，读取器合并目标 bucket 中的条目，得到 <code>{17: [120, 121], 42: [8]}</code>。</p>
+<p>结果仍然只是文件序号和行号。各列对应的 Page 或字节范围，要在下一步通过缓存的 Parquet 文件元数据换算。</p>
+<p>Spotify 原文明确提到 multimap 条目、字典编码的文件序号、追加 fragment，以及按 hash 对大索引分桶。图中的文件字典、<code>bucket b7</code> 和日期分片只是说明这些关系的参考模型，不是 RAP 的固定磁盘格式。原文也没有公开 fragment 编码、hash 函数或具体存储引擎。</p>
+<p>在线读取分为四步：</p>
+<ol>
+<li>用 key 查询外部索引，得到一组文件与行号。</li>
+<li>用缓存的文件元数据把行号换成各目标列的 Page 或字节范围。</li>
+<li>合并相邻范围，并行发出互不依赖的 Range Read。</li>
+<li>解压、解码并抽取目标行，最后合并多个文件中的结果。</li>
+</ol>
+<p>这里的 O(1) 只指哈希索引按 key 查找，不代表端到端查询复杂度。实际开销仍取决于命中文件数、读取列数、Page 大小、网络请求和解码工作。</p>
+<p>Parquet 的 Statistics、Bloom Filter 和 Page Index 用于排除候选范围。RAP 索引返回精确文件与行号，两者职责不同。</p>
+<h3 id="适用边界与准备型优化">适用边界与准备型优化<a class="anchor" href="#%e9%80%82%e7%94%a8%e8%be%b9%e7%95%8c%e4%b8%8e%e5%87%86%e5%a4%87%e5%9e%8b%e4%bc%98%e5%8c%96">#</a></h3>
+<p>外部索引解决了“数据在哪里”，却不一定解决读取放大。标准 Parquet 仍以 Page 作为独立解压边界：即使已经知道目标行，读取器也可能为了很小的结果读取整个 Page。</p>
+<p>更看重点查延迟或读取成本时，可以在写入阶段集中相同 key 的数据，例如按 key 排序，或者在 key 边界刷新 Page。也可以把在线服务需要的字段收进 Blob、Protobuf 或 Variant 列，减少每次请求涉及的列数。很小的值和预聚合结果还可以直接放进覆盖索引，省去对象存储读取。</p>
+<p>这些做法会增加 Page Index 或外部索引的体积，也可能削弱编码效率和列裁剪效果。是否采用，要结合分析查询的需求衡量。</p>
+<p>RAP 适合历史数据、长尾实体以及读多写少的在线点查，也可以作为 AI Agent 获取上下文的入口。它不提供事务、高频行级更新、约束或通用查询执行能力。批量分析仍沿用 Parquet 原有的扫描路径。</p>
+<h2 id="参考资料">参考资料<a class="anchor" href="#%e5%8f%82%e8%80%83%e8%b5%84%e6%96%99">#</a></h2>
+<ul>
+<li><a href="https://parquet.apache.org/docs/overview/">Apache Parquet Overview</a></li>
+<li><a href="https://incubator.apache.org/projects/parquet.html">Apache Incubator：Parquet Project Incubation Status</a></li>
+<li><a href="https://research.google/pubs/dremel-interactive-analysis-of-web-scale-datasets/">Google Research：Dremel: Interactive Analysis of Web-Scale Datasets</a></li>
+<li><a href="https://github.com/apache/parquet-format/blob/apache-parquet-format-2.13.0/README.md">Parquet Format 2.13.0 README：File Format 与 Nested Encoding</a></li>
+<li><a href="https://github.com/apache/parquet-format/blob/apache-parquet-format-2.13.0/src/main/thrift/parquet.thrift">Parquet Format 2.13.0 <code>parquet.thrift</code></a></li>
+<li><a href="https://github.com/apache/parquet-format/blob/apache-parquet-format-2.13.0/LogicalTypes.md">Parquet Format 2.13.0 Logical Types</a></li>
+<li><a href="https://github.com/apache/parquet-format/blob/apache-parquet-format-2.13.0/Encodings.md">Parquet Format 2.13.0 Encodings</a></li>
+<li><a href="https://github.com/apache/parquet-format/blob/apache-parquet-format-2.13.0/Compression.md">Parquet Format 2.13.0 Compression</a></li>
+<li><a href="https://github.com/apache/parquet-format/blob/apache-parquet-format-2.13.0/Encryption.md">Parquet Format 2.13.0 Encryption</a></li>
+<li><a href="https://github.com/apache/parquet-format/blob/apache-parquet-format-2.13.0/PageIndex.md">Parquet Format 2.13.0 Page Index</a></li>
+<li><a href="https://github.com/apache/parquet-format/blob/apache-parquet-format-2.13.0/BloomFilter.md">Parquet Format 2.13.0 Bloom Filter</a></li>
+<li><a href="https://arrow.apache.org/docs/25.0/python/generated/pyarrow.parquet.write_table.html">PyArrow 25.0.0 <code>write_table</code></a></li>
+<li><a href="https://github.com/apache/parquet-java/blob/apache-parquet-1.16.0/parquet-cli/README.md">parquet-cli 1.16.0 README</a></li>
+<li><a href="https://github.com/apache/parquet-java/blob/apache-parquet-1.16.0/parquet-cli/src/main/java/org/apache/parquet/cli/Util.java">parquet-cli 1.16.0 <code>Util.java</code>：Codec 与 Encoding 缩写</a></li>
+<li><a href="https://github.com/apache/parquet-java/blob/apache-parquet-1.16.0/parquet-cli/src/main/java/org/apache/parquet/cli/commands/ShowPagesCommand.java">parquet-cli 1.16.0 <code>ShowPagesCommand.java</code>：Page 输出列</a></li>
+<li><a href="https://duckdb.org/docs/stable/data/parquet/overview">DuckDB：Reading and Writing Parquet Files</a></li>
+<li><a href="https://github.com/duckdb/duckdb/blob/v1.5.5/extension/parquet/parquet_reader.cpp#L1207-L1255">DuckDB 1.5.5：Parquet Row Group 裁剪源码</a></li>
+<li><a href="https://engineering.atspotify.com/2026/7/indexing-the-data-lake-for-online-point-queries">Spotify Engineering：Indexing the Data Lake for Online Point Queries</a></li>
+</ul>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "parquet-file-format", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+  <div>
+  
+    <a href="/2026/08/26/python-contextvars-design-and-implementation/" class="flex align-center">
+      <img src="/icons/backward.svg" class="book-icon" alt="Backward" />
+      <span>Python 的上下文管理</span>
+    </a>
+  
+  </div>
+  <div>
+  
+    <a href="/2026/08/07/server-database-compression-algorithms/" class="flex align-center">
+      <span>服务端与数据库压缩：原理、组合与选型</span>
+      <img src="/icons/forward.svg" class="book-icon" alt="Forward" />
+    </a>
+  
+  </div>
+</div>
+ 
+        
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+        
+<div class="flex align-center" style="margin-top: 1rem;">
+  <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+    访问量<span id="busuanzi_value_site_pv"></span>
+  </span>
+  <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+    访客数<span id="busuanzi_value_site_uv"></span>
+  </span>
+</div>
+        
+  
+ 
+        
+  
+  
+    <script>(function(){document.querySelectorAll("pre:has(code)").forEach(e=>{e.addEventListener("click",e.focus),e.addEventListener("copy",function(t){if(t.preventDefault(),navigator.clipboard){const t=window.getSelection().toString()||e.textContent;navigator.clipboard.writeText(t)}})})})()</script>
+  
+
+      </footer>
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+  
+  <aside class="book-toc">
+    <div class="book-toc-content">
+      
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-parquet-文件结构">1. Parquet 文件结构</a></li>
+    <li><a href="#2-用-sql-驱动一次读取">2. 用 SQL 驱动一次读取</a></li>
+    <li><a href="#3-filemetadata从文件尾开始">3. FileMetaData：从文件尾开始</a>
+      <ul>
+        <li><a href="#31-定位并解析-filemetadata">3.1 定位并解析 FileMetaData</a></li>
+        <li><a href="#32-用-schema-解析-sql-中的列">3.2 用 Schema 解析 SQL 中的列</a></li>
+      </ul>
+    </li>
+    <li><a href="#4-谓词下推statistics-与-bloom-filter">4. 谓词下推：Statistics 与 Bloom Filter</a>
+      <ul>
+        <li><a href="#41-statistics-的字段结构">4.1 Statistics 的字段结构</a></li>
+        <li><a href="#42-用-statistics-裁剪-row-group">4.2 用 Statistics 裁剪 Row Group</a></li>
+        <li><a href="#43-bloom-filter另一条排除路径">4.3 Bloom Filter：另一条排除路径</a></li>
+      </ul>
+    </li>
+    <li><a href="#5-row-group">5. Row Group</a></li>
+    <li><a href="#6-column-chunk列裁剪">6. Column Chunk：列裁剪</a></li>
+    <li><a href="#7-page编码与解压边界">7. Page：编码与解压边界</a>
+      <ul>
+        <li><a href="#71-page-序列与通用-pageheader">7.1 Page 序列与通用 PageHeader</a></li>
+        <li><a href="#72-page-indexcolumnindex-与-offsetindex">7.2 Page Index：<code>ColumnIndex</code> 与 <code>OffsetIndex</code></a></li>
+        <li><a href="#73-读取-dictionary-page-与-data-page">7.3 读取 Dictionary Page 与 Data Page</a></li>
+        <li><a href="#74-编码与压缩">7.4 编码与压缩</a></li>
+      </ul>
+    </li>
+    <li><a href="#8-完整-parquet-文件与查询结果">8. 完整 Parquet 文件与查询结果</a></li>
+    <li><a href="#9-总结">9. 总结</a></li>
+    <li><a href="#附录-a嵌套数据与-dlrl">附录 A：嵌套数据与 DL/RL</a></li>
+    <li><a href="#附录-b可复现实验与检查清单">附录 B：可复现实验与检查清单</a>
+      <ul>
+        <li><a href="#样例字节与偏移明细">样例字节与偏移明细</a></li>
+        <li><a href="#环境与样本生成">环境与样本生成</a></li>
+        <li><a href="#复现清单">复现清单</a></li>
+      </ul>
+    </li>
+    <li><a href="#附录-crandom-access-parquetrap">附录 C：Random Access Parquet（RAP）</a>
+      <ul>
+        <li><a href="#用外部索引替代文件内查找">用外部索引替代文件内查找</a></li>
+        <li><a href="#适用边界与准备型优化">适用边界与准备型优化</a></li>
+      </ul>
+    </li>
+    <li><a href="#参考资料">参考资料</a></li>
+  </ul>
+</nav>
+
+
+
+    </div>
+  </aside>
+  
+ 
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

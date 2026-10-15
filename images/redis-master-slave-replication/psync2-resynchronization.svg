@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1000" viewBox="0 0 900 1000" role="img" aria-labelledby="title desc">
+  <title id="title">PSYNC2 部分重同步决策</title>
+  <desc id="desc">副本已处理到 10086，请求从 10087 开始；仅当复制 ID 为当前 ID，或为次 ID 且请求 offset 不大于 second_replid_offset，并且缺失区间 10087..10119 仍在 backlog 时，才补发 33 字节复制流，否则执行全量重同步。</desc>
+  <defs>
+    <marker id="arrow-charcoal" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#202426"/></marker>
+    <marker id="arrow-teal" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#159E98"/></marker>
+    <marker id="arrow-coral" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#E95D4F"/></marker>
+  </defs>
+  <rect width="900" height="1000" fill="#F7F8F4"/>
+  <g font-family="Arial, 'Noto Sans SC', sans-serif" fill="#202426">
+    <text x="450" y="55" text-anchor="middle" font-size="30" font-weight="700">PSYNC2：何时部分重同步</text>
+    <ellipse cx="240" cy="130" rx="140" ry="35" fill="#F7F8F4" stroke="#159E98" stroke-width="3"/>
+    <text x="240" y="138" text-anchor="middle" font-size="25" font-family="ui-monospace, monospace">PSYNC repl-A 10087</text>
+    <line x1="240" y1="165" x2="240" y2="186" stroke="#202426" stroke-width="2" marker-end="url(#arrow-charcoal)"/>
+    <polygon points="240,190 470,290 240,390 10,290" fill="#F7F8F4" stroke="#E8BD3F" stroke-width="3"/>
+    <text x="240" y="258" text-anchor="middle" font-size="25">
+      <tspan x="240" dy="0">当前 ID，或次 ID 且</tspan>
+      <tspan x="240" dy="31">请求 offset ≤</tspan>
+      <tspan x="240" dy="31" font-family="ui-monospace, monospace">second_replid_offset？</tspan>
+    </text>
+    <line x1="240" y1="390" x2="240" y2="416" stroke="#159E98" stroke-width="3" marker-end="url(#arrow-teal)"/>
+    <text x="256" y="414" font-size="25" fill="#159E98">是</text>
+    <polygon points="240,420 450,485 240,550 30,485" fill="#F7F8F4" stroke="#E8BD3F" stroke-width="3"/>
+    <text x="240" y="492" text-anchor="middle" font-size="25">缺失区间仍在 backlog？</text>
+    <rect x="480" y="315" width="410" height="230" rx="8" fill="#F7F8F4" stroke="#E95D4F" stroke-width="3" aria-label="ID 不可识别、次 ID offset 越界，或请求区间已移出 backlog"/>
+    <text x="685" y="360" text-anchor="middle" font-size="25" font-weight="700" fill="#E95D4F">+FULLRESYNC</text>
+    <text x="685" y="420" text-anchor="middle" font-size="25">ID 不可识别、次 ID offset 越界，</text>
+    <text x="685" y="452" text-anchor="middle" font-size="25">或请求区间已移出 backlog</text>
+    <path d="M470 290 L480 350" fill="none" stroke="#E95D4F" stroke-width="2" marker-end="url(#arrow-coral)"/>
+    <text x="438" y="329" font-size="25" fill="#E95D4F">否</text>
+    <path d="M450 485 L480 505" fill="none" stroke="#E95D4F" stroke-width="2" marker-end="url(#arrow-coral)"/>
+    <text x="450" y="539" font-size="25" fill="#E95D4F">否</text>
+    <line x1="240" y1="550" x2="240" y2="586" stroke="#159E98" stroke-width="3" marker-end="url(#arrow-teal)"/>
+    <text x="256" y="580" font-size="25" fill="#159E98">是</text>
+    <rect x="80" y="590" width="320" height="92" rx="8" fill="#F7F8F4" stroke="#159E98" stroke-width="3"/>
+    <text x="240" y="630" text-anchor="middle" font-size="25" font-weight="700" fill="#159E98">+CONTINUE</text>
+    <text x="240" y="664" text-anchor="middle" font-size="25">补发 33 字节复制流</text>
+    <text x="450" y="738" text-anchor="middle" font-size="25" font-weight="700">复制积压缓冲区 backlog</text>
+    <line x1="140" y1="820" x2="760" y2="820" stroke="#202426" stroke-width="8"/>
+    <line x1="160" y1="820" x2="760" y2="820" stroke="#159E98" stroke-width="12"/>
+    <line x1="140" y1="790" x2="140" y2="850" stroke="#202426" stroke-width="3"/>
+    <line x1="160" y1="780" x2="160" y2="860" stroke="#E8BD3F" stroke-width="4"/>
+    <line x1="760" y1="790" x2="760" y2="850" stroke="#159E98" stroke-width="4"/>
+    <text x="140" y="880" text-anchor="middle" font-size="25">Backlog start</text>
+    <text x="140" y="903" text-anchor="middle" font-size="25" font-weight="700">10085</text>
+    <text x="178" y="778" font-size="25">Replica processed</text>
+    <text x="178" y="802" font-size="25" font-weight="700">10086</text>
+    <text x="760" y="880" text-anchor="middle" font-size="25">Master current</text>
+    <text x="760" y="903" text-anchor="middle" font-size="25" font-weight="700">10119</text>
+    <path d="M160 925 L160 940 L760 940 L760 925" fill="none" stroke="#E8BD3F" stroke-width="4"/>
+    <text x="460" y="976" text-anchor="middle" font-size="25" font-weight="700">缺失区间：33 字节</text>
+  </g>
+</svg>

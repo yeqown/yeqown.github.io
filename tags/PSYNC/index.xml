@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>PSYNC on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/PSYNC/</link>
+    <description>Recent content in PSYNC on Yeqown</description>
+    <generator>Hugo</generator>
+    <language>en-US</language>
+    <lastBuildDate>Mon, 03 Aug 2026 00:00:00 +0800</lastBuildDate>
+    <atom:link href="https://www.yeqown.xyz/tags/PSYNC/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Redis 复制：从全量同步到 PSYNC2</title>
+      <link>https://www.yeqown.xyz/2020/03/29/redis%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6/</link>
+      <pubDate>Sun, 29 Mar 2020 09:45:19 +0800</pubDate>
+      <guid>https://www.yeqown.xyz/2020/03/29/redis%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6/</guid>
+      <description>&lt;p&gt;Sentinel 可以在主节点故障后提升副本，Redis Cluster 也能在故障分片内完成主从切换。两种架构都要求副本在故障发生前持续接收主节点的数据，并尽量跟上写入进度。Redis 复制负责维护这份可供接管的数据。&lt;/p&gt;&#xA;&lt;p&gt;但副本不是主节点的实时镜像。Redis 默认异步传输复制流，主节点响应写入时，副本可能还没有收到对应的数据。链路断开后能否从断点接着传，则取决于 replication ID、offset 和 replication backlog 能否证明双方共享同一段复制历史。本文从部分重同步、全量同步和正常复制流三个阶段入手，解释这些机制为什么存在，以及它们在恢复成本、内存占用、写入延迟和数据一致性之间的取舍。&lt;/p&gt;&#xA;&lt;h2 id=&#34;1-为什么需要复制&#34;&gt;1. 为什么需要复制&lt;a class=&#34;anchor&#34; href=&#34;#1-%e4%b8%ba%e4%bb%80%e4%b9%88%e9%9c%80%e8%a6%81%e5%a4%8d%e5%88%b6&#34;&gt;#&lt;/a&gt;&lt;/h2&gt;&#xA;&lt;p&gt;对现代在线业务来说，只运行一个 Redis 进程、把所有数据和流量压在一台机器上，已经很难满足生产要求。节点故障时，业务需要尽快恢复服务；当数据量或访问量超过单机上限时，又需要把容量和请求分散到多个节点。前者是高可用问题，后者是大数据量和高并发带来的水平扩展问题。RDB 和 AOF 只能帮助单个节点重启后恢复数据，不能让另一个在线节点立即接管服务，也不能突破单机容量。&lt;/p&gt;&#xA;&lt;p&gt;Redis 提供了两种典型部署架构来处理这两类问题。Sentinel 面向不分片的数据集，监控主节点和副本，并在主节点故障后自动选择副本接管，主要解决高可用。Redis Cluster 把键空间分到多个主节点，用分片扩展容量和写入吞吐；每个分片内仍配置副本，因此 Cluster 也包含分片级的高可用。&lt;/p&gt;&#xA;&lt;p&gt;两种架构都依赖复制。无论是 Sentinel 提升副本，还是 Cluster 在故障分片内切换主节点，候选节点都必须预先拥有尽可能新的数据。复制持续把主节点的数据变更传给副本，是两种架构的共同基础。它不负责故障判断、选主或客户端路由，这些职责分别由 Sentinel、Cluster 和客户端完成。&lt;/p&gt;&#xA;&lt;h2 id=&#34;2-redis-如何复制数据&#34;&gt;2. Redis 如何复制数据&lt;a class=&#34;anchor&#34; href=&#34;#2-redis-%e5%a6%82%e4%bd%95%e5%a4%8d%e5%88%b6%e6%95%b0%e6%8d%ae&#34;&gt;#&lt;/a&gt;&lt;/h2&gt;&#xA;&lt;p&gt;Redis 复制的发起方是副本。它连接主节点，完成 &lt;code&gt;PING&lt;/code&gt;、可选的身份认证和 &lt;code&gt;REPLCONF&lt;/code&gt; 信息交换，然后发送 &lt;code&gt;PSYNC &amp;lt;replication-id&amp;gt; &amp;lt;offset&amp;gt;&lt;/code&gt; 申报自己已有的复制历史和进度。主节点维护 replication ID、当前 offset 和 replication backlog，并根据副本的请求选择同步方式。&lt;/p&gt;&#xA;&lt;p&gt;复制链路按主节点的处理顺序分为三段：副本断线恢复时，先尝试部分重同步；第一次复制或部分重同步条件不成立时，改为全量同步；副本追上主节点后，进入持续传输复制流的正常运行状态。这三段并不是每次都依次执行：部分重同步成功后会跳过全量同步，直接回到复制流。两种同步方式都通向同一个结果：先让副本追上，再持续传递新的数据变更。&lt;/p&gt;&#xA;&lt;blockquote class=&#39;book-hint &#39;&gt;&#xA;&lt;p&gt;&lt;strong&gt;为什么复制进度要同时使用 replication ID 和 offset？&lt;/strong&gt;&lt;/p&gt;&#xA;&lt;p&gt;&lt;code&gt;offset&lt;/code&gt; 只是某一条复制历史中的字节位置，并不是全局版本号。两条不同的复制历史即使 offset 相同，对应的数据也可能完全不同。replication ID 用来标识复制历史，offset 用来标识这条历史中的位置；主节点只有同时核对二者，才能判断副本缺少的是不是自己仍可补发的那段字节。&lt;/p&gt;&#xA;&lt;p&gt;PSYNC2 还保留 secondary replication ID 和它的有效 offset 边界，使新主节点在故障转移后仍能识别上一条复制历史。Redis 只保存当前和上一代两个 ID，不追踪完整的历史树，元数据大小固定，判断也简单。连续多次角色切换或缺失数据已经离开 backlog 时，仍需全量同步。&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

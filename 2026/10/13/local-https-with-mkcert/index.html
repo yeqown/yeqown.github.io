@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en-US" dir="ltr">
+<head>
+  <!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="用几条命令在本机启用 https://xxx.com，模拟线上前端的域名与 HTTPS 环境，并说明背后的基本原理。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#2e3440">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2026/10/13/local-https-with-mkcert/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="本地快速启用 HTTPS">
+  <meta property="og:description" content="用几条命令在本机启用 https://xxx.com，模拟线上前端的域名与 HTTPS 环境，并说明背后的基本原理。">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2026-10-13T00:00:00+08:00">
+    <meta property="article:modified_time" content="2026-10-13T00:00:00+08:00">
+    <meta property="article:tag" content="HTTPS">
+    <meta property="article:tag" content="Mkcert">
+    <meta property="article:tag" content="Python">
+
+
+  <meta itemprop="name" content="本地快速启用 HTTPS">
+  <meta itemprop="description" content="用几条命令在本机启用 https://xxx.com，模拟线上前端的域名与 HTTPS 环境，并说明背后的基本原理。">
+  <meta itemprop="datePublished" content="2026-10-13T00:00:00+08:00">
+  <meta itemprop="dateModified" content="2026-10-13T00:00:00+08:00">
+  <meta itemprop="wordCount" content="232">
+  <meta itemprop="keywords" content="HTTPS,Mkcert,Python">
+
+<title>本地快速启用 HTTPS | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2026/10/13/local-https-with-mkcert/">
+<link rel="stylesheet" href="/book.min.c40223b1e1a5ffa9f6a0fe48797821424561eff06762ee5c75071bda9d009477.css" integrity="sha256-xAIjseGl/6n2oP5IeXghQkVh7/BnYu5cdQcb2p0AlHc=" crossorigin="anonymous">
+
+
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.99ce27de54629b271c4277001097f0e183ca5eaedb015e65542b29ce1c90db30.js" integrity="sha256-mc4n3lRimyccQncAEJfw4YPKXq7bAV5lVCspzhyQ2zA=" crossorigin="anonymous"></script>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade">
+  
+</head>
+<body dir="ltr" class="book-kind-page book-type-posts">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    
+<aside class="book-menu">
+  <div class="book-menu-content">
+    
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input id="book-search-input" type="text" 
+    placeholder="Search"
+    aria-label="Search"
+    maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+<ul><li><a href="/categories">Categories</a></li><li><a href="/tags">Tags</a></li></ul>
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">
+      About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+
+  </div>
+</aside>
+ 
+
+    <div class="book-page">
+      <header class="book-header hidden">
+        
+<div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/icons/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>本地快速启用 HTTPS</h3>
+
+  <label for="toc-control">
+    
+    <img src="/icons/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#快速启动">快速启动</a></li>
+    <li><a href="#基本思路">基本思路</a></li>
+    <li><a href="#验证与排查">验证与排查</a></li>
+    <li><a href="#参考">参考</a></li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h1>
+    本地快速启用 HTTPS
+  </h1>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/icons/calendar.svg" class="book-icon" alt="Calendar" />
+    <span>October 13, 2026</span>
+    
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4/">常用命令</a>, 
+      <a href="/categories/%E7%AC%94%E8%AE%B0/">笔记</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/HTTPS/">HTTPS</a>, 
+      <a href="/tags/mkcert/">Mkcert</a>, 
+      <a href="/tags/Python/">Python</a>
+  </div>
+  
+
+
+  <div class="book-post-content markdown-inner"><p>在本地浏览器里调试前端时，有时需要模拟真实的线上部署：页面使用指定域名，并通过 HTTPS 访问。直接使用 <code>http://localhost:3000</code> 或打开 HTML 文件，可能跑得通页面，却无法复现与域名、协议有关的行为。</p>
+<p>比如下面这些场景：</p>
+<ul>
+<li>第三方登录的回调地址已经配置成 <code>https://xxx.com/callback</code>。改用 localhost 后，协议、域名或端口与登记的地址不一致，登录流程会被拒绝。</li>
+<li>登录态 Cookie 设置了 <code>Domain=xxx.com</code> 或 <code>.xxx.com</code>，还带有 <code>Secure</code> 属性。在 localhost 下无法按同样的域名规则使用这些 Cookie，普通 HTTP 也不满足它们的安全传输要求。</li>
+<li>地图、支付等前端 SDK 配置了域名白名单，或服务端校验页面的 Origin。localhost 与线上域名不同，调试时可能直接触发校验失败。</li>
+<li>Service Worker、摄像头和麦克风等浏览器能力要求安全上下文。localhost 通常有开发例外，但换成普通 HTTP 自定义域名后，就不能依赖这个例外。</li>
+</ul>
+<p>这时需要的是一个能快速打开的本地地址，例如 <code>https://xxx.com</code>：浏览器使用目标域名和 HTTPS，页面资源文件仍由本机提供。</p>
+<!-- more -->
+<h2 id="快速启动">快速启动<a class="anchor" href="#%e5%bf%ab%e9%80%9f%e5%90%af%e5%8a%a8">#</a></h2>
+<p>下面以 macOS 和 Homebrew 为例，托管当前目录中的静态文件。先进入前端构建产物目录（例如 <code>dist/</code>）或存放 HTML 的目录，再执行命令。服务使用 Python 3.14 及以上版本。</p>
+<p><code>xxx.com</code> 是示例域名，实际使用时，把 hosts 记录、证书命令和访问地址中的域名一起替换。首次使用先完成准备；如果 <code>/etc/hosts</code> 已有这个域名的记录，应将它改为指向 <code>127.0.0.1</code>，避免重复配置。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># 首次准备：安装依赖、信任本地 CA，并将域名解析到本机</span>
+</span></span><span style="display:flex;"><span>brew install mkcert python
+</span></span><span style="display:flex;"><span>mkcert -install
+</span></span><span style="display:flex;"><span>printf <span style="color:#e6db74">&#39;\n127.0.0.1 xxx.com\n&#39;</span> | sudo tee -a /etc/hosts</span></span></code></pre></div><p>然后执行这一组命令：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>mkcert -cert-file /tmp/local-https-cert.pem <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  -key-file /tmp/local-https-key.pem <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  xxx.com
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>sudo <span style="color:#e6db74">&#34;</span><span style="color:#66d9ef">$(</span>brew --prefix<span style="color:#66d9ef">)</span><span style="color:#e6db74">/bin/python3&#34;</span> -m http.server <span style="color:#ae81ff">443</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  --bind 127.0.0.1 <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  --directory <span style="color:#e6db74">&#34;</span>$PWD<span style="color:#e6db74">&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  --tls-cert /tmp/local-https-cert.pem <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  --tls-key /tmp/local-https-key.pem</span></span></code></pre></div><p>在浏览器中打开 <code>https://xxx.com</code>，就能访问当前目录的页面。终端保持运行，按 <code>Ctrl+C</code> 停止服务。后续使用同一个域名时，直接执行第二组命令即可。</p>
+<h2 id="基本思路">基本思路<a class="anchor" href="#%e5%9f%ba%e6%9c%ac%e6%80%9d%e8%b7%af">#</a></h2>
+<p>浏览器访问 <code>https://xxx.com</code> 时，会解析域名、连接 HTTPS 默认端口 <code>443</code>，并检查服务端证书。把这些条件在本机补齐，就能用这个地址访问本地页面：</p>
+<table>
+  <thead>
+      <tr>
+          <th>条件</th>
+          <th>本地做法</th>
+          <th>作用</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>域名指向本机</td>
+          <td>在 hosts 中配置 <code>xxx.com → 127.0.0.1</code></td>
+          <td>让浏览器连接本机</td>
+      </tr>
+      <tr>
+          <td>HTTPS 证书验证通过</td>
+          <td>使用包含 <code>xxx.com</code> 的证书，并让浏览器信任签发它的 CA</td>
+          <td>满足域名匹配和证书信任要求</td>
+      </tr>
+      <tr>
+          <td>本机接收 HTTPS 请求</td>
+          <td>在 <code>127.0.0.1:443</code> 提供 HTTPS 服务</td>
+          <td>直接使用 <code>https://xxx.com</code>，省去地址中的端口号</td>
+      </tr>
+  </tbody>
+</table>
+<p>hosts 改变的是域名对应的连接地址。浏览器地址栏里的域名仍是 <code>xxx.com</code>，页面的 Origin 也仍是 <code>https://xxx.com</code>，因此可以按这个域名调试回调地址、Cookie 和 SDK 校验。</p>
+<p>这种方式模拟的是本机浏览器看到的域名和 HTTPS 环境。页面请求其他域名的 API 时，跨域权限仍由 API 的 CORS 配置决定；hosts 也只影响本机解析，第三方服务器主动回调本机仍需要可达的网络入口。</p>
+<h2 id="验证与排查">验证与排查<a class="anchor" href="#%e9%aa%8c%e8%af%81%e4%b8%8e%e6%8e%92%e6%9f%a5">#</a></h2>
+<p>服务启动后，可以在另一个终端执行：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>curl --verbose https://xxx.com/</span></span></code></pre></div><p>正常情况下可以看到 TLS 证书验证成功、HTTP <code>200</code>，以及页面的 HTML 内容。</p>
+<p>如果想单独验证 HTTPS 服务，排除 hosts 配置或 DNS 缓存的影响，可以显式指定连接地址：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>curl --verbose --resolve xxx.com:443:127.0.0.1 https://xxx.com/</span></span></code></pre></div><p><code>--resolve</code> 只影响这一次 curl 请求的解析结果，TLS 仍按 <code>xxx.com</code> 验证证书，也仍会使用这个域名发送请求。</p>
+<p>如果浏览器仍然使用之前缓存的解析结果，可以刷新 macOS 的 DNS 缓存：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>sudo dscacheutil -flushcache
+</span></span><span style="display:flex;"><span>sudo killall -HUP mDNSResponder</span></span></code></pre></div><table>
+  <thead>
+      <tr>
+          <th>现象</th>
+          <th>检查位置</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>提示不认识 <code>--tls-cert</code> 或 <code>--tls-key</code></td>
+          <td>确认启动服务的解释器版本至少为 3.14，尤其检查 sudo 后调用的 Python 路径</td>
+      </tr>
+      <tr>
+          <td>浏览器提示证书不受信任</td>
+          <td>确认已运行 <code>mkcert -install</code>；重新打开浏览器</td>
+      </tr>
+      <tr>
+          <td>提示证书域名不匹配</td>
+          <td>检查生成证书时的域名和地址栏是否一致；仅为 <code>xxx.com</code> 签发的证书不能用于 <code>https://127.0.0.1</code></td>
+      </tr>
+      <tr>
+          <td>无法连接，或访问到了其他站点</td>
+          <td>检查 hosts 记录、监听地址和端口；用上面的 <code>curl --resolve</code> 命令区分解析问题和服务问题</td>
+      </tr>
+  </tbody>
+</table>
+<h2 id="参考">参考<a class="anchor" href="#%e5%8f%82%e8%80%83">#</a></h2>
+<ul>
+<li><a href="https://github.com/FiloSottile/mkcert">mkcert 官方说明</a></li>
+<li><a href="https://docs.python.org/3.14/library/http.server.html">Python 3.14 http.server 文档</a></li>
+</ul>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "local-https-with-mkcert", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+  <div>
+  
+  </div>
+  <div>
+  
+    <a href="/2026/08/26/python-contextvars-design-and-implementation/" class="flex align-center">
+      <span>Python 的上下文管理</span>
+      <img src="/icons/forward.svg" class="book-icon" alt="Forward" />
+    </a>
+  
+  </div>
+</div>
+ 
+        
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+        
+<div class="flex align-center" style="margin-top: 1rem;">
+  <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+    访问量<span id="busuanzi_value_site_pv"></span>
+  </span>
+  <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+    访客数<span id="busuanzi_value_site_uv"></span>
+  </span>
+</div>
+        
+  
+ 
+        
+  
+  
+    <script>(function(){document.querySelectorAll("pre:has(code)").forEach(e=>{e.addEventListener("click",e.focus),e.addEventListener("copy",function(t){if(t.preventDefault(),navigator.clipboard){const t=window.getSelection().toString()||e.textContent;navigator.clipboard.writeText(t)}})})})()</script>
+  
+
+      </footer>
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+  
+  <aside class="book-toc">
+    <div class="book-toc-content">
+      
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#快速启动">快速启动</a></li>
+    <li><a href="#基本思路">基本思路</a></li>
+    <li><a href="#验证与排查">验证与排查</a></li>
+    <li><a href="#参考">参考</a></li>
+  </ul>
+</nav>
+
+
+
+    </div>
+  </aside>
+  
+ 
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

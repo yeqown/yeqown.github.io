@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="en-US" dir="ltr">
+<head>
+  <!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="解释 Redis Sentinel 的职责边界、节点监控与分布式故障转移，并提供本地实验和生产排障方法。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#2e3440">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2026/08/03/redis%E5%93%A8%E5%85%B5%E6%9C%BA%E5%88%B6/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="Redis Sentinel：故障检测、自动切主与参数调优">
+  <meta property="og:description" content="解释 Redis Sentinel 的职责边界、节点监控与分布式故障转移，并提供本地实验和生产排障方法。">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2026-08-03T00:00:00+08:00">
+    <meta property="article:modified_time" content="2026-08-03T00:00:00+08:00">
+    <meta property="article:tag" content="Redis">
+    <meta property="article:tag" content="Sentinel">
+    <meta property="article:tag" content="高可用">
+    <meta property="article:tag" content="故障转移">
+
+
+  <meta itemprop="name" content="Redis Sentinel：故障检测、自动切主与参数调优">
+  <meta itemprop="description" content="解释 Redis Sentinel 的职责边界、节点监控与分布式故障转移，并提供本地实验和生产排障方法。">
+  <meta itemprop="datePublished" content="2026-08-03T00:00:00+08:00">
+  <meta itemprop="dateModified" content="2026-08-03T00:00:00+08:00">
+  <meta itemprop="wordCount" content="3534">
+  <meta itemprop="keywords" content="Redis,Sentinel,高可用,故障转移">
+
+<title>Redis Sentinel：故障检测、自动切主与参数调优 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2026/08/03/redis%E5%93%A8%E5%85%B5%E6%9C%BA%E5%88%B6/">
+<link rel="stylesheet" href="/book.min.c40223b1e1a5ffa9f6a0fe48797821424561eff06762ee5c75071bda9d009477.css" integrity="sha256-xAIjseGl/6n2oP5IeXghQkVh7/BnYu5cdQcb2p0AlHc=" crossorigin="anonymous">
+
+
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.99ce27de54629b271c4277001097f0e183ca5eaedb015e65542b29ce1c90db30.js" integrity="sha256-mc4n3lRimyccQncAEJfw4YPKXq7bAV5lVCspzhyQ2zA=" crossorigin="anonymous"></script>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade">
+  
+</head>
+<body dir="ltr" class="book-kind-page book-type-posts">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    
+<aside class="book-menu">
+  <div class="book-menu-content">
+    
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input id="book-search-input" type="text" 
+    placeholder="Search"
+    aria-label="Search"
+    maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+<ul><li><a href="/categories">Categories</a></li><li><a href="/tags">Tags</a></li></ul>
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">
+      About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+
+  </div>
+</aside>
+ 
+
+    <div class="book-page">
+      <header class="book-header hidden">
+        
+<div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/icons/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>Redis Sentinel：故障检测、自动切主与参数调优</h3>
+
+  <label for="toc-control">
+    
+    <img src="/icons/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-sentinel-解决什么问题">1. Sentinel 解决什么问题</a></li>
+    <li><a href="#2-sentinel-原理监控选主与拓扑收敛">2. Sentinel 原理：监控、选主与拓扑收敛</a>
+      <ul>
+        <li><a href="#21-监控建立视图并判断故障">2.1 监控：建立视图并判断故障</a></li>
+        <li><a href="#22-选主先选执行者再选新-master">2.2 选主：先选执行者，再选新 Master</a></li>
+        <li><a href="#23-设置拓扑晋升重配与配置传播">2.3 设置拓扑：晋升、重配与配置传播</a></li>
+      </ul>
+    </li>
+    <li><a href="#3-sentinel-是什么实例发现与协作">3. Sentinel 是什么：实例发现与协作</a></li>
+    <li><a href="#4-实验观察-sentinel-的行为">4. 实验：观察 Sentinel 的行为</a>
+      <ul>
+        <li><a href="#41-观察节点发现与周期监控">4.1 观察节点发现与周期监控</a></li>
+        <li><a href="#42-记录一次自动故障转移">4.2 记录一次自动故障转移</a></li>
+        <li><a href="#43-观察恢复中-replica-的-sentinel-状态">4.3 观察恢复中 Replica 的 Sentinel 状态</a></li>
+        <li><a href="#44-执行一次计划内故障转移">4.4 执行一次计划内故障转移</a></li>
+      </ul>
+    </li>
+    <li><a href="#5-影响-sentinel-行为的参数">5. 影响 Sentinel 行为的参数</a></li>
+    <li><a href="#6-总结">6. 总结</a></li>
+    <li><a href="#参考资料">参考资料</a></li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h1>
+    Redis Sentinel：故障检测、自动切主与参数调优
+  </h1>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/icons/calendar.svg" class="book-icon" alt="Calendar" />
+    <span>August 3, 2026</span>
+    
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Database/">Database</a>, 
+      <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F/">分布式</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Redis/">Redis</a>, 
+      <a href="/tags/Sentinel/">Sentinel</a>, 
+      <a href="/tags/%E9%AB%98%E5%8F%AF%E7%94%A8/">高可用</a>, 
+      <a href="/tags/%E6%95%85%E9%9A%9C%E8%BD%AC%E7%A7%BB/">故障转移</a>
+  </div>
+  
+
+
+  <div class="book-post-content markdown-inner"><p>一个 Redis Master 宕机，两个 Replica 却都还健康。数据明明有副本，服务却不会自己恢复：Replica 不会主动接管，客户端也不会凭空找到新的写入地址。主从复制的工作到这里已经结束，Sentinel 要处理的，正是故障发生后的这段空白。</p>
+<figure>
+  <img
+    src="/images/redis-sentinel/no-sentinel-master-failure.svg"
+    alt="没有部署 Sentinel 时，客户端对已宕机 Master 的 GET、SET 和 INCR 请求均不可达；Master 到 Replica A、Replica B 的复制连接已断开，但两个 Replica 仍然存活且没有被晋升"
+    style="display: block; width: 100%; height: auto;"
+  />
+</figure>
+<p>要看懂 Sentinel，可以跟着一次完整的故障转移往下走：多个 Sentinel 如何交换判断并授权其中一个执行切换，新 Master 怎样被选出，整个复制组又如何接受新拓扑。本文先划清职责边界，再沿这条路径拆解原理；第三节转向 Sentinel 本身，说明这些独立进程如何发现同伴并协调行动。随后用本地三 Redis、三 Sentinel 环境观察关键状态，最后落到参数取舍和生产排障。</p>
+<p>如果还不熟悉主从复制，可以先读<a href="/2020/03/29/redis%e4%b8%bb%e4%bb%8e%e5%a4%8d%e5%88%b6/">《Redis 主从复制》</a>。本文的机制说明基于 Redis 8.10.0 和源码 commit <code>5279a8d44818a5ca51e9abb91a9b8ce481d3c88b</code>；实验结果均按实际操作记录，避免把依赖运行环境的现象写成定论。</p>
+<h2 id="1-sentinel-解决什么问题">1. Sentinel 解决什么问题<a class="anchor" href="#1-sentinel-%e8%a7%a3%e5%86%b3%e4%bb%80%e4%b9%88%e9%97%ae%e9%a2%98">#</a></h2>
+<p>主从复制负责把 Master 的数据变化传给 Replicas。它解决的是“故障后有没有副本”，没有回答以下问题：</p>
+<ul>
+<li>谁判断 Master 已经不可用；</li>
+<li>哪个 Replica 应该接管；</li>
+<li>谁修改其余 Replicas 的上游；</li>
+<li>客户端到哪里查询新的写入地址。</li>
+</ul>
+<p>如果这些动作依赖人工处理，服务恢复时间就取决于告警、判断和操作速度。Sentinel 把这条控制链自动化，但不改变 Redis 异步复制的性质。</p>
+<p>这条控制链决定了 Sentinel 的职责范围。Sentinel 是独立于 Redis 数据节点的控制面：一个 Sentinel 进程可以监控多个 Master 复制组，同一个复制组通常由多个 Sentinel 共同管理。</p>
+<table>
+  <thead>
+      <tr>
+          <th>职责</th>
+          <th>Sentinel 做什么</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>监控</td>
+          <td>周期性检查 Master、Replicas 和其他 Sentinels 是否可达</td>
+      </tr>
+      <tr>
+          <td>通知</td>
+          <td>通过事件、日志或通知脚本报告实例状态变化</td>
+      </tr>
+      <tr>
+          <td>自动故障转移</td>
+          <td>在满足故障判断和授权条件后选择 Replica、完成晋升并重配拓扑</td>
+      </tr>
+      <tr>
+          <td>配置发现</td>
+          <td>向客户端返回当前 Master 地址，并报告已知 Replicas</td>
+      </tr>
+  </tbody>
+</table>
+<p>Sentinel 不在 Redis 命令的数据路径上。客户端先向 Sentinel 查询地址，随后直接连接 Redis；Sentinel 不转发读写请求，也不接管已有连接。</p>
+<p>明确职责后，还要看它没有接手哪些工作：</p>
+<table>
+  <thead>
+      <tr>
+          <th>问题</th>
+          <th>Sentinel 是否解决</th>
+          <th>实际边界</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>强一致或零写入丢失</td>
+          <td>否</td>
+          <td>Redis 仍是异步复制，已确认但尚未复制的写入可能丢失</td>
+      </tr>
+      <tr>
+          <td>透明代理与连接迁移</td>
+          <td>否</td>
+          <td>客户端必须实现发现、地址缓存失效和重连</td>
+      </tr>
+      <tr>
+          <td>Replica 读流量准入</td>
+          <td>否</td>
+          <td>Sentinel 能报告节点，业务仍要检查同步、延迟和健康状态</td>
+      </tr>
+      <tr>
+          <td>数据分片与水平扩容</td>
+          <td>否</td>
+          <td>Sentinel 管理的是 Master-Replica 复制组，不是 Redis Cluster 槽位</td>
+      </tr>
+      <tr>
+          <td>跨地域容灾</td>
+          <td>否</td>
+          <td>故障域、延迟、数据恢复目标和流量调度需要单独设计</td>
+      </tr>
+  </tbody>
+</table>
+<p>Sentinel 的目标是缩短故障发现和拓扑恢复过程。它不会把异步复制变成共识协议，也不能替客户端决定何时恢复业务流量。第 5 节再讨论如何收窄这些风险。</p>
+<p>这些职责和边界对应到 Redis 架构中，就是下面的部署关系：</p>
+<figure>
+  <img
+    src="/images/redis-sentinel/sentinel-deployment-architecture.svg"
+    alt="应用客户端先向三个 Sentinel 查询当前 Master 地址，再直接访问 Redis；Sentinel 持续监控一个 Master 和两个 Replicas，Redis 数据只在数据节点之间复制"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>Redis Sentinel 部署中的控制路径与数据路径</figcaption>
+</figure>
+<p>图里有两条不同的路径。数据路径是客户端与 Redis 之间的命令，以及 Master 到 Replicas 的复制流；控制路径是 Sentinel 对节点的监控、Sentinels 之间的信息交换，以及客户端向 Sentinel 发起的地址查询。即使 Sentinel 短时不可用，已经拿到地址的客户端仍可能继续访问 Redis；但它无法在下一次切换时重新发现地址。</p>
+<p>三个 Sentinel 的意义不只是多启动两个进程。故障判断需要多个观察者交换意见，故障转移还需要多数派授权。它们若全部位于同一宿主机或同一故障域，进程数并不能抵御该故障域整体失效。</p>
+<h2 id="2-sentinel-原理监控选主与拓扑收敛">2. Sentinel 原理：监控、选主与拓扑收敛<a class="anchor" href="#2-sentinel-%e5%8e%9f%e7%90%86%e7%9b%91%e6%8e%a7%e9%80%89%e4%b8%bb%e4%b8%8e%e6%8b%93%e6%89%91%e6%94%b6%e6%95%9b">#</a></h2>
+<p>Sentinel 的工作主线只有三步：持续监控 Redis 复制组，故障成立后选出新 Master，再把其他节点和客户端引向新拓扑。下图先给出完整过程，后面再分别说明监控、选主和拓扑收敛。</p>
+<figure>
+  <img
+    src="/images/redis-sentinel/sentinel-failover-flow.svg"
+    alt="Sentinel 从持续监控开始，依次完成 SDOWN、ODOWN、领导者授权、Replica 选择、晋升、其余 Replica 重配和新配置传播"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>Sentinel 自动故障转移的判断、授权与拓扑重配</figcaption>
+</figure>
+<p>本文实验环境用下面四项配置控制这条流程：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>sentinel monitor mymaster redis-1 6379 2
+</span></span><span style="display:flex;"><span>sentinel down-after-milliseconds mymaster 5000
+</span></span><span style="display:flex;"><span>sentinel parallel-syncs mymaster 1
+</span></span><span style="display:flex;"><span>sentinel failover-timeout mymaster 30000</span></span></code></pre></div><p><code>mymaster</code> 是监控组名称，<code>redis-1 6379</code> 是初始 Master 地址，末尾的 <code>2</code> 是形成 ODOWN 所需的 quorum。<code>down-after-milliseconds</code> 控制故障判断，另外两个参数用于拓扑切换。配置里不需要逐个列出 Replicas 和其他 Sentinels，它们的发现过程放到第 3 节说明。</p>
+<h3 id="21-监控建立视图并判断故障">2.1 监控：建立视图并判断故障<a class="anchor" href="#21-%e7%9b%91%e6%8e%a7%e5%bb%ba%e7%ab%8b%e8%a7%86%e5%9b%be%e5%b9%b6%e5%88%a4%e6%96%ad%e6%95%85%e9%9a%9c">#</a></h3>
+<p>Sentinel 通常每 10 秒读取 Master 和 Replicas 的 <code>INFO</code>。它从 Master 的复制信息中发现 Replicas，再继续采集这些节点的角色、上游、复制偏移量和优先级。每个 Sentinel 据此维护自己的监控视图，而不是读取一份由所有 Sentinel 共享的内存状态。</p>
+<p>完成发现后，Sentinel 通常每秒向已知 Redis 节点和 peer Sentinels 发送 <code>PING</code>。一个节点在 <code>down-after-milliseconds</code> 内持续没有可接受响应时，当前 Sentinel 将其标记为 SDOWN；对于 Master，它还会通过 <code>SENTINEL is-master-down-by-addr</code> 收集其他 Sentinels 的判断，达到 quorum 后形成 ODOWN。</p>
+<blockquote class='book-hint '>
+<p>quorum 控制的是故障判定：至少多少个 Sentinel 同意 Master 下线，才能把它从 SDOWN 推进到 ODOWN。这个值由 <code>sentinel monitor</code> 配置，不会随 Sentinel 数量自动计算。</p>
+</blockquote><table>
+  <thead>
+      <tr>
+          <th>状态</th>
+          <th>判断范围</th>
+          <th>条件</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>SDOWN</td>
+          <td>单个 Sentinel 的本地判断</td>
+          <td>节点持续没有及时回应</td>
+      </tr>
+      <tr>
+          <td>ODOWN</td>
+          <td>仅针对 Master 的故障结论</td>
+          <td>至少 quorum 个 Sentinel 报告 Master 下线</td>
+      </tr>
+  </tbody>
+</table>
+<p>SDOWN 和 ODOWN 都不会直接改变 Redis 角色。<code>down-after-milliseconds</code> 越小，检测越快，但短时丢包、宿主机暂停和 Redis 主线程阻塞也越容易触发误判。</p>
+<h3 id="22-选主先选执行者再选新-master">2.2 选主：先选执行者，再选新 Master<a class="anchor" href="#22-%e9%80%89%e4%b8%bb%e5%85%88%e9%80%89%e6%89%a7%e8%a1%8c%e8%80%85%e5%86%8d%e9%80%89%e6%96%b0-master">#</a></h3>
+<p>Sentinel 的“选主”有两层。Master 进入 ODOWN 后，Sentinels 先按故障转移纪元投票，选出负责本轮切换的 Sentinel。在自动故障转移中，候选者的得票数必须同时达到已知 Sentinel 的绝对多数和配置的 quorum，也就是 <code>max(floor(N / 2) + 1, quorum)</code>。<code>N</code> 是当前 Master 视图中已知的 Sentinel 总数，包含自身；每个 Sentinel 在同一纪元只投一票。</p>
+<p>多数派避免网络分区中的 Sentinel 少数派自行发起切换。quorum 主要控制 ODOWN 的敏感程度，但当它高于多数派时，也会抬高执行者的授权门槛。</p>
+<blockquote class='book-hint '>
+<p>三个 Sentinel、quorum 为 <code>1</code> 或 <code>2</code> 时，授权都至少需要 <code>2</code> 票。五个 Sentinel、quorum 为 <code>2</code> 时需要 <code>3</code> 票；quorum 为 <code>4</code> 时则需要 <code>4</code> 票。</p>
+</blockquote><p>这里讨论的是自动故障转移。手动执行 <code>SENTINEL FAILOVER</code> 属于强制切换，不需要其他 Sentinels 授权。</p>
+<p>执行者确定后，再由 <code>sentinelSelectSlave()</code> 从 Replicas 中选择新的 Redis Master。下面的过滤和排序规则以 Redis 8.10.0 的 <code>src/sentinel.c</code> 为准。</p>
+<h4 id="第一环节排除不合格的-replica">第一环节：排除不合格的 Replica<a class="anchor" href="#%e7%ac%ac%e4%b8%80%e7%8e%af%e8%8a%82%e6%8e%92%e9%99%a4%e4%b8%8d%e5%90%88%e6%a0%bc%e7%9a%84-replica">#</a></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">/* 摘自 src/sentinel.c:5105 附近，省略无关代码；中文注释为本文补充。 */</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">mstime_t</span> master_down_time <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> (master<span style="color:#f92672">-&gt;</span>flags <span style="color:#f92672">&amp;</span> SRI_S_DOWN)
+</span></span><span style="display:flex;"><span>    master_down_time <span style="color:#f92672">=</span> <span style="color:#a6e22e">mstime</span>() <span style="color:#f92672">-</span> master<span style="color:#f92672">-&gt;</span>s_down_since_time;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">/* Replica 最长可断连时间：
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * Master 已处于 SDOWN 的时长 + 10 * down-after-milliseconds。 */</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">mstime_t</span> max_master_down_time <span style="color:#f92672">=</span>
+</span></span><span style="display:flex;"><span>    master_down_time <span style="color:#f92672">+</span> master<span style="color:#f92672">-&gt;</span>down_after_period <span style="color:#f92672">*</span> <span style="color:#ae81ff">10</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> (slave<span style="color:#f92672">-&gt;</span>flags <span style="color:#f92672">&amp;</span> (SRI_S_DOWN<span style="color:#f92672">|</span>SRI_O_DOWN)) <span style="color:#66d9ef">continue</span>; <span style="color:#75715e">/* 已被判定下线 */</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> (slave<span style="color:#f92672">-&gt;</span>link<span style="color:#f92672">-&gt;</span>disconnected) <span style="color:#66d9ef">continue</span>;              <span style="color:#75715e">/* Sentinel 连接已断开 */</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> (<span style="color:#a6e22e">mstime</span>() <span style="color:#f92672">-</span> slave<span style="color:#f92672">-&gt;</span>link<span style="color:#f92672">-&gt;</span>last_avail_time <span style="color:#f92672">&gt;</span>
+</span></span><span style="display:flex;"><span>    sentinel_ping_period <span style="color:#f92672">*</span> <span style="color:#ae81ff">5</span>) <span style="color:#66d9ef">continue</span>;                <span style="color:#75715e">/* 默认约 5 秒不可用 */</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> (slave<span style="color:#f92672">-&gt;</span>slave_priority <span style="color:#f92672">==</span> <span style="color:#ae81ff">0</span>) <span style="color:#66d9ef">continue</span>;              <span style="color:#75715e">/* 明确禁止晋升 */</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">/* Master 已进入 SDOWN 时，只接受默认 5 秒内的 INFO；
+</span></span></span><span style="display:flex;"><span><span style="color:#75715e"> * 其他情况下接受默认 30 秒内的 INFO。 */</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> (master<span style="color:#f92672">-&gt;</span>flags <span style="color:#f92672">&amp;</span> SRI_S_DOWN)
+</span></span><span style="display:flex;"><span>    info_validity_time <span style="color:#f92672">=</span> sentinel_ping_period <span style="color:#f92672">*</span> <span style="color:#ae81ff">5</span>;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">else</span>
+</span></span><span style="display:flex;"><span>    info_validity_time <span style="color:#f92672">=</span> sentinel_info_period <span style="color:#f92672">*</span> <span style="color:#ae81ff">3</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> (<span style="color:#a6e22e">mstime</span>() <span style="color:#f92672">-</span> slave<span style="color:#f92672">-&gt;</span>info_refresh <span style="color:#f92672">&gt;</span> info_validity_time) <span style="color:#66d9ef">continue</span>;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> (slave<span style="color:#f92672">-&gt;</span>master_link_down_time <span style="color:#f92672">&gt;</span> max_master_down_time) <span style="color:#66d9ef">continue</span>;</span></span></code></pre></div><p>Master 进入 SDOWN 后，Sentinel 会把 <code>INFO</code> 有效期从默认约 30 秒收紧到约 5 秒。最后一个条件则给 Replica 留出与故障持续时间相关的断连余量，而不是使用固定阈值。</p>
+<p>过滤条件中没有 <code>loading</code>。Sentinel 也不会把 <code>INFO</code> 中的 loading 状态解析为候选字段，因此正在 loading 的 Replica 仍可能进入排序并被选中。业务侧不能据此判断节点已经完成加载。</p>
+<h4 id="第二环节对剩余-replica-排序">第二环节：对剩余 Replica 排序<a class="anchor" href="#%e7%ac%ac%e4%ba%8c%e7%8e%af%e8%8a%82%e5%af%b9%e5%89%a9%e4%bd%99-replica-%e6%8e%92%e5%ba%8f">#</a></h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">/* 摘自 src/sentinel.c:5077 附近；返回值越小，排序越靠前。 */</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> ((<span style="color:#f92672">*</span>sa)<span style="color:#f92672">-&gt;</span>slave_priority <span style="color:#f92672">!=</span> (<span style="color:#f92672">*</span>sb)<span style="color:#f92672">-&gt;</span>slave_priority)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> (<span style="color:#f92672">*</span>sa)<span style="color:#f92672">-&gt;</span>slave_priority <span style="color:#f92672">-</span> (<span style="color:#f92672">*</span>sb)<span style="color:#f92672">-&gt;</span>slave_priority; <span style="color:#75715e">/* priority 小者优先 */</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> ((<span style="color:#f92672">*</span>sa)<span style="color:#f92672">-&gt;</span>slave_repl_offset <span style="color:#f92672">&gt;</span> (<span style="color:#f92672">*</span>sb)<span style="color:#f92672">-&gt;</span>slave_repl_offset)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>; <span style="color:#75715e">/* offset 大者优先 */</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">else</span> <span style="color:#a6e22e">if</span> ((<span style="color:#f92672">*</span>sa)<span style="color:#f92672">-&gt;</span>slave_repl_offset <span style="color:#f92672">&lt;</span> (<span style="color:#f92672">*</span>sb)<span style="color:#f92672">-&gt;</span>slave_repl_offset)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">/* priority 和 offset 都相同时，没有 run ID 的节点排在最后。 */</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> (sa_runid <span style="color:#f92672">==</span> NULL <span style="color:#f92672">&amp;&amp;</span> sb_runid <span style="color:#f92672">==</span> NULL) <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">0</span>;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">else</span> <span style="color:#a6e22e">if</span> (sa_runid <span style="color:#f92672">==</span> NULL) <span style="color:#66d9ef">return</span> <span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">else</span> <span style="color:#a6e22e">if</span> (sb_runid <span style="color:#f92672">==</span> NULL) <span style="color:#66d9ef">return</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>;
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">return</span> <span style="color:#a6e22e">strcasecmp</span>(sa_runid, sb_runid); <span style="color:#75715e">/* run ID 字典序小者优先 */</span></span></span></code></pre></div><p>只有通过第一环节的 Replicas 才会参与排序。比较顺序是 priority、复制偏移量、run ID；priority 代表运维意图，所以它排在复制进度之前。这套规则不能消除异步复制的数据缺口，也不保证故障转移零丢失。</p>
+<h3 id="23-设置拓扑晋升重配与配置传播">2.3 设置拓扑：晋升、重配与配置传播<a class="anchor" href="#23-%e8%ae%be%e7%bd%ae%e6%8b%93%e6%89%91%e6%99%8b%e5%8d%87%e9%87%8d%e9%85%8d%e4%b8%8e%e9%85%8d%e7%bd%ae%e4%bc%a0%e6%92%ad">#</a></h3>
+<p>在自动故障转移中，Sentinels 投票选出的是本轮故障转移的执行者，不是新 Master。图中 S1 获得授权后，按 2.2 节的规则选出 Replica A。<code>SLAVEOF</code> 是 Redis 8.10 Sentinel 源码沿用的历史命令名，语义等同于 <code>REPLICAOF</code>；图中带加号的标签均为各进程独立产生的本地事件。</p>
+<figure>
+  <img
+    src="/images/redis-sentinel/sentinel-failover-sequence.svg"
+    alt="三个 Sentinel 独立健康检查旧 Master 并选出故障转移执行者；S1 选择 Replica A，等待 INFO 确认其成为 Master，用带配置纪元的 HELLO 同步新地址，重配 Replica B；客户端重新查询地址并通过 ROLE 校验角色"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>箭头表示命令或配置，带加号的色块表示各进程独立产生的本地事件</figcaption>
+</figure>
+<p>Redis 8.10.0 的 HELLO 是由逗号分隔的八个字段：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>sentinel_ip,sentinel_port,sentinel_runid,current_epoch,
+</span></span><span style="display:flex;"><span>master_name,master_ip,master_port,master_config_epoch</span></span></code></pre></div><p>前四个字段标识发送者及其当前纪元，后四个字段描述被监控的 Master 配置。确认 Replica A 晋升后，S1 用它的地址和本轮故障转移纪元构造 HELLO。</p>
+<p>HELLO 有两条周期传播路径：</p>
+<ul>
+<li><strong>Redis 数据节点 Pub/Sub</strong>：通过 Master 或 Replica 的 <code>__sentinel__:hello</code> 频道广播配置，同时发现未知的 peer Sentinel。</li>
+<li><strong>已知 peer 直连</strong>：通过 Sentinel 实现的 fake <code>PUBLISH</code> 点对点刷新配置；它不会真正广播，也不能发现未知 peer。</li>
+</ul>
+<p>两条路径并行工作，不是互斥的主备链路。就传播时机而言，晋升确认只是把下一轮 HELLO 提前。</p>
+<p>接收方分开处理 HELLO 中的两个纪元：较大的 <code>current_epoch</code> 会推进当前纪元，但只有严格更大的 <code>master_config_epoch</code> 才会覆盖本地 Master 配置。地址变化时产生的 <code>+config-update-from</code> 和 <code>+switch-master</code> 是本地事件，不是配置传播消息。</p>
+<p>S1 进入 <code>RECONF_SLAVES</code> 后，<code>sentinelGetCurrentMasterAddress()</code> 已会返回 Replica A，但其内部 Master 条目要到重配阶段收尾才替换。因此，各 Sentinel 可能在短时间内返回不同地址。<code>parallel-syncs</code> 只限制重配并发数；该阶段可因 <code>failover-timeout</code> 收尾，单个 Replica 也可能因内部 <code>slave-reconf-timeout</code> 被按完成处理，所以故障转移完成不代表所有 Replica 都已跟随新 Master。</p>
+<p><code>+switch-master</code> 不是全局收敛信号。客户端应使旧地址缓存失效，按图中流程重新查询并用 <code>ROLE</code> 校验。旧 Master 恢复后，Sentinel 会尝试把它重配为当前 Master 的 Replica，不会自动 failback。</p>
+<h2 id="3-sentinel-是什么实例发现与协作">3. Sentinel 是什么：实例发现与协作<a class="anchor" href="#3-sentinel-%e6%98%af%e4%bb%80%e4%b9%88%e5%ae%9e%e4%be%8b%e5%8f%91%e7%8e%b0%e4%b8%8e%e5%8d%8f%e4%bd%9c">#</a></h2>
+<p>Sentinel 是以 Sentinel 模式运行的独立 <code>redis-server</code> 进程，默认监听 26379，不保存业务数据。一个进程可以监控多个 Master 复制组；每个实例有自己的 <code>myid</code>、连接和本地视图。多个实例常被叫作“Sentinel 集群”，但它们之间没有固定 Master，也没有需要预先登记的成员列表。</p>
+<p><code>sentinel monitor mymaster redis-1 6379 2</code> 只是发现入口：它给出组名、初始 Master 地址和 quorum。Sentinel 连接 Master，通过 <code>INFO</code> 找到 Replicas；随后在每个已知 Redis 节点上发布并订阅 <code>__sentinel__:hello</code>。hello 携带发送者身份、纪元和 Master 配置，收到陌生 <code>runid</code> 后，Sentinel 才把对方加入这个复制组的 peer 视图。</p>
+<figure>
+  <img
+    src="/images/redis-sentinel/sentinel-discovery-coordination.svg"
+    alt="左侧三个 Sentinel 通过每个已知 Redis 节点上的 hello 频道发现同伴，并通过 INFO 从初始 Master 发现 Replicas；右侧三个 peer Sentinel 直连交换 PING、下线报告、投票和纪元，S2 仅作为本轮故障转移的临时执行者，Sentinel 集合没有固定 Master"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>Sentinel 的 peer 发现与直连协调</figcaption>
+</figure>
+<p>Pub/Sub 用于发现 peer 和传播 Master 配置。peer 已知后，周期 <code>PING</code>、<code>SENTINEL is-master-down-by-addr</code>、下线报告和选举投票都走 Sentinel 间直连。每个实例独立保存当前纪元、Master 配置纪元和本轮投票；多数派授权的是一次 failover 的执行者，不是长期存在的 Sentinel Master。</p>
+<p>自动发现也有边界。hello 通告的地址必须能被其他 Sentinels 访问，NAT 或端口映射环境要设置 <code>sentinel announce-ip</code> 和 <code>sentinel announce-port</code>；启用 ACL 后，peer 直连使用 <code>sentinel sentinel-user</code> 和 <code>sentinel sentinel-pass</code>。Sentinel 不会因为 peer 长期失联就自动忘记它，永久移除实例时要先停止目标进程，再在其余 Sentinels 上间隔至少 30 秒执行 <code>SENTINEL RESET &lt;master-name&gt;</code>，最后检查成员数与 <code>CKQUORUM</code>。</p>
+<h2 id="4-实验观察-sentinel-的行为">4. 实验：观察 Sentinel 的行为<a class="anchor" href="#4-%e5%ae%9e%e9%aa%8c%e8%a7%82%e5%af%9f-sentinel-%e7%9a%84%e8%a1%8c%e4%b8%ba">#</a></h2>
+<blockquote class='book-hint '>
+<p>本章命令中的 <code>pc</code> 是下面这个 Podman Compose 包装函数：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>pc<span style="color:#f92672">()</span> <span style="color:#f92672">{</span>
+</span></span><span style="display:flex;"><span>  PODMAN_COMPOSE_WARNING_LOGS<span style="color:#f92672">=</span>false podman compose <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>    -p redis-sentinel-lab -f compose.yaml <span style="color:#e6db74">&#34;</span>$@<span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">}</span></span></span></code></pre></div></blockquote><figure>
+  <img
+    src="/images/redis-sentinel/sentinel-lab-architecture.svg"
+    alt="三个 Sentinel 组成控制层并共同监控 mymaster，向 Redis 数据层执行周期 PING、INFO 和 hello 发布，在故障时控制 Master 与两个 Replicas 的角色切换；图中同时标注 quorum、检测超时、故障转移超时、复制 backlog 和 diskless sync delay"
+    style="display: block; width: 100%; height: auto;"
+  />
+</figure>
+<p>以下结果实测于 2026-08-04，环境为 Podman 5.5.2、podman-compose 1.5.0 和 Redis 8.10.0。每组实验都先执行 <code>./run.sh start</code>，删除上一组实验的容器和数据卷，恢复为 <code>redis-1</code> 主、<code>redis-2</code> 和 <code>redis-3</code> 从的固定拓扑。</p>
+<h3 id="41-观察节点发现与周期监控">4.1 观察节点发现与周期监控<a class="anchor" href="#41-%e8%a7%82%e5%af%9f%e8%8a%82%e7%82%b9%e5%8f%91%e7%8e%b0%e4%b8%8e%e5%91%a8%e6%9c%9f%e7%9b%91%e6%8e%a7">#</a></h3>
+<p>本实验要验证两件事：三个 Sentinel 是否发现了同一个 Master、两个 Replicas 和彼此两个 peers，并且 quorum 与故障转移授权条件均可达；Sentinel 是否会通过周期性的 <code>PING</code>、<code>INFO</code> 和 <code>__sentinel__:hello</code> 发布持续维护这份拓扑视图。</p>
+<p>执行命令：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#66d9ef">for</span> sentinel in sentinel-1 sentinel-2 sentinel-3; <span style="color:#66d9ef">do</span>
+</span></span><span style="display:flex;"><span>  printf <span style="color:#e6db74">&#39;\n# %s\n&#39;</span> <span style="color:#e6db74">&#34;</span>$sentinel<span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>  printf <span style="color:#e6db74">&#39;myid=&#39;</span>
+</span></span><span style="display:flex;"><span>  pc exec -T <span style="color:#e6db74">&#34;</span>$sentinel<span style="color:#e6db74">&#34;</span> redis-cli --raw -p <span style="color:#ae81ff">26379</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>    SENTINEL myid
+</span></span><span style="display:flex;"><span>  printf <span style="color:#e6db74">&#39;master=&#39;</span>
+</span></span><span style="display:flex;"><span>  pc exec -T <span style="color:#e6db74">&#34;</span>$sentinel<span style="color:#e6db74">&#34;</span> redis-cli --raw -p <span style="color:#ae81ff">26379</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>    SENTINEL get-master-addr-by-name mymaster | paste -sd <span style="color:#e6db74">&#39;:&#39;</span> -
+</span></span><span style="display:flex;"><span>  printf <span style="color:#e6db74">&#39;ckquorum=&#39;</span>
+</span></span><span style="display:flex;"><span>  pc exec -T <span style="color:#e6db74">&#34;</span>$sentinel<span style="color:#e6db74">&#34;</span> redis-cli --raw -p <span style="color:#ae81ff">26379</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>    SENTINEL ckquorum mymaster
+</span></span><span style="display:flex;"><span>  pc exec -T <span style="color:#e6db74">&#34;</span>$sentinel<span style="color:#e6db74">&#34;</span> redis-cli --raw -p <span style="color:#ae81ff">26379</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>    SENTINEL replicas mymaster | tr -d <span style="color:#e6db74">&#39;\r&#39;</span> | <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>    awk <span style="color:#e6db74">&#39;$0 == &#34;name&#34; { replicas++ } END { print &#34;replicas=&#34; replicas + 0 }&#39;</span>
+</span></span><span style="display:flex;"><span>  pc exec -T <span style="color:#e6db74">&#34;</span>$sentinel<span style="color:#e6db74">&#34;</span> redis-cli --raw -p <span style="color:#ae81ff">26379</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>    SENTINEL sentinels mymaster | tr -d <span style="color:#e6db74">&#39;\r&#39;</span> | <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>    awk <span style="color:#e6db74">&#39;$0 == &#34;name&#34; { peers++ } END { print &#34;peer-sentinels=&#34; peers + 0 }&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">done</span></span></span></code></pre></div><details ><summary>节点发现结果</summary><div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># sentinel-1</span>
+</span></span><span style="display:flex;"><span>myid<span style="color:#f92672">=</span>8fdda9f1f59b9679c4bc23846628f8d1ae384df8
+</span></span><span style="display:flex;"><span>master<span style="color:#f92672">=</span>redis-1:6379
+</span></span><span style="display:flex;"><span>ckquorum<span style="color:#f92672">=</span>OK <span style="color:#ae81ff">3</span> usable Sentinels. Quorum and failover authorization can be reached
+</span></span><span style="display:flex;"><span>replicas<span style="color:#f92672">=</span><span style="color:#ae81ff">2</span>
+</span></span><span style="display:flex;"><span>peer-sentinels<span style="color:#f92672">=</span><span style="color:#ae81ff">2</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># sentinel-2</span>
+</span></span><span style="display:flex;"><span>myid<span style="color:#f92672">=</span>cab4401ab1d00db3db2ccd0adcfcd5eecaadad0c
+</span></span><span style="display:flex;"><span>master<span style="color:#f92672">=</span>redis-1:6379
+</span></span><span style="display:flex;"><span>ckquorum<span style="color:#f92672">=</span>OK <span style="color:#ae81ff">3</span> usable Sentinels. Quorum and failover authorization can be reached
+</span></span><span style="display:flex;"><span>replicas<span style="color:#f92672">=</span><span style="color:#ae81ff">2</span>
+</span></span><span style="display:flex;"><span>peer-sentinels<span style="color:#f92672">=</span><span style="color:#ae81ff">2</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># sentinel-3</span>
+</span></span><span style="display:flex;"><span>myid<span style="color:#f92672">=</span>22215985d8e613ab86d7ebee587babee40d0f171
+</span></span><span style="display:flex;"><span>master<span style="color:#f92672">=</span>redis-1:6379
+</span></span><span style="display:flex;"><span>ckquorum<span style="color:#f92672">=</span>OK <span style="color:#ae81ff">3</span> usable Sentinels. Quorum and failover authorization can be reached
+</span></span><span style="display:flex;"><span>replicas<span style="color:#f92672">=</span><span style="color:#ae81ff">2</span>
+</span></span><span style="display:flex;"><span>peer-sentinels<span style="color:#f92672">=</span><span style="color:#ae81ff">2</span></span></span></code></pre></div></div></details>
+<p>执行命令：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>pc exec -T sentinel-1 redis-cli --raw -p <span style="color:#ae81ff">26379</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  SENTINEL sentinels mymaster | tr -d <span style="color:#e6db74">&#39;\r&#39;</span> | <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  awk <span style="color:#e6db74">&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    $0 == &#34;name&#34; {
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">      peer++
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">      if (peer &gt; 1) print &#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">      printf &#34;# peer %d\n&#34;, peer
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    }
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    { print }
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">  &#39;</span></span></span></code></pre></div><details ><summary>Sentinel peer 详情</summary><div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># peer 1</span>
+</span></span><span style="display:flex;"><span>name
+</span></span><span style="display:flex;"><span>cab4401ab1d00db3db2ccd0adcfcd5eecaadad0c
+</span></span><span style="display:flex;"><span>ip
+</span></span><span style="display:flex;"><span>10.89.1.6
+</span></span><span style="display:flex;"><span>port
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">26379</span>
+</span></span><span style="display:flex;"><span>runid
+</span></span><span style="display:flex;"><span>cab4401ab1d00db3db2ccd0adcfcd5eecaadad0c
+</span></span><span style="display:flex;"><span>flags
+</span></span><span style="display:flex;"><span>sentinel
+</span></span><span style="display:flex;"><span>link-pending-commands
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>link-refcount
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>last-ping-sent
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>last-ok-ping-reply
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">82</span>
+</span></span><span style="display:flex;"><span>last-ping-reply
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">82</span>
+</span></span><span style="display:flex;"><span>down-after-milliseconds
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">5000</span>
+</span></span><span style="display:flex;"><span>last-hello-message
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">218</span>
+</span></span><span style="display:flex;"><span>voted-leader
+</span></span><span style="display:flex;"><span>?
+</span></span><span style="display:flex;"><span>voted-leader-epoch
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># peer 2</span>
+</span></span><span style="display:flex;"><span>name
+</span></span><span style="display:flex;"><span>22215985d8e613ab86d7ebee587babee40d0f171
+</span></span><span style="display:flex;"><span>ip
+</span></span><span style="display:flex;"><span>10.89.1.7
+</span></span><span style="display:flex;"><span>port
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">26379</span>
+</span></span><span style="display:flex;"><span>runid
+</span></span><span style="display:flex;"><span>22215985d8e613ab86d7ebee587babee40d0f171
+</span></span><span style="display:flex;"><span>flags
+</span></span><span style="display:flex;"><span>sentinel
+</span></span><span style="display:flex;"><span>link-pending-commands
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>link-refcount
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>last-ping-sent
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>last-ok-ping-reply
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">82</span>
+</span></span><span style="display:flex;"><span>last-ping-reply
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">82</span>
+</span></span><span style="display:flex;"><span>down-after-milliseconds
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">5000</span>
+</span></span><span style="display:flex;"><span>last-hello-message
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">1777</span>
+</span></span><span style="display:flex;"><span>voted-leader
+</span></span><span style="display:flex;"><span>?
+</span></span><span style="display:flex;"><span>voted-leader-epoch
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">0</span></span></span></code></pre></div></div></details>
+<p>执行命令：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>printf <span style="color:#e6db74">&#39;# redis-1 MONITOR\n&#39;</span>
+</span></span><span style="display:flex;"><span>pc exec redis-1 redis-cli MONITOR</span></span></code></pre></div><details ><summary>MONITOR 输出</summary><div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># redis-1 MONITOR</span>
+</span></span><span style="display:flex;"><span>OK
+</span></span><span style="display:flex;"><span>1785822963.456740 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.7:42252<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PING&#34;</span>
+</span></span><span style="display:flex;"><span>1785822963.514380 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.5:41580<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PING&#34;</span>
+</span></span><span style="display:flex;"><span>1785822963.987368 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.6:47060<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PING&#34;</span>
+</span></span><span style="display:flex;"><span>1785822964.286629 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.5:41580<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PUBLISH&#34;</span> <span style="color:#e6db74">&#34;__sentinel__:hello&#34;</span> <span style="color:#e6db74">&#34;10.89.1.5,26379,8fdda9f1f59b9679c4bc23846628f8d1ae384df8,0,mymaster,redis-1,6379,0&#34;</span>
+</span></span><span style="display:flex;"><span>1785822964.519722 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.5:41580<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PING&#34;</span>
+</span></span><span style="display:flex;"><span>1785822964.528096 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.7:42252<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PING&#34;</span>
+</span></span><span style="display:flex;"><span>1785822964.626970 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.6:47060<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PUBLISH&#34;</span> <span style="color:#e6db74">&#34;__sentinel__:hello&#34;</span> <span style="color:#e6db74">&#34;10.89.1.6,26379,cab4401ab1d00db3db2ccd0adcfcd5eecaadad0c,0,mymaster,redis-1,6379,0&#34;</span>
+</span></span><span style="display:flex;"><span>1785822964.651873 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.7:42252<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PUBLISH&#34;</span> <span style="color:#e6db74">&#34;__sentinel__:hello&#34;</span> <span style="color:#e6db74">&#34;10.89.1.7,26379,22215985d8e613ab86d7ebee587babee40d0f171,0,mymaster,redis-1,6379,0&#34;</span>
+</span></span><span style="display:flex;"><span>1785822965.018314 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 127.0.0.1:39396<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;ping&#34;</span>
+</span></span><span style="display:flex;"><span>1785822965.024221 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.6:47060<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PING&#34;</span>
+</span></span><span style="display:flex;"><span>1785822965.539056 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.7:42252<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PING&#34;</span>
+</span></span><span style="display:flex;"><span>1785822965.581917 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.5:41580<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PING&#34;</span>
+</span></span><span style="display:flex;"><span>1785822966.074615 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.6:47060<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PING&#34;</span>
+</span></span><span style="display:flex;"><span>1785822966.369419 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.5:41580<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PUBLISH&#34;</span> <span style="color:#e6db74">&#34;__sentinel__:hello&#34;</span> <span style="color:#e6db74">&#34;10.89.1.5,26379,8fdda9f1f59b9679c4bc23846628f8d1ae384df8,0,mymaster,redis-1,6379,0&#34;</span>
+</span></span><span style="display:flex;"><span>1785822966.580222 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.7:42252<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PING&#34;</span>
+</span></span><span style="display:flex;"><span>1785822966.606710 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.5:41580<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PING&#34;</span>
+</span></span><span style="display:flex;"><span>1785822966.650339 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.6:47060<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PUBLISH&#34;</span> <span style="color:#e6db74">&#34;__sentinel__:hello&#34;</span> <span style="color:#e6db74">&#34;10.89.1.6,26379,cab4401ab1d00db3db2ccd0adcfcd5eecaadad0c,0,mymaster,redis-1,6379,0&#34;</span>
+</span></span><span style="display:flex;"><span>1785822966.682308 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.7:42252<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PUBLISH&#34;</span> <span style="color:#e6db74">&#34;__sentinel__:hello&#34;</span> <span style="color:#e6db74">&#34;10.89.1.7,26379,22215985d8e613ab86d7ebee587babee40d0f171,0,mymaster,redis-1,6379,0&#34;</span>
+</span></span><span style="display:flex;"><span>1785822967.078837 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.6:47060<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PING&#34;</span>
+</span></span><span style="display:flex;"><span>1785822967.610383 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.7:42252<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PING&#34;</span>
+</span></span><span style="display:flex;"><span>1785822967.639515 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.5:41580<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PING&#34;</span>
+</span></span><span style="display:flex;"><span>1785822968.099179 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.6:47060<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PING&#34;</span>
+</span></span><span style="display:flex;"><span>1785822968.120448 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 127.0.0.1:59880<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;ping&#34;</span>
+</span></span><span style="display:flex;"><span>1785822968.418590 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.5:41580<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PUBLISH&#34;</span> <span style="color:#e6db74">&#34;__sentinel__:hello&#34;</span> <span style="color:#e6db74">&#34;10.89.1.5,26379,8fdda9f1f59b9679c4bc23846628f8d1ae384df8,0,mymaster,redis-1,6379,0&#34;</span>
+</span></span><span style="display:flex;"><span>1785822968.659030 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.6:47060<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PUBLISH&#34;</span> <span style="color:#e6db74">&#34;__sentinel__:hello&#34;</span> <span style="color:#e6db74">&#34;10.89.1.6,26379,cab4401ab1d00db3db2ccd0adcfcd5eecaadad0c,0,mymaster,redis-1,6379,0&#34;</span>
+</span></span><span style="display:flex;"><span>1785822968.659443 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.7:42252<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PING&#34;</span>
+</span></span><span style="display:flex;"><span>1785822968.718104 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.5:41580<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PING&#34;</span>
+</span></span><span style="display:flex;"><span>1785822968.736650 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.7:42252<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PUBLISH&#34;</span> <span style="color:#e6db74">&#34;__sentinel__:hello&#34;</span> <span style="color:#e6db74">&#34;10.89.1.7,26379,22215985d8e613ab86d7ebee587babee40d0f171,0,mymaster,redis-1,6379,0&#34;</span>
+</span></span><span style="display:flex;"><span>1785822969.109587 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.6:47060<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PING&#34;</span>
+</span></span><span style="display:flex;"><span>1785822969.671602 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.7:42252<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PING&#34;</span>
+</span></span><span style="display:flex;"><span>1785822969.752220 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.5:41580<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;INFO&#34;</span>
+</span></span><span style="display:flex;"><span>1785822969.752246 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.5:41580<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PING&#34;</span>
+</span></span><span style="display:flex;"><span>1785822969.955942 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.6:47060<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;INFO&#34;</span>
+</span></span><span style="display:flex;"><span>1785822970.018776 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.7:42252<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;INFO&#34;</span>
+</span></span><span style="display:flex;"><span>1785822970.178119 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.6:47060<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PING&#34;</span>
+</span></span><span style="display:flex;"><span>1785822970.506924 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.5:41580<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PUBLISH&#34;</span> <span style="color:#e6db74">&#34;__sentinel__:hello&#34;</span> <span style="color:#e6db74">&#34;10.89.1.5,26379,8fdda9f1f59b9679c4bc23846628f8d1ae384df8,0,mymaster,redis-1,6379,0&#34;</span>
+</span></span><span style="display:flex;"><span>1785822970.692314 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.7:42252<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PING&#34;</span>
+</span></span><span style="display:flex;"><span>1785822970.743760 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.6:47060<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PUBLISH&#34;</span> <span style="color:#e6db74">&#34;__sentinel__:hello&#34;</span> <span style="color:#e6db74">&#34;10.89.1.6,26379,cab4401ab1d00db3db2ccd0adcfcd5eecaadad0c,0,mymaster,redis-1,6379,0&#34;</span>
+</span></span><span style="display:flex;"><span>1785822970.761169 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.7:42252<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PUBLISH&#34;</span> <span style="color:#e6db74">&#34;__sentinel__:hello&#34;</span> <span style="color:#e6db74">&#34;10.89.1.7,26379,22215985d8e613ab86d7ebee587babee40d0f171,0,mymaster,redis-1,6379,0&#34;</span>
+</span></span><span style="display:flex;"><span>1785822970.851777 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.5:41580<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PING&#34;</span>
+</span></span><span style="display:flex;"><span>1785822971.002536 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 127.0.0.1:59902<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;ping&#34;</span>
+</span></span><span style="display:flex;"><span>1785822971.236768 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.6:47060<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PING&#34;</span>
+</span></span><span style="display:flex;"><span>1785822971.742526 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.7:42252<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PING&#34;</span>
+</span></span><span style="display:flex;"><span>1785822971.873466 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.5:41580<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PING&#34;</span>
+</span></span><span style="display:flex;"><span>1785822972.282215 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.6:47060<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PING&#34;</span>
+</span></span><span style="display:flex;"><span>1785822972.560418 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.5:41580<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PUBLISH&#34;</span> <span style="color:#e6db74">&#34;__sentinel__:hello&#34;</span> <span style="color:#e6db74">&#34;10.89.1.5,26379,8fdda9f1f59b9679c4bc23846628f8d1ae384df8,0,mymaster,redis-1,6379,0&#34;</span>
+</span></span><span style="display:flex;"><span>1785822972.752865 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.7:42252<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PING&#34;</span>
+</span></span><span style="display:flex;"><span>1785822972.790844 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.6:47060<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PUBLISH&#34;</span> <span style="color:#e6db74">&#34;__sentinel__:hello&#34;</span> <span style="color:#e6db74">&#34;10.89.1.6,26379,cab4401ab1d00db3db2ccd0adcfcd5eecaadad0c,0,mymaster,redis-1,6379,0&#34;</span>
+</span></span><span style="display:flex;"><span>1785822972.837558 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.7:42252<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PUBLISH&#34;</span> <span style="color:#e6db74">&#34;__sentinel__:hello&#34;</span> <span style="color:#e6db74">&#34;10.89.1.7,26379,22215985d8e613ab86d7ebee587babee40d0f171,0,mymaster,redis-1,6379,0&#34;</span>
+</span></span><span style="display:flex;"><span>1785822972.930431 <span style="color:#f92672">[</span><span style="color:#ae81ff">0</span> 10.89.1.5:41580<span style="color:#f92672">]</span> <span style="color:#e6db74">&#34;PING&#34;</span></span></span></code></pre></div></div></details>
+<p><strong>实验结论：</strong></p>
+<ul>
+<li>三个 Sentinel 对 Master、两个 Replicas 和两个 peers 的视图一致。</li>
+<li><code>CKQUORUM</code> 确认 quorum 与故障转移授权均可达。</li>
+<li>peer 记录中的 <code>name</code> 与 <code>runid</code> 和各实例的 <code>myid</code> 一致，且没有下线或断连标记。</li>
+<li>三个 Sentinel 会持续向 Redis 发送 <code>PING</code>、周期执行 <code>INFO</code>，并通过 <code>__sentinel__:hello</code> 发布自身和 Master 配置。</li>
+</ul>
+<p><code>MONITOR</code> 只能观察 Sentinel 与 Redis 之间的命令，不包含 Sentinel 之间的直连协调流量。</p>
+<h3 id="42-记录一次自动故障转移">4.2 记录一次自动故障转移<a class="anchor" href="#42-%e8%ae%b0%e5%bd%95%e4%b8%80%e6%ac%a1%e8%87%aa%e5%8a%a8%e6%95%85%e9%9a%9c%e8%bd%ac%e7%a7%bb">#</a></h3>
+<p>本实验停止当前 Master，持续查询三个 Sentinel，直到它们返回同一个新地址。先动态获取 Master，避免把初始节点写死到停止命令中。</p>
+<p>执行命令：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>FAILED_MASTER<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>pc exec -T sentinel-1 redis-cli --raw -p <span style="color:#ae81ff">26379</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  SENTINEL get-master-addr-by-name mymaster | sed -n <span style="color:#e6db74">&#39;1p&#39;</span><span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>printf <span style="color:#e6db74">&#39;# 停止当前 Master\n&#39;</span>
+</span></span><span style="display:flex;"><span>printf <span style="color:#e6db74">&#39;old master: %s\n&#39;</span> <span style="color:#e6db74">&#34;</span>$FAILED_MASTER<span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>pc stop <span style="color:#e6db74">&#34;</span>$FAILED_MASTER<span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>printf <span style="color:#e6db74">&#39;\n# 轮询三个 Sentinel 的 Master 视图\n&#39;</span>
+</span></span><span style="display:flex;"><span>NEW_MASTER<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">for</span> round in <span style="color:#66d9ef">$(</span>seq <span style="color:#ae81ff">0</span> 45<span style="color:#66d9ef">)</span>; <span style="color:#66d9ef">do</span>
+</span></span><span style="display:flex;"><span>  VIEW_1<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>pc exec -T sentinel-1 redis-cli --raw -p <span style="color:#ae81ff">26379</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>    SENTINEL get-master-addr-by-name mymaster 2&gt;/dev/null | sed -n <span style="color:#e6db74">&#39;1p&#39;</span><span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>  VIEW_2<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>pc exec -T sentinel-2 redis-cli --raw -p <span style="color:#ae81ff">26379</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>    SENTINEL get-master-addr-by-name mymaster 2&gt;/dev/null | sed -n <span style="color:#e6db74">&#39;1p&#39;</span><span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>  VIEW_3<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>pc exec -T sentinel-3 redis-cli --raw -p <span style="color:#ae81ff">26379</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>    SENTINEL get-master-addr-by-name mymaster 2&gt;/dev/null | sed -n <span style="color:#e6db74">&#39;1p&#39;</span><span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>  printf <span style="color:#e6db74">&#39;[round %02d] sentinel-1=%s sentinel-2=%s sentinel-3=%s\n&#39;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;</span>$round<span style="color:#e6db74">&#34;</span> <span style="color:#e6db74">&#34;</span>$VIEW_1<span style="color:#e6db74">&#34;</span> <span style="color:#e6db74">&#34;</span>$VIEW_2<span style="color:#e6db74">&#34;</span> <span style="color:#e6db74">&#34;</span>$VIEW_3<span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">if</span> <span style="color:#f92672">[</span> -n <span style="color:#e6db74">&#34;</span>$VIEW_1<span style="color:#e6db74">&#34;</span> <span style="color:#f92672">]</span> <span style="color:#f92672">&amp;&amp;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>     <span style="color:#f92672">[</span> <span style="color:#e6db74">&#34;</span>$VIEW_1<span style="color:#e6db74">&#34;</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;</span>$VIEW_2<span style="color:#e6db74">&#34;</span> <span style="color:#f92672">]</span> <span style="color:#f92672">&amp;&amp;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>     <span style="color:#f92672">[</span> <span style="color:#e6db74">&#34;</span>$VIEW_2<span style="color:#e6db74">&#34;</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;</span>$VIEW_3<span style="color:#e6db74">&#34;</span> <span style="color:#f92672">]</span> <span style="color:#f92672">&amp;&amp;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>     <span style="color:#f92672">[</span> <span style="color:#e6db74">&#34;</span>$VIEW_1<span style="color:#e6db74">&#34;</span> !<span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;</span>$FAILED_MASTER<span style="color:#e6db74">&#34;</span> <span style="color:#f92672">]</span>; <span style="color:#66d9ef">then</span>
+</span></span><span style="display:flex;"><span>    NEW_MASTER<span style="color:#f92672">=</span>$VIEW_1
+</span></span><span style="display:flex;"><span>    break
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">fi</span>
+</span></span><span style="display:flex;"><span>  sleep <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">done</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>test -n <span style="color:#e6db74">&#34;</span>$NEW_MASTER<span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>printf <span style="color:#e6db74">&#39;new master: %s\n&#39;</span> <span style="color:#e6db74">&#34;</span>$NEW_MASTER<span style="color:#e6db74">&#34;</span></span></span></code></pre></div><p>输出：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># 停止当前 Master</span>
+</span></span><span style="display:flex;"><span>old master: redis-1
+</span></span><span style="display:flex;"><span>redis-sentinel-lab_redis-1_1
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 轮询三个 Sentinel 的 Master 视图</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>round 00<span style="color:#f92672">]</span> sentinel-1<span style="color:#f92672">=</span>redis-1 sentinel-2<span style="color:#f92672">=</span>redis-1 sentinel-3<span style="color:#f92672">=</span>redis-1
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>round 01<span style="color:#f92672">]</span> sentinel-1<span style="color:#f92672">=</span>redis-1 sentinel-2<span style="color:#f92672">=</span>redis-1 sentinel-3<span style="color:#f92672">=</span>redis-1
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>round 02<span style="color:#f92672">]</span> sentinel-1<span style="color:#f92672">=</span>redis-1 sentinel-2<span style="color:#f92672">=</span>redis-1 sentinel-3<span style="color:#f92672">=</span>redis-1
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>round 03<span style="color:#f92672">]</span> sentinel-1<span style="color:#f92672">=</span>redis-1 sentinel-2<span style="color:#f92672">=</span>redis-1 sentinel-3<span style="color:#f92672">=</span>redis-1
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>round 04<span style="color:#f92672">]</span> sentinel-1<span style="color:#f92672">=</span>redis-2 sentinel-2<span style="color:#f92672">=</span>redis-2 sentinel-3<span style="color:#f92672">=</span>redis-2
+</span></span><span style="display:flex;"><span>new master: redis-2</span></span></code></pre></div><p>可以看到在 round4（~5s）的时候就完成了新的选主，这个时间也符合实验环境 <code>down-after-milliseconds mymaster 5000</code> 的设置，这时候检查全部 Sentinel 中的相关日志：</p>
+<p>执行命令：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#66d9ef">for</span> sentinel in sentinel-1 sentinel-2 sentinel-3; <span style="color:#66d9ef">do</span>
+</span></span><span style="display:flex;"><span>  printf <span style="color:#e6db74">&#39;\n# %s\n&#39;</span> <span style="color:#e6db74">&#34;</span>$sentinel<span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>  pc logs <span style="color:#e6db74">&#34;</span>$sentinel<span style="color:#e6db74">&#34;</span> 2&gt;&amp;<span style="color:#ae81ff">1</span> | <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>    grep -E <span style="color:#e6db74">&#39;\+(sdown|odown|new-epoch|try-failover|vote-for-leader|elected-leader|selected-slave|promoted-slave|switch-master)&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">done</span></span></span></code></pre></div><details ><summary>故障转移事件日志</summary><div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># sentinel-1</span>
+</span></span><span style="display:flex;"><span>1:X <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:28:44.398 <span style="color:#75715e"># +sdown master mymaster redis-1 6379</span>
+</span></span><span style="display:flex;"><span>1:X <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:28:44.506 <span style="color:#75715e"># +new-epoch 1</span>
+</span></span><span style="display:flex;"><span>1:X <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:28:44.506 <span style="color:#75715e"># +vote-for-leader cab4401ab1d00db3db2ccd0adcfcd5eecaadad0c 1</span>
+</span></span><span style="display:flex;"><span>1:X <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:28:45.477 <span style="color:#75715e"># +odown master mymaster redis-1 6379 #quorum 3/2</span>
+</span></span><span style="display:flex;"><span>1:X <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:28:46.711 <span style="color:#75715e"># +switch-master mymaster redis-1 6379 redis-2 6379</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># sentinel-2</span>
+</span></span><span style="display:flex;"><span>1:X <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:28:44.441 <span style="color:#75715e"># +sdown master mymaster redis-1 6379</span>
+</span></span><span style="display:flex;"><span>1:X <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:28:44.499 <span style="color:#75715e"># +odown master mymaster redis-1 6379 #quorum 2/2</span>
+</span></span><span style="display:flex;"><span>1:X <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:28:44.499 <span style="color:#75715e"># +new-epoch 1</span>
+</span></span><span style="display:flex;"><span>1:X <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:28:44.499 <span style="color:#75715e"># +try-failover master mymaster redis-1 6379</span>
+</span></span><span style="display:flex;"><span>1:X <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:28:44.502 <span style="color:#75715e"># +vote-for-leader cab4401ab1d00db3db2ccd0adcfcd5eecaadad0c 1</span>
+</span></span><span style="display:flex;"><span>1:X <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:28:44.566 <span style="color:#75715e"># +elected-leader master mymaster redis-1 6379</span>
+</span></span><span style="display:flex;"><span>1:X <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:28:44.645 <span style="color:#75715e"># +selected-slave slave redis-2:6379 redis-2 6379 @ mymaster redis-1 6379</span>
+</span></span><span style="display:flex;"><span>1:X <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:28:45.560 <span style="color:#75715e"># +promoted-slave slave redis-2:6379 redis-2 6379 @ mymaster redis-1 6379</span>
+</span></span><span style="display:flex;"><span>1:X <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:28:46.648 <span style="color:#75715e"># +switch-master mymaster redis-1 6379 redis-2 6379</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># sentinel-3</span>
+</span></span><span style="display:flex;"><span>1:X <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:28:44.478 <span style="color:#75715e"># +sdown master mymaster redis-1 6379</span>
+</span></span><span style="display:flex;"><span>1:X <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:28:44.506 <span style="color:#75715e"># +new-epoch 1</span>
+</span></span><span style="display:flex;"><span>1:X <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:28:44.506 <span style="color:#75715e"># +vote-for-leader cab4401ab1d00db3db2ccd0adcfcd5eecaadad0c 1</span>
+</span></span><span style="display:flex;"><span>1:X <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:28:44.534 <span style="color:#75715e"># +odown master mymaster redis-1 6379 #quorum 3/2</span>
+</span></span><span style="display:flex;"><span>1:X <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:28:46.711 <span style="color:#75715e"># +switch-master mymaster redis-1 6379 redis-2 6379</span></span></span></code></pre></div></div></details>
+<p>可以看到，<code>sentinel-2</code> 是本轮执行者，它选中并晋升了 <code>redis-2</code>。</p>
+<p>最后启动旧 Master，等待 Sentinel 把它重配为新 Master 的 Replica。</p>
+<p>执行命令：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>printf <span style="color:#e6db74">&#39;# 启动旧 Master\n&#39;</span>
+</span></span><span style="display:flex;"><span>pc start <span style="color:#e6db74">&#34;</span>$FAILED_MASTER<span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>printf <span style="color:#e6db74">&#39;\n# 等待旧 Master 恢复为 Replica\n&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">for</span> attempt in <span style="color:#66d9ef">$(</span>seq <span style="color:#ae81ff">1</span> 60<span style="color:#66d9ef">)</span>; <span style="color:#66d9ef">do</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">if</span> pc exec -T <span style="color:#e6db74">&#34;</span>$FAILED_MASTER<span style="color:#e6db74">&#34;</span> redis-cli --raw INFO replication <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>    2&gt;/dev/null | tr -d <span style="color:#e6db74">&#39;\r&#39;</span> | <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>    awk -F: <span style="color:#e6db74">&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">      $1 == &#34;role&#34; { role=$2 }
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">      $1 == &#34;master_link_status&#34; { link=$2 }
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">      END { exit !(role == &#34;slave&#34; &amp;&amp; link == &#34;up&#34;) }
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    &#39;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">then</span>
+</span></span><span style="display:flex;"><span>    printf <span style="color:#e6db74">&#39;recovered after %ss\n&#39;</span> <span style="color:#e6db74">&#34;</span>$attempt<span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>    break
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">fi</span>
+</span></span><span style="display:flex;"><span>  sleep <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">done</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>printf <span style="color:#e6db74">&#39;\n# 旧 Master 的复制状态\n&#39;</span>
+</span></span><span style="display:flex;"><span>pc exec -T <span style="color:#e6db74">&#34;</span>$FAILED_MASTER<span style="color:#e6db74">&#34;</span> redis-cli --raw INFO replication | <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  sed -n <span style="color:#e6db74">&#39;/^role:/p;/^master_host:/p;/^master_link_status:/p&#39;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>printf <span style="color:#e6db74">&#39;\n# 三个 Sentinel 的 Master 视图\n&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">for</span> sentinel in sentinel-1 sentinel-2 sentinel-3; <span style="color:#66d9ef">do</span>
+</span></span><span style="display:flex;"><span>  printf <span style="color:#e6db74">&#39;%s -&gt; &#39;</span> <span style="color:#e6db74">&#34;</span>$sentinel<span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>  pc exec -T <span style="color:#e6db74">&#34;</span>$sentinel<span style="color:#e6db74">&#34;</span> redis-cli --raw -p <span style="color:#ae81ff">26379</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>    SENTINEL get-master-addr-by-name mymaster | paste -sd <span style="color:#e6db74">&#39;:&#39;</span> -
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">done</span></span></span></code></pre></div><p>输出：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># 启动旧 Master</span>
+</span></span><span style="display:flex;"><span>redis-sentinel-lab_redis-1_1
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 等待旧 Master 恢复为 Replica</span>
+</span></span><span style="display:flex;"><span>recovered after 33s
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 旧 Master 的复制状态</span>
+</span></span><span style="display:flex;"><span>role:slave
+</span></span><span style="display:flex;"><span>master_host:redis-2
+</span></span><span style="display:flex;"><span>master_link_status:up
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 三个 Sentinel 的 Master 视图</span>
+</span></span><span style="display:flex;"><span>sentinel-1 -&gt; redis-2:6379
+</span></span><span style="display:flex;"><span>sentinel-2 -&gt; redis-2:6379
+</span></span><span style="display:flex;"><span>sentinel-3 -&gt; redis-2:6379</span></span></code></pre></div><p><strong>实验结论：</strong></p>
+<ul>
+<li><code>redis-1</code> 停止后，三个 Sentinel 先后形成 SDOWN 和 ODOWN。</li>
+<li><code>sentinel-2</code> 获得选票，选中 <code>redis-2</code> 并完成晋升。</li>
+<li>第 5 轮查询时，三个 Sentinel 的地址视图已经收敛到 <code>redis-2</code>，新 Master 读写正常。</li>
+<li>旧 Master 启动后约 33 秒以 Replica 身份恢复。</li>
+</ul>
+<h3 id="43-观察恢复中-replica-的-sentinel-状态">4.3 观察恢复中 Replica 的 Sentinel 状态<a class="anchor" href="#43-%e8%a7%82%e5%af%9f%e6%81%a2%e5%a4%8d%e4%b8%ad-replica-%e7%9a%84-sentinel-%e7%8a%b6%e6%80%81">#</a></h3>
+<p>Sentinel 能发现一个 Replica，不代表这个节点已经完成同步。本实验利用 64 KiB backlog 和 30 秒 diskless sync delay 拉长恢复窗口。</p>
+<p>先停止当前 Master，等待三个 Sentinels 对新 Master 达成一致：</p>
+<p>执行命令：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>RECOVERING_NODE<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>pc exec -T sentinel-1 redis-cli --raw -p <span style="color:#ae81ff">26379</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  SENTINEL get-master-addr-by-name mymaster | sed -n <span style="color:#e6db74">&#39;1p&#39;</span><span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>printf <span style="color:#e6db74">&#39;# 停止当前 Master: %s\n&#39;</span> <span style="color:#e6db74">&#34;</span>$RECOVERING_NODE<span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>pc stop <span style="color:#e6db74">&#34;</span>$RECOVERING_NODE<span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>printf <span style="color:#e6db74">&#39;\n# 等待三个 Sentinel 的 Master 视图收敛\n&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">for</span> attempt in <span style="color:#66d9ef">$(</span>seq <span style="color:#ae81ff">0</span> 45<span style="color:#66d9ef">)</span>; <span style="color:#66d9ef">do</span>
+</span></span><span style="display:flex;"><span>  MASTER_1<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>pc exec -T sentinel-1 redis-cli --raw -p <span style="color:#ae81ff">26379</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>    SENTINEL get-master-addr-by-name mymaster | paste -sd <span style="color:#e6db74">&#39;:&#39;</span> -<span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>  MASTER_2<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>pc exec -T sentinel-2 redis-cli --raw -p <span style="color:#ae81ff">26379</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>    SENTINEL get-master-addr-by-name mymaster | paste -sd <span style="color:#e6db74">&#39;:&#39;</span> -<span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>  MASTER_3<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>pc exec -T sentinel-3 redis-cli --raw -p <span style="color:#ae81ff">26379</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>    SENTINEL get-master-addr-by-name mymaster | paste -sd <span style="color:#e6db74">&#39;:&#39;</span> -<span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">if</span> <span style="color:#f92672">[</span> <span style="color:#e6db74">&#34;</span>$MASTER_1<span style="color:#e6db74">&#34;</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;</span>$MASTER_2<span style="color:#e6db74">&#34;</span> <span style="color:#f92672">]</span> <span style="color:#f92672">&amp;&amp;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>     <span style="color:#f92672">[</span> <span style="color:#e6db74">&#34;</span>$MASTER_2<span style="color:#e6db74">&#34;</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;</span>$MASTER_3<span style="color:#e6db74">&#34;</span> <span style="color:#f92672">]</span> <span style="color:#f92672">&amp;&amp;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>     <span style="color:#f92672">[</span> <span style="color:#e6db74">&#34;</span>$MASTER_1<span style="color:#e6db74">&#34;</span> !<span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;</span>$RECOVERING_NODE<span style="color:#e6db74">:6379&#34;</span> <span style="color:#f92672">]</span>; <span style="color:#66d9ef">then</span>
+</span></span><span style="display:flex;"><span>    printf <span style="color:#e6db74">&#39;consensus reached at round %s\n&#39;</span> <span style="color:#e6db74">&#34;</span>$attempt<span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>    break
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">fi</span>
+</span></span><span style="display:flex;"><span>  sleep <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">done</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>NEW_MASTER<span style="color:#f92672">=</span><span style="color:#e6db74">${</span>MASTER_1%:6379<span style="color:#e6db74">}</span>
+</span></span><span style="display:flex;"><span>printf <span style="color:#e6db74">&#39;new master: %s\n&#39;</span> <span style="color:#e6db74">&#34;</span>$NEW_MASTER<span style="color:#e6db74">&#34;</span></span></span></code></pre></div><p>输出：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># 停止当前 Master: redis-1</span>
+</span></span><span style="display:flex;"><span>redis-sentinel-lab_redis-1_1
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 等待三个 Sentinel 的 Master 视图收敛</span>
+</span></span><span style="display:flex;"><span>consensus reached at round <span style="color:#ae81ff">4</span>
+</span></span><span style="display:flex;"><span>new master: redis-3</span></span></code></pre></div><p>旧节点仍停止时，向新 Master 写入约 10 MB 数据，使偏移差超过实验 backlog：</p>
+<p>执行命令：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>printf <span style="color:#e6db74">&#39;# 写入实验键\n&#39;</span>
+</span></span><span style="display:flex;"><span>pc exec -T sentinel-1 redis-cli -h <span style="color:#e6db74">&#34;</span>$NEW_MASTER<span style="color:#e6db74">&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  SET lab:recovery-window ready
+</span></span><span style="display:flex;"><span>printf <span style="color:#e6db74">&#39;\n# 写入约 10 MB 数据\n&#39;</span>
+</span></span><span style="display:flex;"><span>pc exec -T sentinel-1 redis-benchmark -h <span style="color:#e6db74">&#34;</span>$NEW_MASTER<span style="color:#e6db74">&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  -t set -n <span style="color:#ae81ff">10000</span> -d <span style="color:#ae81ff">1024</span> -r <span style="color:#ae81ff">1000000</span> -q</span></span></code></pre></div><p>输出：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># 写入实验键</span>
+</span></span><span style="display:flex;"><span>OK
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 写入约 10 MB 数据</span>
+</span></span><span style="display:flex;"><span>SET: 175438.59 requests per second, p50<span style="color:#f92672">=</span>0.207 msec</span></span></code></pre></div><p>在终端 A 运行观察循环。它只抽取恢复节点在 Sentinel 中的 flags 和复制链路，同时查询该 Redis 进程自己的复制状态：</p>
+<p>执行命令：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>RECOVERING_NODE<span style="color:#f92672">=</span>redis-1
+</span></span><span style="display:flex;"><span>NEW_MASTER<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>pc exec -T sentinel-1 redis-cli --raw -p <span style="color:#ae81ff">26379</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  SENTINEL get-master-addr-by-name mymaster | sed -n <span style="color:#e6db74">&#39;1p&#39;</span><span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">while</span> :; <span style="color:#66d9ef">do</span>
+</span></span><span style="display:flex;"><span>  date <span style="color:#e6db74">&#39;+%H:%M:%S&#39;</span>
+</span></span><span style="display:flex;"><span>  pc exec -T sentinel-1 redis-cli --raw -p <span style="color:#ae81ff">26379</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>    SENTINEL replicas mymaster 2&gt;/dev/null | tr -d <span style="color:#e6db74">&#39;\r&#39;</span> | <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>    awk -v target<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;</span>$RECOVERING_NODE<span style="color:#e6db74">&#34;</span> <span style="color:#e6db74">&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">      function emit() {
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        if (name ~ (&#34;^&#34; target &#34;:&#34;) || ip == target) {
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">          printf &#34;name=%s ip=%s flags=%s link=%s link-down-ms=%s\n&#34;, \
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">            name, ip, flags, link, down
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        }
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">      }
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">      $0 == &#34;name&#34; {
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        emit()
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        name=&#34;&#34;; ip=&#34;&#34;; flags=&#34;&#34;; link=&#34;&#34;; down=&#34;&#34;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">        getline; name=$0; next
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">      }
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">      $0 == &#34;ip&#34; { getline; ip=$0; next }
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">      $0 == &#34;flags&#34; { getline; flags=$0; next }
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">      $0 == &#34;master-link-status&#34; { getline; link=$0; next }
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">      $0 == &#34;master-link-down-time&#34; { getline; down=$0; next }
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">      END { emit() }
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    &#39;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>  pc exec -T <span style="color:#e6db74">&#34;</span>$RECOVERING_NODE<span style="color:#e6db74">&#34;</span> redis-cli --raw INFO replication <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>    2&gt;/dev/null | <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>    sed -n <span style="color:#e6db74">&#39;/^role:/p;/^master_host:/p;/^master_link_status:/p;/^master_sync_in_progress:/p&#39;</span>
+</span></span><span style="display:flex;"><span>  sleep <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">done</span></span></span></code></pre></div><p>在终端 B 启动旧节点：</p>
+<p>执行命令：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>pc start redis-1</span></span></code></pre></div><p>输出中每秒变化的 link-down 时长和重复状态已经删去，只保留状态转换：</p>
+<p>输出：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># 恢复节点状态转换</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>00s<span style="color:#f92672">]</span> sentinel: flags<span style="color:#f92672">=</span>slave,disconnected link<span style="color:#f92672">=</span>err link-down-ms<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span> | redis: role<span style="color:#f92672">=</span>master
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>01s<span style="color:#f92672">]</span> sentinel: flags<span style="color:#f92672">=</span>slave link<span style="color:#f92672">=</span>err link-down-ms<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span> | redis: role<span style="color:#f92672">=</span>master
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>11s<span style="color:#f92672">]</span> sentinel: flags<span style="color:#f92672">=</span>slave link<span style="color:#f92672">=</span>err link-down-ms<span style="color:#f92672">=</span>-1000 | redis: role<span style="color:#f92672">=</span>slave master<span style="color:#f92672">=</span>redis-3 link<span style="color:#f92672">=</span>down sync<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>42s<span style="color:#f92672">]</span> sentinel: flags<span style="color:#f92672">=</span>slave link<span style="color:#f92672">=</span>ok link-down-ms<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span> | redis: role<span style="color:#f92672">=</span>slave master<span style="color:#f92672">=</span>redis-3 link<span style="color:#f92672">=</span>up sync<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span></span></span></code></pre></div><p>等恢复节点显示 <code>master_link_status:up</code> 后，从恢复节点读取实验键，再从新 Master 的日志确认实际同步路径。</p>
+<p>执行命令：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>printf <span style="color:#e6db74">&#39;# 从恢复后的 Replica 读取实验键\n&#39;</span>
+</span></span><span style="display:flex;"><span>pc exec -T <span style="color:#e6db74">&#34;</span>$RECOVERING_NODE<span style="color:#e6db74">&#34;</span> redis-cli GET lab:recovery-window
+</span></span><span style="display:flex;"><span>printf <span style="color:#e6db74">&#39;\n# 新 Master 的同步日志\n&#39;</span>
+</span></span><span style="display:flex;"><span>pc logs <span style="color:#e6db74">&#34;</span>$NEW_MASTER<span style="color:#e6db74">&#34;</span> 2&gt;&amp;<span style="color:#ae81ff">1</span> | <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  grep -E <span style="color:#e6db74">&#39;Full resync|BGSAVE|diskless|Synchronization with replica&#39;</span></span></span></code></pre></div><p>输出：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># 从恢复后的 Replica 读取实验键</span>
+</span></span><span style="display:flex;"><span>ready
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 新 Master 的同步日志</span>
+</span></span><span style="display:flex;"><span>1:M <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:36:01.434 * Full resync requested by replica redis-1:6379 <span style="color:#f92672">(</span>rdb-channel<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>1:M <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:36:01.434 * Delay next BGSAVE <span style="color:#66d9ef">for</span> diskless SYNC
+</span></span><span style="display:flex;"><span>1:M <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:36:31.791 * Starting BGSAVE <span style="color:#66d9ef">for</span> SYNC with target: replicas sockets <span style="color:#f92672">(</span>rdb-channel<span style="color:#f92672">)</span>
+</span></span><span style="display:flex;"><span>54:C <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:36:31.835 * BGSAVE <span style="color:#66d9ef">done</span>, <span style="color:#ae81ff">9962</span> keys saved, <span style="color:#ae81ff">0</span> keys skipped, <span style="color:#ae81ff">10399539</span> bytes written.
+</span></span><span style="display:flex;"><span>1:M <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:36:31.859 * Synchronization with replica redis-1:6379 succeeded</span></span></code></pre></div><p><strong>实验结论：</strong></p>
+<ul>
+<li>恢复节点尚未启动时，Sentinel 已经在 Replicas 列表中保留了它，状态是 <code>slave,disconnected</code>、链路是 <code>err</code>。</li>
+<li>节点启动后先以 <code>role=master</code> 运行；约 11 秒后被重配为 <code>slave</code>，但直连复制链路仍为 <code>down</code>。这时 <code>master_sync_in_progress=0</code>，同样不能说明节点可读。</li>
+<li>Master 日志记录了 full resync，其中约 30 秒花在 diskless sync 等待。约 42 秒时，Redis 报告 <code>master_link_status=up</code>，Sentinel 才报告 <code>link=ok</code>，实验键也能从该 Replica 读出。</li>
+<li><strong>节点出现在 <code>SENTINEL REPLICAS</code> 中，不代表它已经完成数据恢复并可对外提供服务。</strong></li>
+</ul>
+<p>本次实验中，本地 10 MB 数据的实际传输在一次轮询间隔内完成，因此没有采样到 <code>master_sync_in_progress=1</code>。</p>
+<h3 id="44-执行一次计划内故障转移">4.4 执行一次计划内故障转移<a class="anchor" href="#44-%e6%89%a7%e8%a1%8c%e4%b8%80%e6%ac%a1%e8%ae%a1%e5%88%92%e5%86%85%e6%95%85%e9%9a%9c%e8%bd%ac%e7%a7%bb">#</a></h3>
+<p>计划切换不需要先制造 ODOWN。Redis 8.10 的 <code>SENTINEL FAILOVER</code> 会进入强制故障转移路径，跳过 ODOWN 判断和正常领导者选举授权。操作前执行 <code>CKQUORUM</code> 是运维安全门，用来暴露 Sentinel 数量或通信异常，不是该命令执行的前置条件。还要记录候选 Replicas 的复制状态。实验环境没有持续写入者，下面的检查不能替代生产中的写入排空：</p>
+<p>执行命令：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>printf <span style="color:#e6db74">&#39;# 检查 Sentinel 可用性\n&#39;</span>
+</span></span><span style="display:flex;"><span>pc exec -T sentinel-1 redis-cli -p <span style="color:#ae81ff">26379</span> SENTINEL CKQUORUM mymaster
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>printf <span style="color:#e6db74">&#39;\n# 查询当前 Master\n&#39;</span>
+</span></span><span style="display:flex;"><span>OLD_MASTER<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>pc exec -T sentinel-1 redis-cli --raw -p <span style="color:#ae81ff">26379</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  SENTINEL get-master-addr-by-name mymaster | sed -n <span style="color:#e6db74">&#39;1p&#39;</span><span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>printf <span style="color:#e6db74">&#39;old master: %s\n&#39;</span> <span style="color:#e6db74">&#34;</span>$OLD_MASTER<span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">for</span> node in redis-1 redis-2 redis-3; <span style="color:#66d9ef">do</span>
+</span></span><span style="display:flex;"><span>  printf <span style="color:#e6db74">&#39;\n# %s: INFO replication\n&#39;</span> <span style="color:#e6db74">&#34;</span>$node<span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>  pc exec -T <span style="color:#e6db74">&#34;</span>$node<span style="color:#e6db74">&#34;</span> redis-cli --raw INFO replication | <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>    sed -n <span style="color:#e6db74">&#39;/^role:/p;/^master_host:/p;/^master_link_status:/p;/^master_repl_offset:/p;/^slave_repl_offset:/p&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">done</span></span></span></code></pre></div><details ><summary>切换前复制状态</summary><div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># 检查 Sentinel 可用性</span>
+</span></span><span style="display:flex;"><span>OK <span style="color:#ae81ff">3</span> usable Sentinels. Quorum and failover authorization can be reached
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 查询当前 Master</span>
+</span></span><span style="display:flex;"><span>old master: redis-1
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># redis-1: INFO replication</span>
+</span></span><span style="display:flex;"><span>role:master
+</span></span><span style="display:flex;"><span>master_repl_offset:9062
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># redis-2: INFO replication</span>
+</span></span><span style="display:flex;"><span>role:slave
+</span></span><span style="display:flex;"><span>master_host:redis-1
+</span></span><span style="display:flex;"><span>master_link_status:up
+</span></span><span style="display:flex;"><span>slave_repl_offset:9062
+</span></span><span style="display:flex;"><span>master_repl_offset:9062
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># redis-3: INFO replication</span>
+</span></span><span style="display:flex;"><span>role:slave
+</span></span><span style="display:flex;"><span>master_host:redis-1
+</span></span><span style="display:flex;"><span>master_link_status:up
+</span></span><span style="display:flex;"><span>slave_repl_offset:9062
+</span></span><span style="display:flex;"><span>master_repl_offset:9062</span></span></code></pre></div></div></details>
+<p>通过任一 Sentinel 发起受控切换，再等待三个地址视图一致：</p>
+<p>执行命令：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>printf <span style="color:#e6db74">&#39;# 发起计划切换\n&#39;</span>
+</span></span><span style="display:flex;"><span>pc exec -T sentinel-1 redis-cli -p <span style="color:#ae81ff">26379</span> SENTINEL FAILOVER mymaster
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>printf <span style="color:#e6db74">&#39;\n# 等待三个 Sentinel 的 Master 视图收敛\n&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">for</span> round in <span style="color:#66d9ef">$(</span>seq <span style="color:#ae81ff">0</span> 45<span style="color:#66d9ef">)</span>; <span style="color:#66d9ef">do</span>
+</span></span><span style="display:flex;"><span>  MASTER_1<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>pc exec -T sentinel-1 redis-cli --raw -p <span style="color:#ae81ff">26379</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>    SENTINEL get-master-addr-by-name mymaster | sed -n <span style="color:#e6db74">&#39;1p&#39;</span><span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>  MASTER_2<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>pc exec -T sentinel-2 redis-cli --raw -p <span style="color:#ae81ff">26379</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>    SENTINEL get-master-addr-by-name mymaster | sed -n <span style="color:#e6db74">&#39;1p&#39;</span><span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>  MASTER_3<span style="color:#f92672">=</span><span style="color:#66d9ef">$(</span>pc exec -T sentinel-3 redis-cli --raw -p <span style="color:#ae81ff">26379</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>    SENTINEL get-master-addr-by-name mymaster | sed -n <span style="color:#e6db74">&#39;1p&#39;</span><span style="color:#66d9ef">)</span>
+</span></span><span style="display:flex;"><span>  printf <span style="color:#e6db74">&#39;[round %02d] sentinel-1=%s sentinel-2=%s sentinel-3=%s\n&#39;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;</span>$round<span style="color:#e6db74">&#34;</span> <span style="color:#e6db74">&#34;</span>$MASTER_1<span style="color:#e6db74">&#34;</span> <span style="color:#e6db74">&#34;</span>$MASTER_2<span style="color:#e6db74">&#34;</span> <span style="color:#e6db74">&#34;</span>$MASTER_3<span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">if</span> <span style="color:#f92672">[</span> <span style="color:#e6db74">&#34;</span>$MASTER_1<span style="color:#e6db74">&#34;</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;</span>$MASTER_2<span style="color:#e6db74">&#34;</span> <span style="color:#f92672">]</span> <span style="color:#f92672">&amp;&amp;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>     <span style="color:#f92672">[</span> <span style="color:#e6db74">&#34;</span>$MASTER_2<span style="color:#e6db74">&#34;</span> <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;</span>$MASTER_3<span style="color:#e6db74">&#34;</span> <span style="color:#f92672">]</span> <span style="color:#f92672">&amp;&amp;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>     <span style="color:#f92672">[</span> <span style="color:#e6db74">&#34;</span>$MASTER_1<span style="color:#e6db74">&#34;</span> !<span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;</span>$OLD_MASTER<span style="color:#e6db74">&#34;</span> <span style="color:#f92672">]</span>; <span style="color:#66d9ef">then</span>
+</span></span><span style="display:flex;"><span>    NEW_MASTER<span style="color:#f92672">=</span>$MASTER_1
+</span></span><span style="display:flex;"><span>    break
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">fi</span>
+</span></span><span style="display:flex;"><span>  sleep <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">done</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>printf <span style="color:#e6db74">&#39;master moved: %s -&gt; %s\n&#39;</span> <span style="color:#e6db74">&#34;</span>$OLD_MASTER<span style="color:#e6db74">&#34;</span> <span style="color:#e6db74">&#34;</span>$NEW_MASTER<span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>printf <span style="color:#e6db74">&#39;\n# 验证新 Master 读写\n&#39;</span>
+</span></span><span style="display:flex;"><span>pc exec -T sentinel-1 redis-cli -h <span style="color:#e6db74">&#34;</span>$NEW_MASTER<span style="color:#e6db74">&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  SET lab:planned-failover ok
+</span></span><span style="display:flex;"><span>pc exec -T sentinel-1 redis-cli -h <span style="color:#e6db74">&#34;</span>$NEW_MASTER<span style="color:#e6db74">&#34;</span> <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  GET lab:planned-failover</span></span></code></pre></div><p>输出：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># 发起计划切换</span>
+</span></span><span style="display:flex;"><span>OK
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 等待三个 Sentinel 的 Master 视图收敛</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>round 00<span style="color:#f92672">]</span> sentinel-1<span style="color:#f92672">=</span>redis-1 sentinel-2<span style="color:#f92672">=</span>redis-1 sentinel-3<span style="color:#f92672">=</span>redis-1
+</span></span><span style="display:flex;"><span><span style="color:#f92672">[</span>round 01<span style="color:#f92672">]</span> sentinel-1<span style="color:#f92672">=</span>redis-3 sentinel-2<span style="color:#f92672">=</span>redis-3 sentinel-3<span style="color:#f92672">=</span>redis-3
+</span></span><span style="display:flex;"><span>master moved: redis-1 -&gt; redis-3
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 验证新 Master 读写</span>
+</span></span><span style="display:flex;"><span>OK
+</span></span><span style="display:flex;"><span>ok</span></span></code></pre></div><p>旧 Master 没有停止，但 Sentinel 仍会把它重配为 Replica。等待复制链路恢复并提取事件：</p>
+<p>执行命令：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>printf <span style="color:#e6db74">&#39;# 等待旧 Master 恢复为 Replica\n&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">for</span> attempt in <span style="color:#66d9ef">$(</span>seq <span style="color:#ae81ff">1</span> 60<span style="color:#66d9ef">)</span>; <span style="color:#66d9ef">do</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">if</span> pc exec -T <span style="color:#e6db74">&#34;</span>$OLD_MASTER<span style="color:#e6db74">&#34;</span> redis-cli --raw INFO replication <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>    2&gt;/dev/null | tr -d <span style="color:#e6db74">&#39;\r&#39;</span> | <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>    awk -F: <span style="color:#e6db74">&#39;
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">      $1 == &#34;role&#34; { role=$2 }
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">      $1 == &#34;master_link_status&#34; { link=$2 }
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">      END { exit !(role == &#34;slave&#34; &amp;&amp; link == &#34;up&#34;) }
+</span></span></span><span style="display:flex;"><span><span style="color:#e6db74">    &#39;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">then</span>
+</span></span><span style="display:flex;"><span>    printf <span style="color:#e6db74">&#39;old master recovered after %ss\n&#39;</span> <span style="color:#e6db74">&#34;</span>$attempt<span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>    break
+</span></span><span style="display:flex;"><span>  <span style="color:#66d9ef">fi</span>
+</span></span><span style="display:flex;"><span>  sleep <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">done</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>printf <span style="color:#e6db74">&#39;\n# 旧 Master 的复制状态\n&#39;</span>
+</span></span><span style="display:flex;"><span>pc exec -T <span style="color:#e6db74">&#34;</span>$OLD_MASTER<span style="color:#e6db74">&#34;</span> redis-cli --raw INFO replication | <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  sed -n <span style="color:#e6db74">&#39;/^role:/p;/^master_host:/p;/^master_link_status:/p&#39;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>printf <span style="color:#e6db74">&#39;\n# 三个 Redis 的最终角色\n&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">for</span> node in redis-1 redis-2 redis-3; <span style="color:#66d9ef">do</span>
+</span></span><span style="display:flex;"><span>  printf <span style="color:#e6db74">&#39;%s: &#39;</span> <span style="color:#e6db74">&#34;</span>$node<span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>  pc exec -T <span style="color:#e6db74">&#34;</span>$node<span style="color:#e6db74">&#34;</span> redis-cli --raw ROLE | sed -n <span style="color:#e6db74">&#39;1p&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">done</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>printf <span style="color:#e6db74">&#39;\n# Sentinel 故障转移事件\n&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">for</span> sentinel in sentinel-1 sentinel-2 sentinel-3; <span style="color:#66d9ef">do</span>
+</span></span><span style="display:flex;"><span>  printf <span style="color:#e6db74">&#39;\n# %s\n&#39;</span> <span style="color:#e6db74">&#34;</span>$sentinel<span style="color:#e6db74">&#34;</span>
+</span></span><span style="display:flex;"><span>  pc logs <span style="color:#e6db74">&#34;</span>$sentinel<span style="color:#e6db74">&#34;</span> 2&gt;&amp;<span style="color:#ae81ff">1</span> | <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>    grep -E <span style="color:#e6db74">&#39;\+(sdown|odown|new-epoch|try-failover|elected-leader|selected-slave|promoted-slave|switch-master)&#39;</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">done</span></span></span></code></pre></div><details ><summary>计划切换事件日志</summary><div class="markdown-inner">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># 等待旧 Master 恢复为 Replica</span>
+</span></span><span style="display:flex;"><span>old master recovered after 8s
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 旧 Master 的复制状态</span>
+</span></span><span style="display:flex;"><span>role:slave
+</span></span><span style="display:flex;"><span>master_host:redis-3
+</span></span><span style="display:flex;"><span>master_link_status:up
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 三个 Redis 的最终角色</span>
+</span></span><span style="display:flex;"><span>redis-1: slave
+</span></span><span style="display:flex;"><span>redis-2: slave
+</span></span><span style="display:flex;"><span>redis-3: master
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Sentinel 故障转移事件</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># sentinel-1</span>
+</span></span><span style="display:flex;"><span>1:X <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:37:57.589 <span style="color:#75715e"># +new-epoch 1</span>
+</span></span><span style="display:flex;"><span>1:X <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:37:57.589 <span style="color:#75715e"># +try-failover master mymaster redis-1 6379</span>
+</span></span><span style="display:flex;"><span>1:X <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:37:57.620 <span style="color:#75715e"># +elected-leader master mymaster redis-1 6379</span>
+</span></span><span style="display:flex;"><span>1:X <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:37:57.722 <span style="color:#75715e"># +selected-slave slave redis-3:6379 redis-3 6379 @ mymaster redis-1 6379</span>
+</span></span><span style="display:flex;"><span>1:X <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:37:58.662 <span style="color:#75715e"># +promoted-slave slave redis-3:6379 redis-3 6379 @ mymaster redis-1 6379</span>
+</span></span><span style="display:flex;"><span>1:X <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:38:10.099 <span style="color:#75715e"># +switch-master mymaster redis-1 6379 redis-3 6379</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># sentinel-2</span>
+</span></span><span style="display:flex;"><span>1:X <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:37:57.919 <span style="color:#75715e"># +new-epoch 1</span>
+</span></span><span style="display:flex;"><span>1:X <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:37:58.723 <span style="color:#75715e"># +switch-master mymaster redis-1 6379 redis-3 6379</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># sentinel-3</span>
+</span></span><span style="display:flex;"><span>1:X <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:37:57.919 <span style="color:#75715e"># +new-epoch 1</span>
+</span></span><span style="display:flex;"><span>1:X <span style="color:#ae81ff">04</span> Aug <span style="color:#ae81ff">2026</span> 08:37:58.723 <span style="color:#75715e"># +switch-master mymaster redis-1 6379 redis-3 6379</span></span></span></code></pre></div></div></details>
+<p><strong>实验结论：</strong></p>
+<ul>
+<li>切换前三个 Redis 的复制偏移量都是 9062，两个 Replica 链路也是 <code>up</code>。</li>
+<li><code>SENTINEL FAILOVER</code> 直接返回 <code>OK</code>，日志中没有 SDOWN 或 ODOWN；<code>sentinel-1</code> 选中并晋升了 <code>redis-3</code>。</li>
+<li>下一轮查询时，三个 Sentinel 都已经返回 <code>redis-3</code>。</li>
+<li>旧 Master 始终没有停机，约 8 秒后以 Replica 身份恢复复制。</li>
+</ul>
+<p>日志仍出现历史命名的 <code>+elected-leader</code>，但它不能证明这次强制切换走了自动路径的多数派授权。各 Sentinel 的 <code>+switch-master</code> 时间也不完全一致，不能把某一个进程的日志时间直接当成客户端地址切换时间。生产操作仍需要排空写入、确认候选进度，并单独验证客户端连接池的刷新行为。</p>
+<h2 id="5-影响-sentinel-行为的参数">5. 影响 Sentinel 行为的参数<a class="anchor" href="#5-%e5%bd%b1%e5%93%8d-sentinel-%e8%a1%8c%e4%b8%ba%e7%9a%84%e5%8f%82%e6%95%b0">#</a></h2>
+<blockquote class='book-hint '>
+<p>完整配置请先看 Redis 官方的 <a href="https://github.com/redis/redis/blob/5279a8d44818a5ca51e9abb91a9b8ce481d3c88b/sentinel.conf">Redis 8.10.0 <code>sentinel.conf</code></a>；参数细节和版本变化以 <a href="https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/">Redis Sentinel 官方文档</a> 为准。</p>
+</blockquote><p>本节只保留会直接改变故障判定、故障转移或新 Master 选择结果的参数。认证、目录、脚本、DNS、NAT 和 TLS 等部署配置不在这里展开。表中的重要程度是本文针对生产环境的判断，不是 Redis 官方评级；本节没有“低”级参数。</p>
+<table>
+  <thead>
+      <tr>
+          <th>参数</th>
+          <th>重要程度</th>
+          <th>Redis 8.10.0 默认值 / 推荐起点</th>
+          <th>作用</th>
+          <th>生产注意事项</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>sentinel monitor &lt;name&gt; &lt;host&gt; &lt;port&gt; &lt;quorum&gt;</code></td>
+          <td>高</td>
+          <td>无默认；三个 Sentinel 推荐 quorum <code>2</code></td>
+          <td>创建监控组，并规定形成 ODOWN 所需的同意数</td>
+          <td>quorum 先控制 ODOWN；如果高于多数派，也会抬高执行者的授权门槛</td>
+      </tr>
+      <tr>
+          <td><code>sentinel down-after-milliseconds &lt;name&gt; &lt;ms&gt;</code></td>
+          <td>高</td>
+          <td>默认 <code>30000 ms</code>；稳定同地域网络可从 <code>10000 ms</code> 起测</td>
+          <td>节点持续没有可接受响应达到该时长后进入 SDOWN</td>
+          <td>过小容易把网络抖动、宿主机暂停或 Redis 主线程阻塞当成故障，过大则延迟切换</td>
+      </tr>
+      <tr>
+          <td><code>sentinel master-reboot-down-after-period &lt;name&gt; &lt;ms&gt;</code></td>
+          <td>中</td>
+          <td>默认及推荐起点 <code>0</code></td>
+          <td>Master 重启后，Sentinel 接受 <code>-LOADING</code> 响应的最长时间</td>
+          <td><code>0</code> 表示持续接受 <code>-LOADING</code>，不会因此发起切换；设置非零值前要先测出正常加载耗时</td>
+      </tr>
+      <tr>
+          <td><code>sentinel failover-timeout &lt;name&gt; &lt;ms&gt;</code></td>
+          <td>高</td>
+          <td>默认及推荐起点 <code>180000 ms</code></td>
+          <td>控制故障转移重试、晋升超时判断和 Replica 重配期限</td>
+          <td>它不是一次切换的简单总时限；直接调小可能让仍在推进的故障转移重复进入新轮次</td>
+      </tr>
+      <tr>
+          <td><code>sentinel parallel-syncs &lt;name&gt; &lt;count&gt;</code></td>
+          <td>中</td>
+          <td>默认及推荐起点 <code>1</code></td>
+          <td>新 Master 产生后，同时重配的 Replicas 数量</td>
+          <td>调高可以加快拓扑恢复，但会让更多只读节点同时不可用，并集中消耗新 Master 的资源</td>
+      </tr>
+      <tr>
+          <td><code>replica-priority</code></td>
+          <td>高</td>
+          <td>默认 <code>100</code>；按候选能力设置正整数</td>
+          <td>Sentinel 对候选 Replicas 排序时，数值较小者优先</td>
+          <td>该参数写在 <code>redis.conf</code>；<code>0</code> 表示永不晋升，也会减少可用候选</td>
+      </tr>
+  </tbody>
+</table>
+<p>quorum 先用于把 Master 从 SDOWN 推进到 ODOWN。自动故障转移选举执行者时，授权门槛是 <code>max(floor(N / 2) + 1, quorum)</code>，其中 <code>N</code> 是当前 Master 视图中已知的 Sentinel 总数，包含自身。因此，把三个 Sentinel 的 quorum 从 <code>2</code> 改成 <code>1</code>，仍然至少需要 <code>2</code> 票。手动执行 <code>SENTINEL FAILOVER</code> 不受这个授权条件限制。</p>
+<p><code>down-after-milliseconds</code> 应覆盖正常运行时的尾部延迟、短时丢包和最长宿主机暂停。第四节为了缩短实验时间使用了 5 秒，生产环境不要直接照抄。</p>
+<p><code>failover-timeout</code> 在状态机的多个阶段复用。没有实际事件日志证明重试间隔过长时，保留默认值比按目标 RTO 直接压缩更稳妥。</p>
+<p><code>parallel-syncs</code> 取决于切换期间要保留多少只读容量，以及一次全量同步对新 Master 的影响。有两个 Replicas 且业务依赖副本读取时，建议先保留 <code>1</code>。</p>
+<p>Sentinel 会先排除不健康的 Replicas，再按 priority、复制偏移量和 run ID 排序。priority 排在复制进度之前：如果所有节点都具备同等接管能力，保持相同值即可；只有明确希望某个节点优先或禁止晋升时才区分配置。</p>
+<p>对于一个 Master、两个 Replicas、三个 Sentinel 的同地域部署，可以先从下面这组配置开始演练：</p>
+<pre tabindex="0"><code class="language-conf" data-lang="conf">sentinel monitor mymaster 10.0.1.10 6379 2
+sentinel down-after-milliseconds mymaster 10000
+sentinel master-reboot-down-after-period mymaster 0
+sentinel parallel-syncs mymaster 1
+sentinel failover-timeout mymaster 180000</code></pre><p>可能参与晋升的 Redis 节点先保持默认优先级：</p>
+<pre tabindex="0"><code class="language-conf" data-lang="conf">replica-priority 100</code></pre><p>这组值只是演练起点。上线前至少验证一次 Master 故障：记录 SDOWN、ODOWN、选举、晋升和 Replica 重配的耗时，确认被选中的 Replica 符合预期，再根据观测结果调整参数。</p>
+<h2 id="6-总结">6. 总结<a class="anchor" href="#6-%e6%80%bb%e7%bb%93">#</a></h2>
+<p><em><strong>Sentinel 是 Redis 主从复制之外的分布式控制面。</strong></em> 每个 Sentinel 独立监控拓扑，先记录 SDOWN，再通过 quorum 形成 ODOWN。进入自动故障转移后，Sentinels 按纪元授权一个执行者，由它选择并晋升 Replica、重配其余节点，客户端最后重新发现 Master。</p>
+<p><em><strong>Redis 将故障判断分散给多个 Sentinel，只把一次切换交给一个执行者。</strong></em> 单个进程无法可靠区分节点宕机和网络分区，因此 ODOWN 需要多个观察者；自动故障转移还要取得多数派授权，同一纪元只由一个 Sentinel 协调。数据复制继续留在 Redis 主从链路，Sentinel 不进入数据路径。</p>
+<p><em><strong>Sentinel 的优点是能以较低成本为现有主从复制补上自动故障转移。</strong></em> 它无需代理数据流，可以按健康状态、优先级和复制进度选择候选，并让旧 Master 作为 Replica 回归。多个 Sentinel 跨故障域部署后，也避免了单个监控进程成为控制面单点。</p>
+<p><em><strong>Sentinel 优先恢复可用性，因此保留了异步复制的一致性风险。</strong></em> 未同步写入仍可能丢失，分区中的旧 Master 也可能继续接收写入。实际恢复依赖 Sentinel 部署、地址通告、配置持久化和客户端重连；它不负责读副本准入，也不解决分片或跨地域强一致。</p>
+<h2 id="参考资料">参考资料<a class="anchor" href="#%e5%8f%82%e8%80%83%e8%b5%84%e6%96%99">#</a></h2>
+<ul>
+<li><a href="https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/">Redis Sentinel 官方文档</a></li>
+<li><a href="https://redis.io/docs/latest/develop/reference/sentinel-clients/">High availability with Sentinel client specification</a></li>
+<li><a href="https://redis.io/docs/latest/commands/sentinel-failover/"><code>SENTINEL FAILOVER</code></a></li>
+<li><a href="https://redis.io/docs/latest/commands/sentinel-ckquorum/"><code>SENTINEL CKQUORUM</code></a></li>
+<li><a href="https://redis.io/docs/latest/commands/sentinel-set/"><code>SENTINEL SET</code></a></li>
+<li><a href="https://github.com/redis/redis/blob/5279a8d44818a5ca51e9abb91a9b8ce481d3c88b/redis.conf">Redis 8.10.0 <code>redis.conf</code></a></li>
+<li><a href="https://github.com/redis/redis/blob/5279a8d44818a5ca51e9abb91a9b8ce481d3c88b/sentinel.conf">Redis 8.10.0 <code>sentinel.conf</code></a></li>
+<li><a href="https://github.com/redis/redis/blob/5279a8d44818a5ca51e9abb91a9b8ce481d3c88b/src/sentinel.c#L2867-L3185">Redis 8.10.0 Sentinel 实例发现与周期通信</a></li>
+<li><a href="https://github.com/redis/redis/blob/5279a8d44818a5ca51e9abb91a9b8ce481d3c88b/src/sentinel.c#L4689-L4816">Redis 8.10.0 Sentinel 下线询问与领导者投票</a></li>
+<li><a href="https://github.com/redis/redis/blob/5279a8d44818a5ca51e9abb91a9b8ce481d3c88b/src/sentinel.c#L2650-L2772">Redis 8.10.0 Sentinel 晋升确认与配置纪元更新</a></li>
+<li><a href="https://github.com/redis/redis/blob/5279a8d44818a5ca51e9abb91a9b8ce481d3c88b/src/sentinel.c#L4913-L5401">Redis 8.10.0 Sentinel failover 状态机</a></li>
+</ul>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "redis-sentinel", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+  <div>
+  
+    <a href="/2026/08/07/server-database-compression-algorithms/" class="flex align-center">
+      <img src="/icons/backward.svg" class="book-icon" alt="Backward" />
+      <span>服务端与数据库压缩：原理、组合与选型</span>
+    </a>
+  
+  </div>
+  <div>
+  
+    <a href="/2026/07/23/Kubernetes-VPA-%E7%9A%84%E8%AE%BE%E8%AE%A1%E5%92%8C%E5%AE%9E%E7%8E%B0/" class="flex align-center">
+      <span>Kubernetes VPA 的设计和实现</span>
+      <img src="/icons/forward.svg" class="book-icon" alt="Forward" />
+    </a>
+  
+  </div>
+</div>
+ 
+        
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+        
+<div class="flex align-center" style="margin-top: 1rem;">
+  <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+    访问量<span id="busuanzi_value_site_pv"></span>
+  </span>
+  <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+    访客数<span id="busuanzi_value_site_uv"></span>
+  </span>
+</div>
+        
+  
+ 
+        
+  
+  
+    <script>(function(){document.querySelectorAll("pre:has(code)").forEach(e=>{e.addEventListener("click",e.focus),e.addEventListener("copy",function(t){if(t.preventDefault(),navigator.clipboard){const t=window.getSelection().toString()||e.textContent;navigator.clipboard.writeText(t)}})})})()</script>
+  
+
+      </footer>
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+  
+  <aside class="book-toc">
+    <div class="book-toc-content">
+      
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-sentinel-解决什么问题">1. Sentinel 解决什么问题</a></li>
+    <li><a href="#2-sentinel-原理监控选主与拓扑收敛">2. Sentinel 原理：监控、选主与拓扑收敛</a>
+      <ul>
+        <li><a href="#21-监控建立视图并判断故障">2.1 监控：建立视图并判断故障</a></li>
+        <li><a href="#22-选主先选执行者再选新-master">2.2 选主：先选执行者，再选新 Master</a></li>
+        <li><a href="#23-设置拓扑晋升重配与配置传播">2.3 设置拓扑：晋升、重配与配置传播</a></li>
+      </ul>
+    </li>
+    <li><a href="#3-sentinel-是什么实例发现与协作">3. Sentinel 是什么：实例发现与协作</a></li>
+    <li><a href="#4-实验观察-sentinel-的行为">4. 实验：观察 Sentinel 的行为</a>
+      <ul>
+        <li><a href="#41-观察节点发现与周期监控">4.1 观察节点发现与周期监控</a></li>
+        <li><a href="#42-记录一次自动故障转移">4.2 记录一次自动故障转移</a></li>
+        <li><a href="#43-观察恢复中-replica-的-sentinel-状态">4.3 观察恢复中 Replica 的 Sentinel 状态</a></li>
+        <li><a href="#44-执行一次计划内故障转移">4.4 执行一次计划内故障转移</a></li>
+      </ul>
+    </li>
+    <li><a href="#5-影响-sentinel-行为的参数">5. 影响 Sentinel 行为的参数</a></li>
+    <li><a href="#6-总结">6. 总结</a></li>
+    <li><a href="#参考资料">参考资料</a></li>
+  </ul>
+</nav>
+
+
+
+    </div>
+  </aside>
+  
+ 
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

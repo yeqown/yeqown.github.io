@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 922" width="2880" height="1844" role="img" aria-labelledby="title desc">
+  <title id="title">Sentinel 实例发现与协作</title>
+  <desc id="desc">左侧展示三个 Sentinel 借助 Redis 的 hello 频道发现彼此，并通过 INFO 发现 Replicas；右侧展示 peer Sentinel 直连交换下线判断、投票和纪元。Sentinel 没有固定 Master，故障转移期间只有临时执行者。</desc>
+  <defs>
+    <marker id="arrow-charcoal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#202426"/>
+    </marker>
+    <marker id="arrow-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#E8BD3F"/>
+    </marker>
+    <marker id="arrow-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#159E98"/>
+    </marker>
+    <style>
+      .sans { font-family: "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", Arial, sans-serif; }
+      .mono { font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace; }
+      .charcoal { fill: #202426; }
+      .paper { fill: #F7F8F4; }
+      .teal { fill: #159E98; }
+      .coral { fill: #E95D4F; }
+      .amber { fill: #E8BD3F; }
+      .node { stroke: #202426; stroke-width: 2; rx: 8; }
+      .redis-outline { fill: #F7F8F4; stroke: #159E98; stroke-width: 3; rx: 8; }
+      .label-bg { fill: #F7F8F4; }
+    </style>
+  </defs>
+
+  <rect width="1440" height="922" fill="#F7F8F4"/>
+
+  <g id="header" class="sans">
+    <text x="40" y="62" font-size="40" font-weight="700" fill="#202426">Sentinel 如何相遇，又如何协同</text>
+    <text x="1400" y="60" font-size="28" text-anchor="end" fill="#159E98">Redis 8.10 · Sentinel</text>
+    <rect x="40" y="92" width="1360" height="96" rx="8" fill="#202426"/>
+    <text x="74" y="149" font-size="34" font-weight="700" fill="#F7F8F4">Sentinel 之间没有固定 Master</text>
+    <text x="1366" y="129" font-size="27" text-anchor="end" fill="#E8BD3F">
+      <tspan x="1366" dy="0">只有 failover 期间，获多数派授权的 Sentinel</tspan>
+      <tspan x="1366" dy="38">临时执行本轮切换</tspan>
+    </text>
+  </g>
+
+  <line x1="720" y1="222" x2="720" y2="882" stroke="#202426" stroke-width="2" stroke-dasharray="9 11"/>
+
+  <g id="discovery" class="sans">
+    <text x="60" y="254" font-size="34" font-weight="700" fill="#202426">01  借助 Redis 发现</text>
+    <text x="60" y="296" font-size="25" fill="#159E98">无需成员清单，也没有 MEET</text>
+
+    <g id="discovery-connections" fill="none" stroke-linejoin="round">
+      <path d="M145 400 V428 H260 V455" stroke="#E8BD3F" stroke-width="3" stroke-dasharray="8 9" marker-start="url(#arrow-amber)" marker-end="url(#arrow-amber)"/>
+      <path d="M360 400 V455" stroke="#E8BD3F" stroke-width="3" stroke-dasharray="8 9" marker-start="url(#arrow-amber)" marker-end="url(#arrow-amber)"/>
+      <path d="M575 400 V428 H460 V455" stroke="#E8BD3F" stroke-width="3" stroke-dasharray="8 9" marker-start="url(#arrow-amber)" marker-end="url(#arrow-amber)"/>
+
+      <path d="M190 527 V572 H145 V625" stroke="#E8BD3F" stroke-width="2" stroke-dasharray="7 8" marker-start="url(#arrow-amber)" marker-end="url(#arrow-amber)"/>
+      <path d="M360 527 V625" stroke="#E8BD3F" stroke-width="2" stroke-dasharray="7 8" marker-start="url(#arrow-amber)" marker-end="url(#arrow-amber)"/>
+      <path d="M530 527 V572 H575 V625" stroke="#E8BD3F" stroke-width="2" stroke-dasharray="7 8" marker-start="url(#arrow-amber)" marker-end="url(#arrow-amber)"/>
+
+      <line x1="275" y1="665" x2="230" y2="665" stroke="#159E98" stroke-width="3" marker-end="url(#arrow-teal)"/>
+      <line x1="445" y1="665" x2="490" y2="665" stroke="#159E98" stroke-width="3" marker-end="url(#arrow-teal)"/>
+      <line x1="420" y1="762" x2="420" y2="705" stroke="#202426" stroke-width="2" marker-end="url(#arrow-charcoal)"/>
+    </g>
+
+    <g id="discovery-sentinels">
+      <rect class="node amber" x="70" y="330" width="150" height="70"/>
+      <rect class="node amber" x="285" y="330" width="150" height="70"/>
+      <rect class="node amber" x="500" y="330" width="150" height="70"/>
+      <text x="145" y="375" font-size="27" text-anchor="middle" fill="#202426">Sentinel S1</text>
+      <text x="360" y="375" font-size="27" text-anchor="middle" fill="#202426">Sentinel S2</text>
+      <text x="575" y="375" font-size="27" text-anchor="middle" fill="#202426">Sentinel S3</text>
+    </g>
+
+    <rect x="110" y="455" width="500" height="72" rx="8" fill="#202426"/>
+    <text class="mono" x="360" y="500" font-size="27" text-anchor="middle" fill="#F7F8F4">__sentinel__:hello · Pub/Sub</text>
+    <rect x="155" y="532" width="410" height="38" rx="8" fill="#F7F8F4"/>
+    <text x="360" y="558" font-size="22" text-anchor="middle" fill="#202426">hello：身份 · epoch · Master 配置</text>
+
+    <g id="redis-nodes">
+      <rect class="redis-outline" x="60" y="625" width="170" height="80"/>
+      <rect class="node teal" x="275" y="625" width="170" height="80" stroke-width="3"/>
+      <rect class="redis-outline" x="490" y="625" width="170" height="80"/>
+      <text x="145" y="657" font-size="24" text-anchor="middle" fill="#202426">Replica A</text>
+      <text x="145" y="686" font-size="21" text-anchor="middle" fill="#202426">由 INFO 发现</text>
+      <text x="360" y="657" font-size="24" text-anchor="middle" fill="#F7F8F4">Redis Master</text>
+      <text x="360" y="686" font-size="21" text-anchor="middle" fill="#F7F8F4">monitor 入口</text>
+      <text x="575" y="657" font-size="24" text-anchor="middle" fill="#202426">Replica B</text>
+      <text x="575" y="686" font-size="21" text-anchor="middle" fill="#202426">由 INFO 发现</text>
+    </g>
+
+    <text x="60" y="738" font-size="22" fill="#159E98">INFO 返回复制拓扑</text>
+    <rect x="60" y="762" width="600" height="62" rx="8" fill="#202426"/>
+    <text class="mono" x="360" y="801" font-size="22" text-anchor="middle" fill="#F7F8F4">sentinel monitor mymaster redis-1 6379 2</text>
+  </g>
+
+  <g id="coordination" class="sans">
+    <text x="780" y="254" font-size="34" font-weight="700" fill="#202426">02  peer 之间直连协调</text>
+    <text x="780" y="296" font-size="25" fill="#159E98">发现完成后，判断与投票不经 Pub/Sub</text>
+
+    <g id="peer-connections" fill="none">
+      <line x1="1015" y1="406" x2="890" y2="585" stroke="#202426" stroke-width="3" marker-start="url(#arrow-charcoal)" marker-end="url(#arrow-charcoal)"/>
+      <line x1="1185" y1="406" x2="1310" y2="585" stroke="#202426" stroke-width="3" marker-start="url(#arrow-charcoal)" marker-end="url(#arrow-charcoal)"/>
+      <line x1="980" y1="623" x2="1220" y2="623" stroke="#202426" stroke-width="3" marker-start="url(#arrow-charcoal)" marker-end="url(#arrow-charcoal)"/>
+    </g>
+
+    <rect class="label-bg" x="790" y="424" width="160" height="50"/>
+    <text class="mono" x="870" y="459" font-size="23" text-anchor="middle" fill="#202426">PING</text>
+    <rect class="label-bg" x="1240" y="424" width="160" height="50"/>
+    <text class="mono" x="1400" y="459" font-size="23" text-anchor="end" fill="#202426">down report</text>
+
+    <rect x="970" y="475" width="260" height="72" rx="8" fill="#202426"/>
+    <text x="1100" y="520" font-size="27" text-anchor="middle" fill="#F7F8F4">peer 一对一直连</text>
+
+    <g id="coordination-sentinels">
+      <rect class="node amber" x="1010" y="330" width="180" height="76"/>
+      <rect class="node amber" x="800" y="585" width="180" height="76"/>
+      <rect class="node amber" x="1220" y="585" width="180" height="76"/>
+      <text x="1100" y="378" font-size="27" text-anchor="middle" fill="#202426">Sentinel S1</text>
+      <text x="890" y="633" font-size="27" text-anchor="middle" fill="#202426">Sentinel S2</text>
+      <text x="1310" y="633" font-size="27" text-anchor="middle" fill="#202426">Sentinel S3</text>
+    </g>
+
+    <rect class="label-bg" x="1000" y="576" width="200" height="38"/>
+    <text class="mono" x="1100" y="603" font-size="23" text-anchor="middle" fill="#202426">vote · epoch</text>
+
+    <line x1="890" y1="661" x2="890" y2="675" stroke="#E95D4F" stroke-width="3"/>
+    <rect x="795" y="675" width="190" height="50" rx="8" fill="#E95D4F" stroke="#202426" stroke-width="2"/>
+    <text x="890" y="708" font-size="24" text-anchor="middle" fill="#F7F8F4">临时执行者</text>
+
+    <rect x="780" y="752" width="600" height="80" rx="8" fill="#202426"/>
+    <text class="mono" x="805" y="781" font-size="22" fill="#F7F8F4">PING</text>
+    <text class="mono" x="805" y="813" font-size="22" fill="#F7F8F4">SENTINEL is-master-down-by-addr</text>
+    <text x="780" y="873" font-size="25" font-weight="700" fill="#E95D4F">选出来的是本轮执行者，不是 Sentinel Master</text>
+  </g>
+</svg>

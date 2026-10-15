@@ -1,0 +1,2092 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "https://excalidraw.com",
+  "elements": [
+    {
+      "id": "parquet-cover-canvas",
+      "type": "rectangle",
+      "x": 0,
+      "y": 0,
+      "width": 1280,
+      "height": 720,
+      "angle": 0,
+      "strokeColor": "transparent",
+      "backgroundColor": "#F8FAFC",
+      "fillStyle": "solid",
+      "strokeWidth": 1,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "roundness": null,
+      "seed": 1786600000,
+      "version": 1,
+      "versionNonce": 1786600001,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1786600000000,
+      "link": null,
+      "locked": true,
+      "customData": {
+        "role": "canvas-background"
+      }
+    },
+    {
+      "id": "parquet-cover-hero-database-001-01",
+      "type": "rectangle",
+      "x": 80,
+      "y": 276.6666666666667,
+      "width": 250,
+      "height": 152.77777777777777,
+      "strokeColor": "#1F2937",
+      "backgroundColor": "#EAF7F0",
+      "fillStyle": "solid",
+      "strokeWidth": 4.166666666666666,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "angle": 0,
+      "seed": 279237123,
+      "version": 1,
+      "versionNonce": 1338795598,
+      "isDeleted": false,
+      "groupIds": [
+        "parquet-cover-hero-database-001-group-1"
+      ],
+      "boundElements": [],
+      "link": null,
+      "locked": false,
+      "customData": {
+        "libraryItem": "hero-database"
+      },
+      "updated": 1786086000000
+    },
+    {
+      "id": "parquet-cover-hero-database-001-02",
+      "type": "ellipse",
+      "x": 80,
+      "y": 387.77777777777777,
+      "width": 250,
+      "height": 83.33333333333333,
+      "strokeColor": "#1F2937",
+      "backgroundColor": "#55B685",
+      "fillStyle": "solid",
+      "strokeWidth": 4.166666666666666,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "angle": 0,
+      "seed": 3996026580,
+      "version": 1,
+      "versionNonce": 299415903,
+      "isDeleted": false,
+      "groupIds": [
+        "parquet-cover-hero-database-001-group-1"
+      ],
+      "boundElements": [],
+      "link": null,
+      "locked": false,
+      "customData": {
+        "libraryItem": "hero-database"
+      },
+      "updated": 1786086000000
+    },
+    {
+      "id": "parquet-cover-hero-database-001-03",
+      "type": "ellipse",
+      "x": 80,
+      "y": 235,
+      "width": 250,
+      "height": 83.33333333333333,
+      "strokeColor": "#1F2937",
+      "backgroundColor": "#55B685",
+      "fillStyle": "solid",
+      "strokeWidth": 4.166666666666666,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "angle": 0,
+      "seed": 2910987437,
+      "version": 1,
+      "versionNonce": 654532996,
+      "isDeleted": false,
+      "groupIds": [
+        "parquet-cover-hero-database-001-group-1"
+      ],
+      "boundElements": [],
+      "link": null,
+      "locked": false,
+      "customData": {
+        "libraryItem": "hero-database"
+      },
+      "updated": 1786086000000
+    },
+    {
+      "id": "parquet-cover-hero-database-001-04",
+      "type": "ellipse",
+      "x": 80,
+      "y": 318.3333333333333,
+      "width": 250,
+      "height": 69.44444444444444,
+      "strokeColor": "#55B685",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 4.166666666666666,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "angle": 0,
+      "seed": 2523211126,
+      "version": 1,
+      "versionNonce": 736814213,
+      "isDeleted": false,
+      "groupIds": [
+        "parquet-cover-hero-database-001-group-1"
+      ],
+      "boundElements": [],
+      "link": null,
+      "locked": false,
+      "customData": {
+        "libraryItem": "hero-database"
+      },
+      "updated": 1786086000000
+    },
+    {
+      "id": "parquet-cover-hero-database-001-05",
+      "type": "ellipse",
+      "x": 127.22222222222223,
+      "y": 257.22222222222223,
+      "width": 100,
+      "height": 25,
+      "strokeColor": "#FFFFFF",
+      "backgroundColor": "#FFFFFF",
+      "fillStyle": "solid",
+      "strokeWidth": 1.3888888888888888,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "angle": 0,
+      "seed": 1711294983,
+      "version": 1,
+      "versionNonce": 2450654514,
+      "isDeleted": false,
+      "groupIds": [
+        "parquet-cover-hero-database-001-group-1"
+      ],
+      "boundElements": [],
+      "link": null,
+      "locked": false,
+      "customData": {
+        "libraryItem": "hero-database"
+      },
+      "updated": 1786086000000
+    },
+    {
+      "id": "parquet-cover-hero-message-stream-006-01",
+      "type": "line",
+      "x": 405,
+      "y": 345.1526717557252,
+      "width": 238.5496183206107,
+      "height": 57.25190839694657,
+      "strokeColor": "#1F2937",
+      "backgroundColor": "#E7F7F8",
+      "fillStyle": "solid",
+      "strokeWidth": 2.8625954198473282,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "angle": 0,
+      "seed": 629105389,
+      "version": 1,
+      "versionNonce": 2250648260,
+      "isDeleted": false,
+      "groupIds": [
+        "parquet-cover-hero-message-stream-006-group-1"
+      ],
+      "boundElements": [],
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          28.625954198473284
+        ],
+        [
+          162.21374045801528,
+          0
+        ],
+        [
+          238.5496183206107,
+          28.625954198473284
+        ],
+        [
+          76.33587786259542,
+          57.25190839694657
+        ],
+        [
+          0,
+          28.625954198473284
+        ]
+      ],
+      "startBinding": null,
+      "endBinding": null,
+      "lastCommittedPoint": null,
+      "startArrowhead": null,
+      "endArrowhead": null,
+      "customData": {
+        "libraryItem": "hero-message-stream"
+      },
+      "updated": 1786086000000
+    },
+    {
+      "id": "parquet-cover-hero-message-stream-006-02",
+      "type": "arrow",
+      "x": 429.80916030534354,
+      "y": 360.41984732824426,
+      "width": 125.95419847328245,
+      "height": 19.083969465648856,
+      "strokeColor": "#2AB7CA",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 3.816793893129771,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "angle": 0,
+      "seed": 1951954642,
+      "version": 1,
+      "versionNonce": 325541057,
+      "isDeleted": false,
+      "groupIds": [
+        "parquet-cover-hero-message-stream-006-group-1"
+      ],
+      "boundElements": [],
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          19.083969465648856
+        ],
+        [
+          125.95419847328245,
+          0
+        ]
+      ],
+      "startBinding": null,
+      "endBinding": null,
+      "lastCommittedPoint": null,
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "customData": {
+        "libraryItem": "hero-message-stream"
+      },
+      "updated": 1786086000000
+    },
+    {
+      "id": "parquet-cover-hero-message-stream-006-03",
+      "type": "rectangle",
+      "x": 424.08396946564886,
+      "y": 303.1679389312977,
+      "width": 38.16793893129771,
+      "height": 38.16793893129771,
+      "strokeColor": "#1F2937",
+      "backgroundColor": "#FFFFFF",
+      "fillStyle": "solid",
+      "strokeWidth": 1.9083969465648856,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "angle": 0,
+      "seed": 2292219203,
+      "version": 1,
+      "versionNonce": 2151106702,
+      "isDeleted": false,
+      "groupIds": [
+        "parquet-cover-hero-message-stream-006-group-1"
+      ],
+      "boundElements": [],
+      "link": null,
+      "locked": false,
+      "roundness": {
+        "type": 3
+      },
+      "customData": {
+        "libraryItem": "hero-message-stream"
+      },
+      "updated": 1786086000000
+    },
+    {
+      "id": "parquet-cover-hero-message-stream-006-04",
+      "type": "rectangle",
+      "x": 477.51908396946567,
+      "y": 284.08396946564886,
+      "width": 38.16793893129771,
+      "height": 38.16793893129771,
+      "strokeColor": "#1F2937",
+      "backgroundColor": "#E7F7F8",
+      "fillStyle": "solid",
+      "strokeWidth": 1.9083969465648856,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "angle": 0,
+      "seed": 4215785624,
+      "version": 1,
+      "versionNonce": 3026642755,
+      "isDeleted": false,
+      "groupIds": [
+        "parquet-cover-hero-message-stream-006-group-1"
+      ],
+      "boundElements": [],
+      "link": null,
+      "locked": false,
+      "roundness": {
+        "type": 3
+      },
+      "customData": {
+        "libraryItem": "hero-message-stream"
+      },
+      "updated": 1786086000000
+    },
+    {
+      "id": "parquet-cover-hero-message-stream-006-05",
+      "type": "rectangle",
+      "x": 530.9541984732824,
+      "y": 265,
+      "width": 38.16793893129771,
+      "height": 38.16793893129771,
+      "strokeColor": "#1F2937",
+      "backgroundColor": "#2AB7CA",
+      "fillStyle": "solid",
+      "strokeWidth": 1.9083969465648856,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "angle": 0,
+      "seed": 2406428993,
+      "version": 1,
+      "versionNonce": 11054728,
+      "isDeleted": false,
+      "groupIds": [
+        "parquet-cover-hero-message-stream-006-group-1"
+      ],
+      "boundElements": [],
+      "link": null,
+      "locked": false,
+      "roundness": {
+        "type": 3
+      },
+      "customData": {
+        "libraryItem": "hero-message-stream"
+      },
+      "updated": 1786086000000
+    },
+    {
+      "id": "parquet-cover-hero-message-stream-006-06",
+      "type": "line",
+      "x": 578.7600239154469,
+      "y": 268.8167938931298,
+      "width": 76.23997608455313,
+      "height": 110.59112112272092,
+      "strokeColor": "#1F2937",
+      "backgroundColor": "#2AB7CA",
+      "fillStyle": "solid",
+      "strokeWidth": 2.8625954198473282,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "angle": 0,
+      "seed": 1366437302,
+      "version": 1,
+      "versionNonce": 3340732101,
+      "isDeleted": false,
+      "groupIds": [
+        "parquet-cover-hero-message-stream-006-group-1"
+      ],
+      "boundElements": [],
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          15.363077350561529
+        ],
+        [
+          2.024343200703462,
+          13.7017418203856
+        ],
+        [
+          4.333899697996587,
+          12.46725815347501
+        ],
+        [
+          6.839914530902546,
+          11.707066864841952
+        ],
+        [
+          9.446082954782145,
+          11.450381679389313
+        ],
+        [
+          50.586629782442856,
+          11.785314150242916
+        ],
+        [
+          53.410178706352575,
+          12.773316650158907
+        ],
+        [
+          55.94308412465074,
+          14.36484660825173
+        ],
+        [
+          58.05833558317185,
+          16.480098066772683
+        ],
+        [
+          59.649865541264845,
+          19.013003485070417
+        ],
+        [
+          60.63786804118056,
+          21.83655240898019
+        ],
+        [
+          60.972800512034055,
+          24.80916030534351
+        ],
+        [
+          60.71611532658104,
+          103.75120659181837
+        ],
+        [
+          59.95592403794819,
+          106.25722142472443
+        ],
+        [
+          58.721440371037495,
+          108.56677792201772
+        ],
+        [
+          57.060104840862,
+          110.59112112272092
+        ],
+        [
+          72.32728041338109,
+          99.14073944333161
+        ],
+        [
+          73.98861594355658,
+          97.11639624262841
+        ],
+        [
+          75.22309961046729,
+          94.80683974533513
+        ],
+        [
+          75.98329089910013,
+          92.30082491242906
+        ],
+        [
+          76.23997608455313,
+          13.3587786259542
+        ],
+        [
+          75.90504361369965,
+          10.386170729590875
+        ],
+        [
+          74.91704111378392,
+          7.562621805681103
+        ],
+        [
+          73.32551115569095,
+          5.02971638738337
+        ],
+        [
+          71.21025969716982,
+          2.914464928862417
+        ],
+        [
+          68.67735427887166,
+          1.3229349707695945
+        ],
+        [
+          65.85380535496193,
+          0.3349324708536028
+        ],
+        [
+          24.71325852730123,
+          0
+        ],
+        [
+          22.10709010342163,
+          0.25668518545263874
+        ],
+        [
+          19.601075270515672,
+          1.0168764740856968
+        ],
+        [
+          17.291518773222545,
+          2.2513601409962867
+        ],
+        [
+          15.267175572519085,
+          3.912695671172216
+        ],
+        [
+          0,
+          15.363077350561529
+        ]
+      ],
+      "startBinding": null,
+      "endBinding": null,
+      "lastCommittedPoint": null,
+      "customData": {
+        "libraryItem": "hero-message-stream"
+      },
+      "frameId": null,
+      "roundness": null,
+      "updated": 1786086000000
+    },
+    {
+      "id": "parquet-cover-hero-message-stream-006-07",
+      "type": "line",
+      "x": 578.7600239154469,
+      "y": 272.729489564302,
+      "width": 15.267175572519085,
+      "height": 11.450381679389313,
+      "strokeColor": "#1F2937",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2.8625954198473282,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "angle": 0,
+      "seed": 3682803527,
+      "version": 1,
+      "versionNonce": 769659506,
+      "isDeleted": false,
+      "groupIds": [
+        "parquet-cover-hero-message-stream-006-group-1"
+      ],
+      "boundElements": [],
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          11.450381679389313
+        ],
+        [
+          15.267175572519085,
+          0
+        ]
+      ],
+      "startBinding": null,
+      "endBinding": null,
+      "lastCommittedPoint": null,
+      "customData": {
+        "libraryItem": "hero-message-stream"
+      },
+      "frameId": null,
+      "roundness": null,
+      "updated": 1786086000000
+    },
+    {
+      "id": "parquet-cover-hero-message-stream-006-08",
+      "type": "line",
+      "x": 635.8201287563088,
+      "y": 367.9575333364614,
+      "width": 15.267175572519085,
+      "height": 11.450381679389313,
+      "strokeColor": "#1F2937",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2.8625954198473282,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "angle": 0,
+      "seed": 2848454476,
+      "version": 1,
+      "versionNonce": 1723741367,
+      "isDeleted": false,
+      "groupIds": [
+        "parquet-cover-hero-message-stream-006-group-1"
+      ],
+      "boundElements": [],
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          11.450381679389313
+        ],
+        [
+          15.267175572519085,
+          0
+        ]
+      ],
+      "startBinding": null,
+      "endBinding": null,
+      "lastCommittedPoint": null,
+      "customData": {
+        "libraryItem": "hero-message-stream"
+      },
+      "frameId": null,
+      "roundness": null,
+      "updated": 1786086000000
+    },
+    {
+      "id": "parquet-cover-hero-message-stream-006-09",
+      "type": "line",
+      "x": 574.8473282442749,
+      "y": 280.2671755725191,
+      "width": 64.88549618320612,
+      "height": 103.05343511450383,
+      "strokeColor": "#1F2937",
+      "backgroundColor": "#E7F7F8",
+      "fillStyle": "solid",
+      "strokeWidth": 2.8625954198473282,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "angle": 0,
+      "seed": 4155131749,
+      "version": 1,
+      "versionNonce": 3188093404,
+      "isDeleted": false,
+      "groupIds": [
+        "parquet-cover-hero-message-stream-006-group-1"
+      ],
+      "boundElements": [],
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          13.3587786259542
+        ],
+        [
+          0.6538251639960392,
+          9.230689006441574
+        ],
+        [
+          2.5512996934644203,
+          5.50668556097801
+        ],
+        [
+          5.506685560978389,
+          2.551299693464475
+        ],
+        [
+          9.23068900644152,
+          0.6538251639962018
+        ],
+        [
+          13.3587786259542,
+          0
+        ],
+        [
+          55.65480717676459,
+          0.6538251639962018
+        ],
+        [
+          59.37881062222767,
+          2.551299693464475
+        ],
+        [
+          62.334196489741686,
+          5.50668556097801
+        ],
+        [
+          64.23167101921007,
+          9.230689006441574
+        ],
+        [
+          64.88549618320612,
+          13.3587786259542
+        ],
+        [
+          64.23167101921007,
+          93.82274610806225
+        ],
+        [
+          62.334196489741686,
+          97.54674955352581
+        ],
+        [
+          59.37881062222772,
+          100.50213542103934
+        ],
+        [
+          55.65480717676459,
+          102.39960995050762
+        ],
+        [
+          51.526717557251914,
+          103.05343511450383
+        ],
+        [
+          9.23068900644152,
+          102.39960995050762
+        ],
+        [
+          5.506685560978389,
+          100.50213542103934
+        ],
+        [
+          2.5512996934644203,
+          97.54674955352581
+        ],
+        [
+          0.6538251639960392,
+          93.82274610806225
+        ],
+        [
+          0,
+          89.69465648854963
+        ],
+        [
+          0,
+          13.3587786259542
+        ]
+      ],
+      "startBinding": null,
+      "endBinding": null,
+      "lastCommittedPoint": null,
+      "customData": {
+        "libraryItem": "hero-message-stream"
+      },
+      "frameId": null,
+      "roundness": null,
+      "updated": 1786086000000
+    },
+    {
+      "id": "parquet-cover-hero-message-stream-006-10",
+      "type": "line",
+      "x": 586.2977099236641,
+      "y": 310.80152671755724,
+      "width": 41.98473282442748,
+      "height": 0,
+      "strokeColor": "#1F2937",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 1.9083969465648856,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "angle": 0,
+      "seed": 2714472787,
+      "version": 1,
+      "versionNonce": 1655789694,
+      "isDeleted": false,
+      "groupIds": [
+        "parquet-cover-hero-message-stream-006-group-1"
+      ],
+      "boundElements": [],
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          41.98473282442748,
+          0
+        ]
+      ],
+      "startBinding": null,
+      "endBinding": null,
+      "lastCommittedPoint": null,
+      "customData": {
+        "libraryItem": "hero-message-stream"
+      },
+      "frameId": null,
+      "roundness": null,
+      "updated": 1786086000000
+    },
+    {
+      "id": "parquet-cover-hero-message-stream-006-11",
+      "type": "line",
+      "x": 586.2977099236641,
+      "y": 337.51908396946567,
+      "width": 41.98473282442748,
+      "height": 0,
+      "strokeColor": "#1F2937",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 1.9083969465648856,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "angle": 0,
+      "seed": 90120226,
+      "version": 1,
+      "versionNonce": 2511902193,
+      "isDeleted": false,
+      "groupIds": [
+        "parquet-cover-hero-message-stream-006-group-1"
+      ],
+      "boundElements": [],
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          41.98473282442748,
+          0
+        ]
+      ],
+      "startBinding": null,
+      "endBinding": null,
+      "lastCommittedPoint": null,
+      "customData": {
+        "libraryItem": "hero-message-stream"
+      },
+      "frameId": null,
+      "roundness": null,
+      "updated": 1786086000000
+    },
+    {
+      "id": "parquet-cover-hero-object-storage-017-01",
+      "type": "line",
+      "x": 771.9572901701162,
+      "y": 175,
+      "width": 318.04270982988385,
+      "height": 222.78497787112113,
+      "strokeColor": "#1F2937",
+      "backgroundColor": "#4E7CF6",
+      "fillStyle": "solid",
+      "strokeWidth": 5.103092783505154,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "angle": 0,
+      "seed": 3483825494,
+      "version": 1,
+      "versionNonce": 1247761637,
+      "isDeleted": false,
+      "groupIds": [
+        "parquet-cover-hero-object-storage-017-group-1"
+      ],
+      "boundElements": [],
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          42.5758468711469
+        ],
+        [
+          6.18644052310414,
+          37.49876634311294
+        ],
+        [
+          13.244499601370922,
+          33.72615516758039
+        ],
+        [
+          20.902939982627476,
+          31.402992676320977
+        ],
+        [
+          28.86745209792507,
+          30.618556701030926
+        ],
+        [
+          245.47758507181166,
+          31.642118224329764
+        ],
+        [
+          254.10641711756966,
+          34.661477145427526
+        ],
+        [
+          261.84703576143625,
+          39.52523020027381
+        ],
+        [
+          268.3112940625993,
+          45.98948850143783
+        ],
+        [
+          273.1750471174466,
+          53.730107145304444
+        ],
+        [
+          276.1944060385438,
+          62.35893919106185
+        ],
+        [
+          277.2179675618426,
+          71.44329896907216
+        ],
+        [
+          276.4335315865518,
+          201.88203788849327
+        ],
+        [
+          274.11036909529315,
+          209.5404782697508
+        ],
+        [
+          270.337757919761,
+          216.59853734801737
+        ],
+        [
+          265.2606773917264,
+          222.78497787112113
+        ],
+        [
+          306.08541965976764,
+          192.16642117009022
+        ],
+        [
+          311.1625001878022,
+          185.97998064698646
+        ],
+        [
+          314.9351113633344,
+          178.92192156871985
+        ],
+        [
+          317.258273854593,
+          171.26348118746233
+        ],
+        [
+          318.04270982988385,
+          40.824742268041234
+        ],
+        [
+          317.019148306585,
+          31.740382490030925
+        ],
+        [
+          313.9997893854878,
+          23.111550444273515
+        ],
+        [
+          309.13603633064054,
+          15.370931800406904
+        ],
+        [
+          302.6717780294775,
+          8.906673499242885
+        ],
+        [
+          294.9311593856109,
+          4.0429204443965965
+        ],
+        [
+          286.3023273398529,
+          1.0235615232988362
+        ],
+        [
+          69.6921943659663,
+          0
+        ],
+        [
+          61.727682250668714,
+          0.7844359752900495
+        ],
+        [
+          54.06924186941216,
+          3.1075984665494616
+        ],
+        [
+          47.01118279114537,
+          6.8802096420820105
+        ],
+        [
+          40.824742268041234,
+          11.957290170115972
+        ],
+        [
+          0,
+          42.5758468711469
+        ]
+      ],
+      "startBinding": null,
+      "endBinding": null,
+      "lastCommittedPoint": null,
+      "customData": {
+        "libraryItem": "hero-object-storage"
+      },
+      "frameId": null,
+      "roundness": null,
+      "updated": 1786086000000
+    },
+    {
+      "id": "parquet-cover-hero-object-storage-017-02",
+      "type": "line",
+      "x": 771.9572901701162,
+      "y": 186.95729017011598,
+      "width": 40.824742268041234,
+      "height": 30.618556701030926,
+      "strokeColor": "#1F2937",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 5.103092783505154,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "angle": 0,
+      "seed": 2014979681,
+      "version": 1,
+      "versionNonce": 1624710696,
+      "isDeleted": false,
+      "groupIds": [
+        "parquet-cover-hero-object-storage-017-group-1"
+      ],
+      "boundElements": [],
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          30.618556701030926
+        ],
+        [
+          40.824742268041234,
+          0
+        ]
+      ],
+      "startBinding": null,
+      "endBinding": null,
+      "lastCommittedPoint": null,
+      "customData": {
+        "libraryItem": "hero-object-storage"
+      },
+      "frameId": null,
+      "roundness": null,
+      "updated": 1786086000000
+    },
+    {
+      "id": "parquet-cover-hero-object-storage-017-03",
+      "type": "line",
+      "x": 1037.2179675618427,
+      "y": 367.1664211700902,
+      "width": 40.824742268041234,
+      "height": 30.618556701030926,
+      "strokeColor": "#1F2937",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 5.103092783505154,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "angle": 0,
+      "seed": 3399982008,
+      "version": 1,
+      "versionNonce": 3473613795,
+      "isDeleted": false,
+      "groupIds": [
+        "parquet-cover-hero-object-storage-017-group-1"
+      ],
+      "boundElements": [],
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          30.618556701030926
+        ],
+        [
+          40.824742268041234,
+          0
+        ]
+      ],
+      "startBinding": null,
+      "endBinding": null,
+      "lastCommittedPoint": null,
+      "customData": {
+        "libraryItem": "hero-object-storage"
+      },
+      "frameId": null,
+      "roundness": null,
+      "updated": 1786086000000
+    },
+    {
+      "id": "parquet-cover-hero-object-storage-017-04",
+      "type": "line",
+      "x": 760,
+      "y": 205.6185567010309,
+      "width": 289.17525773195877,
+      "height": 204.12371134020617,
+      "strokeColor": "#1F2937",
+      "backgroundColor": "#EAF0FF",
+      "fillStyle": "solid",
+      "strokeWidth": 5.103092783505154,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "angle": 0,
+      "seed": 497624035,
+      "version": 1,
+      "versionNonce": 842043566,
+      "isDeleted": false,
+      "groupIds": [
+        "parquet-cover-hero-object-storage-017-group-1"
+      ],
+      "boundElements": [],
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          40.824742268041234
+        ],
+        [
+          1.9981051079504286,
+          28.209203116238474
+        ],
+        [
+          7.796831982218627,
+          16.828560834245078
+        ],
+        [
+          16.828560834245465,
+          7.796831982219401
+        ],
+        [
+          28.209203116239244,
+          1.9981051079500418
+        ],
+        [
+          40.824742268041234,
+          0
+        ],
+        [
+          260.9660546157195,
+          1.9981051079500418
+        ],
+        [
+          272.3466968977133,
+          7.796831982219401
+        ],
+        [
+          281.37842574974013,
+          16.828560834245078
+        ],
+        [
+          287.17715262400833,
+          28.20920311624002
+        ],
+        [
+          289.17525773195877,
+          40.824742268041234
+        ],
+        [
+          287.17715262400833,
+          175.91450822396615
+        ],
+        [
+          281.37842574974013,
+          187.2951505059611
+        ],
+        [
+          272.3466968977133,
+          196.32687935798677
+        ],
+        [
+          260.9660546157195,
+          202.12560623225613
+        ],
+        [
+          248.35051546391753,
+          204.12371134020617
+        ],
+        [
+          28.209203116239244,
+          202.12560623225613
+        ],
+        [
+          16.828560834245465,
+          196.32687935798677
+        ],
+        [
+          7.796831982218627,
+          187.2951505059611
+        ],
+        [
+          1.9981051079504286,
+          175.91450822396615
+        ],
+        [
+          0,
+          163.29896907216494
+        ],
+        [
+          0,
+          40.824742268041234
+        ]
+      ],
+      "startBinding": null,
+      "endBinding": null,
+      "lastCommittedPoint": null,
+      "customData": {
+        "libraryItem": "hero-object-storage"
+      },
+      "frameId": null,
+      "roundness": null,
+      "updated": 1786086000000
+    },
+    {
+      "id": "parquet-cover-hero-object-storage-017-05",
+      "type": "line",
+      "x": 797.4226804123712,
+      "y": 246.44329896907215,
+      "width": 74.84536082474227,
+      "height": 74.84536082474227,
+      "strokeColor": "#1F2937",
+      "backgroundColor": "#FFFFFF",
+      "fillStyle": "solid",
+      "strokeWidth": 3.402061855670103,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "angle": 0,
+      "seed": 475129458,
+      "version": 1,
+      "versionNonce": 4001271521,
+      "isDeleted": false,
+      "groupIds": [
+        "parquet-cover-hero-object-storage-017-group-1"
+      ],
+      "boundElements": [],
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          17.010309278350515
+        ],
+        [
+          0.8325437949793453,
+          11.753834631767061
+        ],
+        [
+          3.248679992591127,
+          7.011900347602632
+        ],
+        [
+          7.011900347602245,
+          3.248679992591804
+        ],
+        [
+          11.753834631766289,
+          0.8325437949786684
+        ],
+        [
+          17.010309278350515,
+          0
+        ],
+        [
+          63.09152619297598,
+          0.8325437949786684
+        ],
+        [
+          67.83346047714002,
+          3.248679992591804
+        ],
+        [
+          71.59668083215124,
+          7.011900347602632
+        ],
+        [
+          74.01281702976283,
+          11.753834631767061
+        ],
+        [
+          74.84536082474227,
+          17.010309278350515
+        ],
+        [
+          74.01281702976283,
+          63.0915261929752
+        ],
+        [
+          71.59668083215124,
+          67.83346047713964
+        ],
+        [
+          67.83346047714002,
+          71.59668083215047
+        ],
+        [
+          63.09152619297598,
+          74.0128170297636
+        ],
+        [
+          57.83505154639175,
+          74.84536082474227
+        ],
+        [
+          11.753834631766289,
+          74.0128170297636
+        ],
+        [
+          7.011900347602245,
+          71.59668083215047
+        ],
+        [
+          3.248679992591127,
+          67.83346047713964
+        ],
+        [
+          0.8325437949793453,
+          63.0915261929752
+        ],
+        [
+          0,
+          57.83505154639175
+        ],
+        [
+          0,
+          17.010309278350515
+        ]
+      ],
+      "startBinding": null,
+      "endBinding": null,
+      "lastCommittedPoint": null,
+      "customData": {
+        "libraryItem": "hero-object-storage"
+      },
+      "frameId": null,
+      "roundness": null,
+      "updated": 1786086000000
+    },
+    {
+      "id": "parquet-cover-hero-object-storage-017-06",
+      "type": "line",
+      "x": 885.8762886597938,
+      "y": 273.659793814433,
+      "width": 74.84536082474227,
+      "height": 74.84536082474227,
+      "strokeColor": "#1F2937",
+      "backgroundColor": "#EAF0FF",
+      "fillStyle": "solid",
+      "strokeWidth": 3.402061855670103,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "angle": 0,
+      "seed": 237656077,
+      "version": 1,
+      "versionNonce": 269320804,
+      "isDeleted": false,
+      "groupIds": [
+        "parquet-cover-hero-object-storage-017-group-1"
+      ],
+      "boundElements": [],
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          17.010309278350515
+        ],
+        [
+          0.832543794979442,
+          11.753834631767061
+        ],
+        [
+          3.2486799925910304,
+          7.011900347602632
+        ],
+        [
+          7.011900347602245,
+          3.248679992591804
+        ],
+        [
+          11.753834631766289,
+          0.8325437949786684
+        ],
+        [
+          17.010309278350515,
+          0
+        ],
+        [
+          63.09152619297598,
+          0.8325437949786684
+        ],
+        [
+          67.83346047714002,
+          3.248679992591804
+        ],
+        [
+          71.59668083215124,
+          7.011900347602632
+        ],
+        [
+          74.01281702976283,
+          11.753834631767061
+        ],
+        [
+          74.84536082474227,
+          17.010309278350515
+        ],
+        [
+          74.01281702976283,
+          63.0915261929752
+        ],
+        [
+          71.59668083215124,
+          67.83346047713964
+        ],
+        [
+          67.83346047714002,
+          71.59668083215047
+        ],
+        [
+          63.09152619297598,
+          74.0128170297636
+        ],
+        [
+          57.83505154639175,
+          74.84536082474227
+        ],
+        [
+          11.753834631766289,
+          74.0128170297636
+        ],
+        [
+          7.011900347602245,
+          71.59668083215047
+        ],
+        [
+          3.2486799925910304,
+          67.83346047713964
+        ],
+        [
+          0.832543794979442,
+          63.0915261929752
+        ],
+        [
+          0,
+          57.83505154639175
+        ],
+        [
+          0,
+          17.010309278350515
+        ]
+      ],
+      "startBinding": null,
+      "endBinding": null,
+      "lastCommittedPoint": null,
+      "customData": {
+        "libraryItem": "hero-object-storage"
+      },
+      "frameId": null,
+      "roundness": null,
+      "updated": 1786086000000
+    },
+    {
+      "id": "parquet-cover-hero-object-storage-017-07",
+      "type": "line",
+      "x": 974.3298969072165,
+      "y": 300.87628865979383,
+      "width": 47.628865979381445,
+      "height": 47.628865979381445,
+      "strokeColor": "#1F2937",
+      "backgroundColor": "#4E7CF6",
+      "fillStyle": "solid",
+      "strokeWidth": 3.402061855670103,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "angle": 0,
+      "seed": 620200116,
+      "version": 1,
+      "versionNonce": 810363327,
+      "isDeleted": false,
+      "groupIds": [
+        "parquet-cover-hero-object-storage-017-group-1"
+      ],
+      "boundElements": [],
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          11.907216494845361
+        ],
+        [
+          0.5827806564854934,
+          8.227684242235705
+        ],
+        [
+          2.2740759948137987,
+          4.908330243321223
+        ],
+        [
+          4.90833024332161,
+          2.274075994813025
+        ],
+        [
+          8.22768424223648,
+          0.5827806564849132
+        ],
+        [
+          11.907216494845361,
+          0
+        ],
+        [
+          39.40118173714496,
+          0.5827806564849132
+        ],
+        [
+          42.72053573605983,
+          2.274075994813025
+        ],
+        [
+          45.354789984567645,
+          4.908330243321223
+        ],
+        [
+          47.04608532289595,
+          8.227684242235705
+        ],
+        [
+          47.628865979381445,
+          11.907216494845361
+        ],
+        [
+          47.04608532289595,
+          39.401181737145734
+        ],
+        [
+          45.354789984567645,
+          42.72053573606022
+        ],
+        [
+          42.72053573605983,
+          45.35478998456842
+        ],
+        [
+          39.40118173714496,
+          47.04608532289653
+        ],
+        [
+          35.72164948453608,
+          47.628865979381445
+        ],
+        [
+          8.22768424223648,
+          47.04608532289653
+        ],
+        [
+          4.90833024332161,
+          45.35478998456842
+        ],
+        [
+          2.2740759948137987,
+          42.72053573606022
+        ],
+        [
+          0.5827806564854934,
+          39.401181737145734
+        ],
+        [
+          0,
+          35.72164948453608
+        ],
+        [
+          0,
+          11.907216494845361
+        ]
+      ],
+      "startBinding": null,
+      "endBinding": null,
+      "lastCommittedPoint": null,
+      "customData": {
+        "libraryItem": "hero-object-storage"
+      },
+      "frameId": null,
+      "roundness": null,
+      "updated": 1786086000000
+    },
+    {
+      "id": "parquet-cover-hero-object-storage-017-08",
+      "type": "line",
+      "x": 865.4639175257732,
+      "y": 379.12371134020617,
+      "width": 81.64948453608247,
+      "height": 0,
+      "strokeColor": "#1F2937",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 3.402061855670103,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "angle": 0,
+      "seed": 4062904991,
+      "version": 1,
+      "versionNonce": 2011058858,
+      "isDeleted": false,
+      "groupIds": [
+        "parquet-cover-hero-object-storage-017-group-1"
+      ],
+      "boundElements": [],
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          81.64948453608247,
+          0
+        ]
+      ],
+      "startBinding": null,
+      "endBinding": null,
+      "lastCommittedPoint": null,
+      "customData": {
+        "libraryItem": "hero-object-storage"
+      },
+      "frameId": null,
+      "roundness": null,
+      "updated": 1786086000000
+    },
+    {
+      "id": "parquet-cover-arrow-025",
+      "type": "arrow",
+      "x": 350,
+      "y": 350,
+      "width": 35,
+      "height": 0,
+      "angle": 0,
+      "strokeColor": "#4E7CF6",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 3,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "roundness": null,
+      "seed": 3876208048,
+      "version": 1,
+      "versionNonce": 1225783291,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1786086000000,
+      "link": null,
+      "locked": false,
+      "customData": {
+        "role": "records-to-leaves"
+      },
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          35,
+          0
+        ]
+      ],
+      "lastCommittedPoint": null,
+      "startBinding": null,
+      "endBinding": null,
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "elbowed": false
+    },
+    {
+      "id": "parquet-cover-arrow-026",
+      "type": "arrow",
+      "x": 680,
+      "y": 350,
+      "width": 55,
+      "height": 0,
+      "angle": 0,
+      "strokeColor": "#4E7CF6",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 3,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "roundness": null,
+      "seed": 2279031007,
+      "version": 1,
+      "versionNonce": 1328574698,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1786086000000,
+      "link": null,
+      "locked": false,
+      "customData": {
+        "role": "leaves-to-file"
+      },
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          55,
+          0
+        ]
+      ],
+      "lastCommittedPoint": null,
+      "startBinding": null,
+      "endBinding": null,
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "elbowed": false
+    },
+    {
+      "id": "parquet-cover-text-027",
+      "type": "text",
+      "x": 90,
+      "y": 500,
+      "width": 230,
+      "height": 36,
+      "angle": 0,
+      "strokeColor": "#1F2937",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 1,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "roundness": null,
+      "seed": 3866956520,
+      "version": 1,
+      "versionNonce": 2977675123,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1786086000000,
+      "link": null,
+      "locked": false,
+      "customData": {
+        "role": "technical-label",
+        "logicalText": "30,000 rows",
+        "weight": 600
+      },
+      "fontSize": 26,
+      "fontFamily": 2,
+      "text": "30,000 rows",
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "containerId": null,
+      "originalText": "30,000 rows",
+      "autoResize": false,
+      "lineHeight": 1.25,
+      "baseline": 21
+    },
+    {
+      "id": "parquet-cover-text-028",
+      "type": "text",
+      "x": 415,
+      "y": 445,
+      "width": 230,
+      "height": 36,
+      "angle": 0,
+      "strokeColor": "#2AB7CA",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 1,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "roundness": null,
+      "seed": 2586271787,
+      "version": 1,
+      "versionNonce": 1416416214,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1786086000000,
+      "link": null,
+      "locked": false,
+      "customData": {
+        "role": "technical-label",
+        "logicalText": "leaf columns",
+        "weight": 600
+      },
+      "fontSize": 26,
+      "fontFamily": 2,
+      "text": "leaf columns",
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "containerId": null,
+      "originalText": "leaf columns",
+      "autoResize": false,
+      "lineHeight": 1.25,
+      "baseline": 21
+    },
+    {
+      "id": "parquet-cover-text-029",
+      "type": "text",
+      "x": 797,
+      "y": 261,
+      "width": 75,
+      "height": 28,
+      "angle": 0,
+      "strokeColor": "#1F2937",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 1,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "roundness": null,
+      "seed": 1493067418,
+      "version": 1,
+      "versionNonce": 2040617833,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1786086000000,
+      "link": null,
+      "locked": false,
+      "customData": {
+        "role": "technical-label",
+        "logicalText": "RG0",
+        "weight": 600
+      },
+      "fontSize": 18,
+      "fontFamily": 2,
+      "text": "RG0",
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "containerId": null,
+      "originalText": "RG0",
+      "autoResize": false,
+      "lineHeight": 1.25,
+      "baseline": 14
+    },
+    {
+      "id": "parquet-cover-text-030",
+      "type": "text",
+      "x": 885,
+      "y": 288,
+      "width": 75,
+      "height": 28,
+      "angle": 0,
+      "strokeColor": "#1F2937",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 1,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "roundness": null,
+      "seed": 993632532,
+      "version": 1,
+      "versionNonce": 374941599,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1786086000000,
+      "link": null,
+      "locked": false,
+      "customData": {
+        "role": "technical-label",
+        "logicalText": "RG1",
+        "weight": 600
+      },
+      "fontSize": 18,
+      "fontFamily": 2,
+      "text": "RG1",
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "containerId": null,
+      "originalText": "RG1",
+      "autoResize": false,
+      "lineHeight": 1.25,
+      "baseline": 14
+    },
+    {
+      "id": "parquet-cover-text-031",
+      "type": "text",
+      "x": 973,
+      "y": 307,
+      "width": 48,
+      "height": 25,
+      "angle": 0,
+      "strokeColor": "#1F2937",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 1,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "roundness": null,
+      "seed": 3078452461,
+      "version": 1,
+      "versionNonce": 506163396,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1786086000000,
+      "link": null,
+      "locked": false,
+      "customData": {
+        "role": "technical-label",
+        "logicalText": "RG2",
+        "weight": 600
+      },
+      "fontSize": 16,
+      "fontFamily": 2,
+      "text": "RG2",
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "containerId": null,
+      "originalText": "RG2",
+      "autoResize": false,
+      "lineHeight": 1.25,
+      "baseline": 13
+    },
+    {
+      "id": "parquet-cover-text-032",
+      "type": "text",
+      "x": 835,
+      "y": 420,
+      "width": 160,
+      "height": 36,
+      "angle": 0,
+      "strokeColor": "#F2BD4D",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 1,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "roundness": null,
+      "seed": 106334418,
+      "version": 1,
+      "versionNonce": 2876023489,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1786086000000,
+      "link": null,
+      "locked": false,
+      "customData": {
+        "role": "technical-label",
+        "logicalText": "FileMetaData",
+        "weight": 600
+      },
+      "fontSize": 22,
+      "fontFamily": 2,
+      "text": "FileMetaData",
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "containerId": null,
+      "originalText": "FileMetaData",
+      "autoResize": false,
+      "lineHeight": 1.25,
+      "baseline": 18
+    },
+    {
+      "id": "parquet-cover-rect-033",
+      "type": "rectangle",
+      "x": 1100,
+      "y": 278,
+      "width": 150,
+      "height": 72,
+      "angle": 0,
+      "strokeColor": "#55B685",
+      "backgroundColor": "#EAF7F0",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "roundness": {
+        "type": 3
+      },
+      "seed": 3637307020,
+      "version": 1,
+      "versionNonce": 1268103671,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1786086000000,
+      "link": null,
+      "locked": false,
+      "customData": {
+        "role": "query-result"
+      }
+    },
+    {
+      "id": "parquet-cover-text-034",
+      "type": "text",
+      "x": 1114,
+      "y": 288,
+      "width": 122,
+      "height": 52,
+      "angle": 0,
+      "strokeColor": "#1F2937",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 1,
+      "strokeStyle": "solid",
+      "roughness": 0,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "roundness": null,
+      "seed": 2370165400,
+      "version": 1,
+      "versionNonce": 1282157891,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1786086000000,
+      "link": null,
+      "locked": false,
+      "customData": {
+        "role": "query-result-label",
+        "logicalText": "3,597 rows",
+        "weight": 600
+      },
+      "fontSize": 22,
+      "fontFamily": 2,
+      "text": "3,597 rows",
+      "textAlign": "center",
+      "verticalAlign": "middle",
+      "containerId": null,
+      "originalText": "3,597 rows",
+      "autoResize": false,
+      "lineHeight": 1.25,
+      "baseline": 18
+    }
+  ],
+  "appState": {
+    "viewBackgroundColor": "#F8FAFC",
+    "gridSize": 20,
+    "exportBackground": true,
+    "exportWithDarkMode": false,
+    "exportPadding": 0
+  },
+  "files": {}
+}

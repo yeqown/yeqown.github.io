@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1200" viewBox="0 0 900 1200" role="img" aria-labelledby="title desc">
+  <title id="title">Sentinel 与 Redis Cluster 故障转移范围对比</title>
+  <desc id="desc">Sentinel 提升副本节点 A 后，新主节点 A 向副本节点 B 发送复制数据；Redis Cluster 只提升故障分片 B 的副本，分片 A 和 C 保持不变。</desc>
+  <defs>
+    <marker id="arrow-charcoal" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#202426"/></marker>
+    <marker id="arrow-teal" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#159E98"/></marker>
+    <marker id="arrow-amber" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#E8BD3F"/></marker>
+  </defs>
+  <rect width="900" height="1200" fill="#F7F8F4"/>
+  <g font-family="Arial, 'Noto Sans SC', sans-serif" fill="#202426">
+    <text x="450" y="50" text-anchor="middle" font-size="30" font-weight="700">故障转移范围：Sentinel 与 Cluster</text>
+    <text x="70" y="110" font-size="25" font-weight="700">Sentinel：切换完整数据集的主节点</text>
+    <ellipse cx="450" cy="177" rx="130" ry="32" fill="#F7F8F4" stroke="#E8BD3F" stroke-width="3"/>
+    <text x="450" y="184" text-anchor="middle" font-size="25">Sentinel 多数派</text>
+    <rect x="80" y="260" width="220" height="85" rx="8" fill="#E95D4F" stroke="#E95D4F" stroke-width="3"/>
+    <text x="190" y="310" text-anchor="middle" font-size="25" font-weight="700" fill="#F7F8F4">旧主节点故障</text>
+    <rect x="600" y="260" width="220" height="85" rx="8" fill="#F7F8F4" stroke="#202426" stroke-width="3"/>
+    <text x="710" y="310" text-anchor="middle" font-size="25">副本节点 A</text>
+    <path d="M385 210 L240 260" fill="none" stroke="#202426" stroke-width="2" marker-end="url(#arrow-charcoal)"/>
+    <path d="M515 210 L660 260" fill="none" stroke="#E8BD3F" stroke-width="4" marker-end="url(#arrow-amber)"/>
+    <text x="775" y="232" text-anchor="middle" font-size="25">提升为主节点</text>
+    <line x1="710" y1="345" x2="710" y2="403" stroke="#E8BD3F" stroke-width="4" marker-end="url(#arrow-amber)"/>
+    <rect x="600" y="407" width="220" height="80" rx="8" fill="#159E98" stroke="#159E98" stroke-width="3"/>
+    <text x="710" y="440" text-anchor="middle" font-size="25" font-weight="700" fill="#F7F8F4">副本节点 A</text>
+    <text x="710" y="466" text-anchor="middle" font-size="25" fill="#F7F8F4">新主节点</text>
+    <rect x="80" y="407" width="220" height="80" rx="8" fill="#F7F8F4" stroke="#202426" stroke-width="3"/>
+    <text x="190" y="440" text-anchor="middle" font-size="25">副本节点 B</text>
+    <text x="190" y="466" text-anchor="middle" font-size="25">跟随新主节点</text>
+    <line x1="600" y1="447" x2="304" y2="447" stroke="#159E98" stroke-width="3" marker-end="url(#arrow-teal)"/>
+    <text x="450" y="522" text-anchor="middle" font-size="25" font-weight="700" fill="#159E98">客户端重新发现</text>
+    <path d="M560 515 L635 487" fill="none" stroke="#159E98" stroke-width="2" marker-end="url(#arrow-teal)"/>
+    <text x="450" y="570" text-anchor="middle" font-size="25">不分片：每个节点保存完整数据集</text>
+    <line x1="70" y1="615" x2="830" y2="615" stroke="#202426" stroke-width="2" stroke-dasharray="8 7"/>
+    <text x="70" y="675" font-size="25" font-weight="700">Redis Cluster：只切换故障分片</text>
+    <ellipse cx="450" cy="742" rx="150" ry="32" fill="#F7F8F4" stroke="#202426" stroke-width="3"/>
+    <text x="450" y="749" text-anchor="middle" font-size="25">客户端按哈希槽路由</text>
+    <path d="M380 775 L155 845" fill="none" stroke="#202426" stroke-width="2" marker-end="url(#arrow-charcoal)"/>
+    <line x1="450" y1="775" x2="450" y2="841" stroke="#202426" stroke-width="2" marker-end="url(#arrow-charcoal)"/>
+    <path d="M520 775 L745 845" fill="none" stroke="#202426" stroke-width="2" marker-end="url(#arrow-charcoal)"/>
+    <rect x="25" y="845" width="260" height="130" rx="8" fill="#159E98" stroke="#159E98" stroke-width="3" aria-label="分片 A：槽 0-5460"/>
+    <text x="155" y="900" text-anchor="middle" font-size="25" font-weight="700" fill="#F7F8F4">分片 A：</text>
+    <text x="155" y="935" text-anchor="middle" font-size="25" fill="#F7F8F4">槽 0-5460</text>
+    <rect x="320" y="845" width="260" height="130" rx="8" fill="#E95D4F" stroke="#E95D4F" stroke-width="3" aria-label="分片 B：原主节点故障"/>
+    <text x="450" y="883" text-anchor="middle" font-size="25" font-weight="700" fill="#F7F8F4">分片 B：</text>
+    <text x="450" y="918" text-anchor="middle" font-size="25" fill="#F7F8F4">原主节点故障</text>
+    <text x="450" y="953" text-anchor="middle" font-size="25" fill="#F7F8F4">槽 5461-10922</text>
+    <rect x="615" y="845" width="260" height="130" rx="8" fill="#159E98" stroke="#159E98" stroke-width="3" aria-label="分片 C：槽 10923-16383"/>
+    <text x="745" y="900" text-anchor="middle" font-size="25" font-weight="700" fill="#F7F8F4">分片 C：</text>
+    <text x="745" y="935" text-anchor="middle" font-size="25" fill="#F7F8F4">槽 10923-16383</text>
+    <line x1="450" y1="975" x2="450" y2="1036" stroke="#E8BD3F" stroke-width="5" marker-end="url(#arrow-amber)"/>
+    <rect x="300" y="1040" width="300" height="100" rx="8" fill="#159E98" stroke="#159E98" stroke-width="3" aria-label="B 的副本：只接管分片 B"/>
+    <text x="450" y="1080" text-anchor="middle" font-size="25" font-weight="700" fill="#F7F8F4">B 的副本：</text>
+    <text x="450" y="1115" text-anchor="middle" font-size="25" fill="#F7F8F4">只接管分片 B</text>
+    <line x1="155" y1="975" x2="155" y2="1020" stroke="#159E98" stroke-width="3" stroke-dasharray="7 6"/>
+    <line x1="745" y1="975" x2="745" y2="1020" stroke="#159E98" stroke-width="3" stroke-dasharray="7 6"/>
+    <text x="155" y="1045" text-anchor="middle" font-size="25" font-weight="700" fill="#159E98">A、C 不切换</text>
+  </g>
+</svg>

@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="en-US" dir="ltr">
+<head>
+  <!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="从数据冗余和服务器约束出发，解释数据库常用编码、LZ 与熵编码如何工作、怎样组合成常见 Codec，并结合实际系统和三类数据实测建立压缩选型方法。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#2e3440">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="https://www.yeqown.xyz/2026/08/07/server-database-compression-algorithms/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="服务端与数据库压缩：原理、组合与选型">
+  <meta property="og:description" content="从数据冗余和服务器约束出发，解释数据库常用编码、LZ 与熵编码如何工作、怎样组合成常见 Codec，并结合实际系统和三类数据实测建立压缩选型方法。">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2026-08-07T00:00:00+08:00">
+    <meta property="article:modified_time" content="2026-08-07T00:00:00+08:00">
+    <meta property="article:tag" content="压缩">
+    <meta property="article:tag" content="编码">
+    <meta property="article:tag" content="存储">
+    <meta property="article:tag" content="列式">
+    <meta property="article:tag" content="Zstandard">
+
+
+  <meta itemprop="name" content="服务端与数据库压缩：原理、组合与选型">
+  <meta itemprop="description" content="从数据冗余和服务器约束出发，解释数据库常用编码、LZ 与熵编码如何工作、怎样组合成常见 Codec，并结合实际系统和三类数据实测建立压缩选型方法。">
+  <meta itemprop="datePublished" content="2026-08-07T00:00:00+08:00">
+  <meta itemprop="dateModified" content="2026-08-07T00:00:00+08:00">
+  <meta itemprop="wordCount" content="2632">
+  <meta itemprop="keywords" content="压缩,编码,存储,列式,Zstandard">
+
+<title>服务端与数据库压缩：原理、组合与选型 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="https://www.yeqown.xyz/2026/08/07/server-database-compression-algorithms/">
+<link rel="stylesheet" href="/book.min.c40223b1e1a5ffa9f6a0fe48797821424561eff06762ee5c75071bda9d009477.css" integrity="sha256-xAIjseGl/6n2oP5IeXghQkVh7/BnYu5cdQcb2p0AlHc=" crossorigin="anonymous">
+
+
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.99ce27de54629b271c4277001097f0e183ca5eaedb015e65542b29ce1c90db30.js" integrity="sha256-mc4n3lRimyccQncAEJfw4YPKXq7bAV5lVCspzhyQ2zA=" crossorigin="anonymous"></script>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade">
+  
+</head>
+<body dir="ltr" class="book-kind-page book-type-posts">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    
+<aside class="book-menu">
+  <div class="book-menu-content">
+    
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input id="book-search-input" type="text" 
+    placeholder="Search"
+    aria-label="Search"
+    maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+<ul><li><a href="/categories">Categories</a></li><li><a href="/tags">Tags</a></li></ul>
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">
+      About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+
+  </div>
+</aside>
+ 
+
+    <div class="book-page">
+      <header class="book-header hidden">
+        
+<div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/icons/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>服务端与数据库压缩：原理、组合与选型</h3>
+
+  <label for="toc-control">
+    
+    <img src="/icons/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-一笔交易">1. 一笔交易</a></li>
+    <li><a href="#2-不只一层">2. 不只一层</a></li>
+    <li><a href="#3-编码1利用字段的规律">3. 编码1：利用字段的规律</a>
+      <ul>
+        <li><a href="#31-连续重复rle">3.1 连续重复：RLE</a></li>
+        <li><a href="#32-低基数dictionary-encoding">3.2 低基数：Dictionary Encoding</a></li>
+        <li><a href="#33-相近整数deltafor-与-bit-packing">3.3 相近整数：Delta、FOR 与 Bit Packing</a></li>
+        <li><a href="#34-有序-keyprefix-compression">3.4 有序 Key：Prefix Compression</a></li>
+        <li><a href="#35-稳定时间序列delta-of-delta-与-gorilla-xor">3.5 稳定时间序列：Delta-of-Delta 与 Gorilla XOR</a></li>
+      </ul>
+    </li>
+    <li><a href="#4-编码2利用字节流中的重复片段">4. 编码2：利用字节流中的重复片段</a>
+      <ul>
+        <li><a href="#41-lz77用距离和长度引用历史">4.1 LZ77：用距离和长度引用历史</a></li>
+      </ul>
+    </li>
+    <li><a href="#5-熵编码利用符号出现概率">5. 熵编码：利用符号出现概率</a>
+      <ul>
+        <li><a href="#51-huffman使用更短前缀码">5.1 Huffman：使用更短前缀码</a></li>
+        <li><a href="#52-fse用状态分摊码长">5.2 FSE：用状态分摊码长</a></li>
+      </ul>
+    </li>
+    <li><a href="#6-常见-codec-怎样组合压缩原语">6. 常见 Codec 怎样组合压缩原语</a>
+      <ul>
+        <li><a href="#61-lz4找到重复换成回拷指令">6.1 LZ4：找到重复，换成回拷指令</a></li>
+        <li><a href="#62-snappy1-byte-tag-是一条指令的入口">6.2 Snappy：1-byte tag 是一条指令的入口</a></li>
+        <li><a href="#63-deflate-与-gzip回拷指令继续进入-huffman">6.3 DEFLATE 与 gzip：回拷指令继续进入 Huffman</a></li>
+        <li><a href="#64-brotli格式内置字典和上下文">6.4 Brotli：格式内置字典和上下文</a></li>
+        <li><a href="#65-zstandard先拆-section再分别选择表示">6.5 Zstandard：先拆 section，再分别选择表示</a></li>
+      </ul>
+    </li>
+    <li><a href="#7-系统里的组合">7. 系统里的组合</a></li>
+    <li><a href="#8-用三类数据验证">8. 用三类数据验证</a>
+      <ul>
+        <li><a href="#实验口径">实验口径</a></li>
+      </ul>
+    </li>
+    <li><a href="#9-总结先识别数据再选择算法">9. 总结：先识别数据，再选择算法</a></li>
+    <li><a href="#参考资料">参考资料</a></li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h1>
+    服务端与数据库压缩：原理、组合与选型
+  </h1>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/icons/calendar.svg" class="book-icon" alt="Calendar" />
+    <span>August 7, 2026</span>
+    
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/Database/">Database</a>, 
+      <a href="/categories/%E6%80%BB%E7%BB%93/">总结</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/%E5%8E%8B%E7%BC%A9/">压缩</a>, 
+      <a href="/tags/%E7%BC%96%E7%A0%81/">编码</a>, 
+      <a href="/tags/%E5%AD%98%E5%82%A8/">存储</a>, 
+      <a href="/tags/%E5%88%97%E5%BC%8F/">列式</a>, 
+      <a href="/tags/Zstandard/">Zstandard</a>
+  </div>
+  
+
+
+  <div class="book-post-content markdown-inner"><p>压缩是软件开发中非常常见的一种数据处理手段。做服务端开发时，我们会把响应体压缩后再传输，减少网络带宽和跨机房流量；也会把日志、消息、缓存快照或数据库块压缩后保存，少占磁盘、对象存储和页缓存。数据库系统更进一步，通常还会先利用列、类型和排序里的规律做编码，再交给通用压缩算法处理。</p>
+<p>判断一种压缩方案是否合适，不能只看压缩后体积，还要把 CPU、内存、I/O 和延迟放在同一条数据路径上衡量。</p>
+<p>本文从数据中可被利用的冗余出发，依次回答每种算法解决了什么问题、怎样工作、在什么数据上有效，以及实际系统把它用在数据路径的哪个位置。最后使用三类数据验证这些判断，并给出面向工程约束的选型方法。</p>
+<!-- more -->
+<blockquote class='book-hint '>
+<p><strong>范围说明</strong></p>
+<p>本文讨论服务端和数据库开发中的无损压缩方案，不仅包含常见的通用压缩算法（如 Snappy、LZ4、Zstandard 等），也包含面向字节流（LZ77）和面向字段的压缩编码（如 RLE、Dictionary 等），还会介绍熵编码的相关内容（如 Huffman、FSE、ANS 等），以及它们在实际系统中的应用。</p>
+</blockquote><h2 id="1-一笔交易">1. 一笔交易<a class="anchor" href="#1-%e4%b8%80%e7%ac%94%e4%ba%a4%e6%98%93">#</a></h2>
+<p>服务端里，数据很少只是安静地躺在磁盘上。它会经过网卡、内存、页缓存、磁盘、对象存储和跨机房链路；一次查询、一条日志、一批消息，真正花钱和拖慢速度的往往是这些路径上反复搬运的字节。压缩的直接收益，就是让这些字节变少。原本要从对象存储读 1 GiB，压缩后只读 200 MiB，哪怕后面要解压，端到端延迟也可能下降，因为系统绕开了更慢的 I/O。</p>
+<figure>
+  <img
+    src="/images/server-database-compression-algorithms/server-compression-tradeoff-path.svg"
+    alt="工厂流水线隐喻：传送带上方展示压缩前后的箱子尺寸变化，传送带下方依次是装箱压缩、网卡、内存页缓存、磁盘对象存储、跨机房链路和使用解压，第三个绿色工人表示额外成本"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>箱子变小，装箱和使用多付成本</figcaption>
+</figure>
+<p>但压缩不是白送的。写入端要花 CPU 找重复、建字典、计算概率或改写字段表示；读取端要解压，还可能要把编码后的值恢复成执行引擎能处理的类型。压缩块本身也会带来工作内存和读放大：只想读一小段数据时，可能必须先把整个块取回来再解压。</p>
+<p>所以压缩选型本质上是在换资源。在线接口可能愿意用一点 CPU 换更少的公网流量，但如果机器本来就卡在 CPU 上，压缩会把延迟打高；冷数据归档通常能接受更慢的压缩速度，因为少占对象存储更重要；数据库的 flush、compaction 或 merge 路径可以把一部分成本挪到后台，而前台查询更关心解压速度和最小读取块。</p>
+<p>这也是服务端压缩和普通归档文件压缩的区别。归档文件常常只关心最终体积，服务端还要看压缩发生在写入前台、后台任务、网络传输还是读取路径上。算法没有脱离场景的“最好”，只有在某条数据路径里是否划算。</p>
+<h2 id="2-不只一层">2. 不只一层<a class="anchor" href="#2-%e4%b8%8d%e5%8f%aa%e4%b8%80%e5%b1%82">#</a></h2>
+<p>今天的压缩已经渗进了服务端的很多基础路径。HTTP 响应会压缩，RPC 和消息批次可能压缩，日志落盘和对象存储归档会压缩，数据库页、SST block、列式文件和时间序列 chunk 也经常压缩。很多时候它不是一个单独功能，而是数据格式、存储引擎和执行引擎的一部分。</p>
+<p>这也让问题变复杂了。调用方说“用 LZ4”或“用 Zstd”，通常只说到了通用字节流 Codec；数据库和分析文件格式还会在它前面做一层数据感知编码。通用 Codec 只看到字节，不知道其中八个字节是一条时间戳，也不知道一列字符串只有几十个不同值。数据库知道 schema、列边界、排序键和空值信息，就可以先把这些确定的信息写进更紧凑的表示，再交给通用 Codec 继续处理字节级重复。</p>
+<p>在数据库中，一条典型但并非所有系统都完整采用的链路是：写入时，原始列先经过 RLE、Dictionary、Delta、Prefix Compression 之类的编码，形成整数 ID、差值、偏移或前缀/后缀记录；系统再把编码后的流组织成页或块，交给 LZ4、Snappy、gzip 或 Zstandard。读取时先定位并解压相关块，再按算子需要解码字段值；字典过滤、RLE 扫描等操作也可能直接作用于编码表示，不必先还原整列。</p>
+<figure>
+  <img
+    src="/images/server-database-compression-algorithms/database-compression-pipeline.svg"
+    alt="数据库写入时先做数据感知编码再做通用块压缩，读取时按需定位并解压相关块，执行算子可解码所需字段或直接处理部分编码表示"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>数据库压缩的两层路径</figcaption>
+</figure>
+<p>列式布局特别容易暴露这种规律。把一百万行的 <code>status</code> 放在一起，看到的是少量状态码反复出现；把时间戳放在一起，看到的是相近且大多单调的整数。若按行把时间戳、随机请求 ID、消息文本和状态码交错保存，任一字段的规律都会被其他字段打断。列式并不会自动产生压缩，但它让编码器更容易在相同类型和相似分布中工作。</p>
+<p>这不是在给数据库编码和通用 Codec 排高低，而是在把它们放回各自的位置。Dictionary、Delta、RLE 先改写数据表示，让 LZ4、Snappy 或 Zstd 看到另一种字节流。后者再处理剩下的重复片段和符号频率。</p>
+<figure>
+  <img
+    src="/images/server-database-compression-algorithms/redundancy-algorithm-map.svg"
+    alt="六类常见数据冗余分别对应 RLE、字典、整数编码、前缀压缩、LZ 匹配和熵编码，并最终组合为完整压缩器"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>冗余类型决定算法方向</figcaption>
+</figure>
+<p>所以技术选型时尤其是在实现一个基础服务时，不仅仅是从一堆 Codec 中选出来一个压缩倍数很高的。可以先看字段本身有没有连续重复、低基数、相近整数或公共前缀；有的话，RLE、Dictionary、Delta、Prefix Compression 往往能先把表示改短。改写之后剩下的字节流，才轮到 LZ 去找重复片段，Huffman/FSE 去利用概率偏斜。最后再比较 LZ4、Snappy、gzip、Zstandard 这些完整 Codec，这样可以把压缩利用到极致，也避免遗漏关键优化。</p>
+<blockquote class='book-hint note'>
+<p>为了避免“压缩率”这个词产生歧义，本文用 <code>compressed_size / original_size</code> 表示<strong>压缩后体积占比</strong>，数值越低，留下的字节越少。需要描述“原来是现在的多少倍”时，才使用 <code>original_size / compressed_size</code> 计算<strong>压缩倍数</strong>。压缩和解压速度统一写成 <code>MiB/s</code>，分子始终是原始数据体积。</p>
+<p>后文会反复用到几个容易混在一起的术语：</p>
+<table>
+  <thead>
+      <tr>
+          <th>术语</th>
+          <th>本文中的含义</th>
+          <th>例子</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>数据感知编码</td>
+          <td>理解字段类型、顺序或分布后，改写这一列的表示</td>
+          <td>RLE、Dictionary、Delta、Prefix Compression</td>
+      </tr>
+      <tr>
+          <td>压缩原语</td>
+          <td>完整压缩器内部利用某类冗余的机制</td>
+          <td>LZ77 匹配、Huffman、FSE</td>
+      </tr>
+      <tr>
+          <td>Codec</td>
+          <td>把字节流编码为可独立解码表示的完整实现及配置</td>
+          <td>LZ4、Snappy、gzip-6、Zstandard</td>
+      </tr>
+      <tr>
+          <td>格式</td>
+          <td>规定页、块、元数据以及允许编码方式的容器协议</td>
+          <td>Parquet、ORC、gzip</td>
+      </tr>
+      <tr>
+          <td>压缩后体积占比</td>
+          <td><code>compressed_size / original_size</code></td>
+          <td><code>0.25</code> 表示保留原体积的 25%</td>
+      </tr>
+      <tr>
+          <td>压缩倍数</td>
+          <td><code>original_size / compressed_size</code></td>
+          <td>体积占比 <code>0.25</code> 对应 <code>4x</code></td>
+      </tr>
+  </tbody>
+</table>
+<p>同一算法的结果还会随块大小、压缩级别、字典、实现版本和 CPU 改变。一个“4x”的数字若没有数据分布和实验口径，几乎不能用于选型。</p></blockquote><h2 id="3-编码1利用字段的规律">3. 编码1：利用字段的规律<a class="anchor" href="#3-%e7%bc%96%e7%a0%811%e5%88%a9%e7%94%a8%e5%ad%97%e6%ae%b5%e7%9a%84%e8%a7%84%e5%be%8b">#</a></h2>
+<p>下面几类方法都依赖字段的类型或排列。它们不会尝试理解任意字节流，而是针对某一种清晰的数据特征，把原始值改写成更容易保存和继续压缩的表示。</p>
+<p>这类方法的出发点，是数据库块中的值通常不会覆盖数据类型的全部可能状态。一个 <code>uint64</code> 类型允许很大的范围，不代表当前页的一千个值真的需要 64 bit；一个字符串列允许每行不同，也不代表当前 stripe 没有反复出现的地区名。RLE、Dictionary、Delta 和 FOR 分别把“当前这一小段数据”的规律写进表示，代价则是额外元数据以及更明确的解码边界。</p>
+<h3 id="31-连续重复rle">3.1 连续重复：RLE<a class="anchor" href="#31-%e8%bf%9e%e7%bb%ad%e9%87%8d%e5%a4%8drle">#</a></h3>
+<p>RLE（Run-Length Encoding）要解决的是“同一个值连续写很多次”时的重复计数问题。输入 <code>A A A A B B C C C</code> 不必保存九个值，可以写成 <code>(A, 4) (B, 2) (C, 3)</code>：每个游程只保留一次值和连续次数。解码时按次数展开即可，既不需要全局字典，也不需要搜索历史窗口。</p>
+<figure>
+  <img
+    src="/images/server-database-compression-algorithms/rle-encoding.svg"
+    alt="RLE 将连续相同值记录为值和次数，长游程能摊薄计数字段成本，交替值会打断游程"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>RLE 依赖连续重复</figcaption>
+</figure>
+<p>用 C 看最朴素的定宽记录，它只是值和次数两个字段：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">#include</span> <span style="color:#75715e">&lt;stdint.h&gt;</span><span style="color:#75715e">
+</span></span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">struct</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">uint32_t</span> value;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">uint32_t</span> count;
+</span></span><span style="display:flex;"><span>} Run32;</span></span></code></pre></div><p>若输入原本每个值占 4 bytes，这两个字段按 8 bytes 序列化，那么长度为 1 的游程会把体积扩大一倍，长度为 2 也没有净节省，超过 2 才开始摊薄记录成本。实际格式会使用更窄的值、Varint、bit packing 或混合模式，但判断始终一样：连续次数必须足以覆盖 count 和边界元数据。</p>
+<p>它利用的是<strong>连续性</strong>，而不是低基数本身。一个只有 <code>A</code>、<code>B</code> 两种值的列若交替排列为 <code>A B A B ...</code>，每个游程长度都接近 1，计数字段会使结果比固定宽度输入更大。排序、聚簇或列式组织之所以常与 RLE 一起出现，是因为它们可能把相同值放到相邻位置；若为了制造长游程而改变排序，又要同时评估查询和写入代价。</p>
+<p>RLE 适合长而稳定的连续游程，也适合排序天然聚集相同状态、枚举值或层级值的列。仅仅“值种类少”还不够。</p>
+<h3 id="32-低基数dictionary-encoding">3.2 低基数：Dictionary Encoding<a class="anchor" href="#32-%e4%bd%8e%e5%9f%ba%e6%95%b0dictionary-encoding">#</a></h3>
+<p>Dictionary Encoding 面对的是另一种重复：值不一定相邻，但不同值的总数很少。以 <code>北京 上海 北京 深圳</code> 为例，可以保存字典 <code>0=北京 1=上海 2=深圳</code>，数据流只留下 ID <code>0 1 0 2</code>。当原值是较长字符串而 ID 只需几个 bit 或 byte 时，数据页、比较操作和后续压缩都可能受益。</p>
+<figure>
+  <img
+    src="/images/server-database-compression-algorithms/dictionary-encoding.svg"
+    alt="字典编码将低基数字符串映射为较短整数 ID，数据流保存 ID，同时需要保存字典本身"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>字典编码依赖低基数</figcaption>
+</figure>
+<p>字典不是免费的。它需要保存唯一值、长度、ID 位宽和页级元数据；读取相关数据时还要取得字典。基数上升会同时扩大字典和 ID 位宽，更新频繁或跨页分布不稳定时，还要决定字典作用域和回退策略。若几乎每个值都唯一，字典只是把原数据搬到另一处，再额外增加 ID 流。</p>
+<p>字符串或维度列的唯一值集合明显小于记录数，并且字典能在合适的页、stripe 或列范围内复用时，Dictionary Encoding 才有稳定收益。</p>
+<h3 id="33-相近整数deltafor-与-bit-packing">3.3 相近整数：Delta、FOR 与 Bit Packing<a class="anchor" href="#33-%e7%9b%b8%e8%bf%91%e6%95%b4%e6%95%b0deltafor-%e4%b8%8e-bit-packing">#</a></h3>
+<p>固定宽度整数必须为最大可能值预留位数，即使当前块中的值都很接近。对输入 <code>1000 1005 1007 1012</code>，FOR（Frame of Reference）路径选择 <code>base = 1000</code>，把同一块改写成 offset <code>0 5 7 12</code>；Delta 路径则保存首值 <code>1000</code> 和相邻差值 <code>+5 +2 +5</code>。FOR 的最大 offset 是 12，只需 4 bit，四个 offset 可以按统一位宽紧密排列。</p>
+<p>Delta 与 FOR 是两条并行选择，都可以进入位打包或其他紧凑整数表示，并不构成固定流水线。Delta 关注相邻值之间的变化，适合单调且步长较小的序列；FOR 关注一个块相对共同基值的范围，即使块内顺序有抖动，只要最大值与最小值接近，offset 仍可能很窄。</p>
+<figure>
+  <img
+    src="/images/server-database-compression-algorithms/integer-encoding-paths.svg"
+    alt="相近整数可以按相邻差值编码，或以块基值生成偏移量后按最大位宽打包，Delta 和 FOR 是两条可选路径"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>Delta 与 FOR 的整数编码路径</figcaption>
+</figure>
+<blockquote class='book-hint '>
+<p>Varint 用较少字节保存较小的无符号整数，但大值会占用更多字节；ZigZag 则把绝对值较小的正负数映射到较小的无符号数，常与 Varint 配合保存有符号差值。它们解决的是整数表示问题，不等同于 Delta 或 FOR 所利用的数据关系。</p>
+</blockquote><p>这类编码最怕离群值和错误的块边界。一个极大的差值可能抬高整组位宽；乱序会让 Delta 变大甚至要求有符号表示；块太小会增加 base、位宽等元数据，块太大又更容易包含异常范围。工程实现通常按 block 或 miniblock 记录位宽，以限制单个离群值的影响。</p>
+<p>整数在局部块内单调、步长小或取值范围窄时，值得并行测试 Delta + Bit Packing 与 FOR + Bit Packing，再用真实离群值和块大小验证位宽。</p>
+<h3 id="34-有序-keyprefix-compression">3.4 有序 Key：Prefix Compression<a class="anchor" href="#34-%e6%9c%89%e5%ba%8f-keyprefix-compression">#</a></h3>
+<p>排序后的 Key 往往有很长的公共前缀。<code>customer:0001</code>、<code>customer:0002</code>、<code>customer:0008</code> 中，后两个 Key 与前一个 Key 各共享 12 个字节，因此可以保存“共享前缀长度 12 + 后缀 <code>2</code>”和“共享前缀长度 12 + 后缀 <code>8</code>”，而不重复写入 <code>customer:000</code>。</p>
+<p>若每条记录都依赖前一条，随机定位到块中间就必须从块首顺序恢复。restart point 用空间换局部可寻址性：每隔若干条保存一个完整 Key 和 restart offset，查找先定位附近重启点，再恢复有限数量的后续 Key。间隔越大，完整 Key 越少，但最坏情况下要重放的条目更多；间隔越小则相反。</p>
+<figure>
+  <img
+    src="/images/server-database-compression-algorithms/prefix-compression-restarts.svg"
+    alt="有序 Key 只在重启点保存完整值，其余记录共享前缀长度和不同后缀，重启点间隔影响压缩与随机读取"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>前缀压缩与重启点间隔</figcaption>
+</figure>
+<p>Prefix Compression 的起测条件是 Key 已按字节顺序排列、公共前缀明显，而且读取可以从局部重启点恢复少量条目。restart interval 必须同时进入随机读取测试。</p>
+<h3 id="35-稳定时间序列delta-of-delta-与-gorilla-xor">3.5 稳定时间序列：Delta-of-Delta 与 Gorilla XOR<a class="anchor" href="#35-%e7%a8%b3%e5%ae%9a%e6%97%b6%e9%97%b4%e5%ba%8f%e5%88%97delta-of-delta-%e4%b8%8e-gorilla-xor">#</a></h3>
+<p>固定采样的时间戳不仅相邻差值小，差值本身也常保持不变。<code>1000 1010 1020 1030</code> 的一阶 Delta 是 <code>10 10 10</code>，后续 Delta-of-Delta 为 <code>0 0</code>；大量零可以用很短的控制位或整数表示。采样抖动越小，这种二阶规律越稳定。</p>
+<p>浮点值不能直接照搬整数差分，因为数值接近不保证算术差值拥有方便的整数分布。Gorilla 按 IEEE-754 位模式比较相邻 <code>float64</code>：先 XOR 前值与当前值，XOR 为零表示位模式完全相同；否则记录前导零、有效变化区间和尾随零，只保存中间有效位。后续 XOR 若落在已有窗口内，还可以复用窗口元数据。</p>
+<figure>
+  <img
+    src="/images/server-database-compression-algorithms/time-series-encoding.svg"
+    alt="稳定采样时间戳经过二阶差分后产生大量零，相邻浮点值通过 XOR 只保存发生变化的有效位区间"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>时间戳差分与浮点 XOR</figcaption>
+</figure>
+<p>这两条路径分别利用时间和值的规律。时间戳乱序、采样间隔剧烈变化会放大 Delta-of-Delta；浮点值随机跳变、低位噪声或本身接近随机位流时，XOR 的有效区间会变宽。Gorilla 的收益来自相邻位模式，不是“所有浮点数都容易压缩”。</p>
+<p><a href="https://www.vldb.org/pvldb/vol8/p1816-teller.pdf">Gorilla 原论文</a> 将 Delta-of-Delta 和 XOR 编码用于监控时序点。</p>
+<p>采样周期稳定、相邻浮点位模式只在局部变化，并且读取通常按时间块进行时，可以分别测试 Delta-of-Delta 与 Gorilla XOR。两条流要单独测量，各自的收益取决于对应的数据分布。</p>
+<h2 id="4-编码2利用字节流中的重复片段">4. 编码2：利用字节流中的重复片段<a class="anchor" href="#4-%e7%bc%96%e7%a0%812%e5%88%a9%e7%94%a8%e5%ad%97%e8%8a%82%e6%b5%81%e4%b8%ad%e7%9a%84%e9%87%8d%e5%a4%8d%e7%89%87%e6%ae%b5">#</a></h2>
+<p>RLE 只能利用相邻的相同值，而服务端数据里更常见的是“隔了一段又重复”的字节片段，比如 JSON 字段名、协议头、路径和标签。它们不一定落在字段边界，却仍可以用历史内容代替再次写入。</p>
+<p>这和前面依赖字段语义的编码不同。LZ 类方法不关心字节来自整数、时间戳还是字符串，只把序列化结果当作连续字节流；只要片段在已处理历史中出现过，就能写成一次引用。也因为够通用，常见通用 Codec 多以 LZ77 类历史匹配为主干，再叠加熵编码、frame 或校验。</p>
+<p>相比于字典编码，如果先为整份输入建立静态短语表，就要保存字典并决定哪些短语值得收入；流式输入也无法提前看完。LZ77 直接把最近历史当作滑动字典，不要求调用方提供 schema 或预训练词表，只需在有限窗口内回答“这段内容刚才是否出现过”。代价是必须记录或搜索历史；窗口、块大小和搜索强度会同时影响体积、CPU 和内存。</p>
+<h3 id="41-lz77用距离和长度引用历史">4.1 LZ77：用距离和长度引用历史<a class="anchor" href="#41-lz77%e7%94%a8%e8%b7%9d%e7%a6%bb%e5%92%8c%e9%95%bf%e5%ba%a6%e5%bc%95%e7%94%a8%e5%8e%86%e5%8f%b2">#</a></h3>
+<p><a href="https://ieeexplore.ieee.org/document/1055714">LZ77 原论文</a> 给出的核心模型，是在有限的最近历史窗口中寻找与待编码位置相同的最长片段，再用向后位置（工程格式通常写成距离）和长度替代它。找不到合适匹配的字节仍作为 literal 保存。因此一条 LZ 流至少要能区分两种信息：原样字面量，以及“回到历史某处复制若干字节”的 match。</p>
+<p>以 <code>ABCABCABCX</code> 为例，先不考虑具体格式怎样排列 token，只看 LZ77 要表达什么：</p>
+<table>
+  <thead>
+      <tr>
+          <th>待处理位置</th>
+          <th>此时已有历史</th>
+          <th>编码器写出的概念记录</th>
+          <th>解码后的输出</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>0..2</code></td>
+          <td>空</td>
+          <td><code>literal(&quot;ABC&quot;)</code></td>
+          <td><code>ABC</code></td>
+      </tr>
+      <tr>
+          <td><code>3..8</code></td>
+          <td><code>ABC</code></td>
+          <td><code>match(distance=3, length=6)</code></td>
+          <td><code>ABCABCABC</code></td>
+      </tr>
+      <tr>
+          <td><code>9</code></td>
+          <td><code>ABCABCABC</code></td>
+          <td><code>literal(&quot;X&quot;)</code></td>
+          <td><code>ABCABCABCX</code></td>
+      </tr>
+  </tbody>
+</table>
+<p>第二条记录看起来有个疑问：历史里明明只有 3 个字节，为什么能复制 6 个？因为解码器按字节回拷，并且刚写出的字节立刻成为新的历史。它先从当前位置向前 3 字节复制 <code>ABC</code>，输出变成 <code>ABCABC</code>；距离仍为 3，再继续复制刚生成的 <code>ABC</code>，就得到第三组 <code>ABC</code>。这种重叠复制让很短的历史也能表示周期性重复。</p>
+<p>因此，这段输入可以概念化为：</p>
+<p><code>literal(&quot;ABC&quot;) -&gt; match(distance=3, length=6) -&gt; literal(&quot;X&quot;)</code></p>
+<p>这个短例子未必真的会变小，因为真实格式还要保存 token、长度扩展和块边界。放到日志批次中，同样的过程会作用在重复的 <code>{&quot;level&quot;:&quot;info&quot;,&quot;service&quot;:</code>、路径或协议头上，变化的 ID 和时间戳则继续作为 literal；LZ77 不需要知道这些字节分别是什么字段。</p>
+<figure>
+  <img
+    src="/images/server-database-compression-algorithms/lz77-sliding-window.svg"
+    alt="LZ77 在已编码窗口中找到重复片段，用向后距离和匹配长度替代重复字节，再保留未匹配字面量"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>LZ77 用距离和长度引用历史</figcaption>
+</figure>
+<p>窗口决定最远能引用多久以前的数据，搜索策略决定为找到匹配要花多少计算。更长历史可能找到更好的 match，也会扩大状态和搜索空间；更积极的候选比较可能缩小输出，却会拖慢写入。独立块又形成硬边界：若每个块单独解码，默认不能引用前一块，随机读取更简单，但跨块重复随之丢失。</p>
+<p>输入包含跨字段、跨记录的重复片段，而调用方只能提供普通字节流时，LZ 类 Codec 是合适的起测点。窗口、块大小和搜索强度必须作为配置的一部分记录。</p>
+<h2 id="5-熵编码利用符号出现概率">5. 熵编码：利用符号出现概率<a class="anchor" href="#5-%e7%86%b5%e7%bc%96%e7%a0%81%e5%88%a9%e7%94%a8%e7%ac%a6%e5%8f%b7%e5%87%ba%e7%8e%b0%e6%a6%82%e7%8e%87">#</a></h2>
+<p>LZ 把重复片段换成 literal、length、distance 等符号后，这些符号仍要落到 bitstream 中。如果所有符号都用相同位数，而少数符号出现得特别频繁，定长编码就会把许多 bit 花在“区分几乎不会出现的情况”上。</p>
+<p>设符号分布为 <code>A: 50%</code>、<code>B: 25%</code>、<code>C: 12.5%</code>、<code>D: 12.5%</code>。把它落成 8 个符号，可以写成 <code>AAAABBCD</code>。四种符号的定长表示每个需要 2 bit，整串共 16 bit；但 A 占一半，若能给 A 更短表示，把较长表示留给 C、D，总位数就可能下降。</p>
+<p><a href="https://ieeexplore.ieee.org/document/6773024">Shannon 1948 年论文</a> 用 <code>H = -sum(p_i log2 p_i)</code> 描述离散源的平均信息量。这个分布的熵是 <code>1.75 bit / symbol</code>。熵在这里不是某个 Codec 的压缩承诺。在给定概率模型和唯一可译码约束下，它给出长期平均码率的下界；有限数据块还要承担码表、状态和边界等额外开销。概率越偏斜，定长表示通常留下越多可利用空间。</p>
+<blockquote class='book-hint note'>
+<p>这类按符号出现概率调整表示方式的后端，通常称为熵编码；Huffman 和 FSE 都属于这个方向。</p></blockquote><figure>
+  <img
+    src="/images/server-database-compression-algorithms/entropy-coding-roles.svg"
+    alt="偏斜符号分布下 Huffman 为高频符号分配更短前缀码，FSE 使用有限状态实现接近熵极限的平均码率和表驱动解码"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>Huffman 与 FSE 的角色</figcaption>
+</figure>
+<h3 id="51-huffman使用更短前缀码">5.1 Huffman：使用更短前缀码<a class="anchor" href="#51-huffman%e4%bd%bf%e7%94%a8%e6%9b%b4%e7%9f%ad%e5%89%8d%e7%bc%80%e7%a0%81">#</a></h3>
+<p>Huffman 从最低权重符号开始合并：先把权重同为 1 的 C、D 合成权重 2，再把这个节点与权重 2 的 B 合成权重 4，最后与权重 4 的 A 合并。把左、右分支分别记为 0、1，可以得到 <code>A=0</code>、<code>B=10</code>、<code>C=110</code>、<code>D=111</code>。</p>
+<p>现在把 <code>AAAABBCD</code> 真正写成 bit：</p>
+<table>
+  <thead>
+      <tr>
+          <th>方法</th>
+          <th>逐符号表示</th>
+          <th style="text-align: right">总位数</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>定长码</td>
+          <td><code>00 00 00 00 01 01 10 11</code></td>
+          <td style="text-align: right">16</td>
+      </tr>
+      <tr>
+          <td>Huffman</td>
+          <td><code>0 0 0 0 10 10 110 111</code></td>
+          <td style="text-align: right">14</td>
+      </tr>
+  </tbody>
+</table>
+<p>Huffman 行去掉空格后是 <code>00001010110111</code>。解码器从左到右读取：遇到 <code>0</code> 立即得到 A；遇到 <code>1</code> 还不能停，继续读到 <code>10</code> 得到 B，读到 <code>110</code> 或 <code>111</code> 才得到 C 或 D。任一码字都不是另一个码字的前缀，所以不需要在符号之间另加分隔符。</p>
+<p>平均码长为：</p>
+<p><code>50% * 1 + 25% * 2 + 12.5% * 3 + 12.5% * 3 = 1.75 bit / symbol</code></p>
+<p>这个例子恰好达到熵，是因为各概率能对应 1、2、3 bit 的整数码长。一般分布不会如此整齐；逐符号前缀码的码长只能是整数 bit，平均值可以是小数，却不一定等于熵。<a href="https://ieeexplore.ieee.org/document/4051119">Huffman 原论文</a> 的 minimum-redundancy 结论也有明确范围：已知权重、可即时解码的逐符号二进制码。</p>
+<p>Huffman 表本身也有成本。小块若单独统计和保存一棵树，元数据可能抵消收益；固定表省去传表成本，却未必适合当前分布。解码还要在查表大小、缓存占用与每次读取 bit 数之间取舍。</p>
+<blockquote class='book-hint '>
+<p><a href="https://www.rfc-editor.org/rfc/rfc7541#section-5.2">HTTP/2 HPACK</a> 提供一个边界清楚的应用：字符串 literal 由 <code>H</code> 标志选择是否使用 Appendix B 固定 canonical Huffman code。Huffman 只作用于字符串 literal；HPACK 的静态表、动态表和索引表示是另外的机制。</p>
+</blockquote><h3 id="52-fse用状态分摊码长">5.2 FSE：用状态分摊码长<a class="anchor" href="#52-fse%e7%94%a8%e7%8a%b6%e6%80%81%e5%88%86%e6%91%8a%e7%a0%81%e9%95%bf">#</a></h3>
+<p>先看同一串输入在两种编码下得到什么。<code>AAABAAAB</code> 只有 A、B 两种符号，其中 A 出现 6 次，B 出现 2 次。二元 Huffman 即使知道 A 更常见，也只能给每个符号分配至少 1 bit，例如 <code>A=0</code>、<code>B=1</code>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>AAABAAAB -&gt; 00010001 -&gt; 8 bit</span></span></code></pre></div><p>下面这张 8 状态 FSE 教学表可以把同一输入表示为：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>AAABAAAB -&gt; 111 | 1 00 0 -&gt; 7 bit
+</span></span><span style="display:flex;"><span>              状态  补充选择位</span></span></code></pre></div><p>这里的 <code>111</code> 是最终编码状态 7，也是解码器的初始状态，占 3 bit；<code>1 | 00 | 0</code> 是按解码器消费顺序写出的补充选择位，共 4 bit。先不要把这 7 bit 当成完整文件大小：它不包含概率描述、字符数量、字节对齐、结束标记和外层 block，只是一份用来说明状态机如何工作的逻辑排布，也不是 Zstandard bitstream 的物理位序。</p>
+<p><strong>先把表当作双方共享的规则。</strong></p>
+<p>FSE（Finite State Entropy）是 tANS（Table-based ANS）的表驱动实现。这张教学表有 8 个状态槽，按照 <code>A:75%</code>、<code>B:25%</code> 的比例分配：</p>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: center">符号</th>
+          <th style="text-align: right">次数</th>
+          <th style="text-align: right">状态槽数</th>
+          <th>本例对应状态</th>
+          <th>表项实际读取</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: center">A</td>
+          <td style="text-align: right">6</td>
+          <td style="text-align: right">6</td>
+          <td><code>0、1、3、4、6、7</code></td>
+          <td>0 或 1 bit</td>
+      </tr>
+      <tr>
+          <td style="text-align: center">B</td>
+          <td style="text-align: right">2</td>
+          <td style="text-align: right">2</td>
+          <td><code>2、5</code></td>
+          <td>2 bit</td>
+      </tr>
+  </tbody>
+</table>
+<p>概率只决定 A 占 6 格、B 占 2 格；具体落在哪些位置，由确定的建表算法决定。编码格式通常传递归一化频率、表大小等紧凑描述，或者使用预定义表、复用旧表。编码器和解码器按照同一套规则重建完整表，不需要逐行保存下面这些结果。</p>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: right">当前状态</th>
+          <th style="text-align: center">输出</th>
+          <th style="text-align: right">读取补充选择位</th>
+          <th>下一状态</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: right">0</td>
+          <td style="text-align: center">A</td>
+          <td style="text-align: right">1 bit</td>
+          <td>4-5</td>
+      </tr>
+      <tr>
+          <td style="text-align: right">1</td>
+          <td style="text-align: center">A</td>
+          <td style="text-align: right">1 bit</td>
+          <td>6-7</td>
+      </tr>
+      <tr>
+          <td style="text-align: right">2</td>
+          <td style="text-align: center">B</td>
+          <td style="text-align: right">2 bit</td>
+          <td>0-3</td>
+      </tr>
+      <tr>
+          <td style="text-align: right">3</td>
+          <td style="text-align: center">A</td>
+          <td style="text-align: right">0 bit</td>
+          <td>0</td>
+      </tr>
+      <tr>
+          <td style="text-align: right">4</td>
+          <td style="text-align: center">A</td>
+          <td style="text-align: right">0 bit</td>
+          <td>1</td>
+      </tr>
+      <tr>
+          <td style="text-align: right">5</td>
+          <td style="text-align: center">B</td>
+          <td style="text-align: right">2 bit</td>
+          <td>4-7</td>
+      </tr>
+      <tr>
+          <td style="text-align: right">6</td>
+          <td style="text-align: center">A</td>
+          <td style="text-align: right">0 bit</td>
+          <td>2</td>
+      </tr>
+      <tr>
+          <td style="text-align: right">7</td>
+          <td style="text-align: center">A</td>
+          <td style="text-align: right">0 bit</td>
+          <td>3</td>
+      </tr>
+  </tbody>
+</table>
+<p>每一行都是一条小型解码指令：当前状态先确定输出字符，再从压缩数据流读取指定数量的补充选择位，最后得到下一状态。例如状态 0 已经确定输出 A，但下一状态可能是 4 或 5，所以读取 1 bit：读到 <code>0</code> 去状态 4，读到 <code>1</code> 去状态 5。状态 7 输出 A 后只能去状态 3，因此不需要读取 bit。</p>
+<blockquote class='book-hint note'>
+<p>“读取 0 bit”不表示这个 A 被删除了。状态已经确定本步输出 A，也唯一确定了下一状态，所以不需要再从压缩数据流补充选择信息。</p></blockquote><p><strong>先从 7 bit 正向解码。</strong></p>
+<p>解码器取得初始状态 <code>111 = 7</code>，并把 <code>1000</code> 当作等待读取的补充选择位流：</p>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: right">当前状态</th>
+          <th style="text-align: center">输出</th>
+          <th style="text-align: center">消费</th>
+          <th style="text-align: right">下一状态</th>
+          <th style="text-align: center">剩余补充选择位</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: right">7</td>
+          <td style="text-align: center">A</td>
+          <td style="text-align: center">无</td>
+          <td style="text-align: right">3</td>
+          <td style="text-align: center"><code>1000</code></td>
+      </tr>
+      <tr>
+          <td style="text-align: right">3</td>
+          <td style="text-align: center">A</td>
+          <td style="text-align: center">无</td>
+          <td style="text-align: right">0</td>
+          <td style="text-align: center"><code>1000</code></td>
+      </tr>
+      <tr>
+          <td style="text-align: right">0</td>
+          <td style="text-align: center">A</td>
+          <td style="text-align: center"><code>1</code></td>
+          <td style="text-align: right">5</td>
+          <td style="text-align: center"><code>000</code></td>
+      </tr>
+      <tr>
+          <td style="text-align: right">5</td>
+          <td style="text-align: center">B</td>
+          <td style="text-align: center"><code>00</code></td>
+          <td style="text-align: right">4</td>
+          <td style="text-align: center"><code>0</code></td>
+      </tr>
+      <tr>
+          <td style="text-align: right">4</td>
+          <td style="text-align: center">A</td>
+          <td style="text-align: center">无</td>
+          <td style="text-align: right">1</td>
+          <td style="text-align: center"><code>0</code></td>
+      </tr>
+      <tr>
+          <td style="text-align: right">1</td>
+          <td style="text-align: center">A</td>
+          <td style="text-align: center"><code>0</code></td>
+          <td style="text-align: right">6</td>
+          <td style="text-align: center">空</td>
+      </tr>
+      <tr>
+          <td style="text-align: right">6</td>
+          <td style="text-align: center">A</td>
+          <td style="text-align: center">无</td>
+          <td style="text-align: right">2</td>
+          <td style="text-align: center">空</td>
+      </tr>
+      <tr>
+          <td style="text-align: right">2</td>
+          <td style="text-align: center">B</td>
+          <td style="text-align: center">停止</td>
+          <td style="text-align: right">-</td>
+          <td style="text-align: center">空</td>
+      </tr>
+  </tbody>
+</table>
+<p>完整状态路径是 <code>7 -&gt; 3 -&gt; 0 -&gt; 5 -&gt; 4 -&gt; 1 -&gt; 6 -&gt; 2</code>。把每一步输出连起来，正好得到 <code>AAABAAAB</code>。字符数量由外层元数据提供；解码器输出第 8 个字符后停止，不再为了不存在的第 9 个字符执行状态 2 的迁移。</p>
+<p><strong>再反过来看编码器。</strong></p>
+<p>FSE 的状态在逻辑上像一个栈：编码把字符压入状态，解码再按相反顺序弹出。为了让解码器从左到右输出 <code>AAABAAAB</code>，编码器需要从最右侧的 B 开始，按照 <code>BAAABAAA</code> 的顺序处理。</p>
+<p>解码表描述“当前状态怎样输出字符并到达下一状态”，编码表则是它的反向索引：输入“要加入的字符”和“已经表示后缀的状态”，直接得到前驱状态以及需要保存的补充选择位。</p>
+<p>本例还需要明确一条教学初始化规则：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>seed(B) = 状态 2</span></span></code></pre></div><p>状态 5 同样对应 B，因此不能仅凭“最后一个字符是 B”推出状态一定是 2。真实实现由编码表和初始化规则选定合法状态；选择状态 5 也可能形成另一份合法编码。编码结果不要求唯一，只要求给定表、状态和 bit 流后能够唯一解码。</p>
+<p>采用上面的教学初始化规则，编码器从右向左构造后缀：</p>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: center">加入</th>
+          <th>新后缀</th>
+          <th style="text-align: right">状态</th>
+          <th style="text-align: center">本步压入</th>
+          <th>累计补充位</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: center">初始化</td>
+          <td><code>B</code></td>
+          <td style="text-align: right">2</td>
+          <td style="text-align: center">无</td>
+          <td>空</td>
+      </tr>
+      <tr>
+          <td style="text-align: center">A</td>
+          <td><code>AB</code></td>
+          <td style="text-align: right">6</td>
+          <td style="text-align: center">无</td>
+          <td>空</td>
+      </tr>
+      <tr>
+          <td style="text-align: center">A</td>
+          <td><code>AAB</code></td>
+          <td style="text-align: right">1</td>
+          <td style="text-align: center"><code>0</code></td>
+          <td><code>0</code></td>
+      </tr>
+      <tr>
+          <td style="text-align: center">A</td>
+          <td><code>AAAB</code></td>
+          <td style="text-align: right">4</td>
+          <td style="text-align: center">无</td>
+          <td><code>0</code></td>
+      </tr>
+      <tr>
+          <td style="text-align: center">B</td>
+          <td><code>BAAAB</code></td>
+          <td style="text-align: right">5</td>
+          <td style="text-align: center"><code>00</code></td>
+          <td><code>00 | 0</code></td>
+      </tr>
+      <tr>
+          <td style="text-align: center">A</td>
+          <td><code>ABAAAB</code></td>
+          <td style="text-align: right">0</td>
+          <td style="text-align: center"><code>1</code></td>
+          <td><code>1 | 00 | 0</code></td>
+      </tr>
+      <tr>
+          <td style="text-align: center">A</td>
+          <td><code>AABAAAB</code></td>
+          <td style="text-align: right">3</td>
+          <td style="text-align: center">无</td>
+          <td><code>1 | 00 | 0</code></td>
+      </tr>
+      <tr>
+          <td style="text-align: center">A</td>
+          <td><code>AAABAAAB</code></td>
+          <td style="text-align: right">7</td>
+          <td style="text-align: center">无</td>
+          <td><code>1 | 00 | 0</code></td>
+      </tr>
+  </tbody>
+</table>
+<p>以第三行为例，编码器查询 <code>encode[A][6]</code>，得到前驱状态 1 和补充选择位 <code>0</code>。解码时状态 1 先输出 A，再读取 <code>0</code> 进入状态 6；而状态 6 已经表示后缀 <code>AB</code>，所以继续解码就能得到 <code>AAB</code>。编码过程最后停在状态 7，把它写成 <code>111</code>，再加上逻辑补充选择位 <code>1 | 00 | 0</code>，就得到开头展示的 7 bit。</p>
+<p><strong>FSE 到底省了什么？</strong></p>
+<p>把两种编码的成本按字符排开：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>字符：       A A A B A A A B
+</span></span><span style="display:flex;"><span>Huffman：   1 1 1 1 1 1 1 1 = 8 bit
+</span></span><span style="display:flex;"><span>FSE 补充选择位：0 0 1 2 0 1 0 0 = 4 bit
+</span></span><span style="display:flex;"><span>FSE 状态：                    + 3 bit</span></span></code></pre></div><p>FSE 没有删除任何 A。八个字符仍由状态机逐个输出；它省掉的是高概率符号的独立码字，只有不能唯一确定下一状态时才读取补充选择位。A 占据更多状态，所以更多 A 表项能够用 0 或 1 bit 完成迁移；B 占据较少状态，本例的普通 B 表项需要 2 bit。</p>
+<p>因此，连续的 <code>AAA</code> 不是 FSE 生效的必要条件。FSE 利用的是整条符号流的概率偏斜；把重复片段替换成 length、distance 等引用，是 LZ 负责的工作。这个分布的熵约为 <code>0.811 bit / symbol</code>，8 个符号的理想信息量约为 <code>6.49 bit</code>，教学结果 7 bit 正好说明状态编码可以越过二元 Huffman 的 <code>1 bit / symbol</code> 限制。</p>
+<p><strong>表不是免费的。</strong></p>
+<p>对只有 8 个字符的输入，正文虽然从 8 bit 降到教学口径的 7 bit，但归一化频率、表大小、字符数量和块头肯定会吃掉这 1 bit 收益，所以完整输出通常更大。流足够长时，表和初始状态的固定成本才能被摊薄。Zstandard 的 sequence symbol 会在 <code>Predefined</code>、<code>RLE</code>、<code>FSE Compressed</code> 和 <code>Repeat</code> 等模式之间选择，收益不足时不必建立新表。</p>
+<p><a href="https://www.rfc-editor.org/rfc/rfc8878#section-4.1">RFC 8878 对 FSE 的定义</a>给出了归一化计数、表项字段和状态更新规则。建表涉及符号铺排、计数器规范化和编码表反向索引，细节明显超出这段心智模型；需要实现 FSE 时，应继续沿规范或成熟实现深入，而不是从这张教学表反推生产代码。</p>
+<h2 id="6-常见-codec-怎样组合压缩原语">6. 常见 Codec 怎样组合压缩原语<a class="anchor" href="#6-%e5%b8%b8%e8%a7%81-codec-%e6%80%8e%e6%a0%b7%e7%bb%84%e5%90%88%e5%8e%8b%e7%bc%a9%e5%8e%9f%e8%af%ad">#</a></h2>
+<p>这一节只讨论 LZ4、Snappy、gzip、Brotli 和 Zstandard 这五种 LZ 系 Codec，不把结论外推到所有通用压缩算法。它们接收的是不带字段、类型或记录边界语义的字节流。选择 LZ 压缩路径时，共同起点是寻找已经出现的片段，把输入拆成未匹配字节和向后引用；各格式对这些内容使用的字段名、合法范围和物理布局并不相同。</p>
+<p>可以先记住一条共同主干：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>字节流 -&gt; 找重复 -&gt; 紧凑引用记录 -&gt; 可选的熵编码 -&gt; bitstream</span></span></code></pre></div><p>“可选”很重要。LZ4 和 Snappy 把 literal/copy 类指令直接序列化为字节，不接熵编码后端；DEFLATE 和 Brotli 继续用 Huffman 表示符号；Zstandard 先把 literals 与 sequences 分开，再让各类流选择自己的表示。这里画的是压缩路径，也不表示一个格式支持的每种 block 都必须压缩。</p>
+<figure>
+  <img
+    src="/images/server-database-compression-algorithms/codec-composition.svg"
+    alt="五种 LZ 系 Codec 都先形成未匹配字节和向后引用，随后分为直接保存字节指令、继续使用 Huffman、或把 literals 与 sequences 分流并独立选择模式三条路径"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>共同主干相同，后续表示不同</figcaption>
+</figure>
+<table>
+  <thead>
+      <tr>
+          <th>Codec</th>
+          <th>重复消除</th>
+          <th>熵编码或特有机制</th>
+          <th>记忆点</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>LZ4</td>
+          <td>LZ77-like</td>
+          <td>无熵编码</td>
+          <td>格式轻、解压快、压缩倍数较低</td>
+      </tr>
+      <tr>
+          <td>Snappy</td>
+          <td>LZ77-like</td>
+          <td>1-byte tag、无熵编码</td>
+          <td>字节对齐、吞吐优先</td>
+      </tr>
+      <tr>
+          <td>gzip</td>
+          <td>DEFLATE / LZ77</td>
+          <td>fixed / dynamic Huffman</td>
+          <td>广泛兼容、带 CRC32</td>
+      </tr>
+      <tr>
+          <td>Brotli</td>
+          <td>LZ77 + 静态字典引用</td>
+          <td>Huffman + 上下文建模</td>
+          <td>Web 传输、体积优先</td>
+      </tr>
+      <tr>
+          <td>Zstandard</td>
+          <td>LZ77-like</td>
+          <td>Huffman / FSE，可跳过或复用</td>
+          <td>分流编码、兼顾体积与速度</td>
+      </tr>
+  </tbody>
+</table>
+<p>最后一列只是理解设计和安排基准测试的起点，不是跨数据、实现和配置都成立的性能保证。下面沿用同一个输入：LZ4 讲清引用怎样替代重复字节，DEFLATE 再加一层 Huffman，Zstandard 最后展示分流；Snappy 和 Brotli 只展开它们特有的部分。</p>
+<h3 id="61-lz4找到重复换成回拷指令">6.1 LZ4：找到重复，换成回拷指令<a class="anchor" href="#61-lz4%e6%89%be%e5%88%b0%e9%87%8d%e5%a4%8d%e6%8d%a2%e6%88%90%e5%9b%9e%e6%8b%b7%e6%8c%87%e4%bb%a4">#</a></h3>
+<p>输入是 17 bytes：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>abcabcabcabc12345
+</span></span><span style="display:flex;"><span>-&gt; literal(&#34;abc&#34;)
+</span></span><span style="display:flex;"><span>-&gt; match(offset=3, length=9)
+</span></span><span style="display:flex;"><span>-&gt; literal(&#34;12345&#34;)</span></span></code></pre></div><p>解码器先输出 <code>abc</code>。执行 match 时，它从当前位置向前看 3 bytes，连续回拷 9 bytes，得到 <code>abcabcabc</code>。原输入中这 9 个重复字节不再逐字保存，只需记录“向前 3 bytes、复制 9 bytes”。</p>
+<p>按照 <a href="https://github.com/lz4/lz4/blob/v1.10.0/doc/lz4_Block_format.md">LZ4 v1.10.0 block format</a>，这组逻辑可以写成一份合法的 raw block：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>35 61 62 63 03 00 | 50 31 32 33 34 35</span></span></code></pre></div><ul>
+<li><code>0x35 = 0011 0101</code>：高 4 bit 表示后面有 3-byte literal；低 4 bit 的值为 5，加上 <code>minmatch=4</code>，得到 match length 9。</li>
+<li><code>61 62 63</code> 是 <code>abc</code>；<code>03 00</code> 是 little-endian offset 3。</li>
+<li><code>0x50</code> 的高 4 bit 表示最后还有 5-byte literal，后面的 <code>31 32 33 34 35</code> 就是 <code>12345</code>。LZ4 最后一条 sequence 只含 literals，因此到这里直接结束，不再读取 offset。</li>
+</ul>
+<p>token 的任一长度 nibble 达到 15 时，格式会继续读取扩展长度。这个例子没有触发扩展：9 个重复字节由 <code>0x35</code> 的低半字节和 2-byte offset 描述，整个 raw block 从 17 bytes 变成 12 bytes。它不包含 frame 或解码所需的外部长度信息。</p>
+<p>这是格式允许的一种表示，不代表每个 compressor 都会选中同一个 match。匹配搜索属于实现策略。LZ4 的心智模型很短：找到重复，把它换成回拷指令，然后停手。</p>
+<h3 id="62-snappy1-byte-tag-是一条指令的入口">6.2 Snappy：1-byte tag 是一条指令的入口<a class="anchor" href="#62-snappy1-byte-tag-%e6%98%af%e4%b8%80%e6%9d%a1%e6%8c%87%e4%bb%a4%e7%9a%84%e5%85%a5%e5%8f%a3">#</a></h3>
+<p><a href="https://github.com/google/snappy/blob/1.2.1/format_description.txt">Snappy format description</a> 也使用 LZ77 类 literal/copy 表示，但 wire format 与 LZ4 不同。同一个输入可以写成下面这份合法的 Snappy raw block：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>11 | 08 61 62 63 | 15 03 | 10 31 32 33 34 35</span></span></code></pre></div><p>第一个数字并不是 tag：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>0x11 = 未压缩长度 17 的 little-endian Varint，不是 tag
+</span></span><span style="display:flex;"><span>tag  = 每个 element 固定 1 byte 的头
+</span></span><span style="display:flex;"><span>element = tag + 按操作类型解释的后续字段或 literal 数据</span></span></code></pre></div><p>每个 tag 的低 2 bit 先告诉解码器这是什么操作：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>00  Literal
+</span></span><span style="display:flex;"><span>01  Copy with 1-byte offset（Copy_1）
+</span></span><span style="display:flex;"><span>10  Copy with 2-byte offset（Copy_2）
+</span></span><span style="display:flex;"><span>11  Copy with 4-byte offset（Copy_4）</span></span></code></pre></div><p>tag 确实固定为 1 byte，但整个 element 不一定只有 1 byte。高 6 bit 也不能笼统叫作 length，它的含义由低 2 bit 的操作类型决定：</p>
+<ul>
+<li>短 Literal 用高 6 bit 保存 <code>length - 1</code>；值 60 至 63 则表示后面用 1 至 4 bytes 保存更长的 <code>length - 1</code>。</li>
+<li>Copy_1 把 bits 2-4 用作 <code>length - 4</code>，bits 5-7 用作 offset 的高 3 bit，后续 1 byte 保存 offset 的低 8 bit。</li>
+<li>Copy_2 和 Copy_4 用高 6 bit 保存 <code>length - 1</code>，再分别读取 2-byte 或 4-byte little-endian offset。</li>
+</ul>
+<p>现在拆开例子里的两个 tag：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>0x08 = 000010 | 00
+</span></span><span style="display:flex;"><span>       length-1  Literal
+</span></span><span style="display:flex;"><span>       -&gt; 2 + 1 = 3 bytes，即 abc
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>0x15 = 000 | 101 | 01
+</span></span><span style="display:flex;"><span>       offset高3  length-4  Copy_1
+</span></span><span style="display:flex;"><span>       -&gt; offset 高位为 0，低 8 bit 从后续 0x03 读取
+</span></span><span style="display:flex;"><span>       -&gt; offset=3，length=5+4=9</span></span></code></pre></div><p>末尾的 <code>0x10</code> 同样是 Literal tag：高 6 bit 为 4，因此后面跟 5 bytes 的 <code>12345</code>。中间 9 个重复字节只用 <code>15 03</code> 两个字节表示；算上原始长度 Varint 和两个 Literal tag，整个 raw block 是 13 bytes。</p>
+<p>1-byte tag 的好处是解码器读一个字节就知道操作类型，以及接下来要读取什么，整个过程保持字节对齐。代价也直接写在格式里：每个 element 至少有一个 tag，较长 literal 或更远的 copy 还要追加固定字段，而且这些 tag 与 copy 参数不会再经过 Huffman/FSE 压缩。Snappy 因此容易解析，但会留下尚未利用的概率冗余。</p>
+<p>Snappy raw block、Snappy framed format、LZ4 raw block 和 LZ4 frame 都是不同格式。格式规定怎样解释合法字节流；compressor 怎样寻找 match，仍由实现决定。本文实验使用 <code>github.com/pierrec/lz4/v4 v4.1.22</code> 的独立 frame 和 <code>github.com/golang/snappy v1.0.0</code> 的 raw block，后文数字只适用于这些实现与配置。</p>
+<h3 id="63-deflate-与-gzip回拷指令继续进入-huffman">6.3 DEFLATE 与 gzip：回拷指令继续进入 Huffman<a class="anchor" href="#63-deflate-%e4%b8%8e-gzip%e5%9b%9e%e6%8b%b7%e6%8c%87%e4%bb%a4%e7%bb%a7%e7%bb%ad%e8%bf%9b%e5%85%a5-huffman">#</a></h3>
+<p>DEFLATE 可以先得到与前面相同的逻辑匹配：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>&#39;a&#39; &#39;b&#39; &#39;c&#39; Match(length=9, distance=3) &#39;1&#39; &#39;2&#39; &#39;3&#39; &#39;4&#39; &#39;5&#39;</span></span></code></pre></div><p>区别在下一步。<a href="https://www.rfc-editor.org/rfc/rfc1951#section-3.2.5">RFC 1951 §3.2.5</a> 把 literal 和 length code 放在同一个 alphabet，把 distance code 放在另一个 alphabet。本例对应的逻辑符号是：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Literal / Length alphabet:
+</span></span><span style="display:flex;"><span>&#39;a&#39; &#39;b&#39; &#39;c&#39; LengthCode(263) &#39;1&#39; &#39;2&#39; &#39;3&#39; &#39;4&#39; &#39;5&#39; EndOfBlock(256)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Distance alphabet:
+</span></span><span style="display:flex;"><span>DistanceCode(2)</span></span></code></pre></div><p>规范表中的映射是精确的：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>LengthCode 263 -&gt; length 9，0 extra bits
+</span></span><span style="display:flex;"><span>DistanceCode 2 -&gt; backward distance 3，0 extra bits</span></span></code></pre></div><p>DEFLATE 再用 Huffman code 表示这些 literal、length 和 distance symbol。Fixed Huffman block 使用 RFC 规定的固定 code lengths，不传当前块的新表；dynamic Huffman block 则把 literal/length 与 distance alphabet 的 code lengths 写在 block 中，这批 code lengths 又由第三套 code-length Huffman code 表示。</p>
+<p>这里不手写最终 bitstream，因为它还取决于 block header、fixed/dynamic 选择、实际 Huffman code 和 bit packing。能确定的心智模型是：LZ 先省掉重复内容，Huffman 再缩短描述 literal、length 和 distance 的符号。</p>
+<p>gzip 是外层封装，不是 DEFLATE bitstream 的另一个名字。<a href="https://www.rfc-editor.org/rfc/rfc1952">RFC 1952</a> 中，<code>CM=8</code> 表示 member 内使用 DEFLATE，结构可以简化为：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>gzip member = header + DEFLATE compressed data + CRC32 + ISIZE</span></span></code></pre></div><p><code>CRC32</code> 和 <code>ISIZE</code> 位于 trailer。一个 gzip 文件还可以顺序包含多个 member。</p>
+<h3 id="64-brotli格式内置字典和上下文">6.4 Brotli：格式内置字典和上下文<a class="anchor" href="#64-brotli%e6%a0%bc%e5%bc%8f%e5%86%85%e7%bd%ae%e5%ad%97%e5%85%b8%e5%92%8c%e4%b8%8a%e4%b8%8b%e6%96%87">#</a></h3>
+<p>Brotli 仍然沿用 LZ77 + Huffman，但比 DEFLATE 多了两个值得单独记住的机制。</p>
+<p>第一个是格式内置的静态字典。<a href="https://www.rfc-editor.org/rfc/rfc7932#section-8">RFC 7932 §8</a> 规定，解码出的 distance 超过当前位置允许的最大历史回看距离时，它不再指向已有输出，而是指向 <a href="https://www.rfc-editor.org/rfc/rfc7932#appendix-A">Appendix A 的静态字典数据</a>。copy length 必须在 4 至 24 之间；解码器用 length 与 distance 算出基础词索引和 transform ID，再应用 <a href="https://www.rfc-editor.org/rfc/rfc7932#appendix-B">Appendix B 定义的 121 种 word transformation</a>。</p>
+<p>普通 HTTP <code>br</code> 不会在连接中另发一份这张字典：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-http" data-lang="http"><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">Accept-Encoding: br
+</span></span></span><span style="display:flex;"><span><span style="color:#960050;background-color:#1e0010">Content-Encoding: br</span></span></span></code></pre></div><p>前者表示客户端接受 Brotli content coding，后者表示响应实际应用了它。双方之所以能解释同一个字典引用，是因为字典数据和 transformation 都属于 RFC 7932 格式；合规解码器按规范实现，编码器可以选择是否使用字典。这里没有独立的字典协商。外部共享字典使用 <a href="https://www.rfc-editor.org/rfc/rfc9842">RFC 9842 定义的 <code>dcb</code> content coding</a>，它在 IANA 注册表中也是<a href="https://www.iana.org/assignments/http-parameters/http-parameters.xhtml#content-coding">独立条目</a>，不属于普通 <code>br</code> 路径。</p>
+<p>第二个机制是上下文建模。Brotli 可以为同类符号准备多套 prefix code：literal 根据前两个已解码字节等上下文选择 code，distance 则可以根据本条命令的 copy length 选择 code。上下文在这里用于选择概率模型，并不是字段级语义。</p>
+<p>Brotli 的心智模型可以写成：LZ + Huffman，再加格式内置词表和按上下文切换的 prefix code。它常见于 HTTP 响应压缩，是否使用仍取决于客户端、网关、CDN 与服务端支持范围。</p>
+<h3 id="65-zstandard先拆-section再分别选择表示">6.5 Zstandard：先拆 section，再分别选择表示<a class="anchor" href="#65-zstandard%e5%85%88%e6%8b%86-section%e5%86%8d%e5%88%86%e5%88%ab%e9%80%89%e6%8b%a9%e8%a1%a8%e7%a4%ba">#</a></h3>
+<p>Zstandard frame 中的 block 可以是 <code>Raw</code>、<code>RLE</code> 或 <code>Compressed</code>。只有进入 Compressed block，才会继续拆成 Literals Section 和 Sequences Section。<a href="https://www.rfc-editor.org/rfc/rfc8878#section-3.1.1.3">RFC 8878</a> 还建议：如果压缩块比原始块更大，应改发 Raw block。</p>
+<p>沿用同一个输入，一份逻辑分流可以写成：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Literals Section:
+</span></span><span style="display:flex;"><span>a b c 1 2 3 4 5
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Sequences Section（逻辑值）：
+</span></span><span style="display:flex;"><span>literals_length = 3
+</span></span><span style="display:flex;"><span>match_length = 9
+</span></span><span style="display:flex;"><span>backward distance = 3</span></span></code></pre></div><p>执行这条 sequence 时，解码器先从 Literals Section 取出 <code>abc</code>，再从当前输出向前 3 bytes 回拷 9 bytes。所有 sequences 执行完后，Literals Section 还剩 <code>12345</code>，它们被追加到块尾，最终仍是 <code>abcabcabcabc12345</code>。</p>
+<p>这里的 <code>backward distance = 3</code> 只是便于理解的语义值。Zstandard 的物理格式保存 offset code/value，并带有 recent-offset 规则，不能把语义距离直接当成 wire symbol。</p>
+<p>分流以后，各部分独立选择表示：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>Block:
+</span></span><span style="display:flex;"><span>Raw / RLE / Compressed
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Literals Section:
+</span></span><span style="display:flex;"><span>Raw / RLE / Compressed(Huffman) / Treeless（复用 Huffman 表）
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Literal Length、Match Length、Offset 三类 sequence codes：
+</span></span><span style="display:flex;"><span>Predefined / RLE / FSE Compressed / Repeat（复用 sequence table）</span></span></code></pre></div><p>这个小例子只有一条 sequence，因此每类 sequence code 也只有一个符号。它只能解释“怎样分流”，不能证明 FSE 能省多少。<a href="https://www.rfc-editor.org/rfc/rfc8878#section-3.1.1.3.2">RFC 8878 §3.1.1.3.2</a> 明确规定，只有单一符号时不得使用 <code>FSE_Compressed_Mode</code>，应该使用 <code>RLE_Mode</code>；规范也允许其他可工作的模式。更长的符号流出现稳定概率偏斜时，建立或复用 FSE table 才可能值得。</p>
+<p>所以 Zstandard 并不是“所有内容依次经过 LZ、Huffman、FSE”。它先把原文字节和回拷指令分流，再让不同符号流单独决定是原样保存、RLE、熵编码还是复用已有表。压缩级别调整的是 compressor 的匹配搜索与表示决策预算，不是把 FSE “开得更强”。</p>
+<h2 id="7-系统里的组合">7. 系统里的组合<a class="anchor" href="#7-%e7%b3%bb%e7%bb%9f%e9%87%8c%e7%9a%84%e7%bb%84%e5%90%88">#</a></h2>
+<p>在实际使用中，同一个软件系统可以在列、页、索引 Key、SST block 或持久化对象上使用不同压缩。</p>
+<ol>
+<li>
+<p><strong>Parquet 与 ORC</strong></p>
+<p>在 <a href="https://github.com/apache/parquet-format/blob/apache-parquet-format-2.13.0/Encodings.md">Parquet Format 2.13.0</a> 中，column chunk 内的 page 先按物理类型和数据分布选择表示：布尔值、字典 ID 和层级流可走 RLE/bit-packing hybrid，字符串等值可进入 dictionary page，<code>INT32</code>/<code>INT64</code> 还可选择 <code>DELTA_BINARY_PACKED</code>。形成 encoded data block 后，文件元数据再指定 <a href="https://github.com/apache/parquet-format/blob/apache-parquet-format-2.13.0/Compression.md">SNAPPY、GZIP、ZSTD、LZ4_RAW 等通用 Codec</a>。该规范没有全局默认 Codec；旧 <code>LZ4</code> 标识已经废弃，与 <code>LZ4_RAW</code> 是不同的格式枚举。</p>
+<p><a href="https://github.com/apache/orc/blob/v2.3.1/site/specification/ORCv1.md">Apache ORC 2.3.1 发布的 ORC v1 规范</a> 把列拆成不同 stream：byte、boolean 和 integer stream 分别有对应的 RLE/bit packing 规则，字符串列可在 direct 与 dictionary encoding 之间选择。这里讨论的是 stripe/column stream 的表示方式；不同 stream 采用各自的编码规则，文件级默认 Codec 不在这项证据范围内。</p>
+<p>这两种格式都有分层能力，但实现并不相同：先让列编码利用类型信息，再让页或流的字节块进入通用压缩。</p>
+</li>
+<li>
+<p><strong>ClickHouse</strong></p>
+<p><a href="https://github.com/ClickHouse/ClickHouse/blob/v26.7.3.19-stable/docs/en/sql-reference/statements/create/table.md#column_compression_codec">ClickHouse 26.7.3.19-stable</a> 允许列声明 <code>CODEC(...)</code> pipeline。<code>Delta</code>、<code>DoubleDelta</code>、<code>Gorilla</code> 等先利用列类型和相邻值改写表示，再与 <code>LZ4</code>、<code>ZSTD</code> 等通用 Codec 组合；<code>Delta</code> 和 <code>DoubleDelta</code> 不能单独作为完整 pipeline。显式列配置与环境默认必须分开：该固定版本文档写明 self-managed 默认 LZ4，ClickHouse Cloud 默认 Zstd。</p>
+<p>低基数字符串还有另一层选择：只有显式声明 <a href="https://github.com/ClickHouse/ClickHouse/blob/v26.7.3.19-stable/docs/en/sql-reference/data-types/lowcardinality.md"><code>LowCardinality(T)</code></a> 的列使用字典和短引用，高基数时可能适得其反。简化写入链路可以写成“列值 -&gt; 可选数据准备 Codec / LowCardinality 表示 -&gt; LZ4 或 ZSTD -&gt; 列压缩块”。</p>
+</li>
+<li>
+<p><strong>RocksDB 与 LevelDB</strong></p>
+<p><a href="https://github.com/facebook/rocksdb/blob/v11.8.0/table/block_based/block_builder.cc#L10-L32">RocksDB 11.8.0 <code>BlockBuilder</code></a> 在 BlockBasedTable 的 key entry 中保存与前一个 Key 的共享前缀，并周期性写 <code>shared_bytes = 0</code> 的完整 restart key 与 offset。value 不走这条前缀编码。形成 SST block 后，<a href="https://github.com/facebook/rocksdb/blob/v11.8.0/include/rocksdb/options.h#L193-L215"><code>ColumnFamilyOptions::compression</code></a> 再决定通用块压缩：编译时支持 LZ4 则该版本默认 LZ4，否则默认 Snappy；两者都不可用时不压缩。其他 Codec 和 bottommost compression 可以显式配置。</p>
+<p><a href="https://github.com/google/leveldb/blob/7ee830d02b623e8ffe0b95d59a74db1e58da04c5/table/block_builder.cc#L5-L27">LevelDB 固定 commit</a> 同样只对 table data block 的 Key 保存 shared prefix 和 suffix，value 原样保存；默认 <code>block_restart_interval = 16</code>。LevelDB 的行为以该固定 commit 为准。这里比较的范围限于 table data block，不涉及 WAL、memtable、filter block 或 compaction 策略。</p>
+</li>
+<li>
+<p><strong>Lucene</strong></p>
+<p><a href="https://github.com/apache/lucene/blob/f6eaee8148b7569e83c433feacc4f624608188fd/lucene/core/src/java/org/apache/lucene/codecs/lucene104/Lucene104PostingsWriter.java#L426-L450">Lucene 10.5.0 的 Lucene104 postings writer</a> 先对有序 doc ID 形成 delta block，再按分布在 FOR packed integers 与 unary/bit-set 等路径之间选择。它利用的是文档编号的局部范围；这一选择适用于该版本 Lucene104 postings writer 的 doc ID block，其他 postings 与整数编码路径可能不同。</p>
+<p>term dictionary 是另一种表示。<a href="https://github.com/apache/lucene/blob/f6eaee8148b7569e83c433feacc4f624608188fd/lucene/core/src/java/org/apache/lucene/codecs/lucene103/blocktree/Lucene103BlockTreeTermsWriter.java#L561-L571">Lucene103 BlockTree</a> 把共享公共前缀的 terms 放入 block，entry 保存相对 block prefix 的 suffix，term index/trie 再把前缀映射到 block。其格式与 RocksDB 的“前一 Key + restart interval”不同。这里讨论的是 postings 与 term dictionary 的局部编码；stored fields、doc values 等其他文件格式各有自己的编码路径。</p>
+</li>
+<li>
+<p><strong>Redis</strong></p>
+<p><a href="https://github.com/redis/redis/blob/8.10.0/src/rdb.c#L356-L480">Redis 8.10.0 <code>rdb.c</code></a> 在保存 RDB string object 时按对象决定是否使用 LZF。<code>rdbcompression yes</code> 默认开启，但字符串要长于 20 bytes，并且压缩后至少节省 4 bytes，才保存压缩长度、原长度和 LZF 数据。条件不满足就写原字符串。</p>
+<p>这个路径说明，真实系统通常不会无条件压缩每个对象。对象较小、可压缩性差异很大，或者格式允许逐对象选择时，“尝试压缩 + 最小收益门槛 + 原样回退”比强制进入同一 Codec 更实用。这个结论适用于 RDB string object；Redis 内存对象、AOF 和网络协议是其他数据路径。</p>
+</li>
+<li>
+<p><strong>Prometheus</strong></p>
+<p><a href="https://github.com/prometheus/prometheus/blob/v3.13.2/tsdb/chunkenc/xor.go#L161-L227">Prometheus 3.13.2 <code>chunkenc.XORChunk</code></a> 把 float sample 的时间戳和值一起编码进 chunk：时间戳保存 delta-of-delta，浮点值按 IEEE-754 位模式 XOR，并复用 leading/trailing-zero window。Prometheus 为毫秒时间戳调整了 Gorilla 的范围，因此它沿用 Gorilla 的思路，但 bitstream 与原论文并不完全相同。</p>
+<p>这一机制针对 float sample chunk。Histogram chunk 以及 chunk 外层是否另用 LZ4 或 Zstandard 属于其他路径，应分别确认数据对象与读取粒度。</p>
+</li>
+</ol>
+<h2 id="8-用三类数据验证">8. 用三类数据验证<a class="anchor" href="#8-%e7%94%a8%e4%b8%89%e7%b1%bb%e6%95%b0%e6%8d%ae%e9%aa%8c%e8%af%81">#</a></h2>
+<h3 id="实验口径">实验口径<a class="anchor" href="#%e5%ae%9e%e9%aa%8c%e5%8f%a3%e5%be%84">#</a></h3>
+<p>实验在 Apple M2 上完成，通用 Codec 统一使用 <code>1 MiB</code> 独立块，不共享跨块状态，也不使用预训练字典。三类输入均约 <code>256 MiB</code>：结构化日志、单调 <code>uint64</code>，以及 <code>timestamp + float64</code> 时序样本。</p>
+<p>表中数据是在这组输入、库版本、单线程和块大小下测得的中位结果。数据感知编码轨道验证字节数和往返 SHA，不测吞吐；通用 Codec 轨道直接测成熟库。两条轨道用途不同：先看原始表示，再决定是否进入通用 Codec。</p>
+<p>通用 Codec 的 <code>1 MiB</code> 分块结果如下。体积占比越低，留下的字节越少；压缩和解压速度都是按原始体积计算的中位 <code>MiB/s</code>。</p>
+<h4 id="结构化日志">结构化日志<a class="anchor" href="#%e7%bb%93%e6%9e%84%e5%8c%96%e6%97%a5%e5%bf%97">#</a></h4>
+<table>
+  <thead>
+      <tr>
+          <th>Codec</th>
+          <th style="text-align: right">体积占比</th>
+          <th style="text-align: right">压缩 MiB/s</th>
+          <th style="text-align: right">解压 MiB/s</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>LZ4</td>
+          <td style="text-align: right">0.237</td>
+          <td style="text-align: right">566</td>
+          <td style="text-align: right">1421</td>
+      </tr>
+      <tr>
+          <td>Snappy</td>
+          <td style="text-align: right">0.242</td>
+          <td style="text-align: right"><em><strong>1506</strong></em></td>
+          <td style="text-align: right"><em><strong>3143</strong></em></td>
+      </tr>
+      <tr>
+          <td>gzip-6</td>
+          <td style="text-align: right">0.130</td>
+          <td style="text-align: right">115</td>
+          <td style="text-align: right">466</td>
+      </tr>
+      <tr>
+          <td>Zstd-1</td>
+          <td style="text-align: right">0.131</td>
+          <td style="text-align: right">481</td>
+          <td style="text-align: right">1102</td>
+      </tr>
+      <tr>
+          <td>Zstd-3</td>
+          <td style="text-align: right">0.137</td>
+          <td style="text-align: right">341</td>
+          <td style="text-align: right">1024</td>
+      </tr>
+      <tr>
+          <td>Zstd-9</td>
+          <td style="text-align: right"><em><strong>0.128</strong></em></td>
+          <td style="text-align: right">315</td>
+          <td style="text-align: right">1193</td>
+      </tr>
+  </tbody>
+</table>
+<p>结构化日志中，Snappy 以 <code>1506 MiB/s</code> 压缩到 <code>0.242</code>；Zstd-9 体积最低，为 <code>0.128</code>。日志有重复字段名和相似消息，CPU 紧就选快速路径，带宽贵再考虑更小体积。</p>
+<h4 id="整数列">整数列<a class="anchor" href="#%e6%95%b4%e6%95%b0%e5%88%97">#</a></h4>
+<table>
+  <thead>
+      <tr>
+          <th>Codec</th>
+          <th style="text-align: right">体积占比</th>
+          <th style="text-align: right">压缩 MiB/s</th>
+          <th style="text-align: right">解压 MiB/s</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>LZ4</td>
+          <td style="text-align: right">0.501</td>
+          <td style="text-align: right">385</td>
+          <td style="text-align: right">743</td>
+      </tr>
+      <tr>
+          <td>Snappy</td>
+          <td style="text-align: right">0.501</td>
+          <td style="text-align: right"><em><strong>771</strong></em></td>
+          <td style="text-align: right"><em><strong>1793</strong></em></td>
+      </tr>
+      <tr>
+          <td>gzip-6</td>
+          <td style="text-align: right">0.190</td>
+          <td style="text-align: right">18</td>
+          <td style="text-align: right">237</td>
+      </tr>
+      <tr>
+          <td>Zstd-1</td>
+          <td style="text-align: right"><em><strong>0.130</strong></em></td>
+          <td style="text-align: right">317</td>
+          <td style="text-align: right">535</td>
+      </tr>
+      <tr>
+          <td>Zstd-3</td>
+          <td style="text-align: right"><em><strong>0.130</strong></em></td>
+          <td style="text-align: right">329</td>
+          <td style="text-align: right">551</td>
+      </tr>
+      <tr>
+          <td>Zstd-9</td>
+          <td style="text-align: right"><em><strong>0.129</strong></em></td>
+          <td style="text-align: right">239</td>
+          <td style="text-align: right">511</td>
+      </tr>
+  </tbody>
+</table>
+<p>整数列中，Zstandard 三个级别都在 <code>0.130</code> 左右，LZ4/Snappy 约 <code>0.501</code>。同一数据在教学轨道里经 Delta + Bit Packing 后到 <code>0.048</code>，说明这类数据应该先试数值编码。</p>
+<h4 id="时序数据">时序数据<a class="anchor" href="#%e6%97%b6%e5%ba%8f%e6%95%b0%e6%8d%ae">#</a></h4>
+<table>
+  <thead>
+      <tr>
+          <th>Codec</th>
+          <th style="text-align: right">体积占比</th>
+          <th style="text-align: right">压缩 MiB/s</th>
+          <th style="text-align: right">解压 MiB/s</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>LZ4</td>
+          <td style="text-align: right">0.850</td>
+          <td style="text-align: right">205</td>
+          <td style="text-align: right">884</td>
+      </tr>
+      <tr>
+          <td>Snappy</td>
+          <td style="text-align: right">0.815</td>
+          <td style="text-align: right"><em><strong>720</strong></em></td>
+          <td style="text-align: right"><em><strong>2543</strong></em></td>
+      </tr>
+      <tr>
+          <td>gzip-6</td>
+          <td style="text-align: right">0.641</td>
+          <td style="text-align: right">26</td>
+          <td style="text-align: right">133</td>
+      </tr>
+      <tr>
+          <td>Zstd-1</td>
+          <td style="text-align: right"><em><strong>0.594</strong></em></td>
+          <td style="text-align: right">213</td>
+          <td style="text-align: right">470</td>
+      </tr>
+      <tr>
+          <td>Zstd-3</td>
+          <td style="text-align: right">0.621</td>
+          <td style="text-align: right">91</td>
+          <td style="text-align: right">426</td>
+      </tr>
+      <tr>
+          <td>Zstd-9</td>
+          <td style="text-align: right">0.622</td>
+          <td style="text-align: right">54</td>
+          <td style="text-align: right">354</td>
+      </tr>
+  </tbody>
+</table>
+<p>时序数据中，原始输入把 timestamp 和 float64 交错保存，Zstd-1 最小，为 <code>0.594</code>；Snappy 压缩最快，为 <code>720 MiB/s</code>。若把时间和值拆成两条流，Delta-of-Delta 和 Gorilla 才有发挥空间。</p>
+<h2 id="9-总结先识别数据再选择算法">9. 总结：先识别数据，再选择算法<a class="anchor" href="#9-%e6%80%bb%e7%bb%93%e5%85%88%e8%af%86%e5%88%ab%e6%95%b0%e6%8d%ae%e5%86%8d%e9%80%89%e6%8b%a9%e7%ae%97%e6%b3%95">#</a></h2>
+<p>三个常见误区校正：</p>
+<ol>
+<li><strong>编码不是低配版压缩器。</strong> 它利用的是通用字节 Codec 看不到的类型信息，数据库常把两层串起来。</li>
+<li><strong>最高压缩倍数不等于最低总成本。</strong> 少读 I/O 可能值得更多 CPU，也可能让在线写入和尾延迟更差。</li>
+<li><strong>解压通常更靠近在线查询关键路径，但并非所有系统都读多写少。</strong> 数据生命周期、compaction 与恢复路径会改变 CPU 应该花在哪里。</li>
+</ol>
+<p>服务端压缩可以按三层理解。第一层是数据感知编码，利用字段类型、顺序和分布；第二层是 LZ 这种面向字节的重复模式；第三层是 Huffman、FSE 等熵编码，利用普通字节流中的重复和概率。至于常说的 LZ4、Snappy、Zstandard 这种通用 Codec，一般都是利用 第二层 和 第三层进行组合参数调优的一层包装。</p>
+<figure>
+  <img
+    src="/images/server-database-compression-algorithms/compression-selection-flow.svg"
+    alt="服务端压缩选型先识别数据分布，再按延迟、空间、兼容性和高熵特征选择测试起点，最终用真实块大小验证总成本"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>压缩选型的基本流程</figcaption>
+</figure>
+<p>落到具体系统，第一问不该是“LZ4 还是 Zstd”，而是数据是否有 schema、顺序和稳定分布。若能识别低基数、长游程、局部整数范围、公共 Key 前缀或固定采样周期，先测试数据感知编码；它可能比提高通用 Codec 级别更直接，也可能让后续 Codec 看到完全不同的字节流。</p>
+<p>然后按约束缩小候选：</p>
+<ol>
+<li><strong>读路径延迟：</strong> 在线查询是否每次都要解压？重点看解压尾延迟、批量解码和最小读取块，而不只看压缩吞吐。</li>
+<li><strong>CPU 与生命周期：</strong> 写入能否把工作移到 compaction、merge 或离线归档？若写入也在关键路径，就要给压缩 CPU 明确预算。</li>
+<li><strong>空间与网络：</strong> SSD、对象存储和跨机房流量哪一项最贵？只有真实节省的字节才能抵扣 CPU。</li>
+<li><strong>兼容性：</strong> 对端要求 gzip member、Snappy block、LZ4 frame 还是某个文件格式枚举？同名 LZ 思路不代表 wire format 可交换。</li>
+<li><strong>随机访问：</strong> 页、块和 restart interval 会决定点查读放大与工作内存，不能只用整文件体积选择。</li>
+<li><strong>高熵与小对象：</strong> 保留“不压缩”和收益门槛；若压缩后没有至少覆盖 header 与 CPU 的收益，直接回退。</li>
+</ol>
+<p>下面的矩阵给出起测点，不是生产默认答案：</p>
+<table>
+  <thead>
+      <tr>
+          <th>场景</th>
+          <th>先处理的数据与块</th>
+          <th>Codec 起点</th>
+          <th>重点验证</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>在线查询</td>
+          <td>列编码、较小可寻址块</td>
+          <td>LZ4、Snappy、Zstandard 低级别</td>
+          <td>解压尾延迟、读放大、缓存与并发内存</td>
+      </tr>
+      <tr>
+          <td>写入 / Compaction</td>
+          <td>在后台整理 Delta、FOR、Dictionary</td>
+          <td>Zstandard 与快速 Codec 对照</td>
+          <td>压缩 CPU 是否挤占写入，compaction 总时长</td>
+      </tr>
+      <tr>
+          <td>日志 / 消息传输</td>
+          <td>批量相似记录，固定 batch 边界</td>
+          <td>LZ4、Snappy、Zstandard；兼容时 gzip</td>
+          <td>生产者 CPU、broker 是否转换、网络节省</td>
+      </tr>
+      <tr>
+          <td>时序 chunk</td>
+          <td>Delta-of-Delta、Gorilla XOR 分流</td>
+          <td>快速 Codec、Zstandard、不再压缩</td>
+          <td>样本抖动、chunk 查询范围、二次压缩收益</td>
+      </tr>
+      <tr>
+          <td>冷数据 / 备份</td>
+          <td>较大块，恢复边界清楚</td>
+          <td>Zstandard；要求既有格式时 gzip</td>
+          <td>离线压缩时间、恢复吞吐、长期兼容性</td>
+      </tr>
+  </tbody>
+</table>
+<p>最后，先识别数据分布，再把 CPU、块边界和读取路径一起测出来；这比单看压缩倍数可靠得多。</p>
+<h2 id="参考资料">参考资料<a class="anchor" href="#%e5%8f%82%e8%80%83%e8%b5%84%e6%96%99">#</a></h2>
+<ul>
+<li>C. E. Shannon, <a href="https://people.math.harvard.edu/~ctm/home/text/others/shannon/entropy/entropy.pdf">A Mathematical Theory of Communication</a>, 1948；D. A. Huffman, <a href="https://ieeexplore.ieee.org/document/4051119">A Method for the Construction of Minimum-Redundancy Codes</a>, 1952；J. Ziv, A. Lempel, <a href="https://ieeexplore.ieee.org/document/1055714">A Universal Algorithm for Sequential Data Compression</a>, 1977</li>
+<li>T. Pelkonen 等, <a href="https://www.vldb.org/pvldb/vol8/p1816-teller.pdf">Gorilla: A Fast, Scalable, In-Memory Time Series Database</a>, VLDB 2015；<a href="https://github.com/prometheus/prometheus/blob/v3.13.2/tsdb/chunkenc/xor.go">Prometheus 3.13.2 XORChunk</a></li>
+<li>RFC 与标准：<a href="https://www.rfc-editor.org/rfc/rfc1951">DEFLATE / RFC 1951</a>、<a href="https://www.rfc-editor.org/rfc/rfc7541">HPACK / RFC 7541</a>、<a href="https://www.rfc-editor.org/rfc/rfc8878">Zstandard / RFC 8878</a>、<a href="https://www.rfc-editor.org/rfc/rfc7932">Brotli / RFC 7932</a>、<a href="https://www.iana.org/assignments/http-parameters/http-parameters.xhtml#content-coding">IANA HTTP Content Coding Registry</a></li>
+<li>快速 LZ 格式：<a href="https://github.com/lz4/lz4/blob/v1.10.0/doc/lz4_Block_format.md">LZ4 v1.10.0 Block Format</a>、<a href="https://github.com/google/snappy/blob/1.2.1/format_description.txt">Snappy 1.2.1 format description</a></li>
+<li>列式格式文档：Apache Parquet Format 2.13.0 的 <a href="https://github.com/apache/parquet-format/blob/apache-parquet-format-2.13.0/Encodings.md">Encodings</a> 与 <a href="https://github.com/apache/parquet-format/blob/apache-parquet-format-2.13.0/Compression.md">Compression</a>；<a href="https://github.com/apache/orc/blob/v2.3.1/site/specification/ORCv1.md">Apache ORC 2.3.1 / ORC v1 Specification</a></li>
+<li>ClickHouse 26.7.3.19-stable：<a href="https://github.com/ClickHouse/ClickHouse/blob/v26.7.3.19-stable/docs/en/sql-reference/data-types/lowcardinality.md">LowCardinality</a>、<a href="https://github.com/ClickHouse/ClickHouse/blob/v26.7.3.19-stable/docs/en/sql-reference/statements/create/table.md#column_compression_codec">Column Compression Codecs</a></li>
+<li>LSM 与索引源码：RocksDB 11.8.0 的 <a href="https://github.com/facebook/rocksdb/blob/v11.8.0/table/block_based/block_builder.cc">BlockBuilder</a> 与 <a href="https://github.com/facebook/rocksdb/blob/v11.8.0/include/rocksdb/options.h#L193-L215">compression options</a>；<a href="https://github.com/google/leveldb/blob/7ee830d02b623e8ffe0b95d59a74db1e58da04c5/table/block_builder.cc">LevelDB BlockBuilder 与 restart</a></li>
+<li>Lucene 10.5.0：<a href="https://github.com/apache/lucene/blob/f6eaee8148b7569e83c433feacc4f624608188fd/lucene/core/src/java/org/apache/lucene/codecs/lucene104/Lucene104PostingsWriter.java">Lucene104 postings</a>、<a href="https://github.com/apache/lucene/blob/f6eaee8148b7569e83c433feacc4f624608188fd/lucene/core/src/java/org/apache/lucene/codecs/lucene103/blocktree/Lucene103BlockTreeTermsWriter.java">Lucene103 BlockTree</a></li>
+<li>Redis 8.10.0：<a href="https://github.com/redis/redis/blob/8.10.0/src/rdb.c#L356-L480">RDB LZF path</a>、<a href="https://github.com/redis/redis/blob/8.10.0/redis.conf#L513-L518"><code>rdbcompression</code> default</a></li>
+</ul>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+  <div>
+  
+    <a href="/2026/08/07/Parquet%E6%96%87%E4%BB%B6%E6%A0%BC%E5%BC%8F%E5%8E%9F%E7%90%86/" class="flex align-center">
+      <img src="/icons/backward.svg" class="book-icon" alt="Backward" />
+      <span>Parquet 文件格式解析</span>
+    </a>
+  
+  </div>
+  <div>
+  
+    <a href="/2026/08/03/redis%E5%93%A8%E5%85%B5%E6%9C%BA%E5%88%B6/" class="flex align-center">
+      <span>Redis Sentinel：故障检测、自动切主与参数调优</span>
+      <img src="/icons/forward.svg" class="book-icon" alt="Forward" />
+    </a>
+  
+  </div>
+</div>
+ 
+        
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+        
+<div class="flex align-center" style="margin-top: 1rem;">
+  <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+    访问量<span id="busuanzi_value_site_pv"></span>
+  </span>
+  <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+    访客数<span id="busuanzi_value_site_uv"></span>
+  </span>
+</div>
+        
+  
+ 
+        
+  
+  
+    <script>(function(){document.querySelectorAll("pre:has(code)").forEach(e=>{e.addEventListener("click",e.focus),e.addEventListener("copy",function(t){if(t.preventDefault(),navigator.clipboard){const t=window.getSelection().toString()||e.textContent;navigator.clipboard.writeText(t)}})})})()</script>
+  
+
+      </footer>
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+  
+  <aside class="book-toc">
+    <div class="book-toc-content">
+      
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-一笔交易">1. 一笔交易</a></li>
+    <li><a href="#2-不只一层">2. 不只一层</a></li>
+    <li><a href="#3-编码1利用字段的规律">3. 编码1：利用字段的规律</a>
+      <ul>
+        <li><a href="#31-连续重复rle">3.1 连续重复：RLE</a></li>
+        <li><a href="#32-低基数dictionary-encoding">3.2 低基数：Dictionary Encoding</a></li>
+        <li><a href="#33-相近整数deltafor-与-bit-packing">3.3 相近整数：Delta、FOR 与 Bit Packing</a></li>
+        <li><a href="#34-有序-keyprefix-compression">3.4 有序 Key：Prefix Compression</a></li>
+        <li><a href="#35-稳定时间序列delta-of-delta-与-gorilla-xor">3.5 稳定时间序列：Delta-of-Delta 与 Gorilla XOR</a></li>
+      </ul>
+    </li>
+    <li><a href="#4-编码2利用字节流中的重复片段">4. 编码2：利用字节流中的重复片段</a>
+      <ul>
+        <li><a href="#41-lz77用距离和长度引用历史">4.1 LZ77：用距离和长度引用历史</a></li>
+      </ul>
+    </li>
+    <li><a href="#5-熵编码利用符号出现概率">5. 熵编码：利用符号出现概率</a>
+      <ul>
+        <li><a href="#51-huffman使用更短前缀码">5.1 Huffman：使用更短前缀码</a></li>
+        <li><a href="#52-fse用状态分摊码长">5.2 FSE：用状态分摊码长</a></li>
+      </ul>
+    </li>
+    <li><a href="#6-常见-codec-怎样组合压缩原语">6. 常见 Codec 怎样组合压缩原语</a>
+      <ul>
+        <li><a href="#61-lz4找到重复换成回拷指令">6.1 LZ4：找到重复，换成回拷指令</a></li>
+        <li><a href="#62-snappy1-byte-tag-是一条指令的入口">6.2 Snappy：1-byte tag 是一条指令的入口</a></li>
+        <li><a href="#63-deflate-与-gzip回拷指令继续进入-huffman">6.3 DEFLATE 与 gzip：回拷指令继续进入 Huffman</a></li>
+        <li><a href="#64-brotli格式内置字典和上下文">6.4 Brotli：格式内置字典和上下文</a></li>
+        <li><a href="#65-zstandard先拆-section再分别选择表示">6.5 Zstandard：先拆 section，再分别选择表示</a></li>
+      </ul>
+    </li>
+    <li><a href="#7-系统里的组合">7. 系统里的组合</a></li>
+    <li><a href="#8-用三类数据验证">8. 用三类数据验证</a>
+      <ul>
+        <li><a href="#实验口径">实验口径</a></li>
+      </ul>
+    </li>
+    <li><a href="#9-总结先识别数据再选择算法">9. 总结：先识别数据，再选择算法</a></li>
+    <li><a href="#参考资料">参考资料</a></li>
+  </ul>
+</nav>
+
+
+
+    </div>
+  </aside>
+  
+ 
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>TopologySpreadConstraints on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/topologySpreadConstraints/</link>
+    <description>Recent content in TopologySpreadConstraints on Yeqown</description>
+    <generator>Hugo</generator>
+    <language>en-US</language>
+    <lastBuildDate>Wed, 08 Jul 2026 09:38:56 +0800</lastBuildDate>
+    <atom:link href="https://www.yeqown.xyz/tags/topologySpreadConstraints/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Kubernetes 拓扑感知调度与就近访问</title>
+      <link>https://www.yeqown.xyz/2026/07/08/Kubernetes%E6%8B%93%E6%89%91%E6%84%9F%E7%9F%A5%E8%B0%83%E5%BA%A6%E4%B8%8E%E5%B0%B1%E8%BF%91%E8%AE%BF%E9%97%AE/</link>
+      <pubDate>Wed, 08 Jul 2026 09:38:56 +0800</pubDate>
+      <guid>https://www.yeqown.xyz/2026/07/08/Kubernetes%E6%8B%93%E6%89%91%E6%84%9F%E7%9F%A5%E8%B0%83%E5%BA%A6%E4%B8%8E%E5%B0%B1%E8%BF%91%E8%AE%BF%E9%97%AE/</guid>
+      <description>&lt;p&gt;&lt;code&gt;topologySpreadConstraints&lt;/code&gt; 和 &lt;code&gt;trafficDistribution&lt;/code&gt; 都在解决 Kubernetes 集群里的拓扑感知问题，但它们所在的层次不同：&lt;/p&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;&lt;code&gt;topologySpreadConstraints&lt;/code&gt; 作用在调度阶段，决定 Pod 应该如何分散到不同的可用区（zone）、节点（node）或自定义拓扑域。&lt;/li&gt;&#xA;&lt;li&gt;&lt;code&gt;trafficDistribution&lt;/code&gt; 作用在 Service 转发阶段，决定客户端访问 Service 时是否优先选择同可用区或同节点的 Endpoint。&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;p&gt;前者解决“后端是否按拓扑域铺开”，后者解决“流量是否优先走近端后端”。如果只配置就近访问，而没有保证各个拓扑域内都有足够 Endpoint，最终很容易把局部流量压到少量 Pod 上。&lt;/p&gt;&#xA;&lt;!-- more --&gt;&#xA;&lt;p&gt;本文基于 Kubernetes v1.36 的文档和上游源码，先从使用方式讲起，再进入实现细节。&lt;/p&gt;&#xA;&lt;blockquote class=&#39;book-hint &#39;&gt;&#xA;&lt;p&gt;&lt;strong&gt;阅读说明&lt;/strong&gt;&lt;/p&gt;&#xA;&lt;p&gt;为了避免把不同版本和不同转发实现混在一起，本文先约定几个边界：&lt;/p&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;Kubernetes 版本以 &lt;code&gt;v1.36.0&lt;/code&gt; 为准，源码片段也对应这个版本。其他小版本的字段状态、feature gate 和源码路径可能存在差异。&lt;/li&gt;&#xA;&lt;li&gt;&lt;code&gt;trafficDistribution&lt;/code&gt; 依赖 EndpointSlice hints，以及 kube-proxy 或兼容实现对这些 hints 的支持。若集群使用 eBPF dataplane、第三方 Service 实现或云厂商托管代理，需要以对应实现和实测结果为准。&lt;/li&gt;&#xA;&lt;li&gt;本文主要讨论 Kubernetes 原生的 Service 转发路径；Service Mesh 场景会单独说明，因为 mesh 数据面可能绕过 kube-proxy 自行选择 Endpoint。&lt;/li&gt;&#xA;&lt;li&gt;下文中的 API 字段和值保留英文，例如 &lt;code&gt;topologySpreadConstraints&lt;/code&gt;、&lt;code&gt;PreferSameZone&lt;/code&gt;；概念性表述优先使用中文，例如“可用区”“节点”“同可用区”“同节点”。第一次出现时会保留常见英文缩写，便于和官方文档对应。&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;/blockquote&gt;&lt;h2 id=&#34;1-背景可用区和跨区流量&#34;&gt;1. 背景：可用区和跨区流量&lt;a class=&#34;anchor&#34; href=&#34;#1-%e8%83%8c%e6%99%af%e5%8f%af%e7%94%a8%e5%8c%ba%e5%92%8c%e8%b7%a8%e5%8c%ba%e6%b5%81%e9%87%8f&#34;&gt;#&lt;/a&gt;&lt;/h2&gt;&#xA;&lt;h3 id=&#34;11-可用区是什么&#34;&gt;1.1 可用区是什么&lt;a class=&#34;anchor&#34; href=&#34;#11-%e5%8f%af%e7%94%a8%e5%8c%ba%e6%98%af%e4%bb%80%e4%b9%88&#34;&gt;#&lt;/a&gt;&lt;/h3&gt;&#xA;&lt;p&gt;在云厂商的基础设施里，Region 通常表示一个地理区域，Availability Zone 表示 Region 内相互隔离的一组机房资源。不同可用区之间一般具备独立的供电、网络和故障边界，但仍然可以通过区域内网络互通。&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

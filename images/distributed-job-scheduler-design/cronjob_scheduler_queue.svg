@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="724px" height="508px" viewBox="0 0 724 508" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>scheduler</title>
+    <g id="scheduler" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <rect fill="#E3E3E3" x="0" y="0" width="724" height="508"></rect>
+        <rect id="矩形" stroke="#979797" fill="#BFBFBF" x="81.5" y="195.5" width="474" height="48"></rect>
+        <rect id="矩形备份" stroke="#979797" fill="#B9F6CA" x="82.5" y="289.5" width="474" height="48"></rect>
+        <rect id="矩形备份-2" stroke="#979797" fill="#FBE9E7" x="82.5" y="375.5" width="474" height="48"></rect>
+        <g id="编组" transform="translate(81.000000, 54.000000)">
+            <rect id="矩形" stroke="#979797" fill="#00BFA5" x="0.5" y="0.5" width="299" height="62"></rect>
+            <text id="CronTimer-triggered" font-family="PTMono-Bold, PT Mono" font-size="24" font-weight="bold" fill="#FFFFFF">
+                <tspan x="13.2" y="39">CronTimer triggered</tspan>
+            </text>
+        </g>
+        <text id="failed-and-should-re" font-family="PTMono-Regular, PT Mono" font-size="16" font-weight="normal" fill="#212121">
+            <tspan x="381.6" y="364">failed and should retry</tspan>
+        </text>
+        <text id="WaitSchedule-queue" font-family="PTMono-Bold, PT Mono" font-size="16" font-weight="bold" fill="#212121">
+            <tspan x="81.6" y="184">WaitSchedule queue</tspan>
+        </text>
+        <text id="Running-queue/set" font-family="PTMono-Bold, PT Mono" font-size="16" font-weight="bold" fill="#212121">
+            <tspan x="81.4" y="278">Running queue/set</tspan>
+        </text>
+        <text id="Retry-queue" font-family="PTMono-Bold, PT Mono" font-size="16" font-weight="bold" fill="#212121">
+            <tspan x="82.2" y="364">Retry queue</tspan>
+        </text>
+        <path id="路径-3" d="M80.3449292,218.150599 L81.6550708,220.849401 C57.6152063,232.519628 45.7304881,247.711066 45.7304881,266.5 C45.7304881,280.59772 52.4057772,292.639781 65.8757132,302.715555 L69.8378485,295.952739 L81.4314437,313.752698 L60.2353191,312.347599 L64.3514084,305.320806 C49.9780661,294.664497 42.7304881,281.693825 42.7304881,266.5 C42.7304881,246.4221 55.3587778,230.280204 80.3449292,218.150599 Z" fill="#004D40" fill-rule="nonzero"></path>
+        <path id="路径-4" d="M62.2651039,317.699065 L82.9854965,322.380446 L66.808156,336.147931 L64.9489138,328.596629 C52.0596577,333.940702 45.7304881,342.738964 45.7304881,355.180233 C45.7304881,372.360624 57.3647714,386.555696 80.9207097,397.802614 L81.6381755,398.142527 L80.3618245,400.857473 C55.3729897,389.109714 42.7304881,373.8712 42.7304881,355.180233 C42.7304881,341.332627 49.9741702,331.424928 64.2229064,325.652259 L62.2651039,317.699065 Z" fill="#004D40" fill-rule="nonzero"></path>
+        <path id="路径-5" d="M556.305708,312.031483 C591.957881,319.453351 610.057387,334.261522 610.057387,356.5 C610.057387,374.529682 598.327819,387.726635 575.218601,395.998494 L577.342992,403.820031 L556.517473,399.631026 L572.363988,385.484014 L574.430332,393.094111 C596.297032,385.214498 607.057387,373.046904 607.057387,356.5 C607.057387,336.198346 590.455716,322.412617 556.721777,315.185513 L555.694292,314.968517 L556.305708,312.031483 Z" fill="#BF360C" fill-rule="nonzero"></path>
+        <path id="路径-6" d="M583.778693,132.774799 C583.778693,161.664472 578.419018,185.774104 567.676476,205.086468 L574.362943,209.73771 L555.714482,219.910463 L558.765356,198.888042 L565.200643,203.364985 C575.578385,184.576892 580.778693,161.052495 580.778693,132.774799 C580.778693,97.7081182 515.608596,82.0507974 385.035969,86.8472232 L381.059203,86.9988312 L380.940797,84.0011688 C516.086213,78.6629969 583.778693,94.5620888 583.778693,132.774799 Z" fill="#004D40" fill-rule="nonzero"></path>
+        <path id="直线-17" d="M252,213 L252,219 L357,219 L357,221 L252,221 L252,227 L238,220 L252,213 Z" fill="#263238" fill-rule="nonzero"></path>
+        <path id="直线-17备份-2" d="M342.029914,306.940489 L356,314 L341.97034,320.940363 L341.995,314.94 L238.495745,314.499991 L237.495754,314.495736 L237.504264,312.495754 L238.504255,312.500009 L342.004,312.94 L342.029914,306.940489 Z" fill="#263238" fill-rule="nonzero"></path>
+        <path id="直线-17备份" d="M252,392 L252,398 L357,398 L357,400 L252,400 L252,406 L238,399 L252,392 Z" fill="#263238" fill-rule="nonzero"></path>
+        <text id="front" font-family="PTMono-Bold, PT Mono" font-size="16" font-weight="bold" fill="#212121">
+            <tspan x="146" y="226">front</tspan>
+        </text>
+        <text id="front备份" font-family="PTMono-Bold, PT Mono" font-size="16" font-weight="bold" fill="#212121">
+            <tspan x="381" y="319">front</tspan>
+        </text>
+        <text id="front备份-2" font-family="PTMono-Bold, PT Mono" font-size="16" font-weight="bold" fill="#212121">
+            <tspan x="157" y="404">front</tspan>
+        </text>
+        <path id="直线-18" d="M658.086753,304.914032 L677.085968,305.086753 L676.913247,324.085968 L657.914032,323.913247 L657.986,315.913 L557.486364,314.999938 L555.986426,314.986302 L556.013698,311.986426 L557.513636,312.000062 L658.014,312.913 L658.086753,304.914032 Z" fill="#004D40" fill-rule="nonzero"></path>
+    </g>
+</svg>

@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en-US" dir="ltr">
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="从工作负载资源 API 出发，沿着运行时、cgroupfs 和 Linux 内核 controller 追踪资源限制的执行过程，并解释 cgroup v1 到 v2 的设计演进。">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#2e3440">
+<meta name="color-scheme" content="light dark"><meta property="og:url" content="http://localhost:1313/2026/09/09/cgroup-top-down/">
+  <meta property="og:site_name" content="Yeqown">
+  <meta property="og:title" content="cgroup 自上而下">
+  <meta property="og:description" content="从工作负载资源 API 出发，沿着运行时、cgroupfs 和 Linux 内核 controller 追踪资源限制的执行过程，并解释 cgroup v1 到 v2 的设计演进。">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2026-09-09T00:00:00+08:00">
+    <meta property="article:modified_time" content="2026-09-09T00:00:00+08:00">
+    <meta property="article:tag" content="Linux">
+    <meta property="article:tag" content="Cgroup">
+    <meta property="article:tag" content="容器">
+    <meta property="article:tag" content="资源管理">
+    <meta property="article:tag" content="Kubernetes">
+
+
+  <meta itemprop="name" content="cgroup 自上而下">
+  <meta itemprop="description" content="从工作负载资源 API 出发，沿着运行时、cgroupfs 和 Linux 内核 controller 追踪资源限制的执行过程，并解释 cgroup v1 到 v2 的设计演进。">
+  <meta itemprop="datePublished" content="2026-09-09T00:00:00+08:00">
+  <meta itemprop="dateModified" content="2026-09-09T00:00:00+08:00">
+  <meta itemprop="wordCount" content="1949">
+  <meta itemprop="keywords" content="Linux,Cgroup,容器,资源管理,Kubernetes">
+
+<title>cgroup 自上而下 | Yeqown</title>
+<link rel="icon" href="/favicon.png" >
+<link rel="manifest" href="/manifest.json">
+<link rel="canonical" href="http://localhost:1313/2026/09/09/cgroup-top-down/">
+<link rel="stylesheet" href="/book.min.c40223b1e1a5ffa9f6a0fe48797821424561eff06762ee5c75071bda9d009477.css" integrity="sha256-xAIjseGl/6n2oP5IeXghQkVh7/BnYu5cdQcb2p0AlHc=" crossorigin="anonymous">
+
+
+  <script defer src="/fuse.min.js"></script>
+  <script defer src="/en.search.min.fc083b83b9c4c02bba9524180d581c3d841404ca11ea39e9d9517080828fb23a.js" integrity="sha256-/Ag7g7nEwCu6lSQYDVgcPYQUBMoR6jnp2VFwgIKPsjo=" crossorigin="anonymous"></script>
+
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+  <meta name="referrer" content="no-referrer-when-downgrade">
+  
+</head>
+<body dir="ltr" class="book-kind-page book-type-posts">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    
+<aside class="book-menu">
+  <div class="book-menu-content">
+    
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>Yeqown</span>
+  </a>
+</h2>
+
+
+<div class="book-search hidden">
+  <input id="book-search-input" type="text" 
+    placeholder="Search"
+    aria-label="Search"
+    maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+<script>document.querySelector(".book-search").classList.remove("hidden")</script>
+
+
+
+
+
+
+<ul><li><a href="/categories">Categories</a></li><li><a href="/tags">Tags</a></li></ul>
+
+
+
+
+
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/aboutme/" class="">
+      About Me</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var e=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(){localStorage.setItem("menu.scrollTop",e.scrollTop)}),e.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+
+
+
+  </div>
+</aside>
+ 
+
+    <div class="book-page">
+      <header class="book-header hidden">
+        
+<div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/icons/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <h3>cgroup 自上而下</h3>
+
+  <label for="toc-control">
+    
+    <img src="/icons/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-先站到-cgroup-上面">1. 先站到 cgroup 上面</a>
+      <ul>
+        <li><a href="#11-资源配置与职责边界">1.1 资源配置与职责边界</a></li>
+        <li><a href="#12-从-resourcespec-到-resourceplan">1.2 从 ResourceSpec 到 ResourcePlan</a></li>
+        <li><a href="#13-层级所有权与生命周期">1.3 层级、所有权与生命周期</a></li>
+      </ul>
+    </li>
+    <li><a href="#2-cgroup-在-linux-系统架构中的位置">2. cgroup 在 Linux 系统架构中的位置</a>
+      <ul>
+        <li><a href="#21-从-cgroupfs-到内核-controller">2.1 从 cgroupfs 到内核 controller</a></li>
+        <li><a href="#22-cpu权重和上限是两种模型">2.2 CPU：权重和上限是两种模型</a></li>
+        <li><a href="#23-内存保护回收与-oom">2.3 内存保护、回收与 OOM</a></li>
+        <li><a href="#24-io-限制与-writeback">2.4 I/O 限制与 writeback</a></li>
+        <li><a href="#25-pids在-fork-路径拒绝">2.5 pids：在 fork 路径拒绝</a></li>
+        <li><a href="#26-统计事件与-psi">2.6 统计、事件与 PSI</a></li>
+      </ul>
+    </li>
+    <li><a href="#3-从-v1-到-v2问题不只是文件名太乱">3. 从 v1 到 v2：问题不只是文件名太乱</a>
+      <ul>
+        <li><a href="#31-v1-为什么允许多层级">3.1 v1 为什么允许多层级</a></li>
+        <li><a href="#32-v1-的三类结构冲突">3.2 v1 的三类结构冲突</a></li>
+        <li><a href="#33-v2-如何收紧层级与委托">3.3 v2 如何收紧层级与委托</a></li>
+        <li><a href="#34-v2-的接口与语义变化">3.4 v2 的接口与语义变化</a></li>
+      </ul>
+    </li>
+    <li><a href="#4-怎样迁移一个真正使用-cgroup-的系统">4. 怎样迁移一个真正使用 cgroup 的系统</a>
+      <ul>
+        <li><a href="#41-盘点-cgroupfs-依赖">4.1 盘点 cgroupfs 依赖</a></li>
+        <li><a href="#42-分离所有权与接口版本迁移">4.2 分离所有权与接口版本迁移</a></li>
+      </ul>
+    </li>
+    <li><a href="#5-回到最初的系统设计">5. 回到最初的系统设计</a></li>
+    <li><a href="#参考资料">参考资料</a></li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+<article class="markdown book-post">
+  <h1>
+    cgroup 自上而下
+  </h1>
+  
+  <div class="flex align-center text-small book-post-date">
+    <img src="/icons/calendar.svg" class="book-icon" alt="Calendar" />
+    <span>September 9, 2026</span>
+    
+      <span class="book-draft-badge">DRAFT</span>
+    
+  </div>
+
+
+
+  
+  <div class="text-small">
+    
+      <a href="/categories/%E6%9E%B6%E6%9E%84/">架构</a>, 
+      <a href="/categories/%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/">源码分析</a>
+  </div>
+  
+
+  
+  <div class="text-small">
+    
+      <a href="/tags/Linux/">Linux</a>, 
+      <a href="/tags/cgroup/">Cgroup</a>, 
+      <a href="/tags/%E5%AE%B9%E5%99%A8/">容器</a>, 
+      <a href="/tags/%E8%B5%84%E6%BA%90%E7%AE%A1%E7%90%86/">资源管理</a>, 
+      <a href="/tags/Kubernetes/">Kubernetes</a>
+  </div>
+  
+
+
+  <div class="book-post-content markdown-inner"><p>我最初只把 cgroup 理解成 Kubernetes <code>resources.requests</code> 和 <code>resources.limits</code> 背后的实现。这个理解没有错，但它跳过了真正有意思的部分：为什么 CPU request 最后成了一个相对权重，CPU limit 却是一段时间配额；为什么内存达到上限会触发回收甚至 OOM，而不是像 CPU 一样暂停一会儿；如果自己写一个任务编排器，又该把哪些概念放进公开 API？</p>
+<p>Kubernetes 的版本变化把这些问题推到了眼前。cgroup v2 在 Kubernetes v1.25 进入 Stable；v1.31 将 cgroup v1 支持转入维护模式；从 v1.35 开始，cgroup v1 被正式标记为 deprecated，kubelet 默认不再在 v1 节点启动。</p>
+<p>本文从一个自研工作负载系统开始，依次回答三个问题：上层资源 API 应该表达什么，cgroup 在 Linux 内核里怎样完成这些约束，以及 v1 的哪些设计最终把整个生态推向了 v2。</p>
+<!-- more -->
+<blockquote class='book-hint '>
+<p><strong>阅读边界</strong></p>
+<ul>
+<li>cgroup v2 的接口和源码入口以 Linux v6.16 为参照；这些核心语义在相邻版本中较稳定，但具体文件仍取决于内核配置和启用的 controller。</li>
+<li>本文不依赖手边已有 Linux 环境。命令用于说明接口和观测方法，展示的值来自文中的配置推导，不冒充性能实测。</li>
+<li>Kubernetes 只用来引出问题并提供一个对照。正文讨论的设计同样适用于批处理系统、容器管理器、进程托管服务和 systemd unit。</li>
+</ul>
+</blockquote><h2 id="1-先站到-cgroup-上面">1. 先站到 cgroup 上面<a class="anchor" href="#1-%e5%85%88%e7%ab%99%e5%88%b0-cgroup-%e4%b8%8a%e9%9d%a2">#</a></h2>
+<h3 id="11-资源配置与职责边界">1.1 资源配置与职责边界<a class="anchor" href="#11-%e8%b5%84%e6%ba%90%e9%85%8d%e7%bd%ae%e4%b8%8e%e8%81%8c%e8%b4%a3%e8%be%b9%e7%95%8c">#</a></h3>
+<p>先看最熟悉的配置：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#f92672">resources</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">requests</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">cpu</span>: <span style="color:#ae81ff">500m</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">memory</span>: <span style="color:#ae81ff">512Mi</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">limits</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">cpu</span>: <span style="color:#e6db74">&#34;2&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">memory</span>: <span style="color:#ae81ff">1Gi</span></span></span></code></pre></div><p>它看起来只有四个数字，实际跨越了两套系统：</p>
+<table>
+  <thead>
+      <tr>
+          <th>决策</th>
+          <th>回答的问题</th>
+          <th>典型执行者</th>
+          <th>cgroup 是否参与</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>放置与准入</td>
+          <td>哪台机器还能接收这个工作负载</td>
+          <td>调度器、quota/admission 模块</td>
+          <td>不直接参与</td>
+      </tr>
+      <tr>
+          <td>节点内资源分配</td>
+          <td>进程已经运行后，怎样竞争和限制资源</td>
+          <td>node agent、容器运行时、Linux 内核</td>
+          <td>参与最终执行</td>
+      </tr>
+  </tbody>
+</table>
+<p>CPU request 会参与调度，在节点上通常还会被转换成竞争时的 CPU 权重；CPU limit 会转换成带周期的带宽上限。memory request 主要是调度承诺，在 cgroup v2 上也可以作为 <code>memory.min</code> 或 <code>memory.low</code> 的输入；memory limit 则会落到硬边界。相同的 request/limit 外观，背后并不是一套通用算法。</p>
+<p>因此，cgroup 不知道什么是 Pod，也不会替调度器判断一台机器能否再放一个任务。它接受的对象是进程和层级，接受的参数是权重、上限、保护值等。把业务语义翻译成这些参数，是用户态资源管理器的职责。</p>
+<figure>
+  <img
+    src="/images/cgroup-top-down/resource-control-chain.svg"
+    alt="资源配置经过准入与调度、节点资源管理器和运行时转换为 cgroup 文件，随后由 cgroup core 将进程组织成层级，并由 CPU 调度器、内存管理和块 I/O 子系统执行约束"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>策略由用户态决定，约束由内核资源子系统执行</figcaption>
+</figure>
+<p>Kubernetes 不是使用 cgroup 的唯一方式。把几套接口按层次排开，边界会更清楚：</p>
+<table>
+  <thead>
+      <tr>
+          <th>系统或接口</th>
+          <th>面向用户的对象</th>
+          <th>资源表达</th>
+          <th>本机执行者</th>
+          <th>它没有负责什么</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>Kubernetes</td>
+          <td>Pod、Container</td>
+          <td>CPU/内存 request 与 limit，Pod QoS 等</td>
+          <td>kubelet、CRI runtime</td>
+          <td>cgroup 不参与跨节点调度</td>
+      </tr>
+      <tr>
+          <td>Nomad</td>
+          <td>Allocation、Task</td>
+          <td><code>cpu</code>/<code>cores</code>、<code>memory</code>、<code>memory_max</code> 等</td>
+          <td>Nomad client 与 task driver</td>
+          <td>字段是否能精确执行取决于 OS 和 driver</td>
+      </tr>
+      <tr>
+          <td>systemd</td>
+          <td>Slice、Service、Scope</td>
+          <td><code>CPUWeight</code>、<code>CPUQuota</code>、<code>MemoryLow</code>、<code>MemoryHigh</code>、<code>MemoryMax</code> 等</td>
+          <td>systemd PID 1</td>
+          <td>不替应用设计跨机器资源模型</td>
+      </tr>
+      <tr>
+          <td>OCI Runtime Spec</td>
+          <td>Container</td>
+          <td><code>linux.resources</code>、<code>cgroupsPath</code></td>
+          <td>runc、crun 等 OCI runtime</td>
+          <td>它是本机运行契约，不是调度 API</td>
+      </tr>
+      <tr>
+          <td>cgroupfs</td>
+          <td>cgroup 目录中的进程</td>
+          <td><code>cpu.max</code>、<code>memory.high</code>、<code>io.max</code> 等文件</td>
+          <td>Linux 内核</td>
+          <td>不提供业务对象、准入、重试或状态机</td>
+      </tr>
+  </tbody>
+</table>
+<p>这几层不能随意互换。直接把 <code>cpu.max</code> 暴露给业务用户，会让 API 绑定 Linux 版本和运行时细节；只提供一个模糊的 <code>resources: small</code>，node agent 又无法判断应该写哪些 controller 文件。比较稳妥的分界是：公开 API 表达资源意图，节点侧生成一份可观测的执行计划，backend adapter 再负责 systemd、OCI 或 cgroupfs 的具体写入。</p>
+<h3 id="12-从-resourcespec-到-resourceplan">1.2 从 ResourceSpec 到 ResourcePlan<a class="anchor" href="#12-%e4%bb%8e-resourcespec-%e5%88%b0-resourceplan">#</a></h3>
+<p>假设要写一个运行转码任务的系统。下面不是一份通用标准，而是一套可以继续演进的起点：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">runtime.example.io/v1alpha1</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">kind</span>: <span style="color:#ae81ff">Workload</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">metadata</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">transcode-7f3a</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">tenant</span>: <span style="color:#ae81ff">team-video</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">spec</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">command</span>: [<span style="color:#e6db74">&#34;transcoder&#34;</span>, <span style="color:#e6db74">&#34;--input&#34;</span>, <span style="color:#e6db74">&#34;/data/input.mp4&#34;</span>]
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">resources</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">cpu</span>:
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">request</span>: <span style="color:#ae81ff">500m</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">limit</span>: <span style="color:#e6db74">&#34;2&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">memory</span>:
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">request</span>: <span style="color:#ae81ff">512Mi</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">protection</span>: <span style="color:#ae81ff">BestEffort</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">throttleAt</span>: <span style="color:#ae81ff">768Mi</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">limit</span>: <span style="color:#ae81ff">1Gi</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">swapLimit</span>: <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">io</span>:
+</span></span><span style="display:flex;"><span>      - <span style="color:#f92672">volume</span>: <span style="color:#ae81ff">scratch</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">writeBps</span>: <span style="color:#ae81ff">50Mi</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">pids</span>:
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">limit</span>: <span style="color:#ae81ff">256</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">oom</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">scope</span>: <span style="color:#ae81ff">Workload</span></span></span></code></pre></div><p>这里刻意没有 <code>cpu.weight</code>、设备号 <code>259:0</code> 或 cgroup 目录路径。公开字段先把语义说清楚：</p>
+<table>
+  <thead>
+      <tr>
+          <th>字段</th>
+          <th>对用户的承诺</th>
+          <th>节点侧可能的实现</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>cpu.request</code></td>
+          <td>调度时预留容量；争用时获得相对份额</td>
+          <td>admission accounting + <code>cpu.weight</code></td>
+      </tr>
+      <tr>
+          <td><code>cpu.limit</code></td>
+          <td>一段时间内可使用的平均 CPU 带宽上限</td>
+          <td><code>cpu.max</code></td>
+      </tr>
+      <tr>
+          <td><code>memory.request</code></td>
+          <td>调度时预留内存，并按 protection 策略提供回收保护</td>
+          <td>admission accounting + 可选的 <code>memory.low</code>/<code>memory.min</code></td>
+      </tr>
+      <tr>
+          <td><code>memory.throttleAt</code></td>
+          <td>超过该值后允许回收和降速，不立刻杀进程</td>
+          <td><code>memory.high</code></td>
+      </tr>
+      <tr>
+          <td><code>memory.limit</code></td>
+          <td>工作负载可占用内存的最终边界</td>
+          <td><code>memory.max</code></td>
+      </tr>
+      <tr>
+          <td><code>memory.swapLimit</code></td>
+          <td>单独约束该组可用的 swap</td>
+          <td><code>memory.swap.max</code></td>
+      </tr>
+      <tr>
+          <td><code>io[].volume</code></td>
+          <td>对稳定的 volume 名称限速</td>
+          <td>node agent 将 volume 解析为块设备，再写 <code>io.max</code></td>
+      </tr>
+      <tr>
+          <td><code>pids.limit</code></td>
+          <td>限制可创建的内核 task 数量</td>
+          <td><code>pids.max</code></td>
+      </tr>
+      <tr>
+          <td><code>oom.scope</code></td>
+          <td>OOM 时维持工作负载完整性，避免只杀掉随机子进程</td>
+          <td><code>memory.oom.group</code></td>
+      </tr>
+  </tbody>
+</table>
+<p><code>memory.request</code> 是否真的写入保护边界，必须是显式策略。<code>memory.low</code> 和 <code>memory.min</code> 都受祖先节点的保护额度约束；父级没有分配额度时，叶子上写一个漂亮的数字也无法兑现承诺。要提供 <code>Guaranteed</code> 一类策略，准入层就必须核算整条祖先链，而不是只检查当前机器还有多少空闲内存。</p>
+<p>CPU 权重也不应该成为公开契约。<code>cpu.weight</code> 只表示同一父节点下活跃兄弟之间的比例，而且 v1 <code>cpu.shares</code> 到 v2 weight 的转换并非恒等映射。OCI runtime 在 2026 年还调整过这套转换公式。如果监控系统需要知道最终权重，应从 workload status 或本机运行时读取，而不是从 request 反推。</p>
+<p>节点侧可以把公开配置编译成 <code>ResourcePlan</code>。假设这个系统规定 1000m CPU 对应默认 weight 100，那么上面的任务会生成如下计划：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#f92672">backend</span>: <span style="color:#ae81ff">cgroup-v2</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">path</span>: <span style="color:#ae81ff">team-video/transcode-7f3a</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">files</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">cpu.weight</span>: <span style="color:#e6db74">&#34;50&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">cpu.max</span>: <span style="color:#e6db74">&#34;200000 100000&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">memory.low</span>: <span style="color:#e6db74">&#34;536870912&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">memory.high</span>: <span style="color:#e6db74">&#34;805306368&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">memory.max</span>: <span style="color:#e6db74">&#34;1073741824&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">memory.swap.max</span>: <span style="color:#e6db74">&#34;0&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">memory.oom.group</span>: <span style="color:#e6db74">&#34;1&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">io.max</span>: <span style="color:#e6db74">&#34;259:0 wbps=52428800&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">pids.max</span>: <span style="color:#e6db74">&#34;256&#34;</span></span></span></code></pre></div><p><code>ResourcePlan</code> 应该进入工作负载 status 和审计日志，而不是执行完就丢掉。这样用户能查到系统最终应用了什么，backend 也能替换：systemd backend 生成 transient scope/service 属性，OCI backend 生成 <code>linux.resources</code> 与 <code>cgroupsPath</code>。只有资源管理器确实拥有一棵委托子树时，才直接操作 cgroupfs。</p>
+<p><code>cpu.max: 200000 100000</code> 表示每 100000 微秒最多使用 200000 微秒 CPU 时间，即平均 2 个 CPU。它不表示绑定两个固定 CPU，也不阻止任务短时间在更多 CPU 上并行。若要固定 CPU 集合，需要另行设计独占或亲和性 API，并交给 cpuset controller。</p>
+<p>I/O 计划里的 <code>259:0</code> 也不该由用户填写。块设备号会随节点和挂载关系变化，node agent 应在启动与设备变更时解析 <code>scratch</code>，把稳定的 volume 身份翻译为当前设备。如果 volume 最后落到网络文件系统、device mapper 或共享 inode 上，系统还要明确说明哪些限制能生效，哪些只能尽力而为。</p>
+<figure>
+  <img
+    src="/images/cgroup-top-down/resource-policy-translation.svg"
+    alt="转码任务的资源意图经过 ResourcePlan 归一化后，分别映射为 cpu.weight、cpu.max、memory.low、memory.high、memory.max、io.max 和 pids.max，并产生争用权重、带宽上限、回收保护、内存降速、OOM 边界、磁盘限速和进程数限制"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>同一份资源意图在节点上展开为不同的 controller 语义</figcaption>
+</figure>
+<h3 id="13-层级所有权与生命周期">1.3 层级、所有权与生命周期<a class="anchor" href="#13-%e5%b1%82%e7%ba%a7%e6%89%80%e6%9c%89%e6%9d%83%e4%b8%8e%e7%94%9f%e5%91%bd%e5%91%a8%e6%9c%9f">#</a></h3>
+<p>cgroup 的资源约束沿树向下生效。系统里的租户、任务和容器如果需要不同层次的总预算，就应该出现在树中：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>myagent.service/                 systemd 委托边界
+</span></span><span style="display:flex;"><span>├── manager/                    node agent 自己的进程
+</span></span><span style="display:flex;"><span>└── tenants/                    结构节点，无进程
+</span></span><span style="display:flex;"><span>    └── team-video/             租户总预算，无进程
+</span></span><span style="display:flex;"><span>        └── transcode-7f3a/     工作负载总预算，无进程
+</span></span><span style="display:flex;"><span>            ├── main/           转码进程
+</span></span><span style="display:flex;"><span>            └── metrics/        监控 sidecar 进程</span></span></code></pre></div><p><code>team-video</code> 可以限制整个租户，<code>transcode-7f3a</code> 可以限制任务总量，<code>main</code> 和 <code>metrics</code> 再分配任务内部的资源。父级限制不会被子级覆盖；子级只能在拿到的资源中继续分配。</p>
+<p>这棵树还体现了 v2 的 no internal process 约束：一个非 root 的 domain cgroup 如果要把 CPU、内存或 I/O controller 分发给子节点，它自己不能同时放进程。node agent 因此待在 <code>manager/</code> 叶子里，结构节点只负责分配资源。在 systemd 上，服务应通过 <code>Delegate=yes</code> 获得子树；较新的 systemd 还可以用 <code>DelegateSubgroup=</code> 把管理进程直接放进指定子组。</p>
+<p>一次可靠的启动可以按下面的顺序进行：</p>
+<ol>
+<li>获取 cgroup 子树。systemd 主机通过 transient unit 或带 <code>Delegate=yes</code> 的 service/scope 取得所有权；非 systemd 环境才考虑由 agent 管理约定好的 cgroup2 子树。</li>
+<li>读取 <code>cgroup.controllers</code>，确认 CPU、memory、I/O、pids 等能力确实可用。API 中无法支持的字段应该进入 status，不能静默忽略。</li>
+<li>创建空的结构节点，把管理进程放到独立叶子，然后从上到下写 <code>cgroup.subtree_control</code>。父级未启用的 controller，子级无法自行启用。</li>
+<li>先写父级预算，再写工作负载与容器级参数。多个 controller 文件之间没有事务，失败时要保留阶段状态并执行幂等回滚。</li>
+<li>让目标进程从出生时就位于目标 cgroup。优先交给 systemd/OCI runtime，或使用 <code>clone3(CLONE_INTO_CGROUP)</code>；“先 exec，再把 PID 移过去”会留下短暂逃逸窗口。</li>
+<li>运行期间读取统计、事件和 pressure，接受资源更新并持续校正漂移。调整 <code>memory.max</code> 等状态型资源时，要处理同步回收和 OOM 风险。</li>
+<li>停止时先阻止新任务，必要时写 <code>cgroup.kill</code>，等待 <code>cgroup.events</code> 的 <code>populated 0</code>，最后从叶子向上删除空目录。</li>
+</ol>
+<figure>
+  <img
+    src="/images/cgroup-top-down/cgroup-manager-lifecycle.svg"
+    alt="cgroup 资源管理器从获取 systemd 委托开始，依次发现 controller、建立空的结构层级、写入父子预算、让进程直接出生在叶子 cgroup、持续观测和更新，最后 kill、等待 populated 归零并自底向上清理"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>资源管理不是一次性写文件，而是贯穿工作负载生命周期的控制循环</figcaption>
+</figure>
+<p>一个可用的顶层 API 还要有 status，记录 backend 类型、实际 cgroup 路径、生效值、缺失能力、最近一次 reconcile 错误和 pressure/OOM 事件。例如：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#f92672">status</span>:
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">observedGeneration</span>: <span style="color:#ae81ff">7</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">backend</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">type</span>: <span style="color:#ae81ff">cgroup-v2</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">path</span>: <span style="color:#ae81ff">/myagent.service/tenants/team-video/transcode-7f3a</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">effective</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">cpu.weight</span>: <span style="color:#e6db74">&#34;50&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">cpu.max</span>: <span style="color:#e6db74">&#34;200000 100000&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">memory.max</span>: <span style="color:#e6db74">&#34;1073741824&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">conditions</span>:
+</span></span><span style="display:flex;"><span>    - <span style="color:#f92672">type</span>: <span style="color:#ae81ff">ResourcesApplied</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">status</span>: <span style="color:#e6db74">&#34;True&#34;</span>
+</span></span><span style="display:flex;"><span>    - <span style="color:#f92672">type</span>: <span style="color:#ae81ff">ControllerAvailable</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">resource</span>: <span style="color:#ae81ff">io</span>
+</span></span><span style="display:flex;"><span>      <span style="color:#f92672">status</span>: <span style="color:#e6db74">&#34;True&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">events</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">memoryHigh</span>: <span style="color:#ae81ff">12</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">oomKill</span>: <span style="color:#ae81ff">0</span></span></span></code></pre></div><p>更新规则也属于 API 契约。request 变化要重新经过准入，必要时触发迁移；CPU weight 和 limit 通常可以原地更新；向下调整 <code>memory.max</code> 则可能让执行写操作的线程同步回收，甚至触发 memcg OOM。由于多个 controller 文件之间没有事务，status 需要用 <code>observedGeneration</code> 和 phase 区分“配置已接收”“正在应用”和“已经生效”。</p>
+<h2 id="2-cgroup-在-linux-系统架构中的位置">2. cgroup 在 Linux 系统架构中的位置<a class="anchor" href="#2-cgroup-%e5%9c%a8-linux-%e7%b3%bb%e7%bb%9f%e6%9e%b6%e6%9e%84%e4%b8%ad%e7%9a%84%e4%bd%8d%e7%bd%ae">#</a></h2>
+<h3 id="21-从-cgroupfs-到内核-controller">2.1 从 cgroupfs 到内核 controller<a class="anchor" href="#21-%e4%bb%8e-cgroupfs-%e5%88%b0%e5%86%85%e6%a0%b8-controller">#</a></h3>
+<p>Linux 内核文档对 cgroup 的定义很克制：它把进程组织成层级，并沿层级分配系统资源。实现也分成两部分：</p>
+<ul>
+<li>cgroup core 管进程属于哪个组、组之间的父子关系、controller 的启停、委托、迁移和公共统计。</li>
+<li>controller 管某一类资源。CPU controller 接入调度器，memory controller 接入内存记账与回收，I/O controller 接入块层，pids controller 接入 <code>fork()</code>/<code>clone()</code> 路径。</li>
+</ul>
+<p>cgroupfs 是两者暴露给用户态的控制面。它看起来像目录和文件，但写进去的内容不会保存成普通磁盘文件；VFS 将读写交给 kernfs 和 cgroup/controller 的回调。早期 cgroup 没有为这些操作增加一套专用系统调用，<code>mkdir</code>、<code>rmdir</code>、<code>read</code>、<code>write</code> 和文件通知就是主要 API。后来 <code>clone3(CLONE_INTO_CGROUP)</code> 补上了“让子进程直接出生在目标组”这个启动能力。</p>
+<figure>
+  <img
+    src="/images/cgroup-top-down/cgroup-kernel-architecture.svg"
+    alt="Linux cgroup 的分层结构：用户态资源管理器通过 cgroupfs 和 kernfs 操作 cgroup core；task_struct 经 css_set 关联各 controller 状态；CPU、memory、io 和 pids controller 分别接入调度器、内存管理、块 I/O 和进程创建路径完成记账、回收、降速、限速或拒绝"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>cgroup core 负责分组，资源子系统负责执行</figcaption>
+</figure>
+<p>cgroup 所在的层次由此很明确：它不是调度器上方一个独立的资源模拟层，也不属于容器运行时。它在内核中维护统一的进程分组，并向调度器、内存管理、块 I/O 等子系统提供 controller 状态和钩子。容器运行时只是用户态调用者之一。</p>
+<p>沿着这层关系继续往下看，Linux v6.16 的 <code>task_struct</code> 中有一条指向 <code>css_set</code> 的 RCU 指针：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">// include/linux/sched.h
+</span></span></span><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> task_struct {
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> css_set __rcu <span style="color:#f92672">*</span>cgroups;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> list_head cg_list;
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e">// ...
+</span></span></span><span style="display:flex;"><span>};</span></span></code></pre></div><p><code>css</code> 是 cgroup subsystem state 的缩写。几个关键对象可以简化成：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-c" data-lang="c"><span style="display:flex;"><span><span style="color:#75715e">// include/linux/cgroup-defs.h，字段经过裁剪
+</span></span></span><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> cgroup_subsys_state {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> cgroup <span style="color:#f92672">*</span>cgroup;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> cgroup_subsys <span style="color:#f92672">*</span>ss;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> cgroup_subsys_state <span style="color:#f92672">*</span>parent;
+</span></span><span style="display:flex;"><span>};
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> css_set {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> cgroup_subsys_state <span style="color:#f92672">*</span>subsys[CGROUP_SUBSYS_COUNT];
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> cgroup <span style="color:#f92672">*</span>dfl_cgrp;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> list_head tasks;
+</span></span><span style="display:flex;"><span>};
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">struct</span> cgroup {
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> kernfs_node <span style="color:#f92672">*</span>kn;
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">struct</span> cgroup_subsys_state __rcu <span style="color:#f92672">*</span>subsys[CGROUP_SUBSYS_COUNT];
+</span></span><span style="display:flex;"><span>    u16 subtree_control;
+</span></span><span style="display:flex;"><span>};</span></span></code></pre></div><p>可以沿这条链理解它们：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>task_struct
+</span></span><span style="display:flex;"><span>    -&gt; css_set
+</span></span><span style="display:flex;"><span>        -&gt; CPU controller 的 cgroup_subsys_state
+</span></span><span style="display:flex;"><span>        -&gt; memory controller 的 cgroup_subsys_state
+</span></span><span style="display:flex;"><span>        -&gt; I/O controller 的 cgroup_subsys_state
+</span></span><span style="display:flex;"><span>        -&gt; ...</span></span></code></pre></div><p>多个进程如果拥有同一组 controller 归属，可以共享 <code>css_set</code>，不用在每个 <code>task_struct</code> 中重复保存整套指针。对 v2 来说，一个进程在统一层级里只有一条 cgroup 路径；但某个 controller 可能没有在该节点启用，此时 <code>css_set</code> 中对应项可以指向最近的有效祖先状态。</p>
+<p><code>struct cgroup_subsys</code> 则是一张 controller 回调表，包含状态创建和销毁、进程 attach、fork/exit 以及默认层级文件表 <code>dfl_cftypes</code>。controller 用 <code>cftype</code> 注册自己的接口文件。例如 CPU 注册 <code>weight</code> 和 <code>max</code> 后，cgroup core 会以 <code>cpu.</code> 前缀把它们呈现为 <code>cpu.weight</code> 和 <code>cpu.max</code>。</p>
+<p>再用两个常见写操作把这些对象串起来。</p>
+<p>把 PID 写入 <code>cgroup.procs</code> 时，内核大致经过：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>write(cgroup.procs)
+</span></span><span style="display:flex;"><span>  -&gt; cgroup_procs_write()
+</span></span><span style="display:flex;"><span>  -&gt; 检查目标 cgroup、权限与委托边界
+</span></span><span style="display:flex;"><span>  -&gt; cgroup_attach_task()
+</span></span><span style="display:flex;"><span>  -&gt; 切换 css_set，并调用相关 controller 的 attach 回调</span></span></code></pre></div><p>写 <code>cpu.max</code> 时走的是另一条路：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>write(cpu.max, &#34;200000 100000&#34;)
+</span></span><span style="display:flex;"><span>  -&gt; kernfs 找到 CPU controller 的 cftype
+</span></span><span style="display:flex;"><span>  -&gt; cpu_max_write()
+</span></span><span style="display:flex;"><span>  -&gt; 解析 quota/period
+</span></span><span style="display:flex;"><span>  -&gt; tg_set_cfs_bandwidth()
+</span></span><span style="display:flex;"><span>  -&gt; 更新调度器 task_group 的带宽状态</span></span></code></pre></div><p>所以 cgroupfs 不是一个不断轮询并杀进程的后台服务。文件写入直接改变内核对象，之后资源子系统在自己的热路径上记账和执行。</p>
+<h3 id="22-cpu权重和上限是两种模型">2.2 CPU：权重和上限是两种模型<a class="anchor" href="#22-cpu%e6%9d%83%e9%87%8d%e5%92%8c%e4%b8%8a%e9%99%90%e6%98%af%e4%b8%a4%e7%a7%8d%e6%a8%a1%e5%9e%8b">#</a></h3>
+<p>CPU controller 最容易被 request/limit 这组词误导。v2 提供的两个主要旋钮互不替代。</p>
+<h4 id="cpuweight只在竞争时分配比例"><code>cpu.weight</code>：只在竞争时分配比例<a class="anchor" href="#cpuweight%e5%8f%aa%e5%9c%a8%e7%ab%9e%e4%ba%89%e6%97%b6%e5%88%86%e9%85%8d%e6%af%94%e4%be%8b">#</a></h4>
+<p><code>cpu.weight</code> 的范围是 1 到 10000，默认值为 100。假设同一父 cgroup 下只有两个一直 runnable 的子组，weight 分别是 50 和 100，那么在 CPU 饱和时，它们期望得到的时间比例约为 1:2。</p>
+<p>这里有三个限制条件：</p>
+<ol>
+<li>它比较的是兄弟节点，不是全局优先级。把不同父节点下的两个 weight 直接相比没有意义。</li>
+<li>它是 work-conserving 的。另一个组没有任务可运行时，weight 50 的组仍可使用全部空闲 CPU。</li>
+<li>它不承诺 500m 这样的绝对容量。调度器的准入承诺和本机竞争权重必须分别建模。</li>
+</ol>
+<p>Linux v6.16 中，<code>cpu_weight_write_u64()</code> 会把 cgroup weight 转成调度器内部权重，再更新相应的 <code>task_group</code>。这个接口主要影响 fair-class scheduler 下的进程；实时调度类和使用自定义 <code>sched_ext</code> 的任务有各自边界，不能假定所有调度策略都遵守同一套 weight。</p>
+<h4 id="cpumax在周期内消费配额"><code>cpu.max</code>：在周期内消费配额<a class="anchor" href="#cpumax%e5%9c%a8%e5%91%a8%e6%9c%9f%e5%86%85%e6%b6%88%e8%b4%b9%e9%85%8d%e9%a2%9d">#</a></h4>
+<p><code>cpu.max</code> 的格式是：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>$MAX $PERIOD</span></span></code></pre></div><p>默认值 <code>max 100000</code> 表示不限制。文中的 <code>200000 100000</code> 表示每个 100ms 周期最多消费 200ms CPU 时间。多线程可以在多核上并行消耗这份配额；配额耗尽后，对应的 fair scheduling run queue 会被 throttle，等下个周期补充 runtime 后再运行。</p>
+<p><code>cpu.stat</code> 中的 <code>nr_periods</code>、<code>nr_throttled</code> 和 <code>throttled_usec</code> 可以说明限制是否频繁命中。只看 CPU 使用率不够：一个延迟敏感任务即使平均用量没到 2 CPU，也可能因为短时并发把配额提前耗尽，随后在周期尾部等待。</p>
+<p><code>cpu.max</code> 控制时间，不控制位置。要限制任务只能在 CPU 2 和 3 上运行，应使用 <code>cpuset.cpus</code>；要独占 CPU，还需要 node agent 协调拓扑与其他工作负载，不能只写一个叶子文件。</p>
+<h3 id="23-内存保护回收与-oom">2.3 内存保护、回收与 OOM<a class="anchor" href="#23-%e5%86%85%e5%ad%98%e4%bf%9d%e6%8a%a4%e5%9b%9e%e6%94%b6%e4%b8%8e-oom">#</a></h3>
+<p>CPU 时间用完后可以暂停，内存却带着状态。已经分配的匿名页、page cache、内核对象和 socket buffer 不会因为周期结束自动消失。memory controller 因此有一组不同强度的边界：</p>
+<table>
+  <thead>
+      <tr>
+          <th>文件</th>
+          <th>语义</th>
+          <th>超过边界后的动作</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>memory.min</code></td>
+          <td>硬保护</td>
+          <td>有效 min 内不回收；没有其他可回收内存时可能导致 OOM</td>
+      </tr>
+      <tr>
+          <td><code>memory.low</code></td>
+          <td>尽力保护</td>
+          <td>优先回收未保护组；必要时仍可回收 low 内页面</td>
+      </tr>
+      <tr>
+          <td><code>memory.high</code></td>
+          <td>降速边界</td>
+          <td>对该组施加强回收压力并 throttle，不直接触发 OOM</td>
+      </tr>
+      <tr>
+          <td><code>memory.max</code></td>
+          <td>最终硬边界</td>
+          <td>直接回收仍无法满足分配时，在该 memcg 内触发 OOM</td>
+      </tr>
+  </tbody>
+</table>
+<p>进程申请一页内存时，memory controller 会找到它所属的 memcg，沿层级更新 page counter。<code>try_charge_memcg()</code> 先尝试 charge；超过边界后进入直接回收，仍无法前进时才进入 memcg OOM。<code>memory.high</code> 的超额还会通过 <code>mem_cgroup_handle_over_high()</code> 把回收成本和等待施加给造成压力的任务。</p>
+<p>这条路径解释了几个常见现象：</p>
+<ul>
+<li><code>memory.max</code> 是硬边界，但 <code>memory.current</code> 在特殊情形下可以短暂超过它；内核需要先完成某些分配，再回收或选择 OOM victim。</li>
+<li><code>memory.high</code> 适合作为日常控制线。配置太低时，任务会逐渐变慢而不是马上死亡，资源管理器可以结合 pressure 调整它。</li>
+<li><code>memory.oom.group=1</code> 可以让 cgroup 被当作不可分割的工作负载。发生本组 OOM 时，内核会一起杀掉本 cgroup 及后代 cgroup 中的任务，而不是留下一个缺少关键子进程的半残实例；<code>oom_score_adj=-1000</code> 的任务例外。</li>
+<li>把运行中的进程迁到新 cgroup，不会把它以前申请的内存一并迁走。内存仍记在最初 charge 的 memcg 上，这也是内核文档建议“organize once and control”的原因。</li>
+</ul>
+<p><code>memory.swap.max</code> 单独限制 swap 用量。把它设为 0 会阻止该组匿名内存继续换出，但不会让已经换出的页面凭空回到内存。它和 v1 的 memory+swap 联合上限不是同一种计数口径。</p>
+<h3 id="24-io-限制与-writeback">2.4 I/O 限制与 writeback<a class="anchor" href="#24-io-%e9%99%90%e5%88%b6%e4%b8%8e-writeback">#</a></h3>
+<p><code>io.max</code> 按块设备的 major:minor 配置读写 BPS 或 IOPS：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>259:0 rbps=max wbps=52428800 riops=max wiops=max</span></span></code></pre></div><p>达到上限后，块层延迟后续 I/O；短暂 burst 是允许的。<code>io.weight</code> 则用于同一设备上兄弟 cgroup 的相对分配，实际效果依赖块设备、I/O scheduler 和启用的策略。</p>
+<p>直接 I/O 比较容易归属，因为提交路径带着发起任务的信息。buffered write 要复杂得多：应用只是把 page cache 标成 dirty，真正写盘可能由之后的 writeback worker 完成。cgroup v2 让 memory controller 提供 dirty page 所在的 memory domain，I/O controller 再负责 writeback 的 I/O domain。支持 cgroup writeback 的文件系统会据此归属 I/O；Linux v6.16 文档列出的实现包括 ext2、ext4、btrfs、f2fs 和 XFS，其他文件系统可能把 writeback 记到 root cgroup。</p>
+<p>归属也不是绝对精确。内存按 page 记账，writeback 主要按 inode 归属；多个 cgroup 同时写同一个 inode 时，一部分 I/O 可能记到当前主要 owner。顶层 API 如果承诺“某个目录严格只有 50MiB/s”，却不检查它背后的文件系统、块设备和共享方式，这个承诺很可能无法兑现。</p>
+<p>I/O controller 控制的是吞吐和竞争，不是存储容量。任务最多能写多少磁盘空间，仍要靠文件系统 quota、独立 volume、项目配额或上层清理策略。</p>
+<h3 id="25-pids在-fork-路径拒绝">2.5 pids：在 fork 路径拒绝<a class="anchor" href="#25-pids%e5%9c%a8-fork-%e8%b7%af%e5%be%84%e6%8b%92%e7%bb%9d">#</a></h3>
+<p><code>pids.max</code> 防的是 fork bomb 一类问题。每次 <code>fork()</code> 或 <code>clone()</code> 时，pids controller 会沿祖先链尝试增加计数；任何一级超过 limit，<code>pids_try_charge()</code> 都会回滚已经增加的计数并返回 <code>-EAGAIN</code>。</p>
+<p>这里的 PID 实际按内核 task，也就是 TID 计数。一个拥有 200 个线程的进程会消耗约 200 个名额，不能把 <code>pids.max: 256</code> 理解成“最多 256 个用户态进程”。</p>
+<p>通过修改限制或迁移进程，可以暂时看到 <code>pids.current &gt; pids.max</code>；controller 保证的是新的 <code>fork()</code>/<code>clone()</code> 不能继续违反策略，而不是强行杀掉已有 task。命中次数可以从 <code>pids.events</code> 读取。</p>
+<h3 id="26-统计事件与-psi">2.6 统计、事件与 PSI<a class="anchor" href="#26-%e7%bb%9f%e8%ae%a1%e4%ba%8b%e4%bb%b6%e4%b8%8e-psi">#</a></h3>
+<p>一个资源管理器至少要观察下面几类文件：</p>
+<table>
+  <thead>
+      <tr>
+          <th>目的</th>
+          <th>常见接口</th>
+          <th>能回答的问题</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>存量与累计量</td>
+          <td><code>memory.current</code>、<code>memory.stat</code>、<code>io.stat</code>、<code>cpu.stat</code>、<code>pids.current</code></td>
+          <td>资源用了多少，组成是什么</td>
+      </tr>
+      <tr>
+          <td>限制事件</td>
+          <td><code>memory.events</code>、<code>pids.events</code></td>
+          <td>high、max、OOM 或 PID 上限命中过几次</td>
+      </tr>
+      <tr>
+          <td>生命周期</td>
+          <td><code>cgroup.events</code></td>
+          <td>子树是否 populated，freeze 是否完成</td>
+      </tr>
+      <tr>
+          <td>资源压力</td>
+          <td><code>cpu.pressure</code>、<code>memory.pressure</code>、<code>io.pressure</code></td>
+          <td>任务因为资源不足损失了多少可运行时间</td>
+      </tr>
+  </tbody>
+</table>
+<p>Pressure Stall Information（PSI）会给出 <code>some</code> 和 <code>full</code> 两行。<code>some</code> 表示至少有部分 task 因该资源停顿的时间比例；<code>full</code> 表示所有非 idle task 同时停顿，工作负载已经没有有效进展。每行包含 10、60、300 秒移动窗口和累计微秒数，还可以通过 <code>poll()</code>/<code>epoll()</code> 注册阈值触发器。</p>
+<p>这比只盯着 <code>memory.current / memory.max</code> 更接近用户感受。缓存型任务可能长期接近内存上限却没有压力；另一个任务用量不高，却可能频繁 direct reclaim。资源调整应同时看使用量、限制事件和 pressure，而不是把某个百分比当成唯一信号。</p>
+<p>还要划清一条容易混淆的边界：cgroup 不是容器的全部。容器通常把多种内核能力组合起来：</p>
+<table>
+  <thead>
+      <tr>
+          <th>目标</th>
+          <th>主要机制</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>组织、记账和分配 CPU/内存/I/O/PID 等资源</td>
+          <td>cgroup</td>
+      </tr>
+      <tr>
+          <td>隔离 PID、mount、network、UTS、IPC、user 等视图</td>
+          <td>namespace</td>
+      </tr>
+      <tr>
+          <td>限制系统调用</td>
+          <td>seccomp</td>
+      </tr>
+      <tr>
+          <td>控制对象访问</td>
+          <td>LSM，例如 SELinux、AppArmor</td>
+      </tr>
+      <tr>
+          <td>拆分 root 权限</td>
+          <td>Linux capabilities</td>
+      </tr>
+      <tr>
+          <td>构造 root filesystem 和挂载关系</td>
+          <td>mount namespace、pivot_root/chroot、VFS</td>
+      </tr>
+  </tbody>
+</table>
+<p>cgroup v2 的 device access 也不再提供 v1 那套 <code>devices.allow</code>/<code>devices.deny</code> 文件，而是通过 <code>BPF_PROG_TYPE_CGROUP_DEVICE</code> 程序决定某次 mknod、read 或 write 是否允许。它仍属于 cgroup 挂载点上的策略，但执行依赖 cgroup BPF。</p>
+<p>只创建 namespace 不能阻止容器耗尽宿主机内存；只创建 cgroup 也不能阻止进程看到宿主机 PID 或访问不该访问的文件。所谓“容器”来自这些机制和用户态生命周期管理的组合，内核里没有一个名为 Container 的总开关。</p>
+<h2 id="3-从-v1-到-v2问题不只是文件名太乱">3. 从 v1 到 v2：问题不只是文件名太乱<a class="anchor" href="#3-%e4%bb%8e-v1-%e5%88%b0-v2%e9%97%ae%e9%a2%98%e4%b8%8d%e5%8f%aa%e6%98%af%e6%96%87%e4%bb%b6%e5%90%8d%e5%a4%aa%e4%b9%b1">#</a></h2>
+<h3 id="31-v1-为什么允许多层级">3.1 v1 为什么允许多层级<a class="anchor" href="#31-v1-%e4%b8%ba%e4%bb%80%e4%b9%88%e5%85%81%e8%ae%b8%e5%a4%9a%e5%b1%82%e7%ba%a7">#</a></h3>
+<p>cgroup 最初随 Linux 2.6.24 发布。v1 允许创建任意多棵 hierarchy，每个 controller 只能绑定到其中一棵，一棵树也可以挂多个 controller。</p>
+<p>这套设计想解决一个真实需求：同一批进程可能需要按不同维度分类。大学服务器可以按教师/学生划分 CPU 和内存，却按网页浏览/NFS/其他流量划分网络。若强制所有资源共享一棵树，就要为这些分类的笛卡尔积创建大量 cgroup。</p>
+<p>于是，同一个进程在 v1 中可能同时拥有几条完全不同的路径：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>5:cpu,cpuacct:/users/student/batch
+</span></span><span style="display:flex;"><span>4:memory:/courses/video/transcode-7f3a
+</span></span><span style="display:flex;"><span>3:blkio:/io-priority/low</span></span></code></pre></div><p>局部看很灵活。系统规模变大后，用户态要同时维护多棵相似却不完全一致的树，controller 也无法假定自己与其他资源看见的是同一组进程。原本用来避免组合爆炸的设计，反过来把组合关系留给了每一个管理器和 controller。</p>
+<p>Linux 3.10 开始开发新的实现，早期需要 <code>__DEVEL__sane_behavior</code> 挂载选项；cgroup v2 随 Linux 4.5 正式发布。它没有尝试保留所有 v1 自由度，而是先收紧结构，再在明确边界内补回需要的能力。</p>
+<figure>
+  <img
+    src="/images/cgroup-top-down/cgroup-v1-v2-evolution.svg"
+    alt="cgroup v1 中同一进程分别属于 CPU、memory 和 blkio 三棵不同层级，资源视图互相正交；cgroup v2 将 controller 放到 team、workload 和 process leaf 构成的一棵统一树上，并通过 top-down、no internal process 和 delegation containment 约束资源分配"
+    style="display: block; width: 100%; height: auto;"
+  />
+  <figcaption>v2 用一棵资源树换取跨 controller 的一致语义</figcaption>
+</figure>
+<h3 id="32-v1-的三类结构冲突">3.2 v1 的三类结构冲突<a class="anchor" href="#32-v1-%e7%9a%84%e4%b8%89%e7%b1%bb%e7%bb%93%e6%9e%84%e5%86%b2%e7%aa%81">#</a></h3>
+<p>第一类冲突来自多棵树。v1 中一个 controller 同一时刻只能绑定到一棵 hierarchy。freezer 这类通用 controller 即使对多种分类都有用，也只能出现在一棵树中；树一旦填入 cgroup，controller 又很难移动。实践中，除了 <code>cpu</code> 和 <code>cpuacct</code> 这类天然相关的组合，很多系统只好为 controller 分别挂树。</p>
+<p>更棘手的是，CPU controller 无法知道 memory controller 看见的拓扑。两者必须假定彼此完全正交。buffered write 恰好同时横跨内存和 I/O：脏页先记在 memcg，之后才由 writeback 发往块设备。如果两套 controller 没有共同的资源域，归属与限速很难协调。</p>
+<p>v2 规定一棵 unified hierarchy。进程只有一个资源身份，controller 可以在同一层级上选择性启用；某个 controller 不关心更细粒度时，可以在较高节点停止继续分发，而不是另建一棵树。</p>
+<p>第二类冲突来自线程归属。v1 允许同一进程的线程进入不同 cgroup。对 CPU 线程池有时很有用，对内存、socket buffer、page cache 这类难以归属到单一线程的资源却说不通。更糟的是，应用为了管理自己的线程，需要解析 <code>/proc/self/cgroup</code>、拼出文件路径再读写伪文件；目标进程可能在这些步骤间被迁移，整个过程既繁琐又有竞态。</p>
+<p>v2 默认按进程迁移：向 <code>cgroup.procs</code> 写任意线程的 PID，会移动整个 thread group。确实需要线程级 CPU 分配时，可以显式创建 threaded subtree，通过 <code>cgroup.type</code> 和 <code>cgroup.threads</code> 管理。只有支持 threaded mode 的 controller 能在里面启用；Linux v6.16 文档列出 <code>cpu</code>、<code>cpuset</code>、<code>perf_event</code> 和 <code>pids</code>。内存等 domain resource 仍归到共同的 threaded domain。</p>
+<p>这不是删除线程级控制，而是把“系统管理的进程资源域”和“应用参与的线程调度”分成两个模式。</p>
+<p>第三类冲突出现在内部进程和子 cgroup 之间。v1 允许父 cgroup 自己放线程，同时把资源分给子 cgroup。此时父进程和子组是什么关系？</p>
+<ul>
+<li>CPU controller 曾把内部线程和子 cgroup 当成同级竞争者。父级线程数一变，子组实际比例也跟着漂移。</li>
+<li>I/O controller 为内部线程偷偷创建一层 hidden leaf，并暴露 <code>leaf_</code> 前缀参数。</li>
+<li>memory controller 没有一致办法定义父进程与子组怎样竞争。</li>
+</ul>
+<p>这类差异没法由某一个 controller 修好，因为问题来自树的结构。v2 的 no internal process 约束给出统一答案：非 root 的 domain cgroup 只要向子节点分发 domain controller，自己就必须为空。进程待在叶子，内部节点分配资源，两种实体不再同场竞争。</p>
+<p>threaded subtree 是经过约束的例外。它只接纳 threaded controller，并把无法归到线程的资源统一记到 thread root，因此没有回到 v1 的任意组合。</p>
+<h3 id="33-v2-如何收紧层级与委托">3.3 v2 如何收紧层级与委托<a class="anchor" href="#33-v2-%e5%a6%82%e4%bd%95%e6%94%b6%e7%b4%a7%e5%b1%82%e7%ba%a7%e4%b8%8e%e5%a7%94%e6%89%98">#</a></h3>
+<p>在 v2 中，controller 要先出现在父节点的 <code>cgroup.controllers</code>，再由父节点写入 <code>cgroup.subtree_control</code>，子节点才能获得相应接口。非 root 节点也只能继续分发父级已经分给它的 controller。</p>
+<p>资源参数同样沿层级生效：</p>
+<ul>
+<li>子级 <code>memory.max</code> 无法突破祖先的 memory 上限。</li>
+<li><code>memory.low</code>/<code>memory.min</code> 的有效保护量受祖先分配的保护额度约束。</li>
+<li>CPU weight 先在父级的直接子节点间分配，每个子节点再分自己的份额。</li>
+<li><code>pids.max</code> 在任意祖先命中都会阻止新的 task 创建。</li>
+</ul>
+<p>这使“把 team-video 委托给另一个管理器”成为可推理的操作。被委托者可以在子树内建组和分配资源，却不能凭空得到父级没有授予的 controller；即使把子级文件写得更宽，实际可用资源也越不过祖先边界。</p>
+<p>资源分发之外，v2 还收紧了进程迁移的权限边界。v1 的非特权委托缺少完整的 containment。v2 要求迁移进程的人同时拥有目标 <code>cgroup.procs</code> 和源、目标公共祖先的 <code>cgroup.procs</code> 写权限；cgroup namespace 还要求两端都能从当前 namespace 到达。被委托者因此可以在自己的子树内移动进程，却不能把外部进程拉进来，或把受限进程推出去。</p>
+<p>在 systemd 主机上还要再加一条用户态规则：一棵子树只有一个 writer。PID 1 管整棵系统树，容器管理器或自研 agent 必须通过 service/scope 的 <code>Delegate=</code> 获得明确子树；双方不能同时创建、删除或迁移同一范围内的 cgroup。Kubernetes 推荐 systemd cgroup driver，根本原因也在这里：kubelet/runtime 与 PID 1 需要对层级所有权形成一致视图。</p>
+<h3 id="34-v2-的接口与语义变化">3.4 v2 的接口与语义变化<a class="anchor" href="#34-v2-%e7%9a%84%e6%8e%a5%e5%8f%a3%e4%b8%8e%e8%af%ad%e4%b9%89%e5%8f%98%e5%8c%96">#</a></h3>
+<p>v2 约定 controller 文件使用 <code>&lt;controller&gt;.&lt;parameter&gt;</code> 命名，无上限统一写 <code>max</code>，权重统一使用 1 到 10000、默认 100，统计多采用按 key 解析的文本格式。<code>cgroup.events</code> 提供递归的 populated/frozen 状态，PSI 提供资源停顿信息，避免继续依赖 v1 <code>release_agent</code> 那类每次事件启动用户态 helper 的机制。</p>
+<p>迁移不能靠批量改名：</p>
+<table>
+  <thead>
+      <tr>
+          <th>cgroup v1</th>
+          <th>cgroup v2</th>
+          <th>迁移时不能忽略的差异</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>cpu.shares</code></td>
+          <td><code>cpu.weight</code></td>
+          <td>取值范围和默认值不同，必须转换；weight 仍只在兄弟争用时生效</td>
+      </tr>
+      <tr>
+          <td><code>cpu.cfs_quota_us</code> + <code>cpu.cfs_period_us</code></td>
+          <td><code>cpu.max</code></td>
+          <td>两个文件合成 <code>$MAX $PERIOD</code>，带宽语义基本对应</td>
+      </tr>
+      <tr>
+          <td><code>cpuacct.usage</code> 等</td>
+          <td><code>cpu.stat</code></td>
+          <td><code>cpuacct</code> 并入 CPU controller，字段和单位要按 key 读取</td>
+      </tr>
+      <tr>
+          <td><code>memory.soft_limit_in_bytes</code></td>
+          <td>没有严格等价项，通常重新设计为 <code>memory.low</code>/<code>memory.high</code></td>
+          <td>v1 soft limit 非层级化；v2 low 是保护，high 是降速边界</td>
+      </tr>
+      <tr>
+          <td><code>memory.limit_in_bytes</code></td>
+          <td><code>memory.max</code></td>
+          <td>下调到当前用量以下时，v2 可能同步回收并触发 memcg OOM</td>
+      </tr>
+      <tr>
+          <td><code>memory.memsw.limit_in_bytes</code></td>
+          <td><code>memory.max</code> + <code>memory.swap.max</code></td>
+          <td>v1 限制 memory+swap 总和；v2 单独限制内存和 swap</td>
+      </tr>
+      <tr>
+          <td><code>blkio.throttle.*</code></td>
+          <td><code>io.max</code></td>
+          <td>v2 使用单个按设备、按 key 的接口，buffered write 归属能力也不同</td>
+      </tr>
+      <tr>
+          <td><code>freezer.state</code></td>
+          <td><code>cgroup.freeze</code> + <code>cgroup.events</code></td>
+          <td>发起 freeze 与观察完成状态分开</td>
+      </tr>
+      <tr>
+          <td><code>tasks</code></td>
+          <td>默认使用 <code>cgroup.procs</code>；threaded subtree 使用 <code>cgroup.threads</code></td>
+          <td>v2 默认按整个进程迁移</td>
+      </tr>
+      <tr>
+          <td><code>notify_on_release</code> + <code>release_agent</code></td>
+          <td><code>cgroup.events</code> + poll/inotify</td>
+          <td>不再为每个 release 事件执行 helper</td>
+      </tr>
+      <tr>
+          <td><code>devices.allow</code>/<code>devices.deny</code></td>
+          <td>cgroup device BPF</td>
+          <td>v2 没有对应接口文件</td>
+      </tr>
+      <tr>
+          <td><code>net_cls</code>、<code>net_prio</code></td>
+          <td>没有直接等价 controller</td>
+          <td>按需求迁移到 cgroup BPF、tc 或其他网络策略层</td>
+      </tr>
+  </tbody>
+</table>
+<p><code>cpu.shares -&gt; cpu.weight</code> 特别能说明为什么上层不该保存内核旋钮。早期 OCI runtime 常用线性公式把 <code>[2, 262144]</code> 映射到 <code>[1, 10000]</code>，会把 v1 默认 shares 1024 映射到约 39，而不是 v2 默认 weight 100。runc 1.3.2 和 crun 1.23 开始采用经过三个基准点的新公式。Kubernetes API 的 <code>500m</code> 没有变化，变化发生在 runtime 的实现层。监控如果把换算结果当成用户意图，升级后就会产生假告警。</p>
+<h2 id="4-怎样迁移一个真正使用-cgroup-的系统">4. 怎样迁移一个真正使用 cgroup 的系统<a class="anchor" href="#4-%e6%80%8e%e6%a0%b7%e8%bf%81%e7%a7%bb%e4%b8%80%e4%b8%aa%e7%9c%9f%e6%ad%a3%e4%bd%bf%e7%94%a8-cgroup-%e7%9a%84%e7%b3%bb%e7%bb%9f">#</a></h2>
+<p>如果系统只通过成熟 runtime 或 systemd 配置资源，迁移主要发生在操作系统和 runtime 层。如果代码直接读取 <code>/sys/fs/cgroup</code>，就要把它当成一次 backend 重写。</p>
+<h3 id="41-盘点-cgroupfs-依赖">4.1 盘点 cgroupfs 依赖<a class="anchor" href="#41-%e7%9b%98%e7%82%b9-cgroupfs-%e4%be%9d%e8%b5%96">#</a></h3>
+<p>容易漏掉的调用者不只有容器运行时：</p>
+<ul>
+<li>监控 agent 可能硬编码 v1 mount path 和统计文件名。</li>
+<li>JVM、Node.js 或语言库可能从 cgroup 计算可用 CPU 与堆上限。</li>
+<li>安全 agent 可能依赖 <code>devices</code>、<code>net_cls</code> 或进程路径。</li>
+<li>运维脚本可能读取 <code>cpuacct.usage</code>，或用 <code>release_agent</code> 清理目录。</li>
+<li>应用可能把宿主机 cgroupfs 挂进容器并自行调整子组。</li>
+</ul>
+<p>Kubernetes 文档列出了 cAdvisor、JDK、Node.js 和 <code>automaxprocs</code> 等容易漏查的组件。自研系统也该按同样思路盘点：任何直接解释 cgroupfs 的组件都在消费一套版本化内核 API。</p>
+<h3 id="42-分离所有权与接口版本迁移">4.2 分离所有权与接口版本迁移<a class="anchor" href="#42-%e5%88%86%e7%a6%bb%e6%89%80%e6%9c%89%e6%9d%83%e4%b8%8e%e6%8e%a5%e5%8f%a3%e7%89%88%e6%9c%ac%e8%bf%81%e7%a7%bb">#</a></h3>
+<p>迁移步骤可以分成：</p>
+<ol>
+<li>升级到默认启用 v2 的发行版，并确认 systemd、OCI runtime、监控和语言运行时版本支持 v2。</li>
+<li>让一台测试节点只使用 unified hierarchy，避免长期停留在 hybrid mode。controller 不能同时属于 v1 和 v2，混合挂载会让能力判断更难。</li>
+<li>统一 cgroup manager。systemd 主机选择 systemd driver，并确认上层 agent 只操作委托子树。</li>
+<li>让 backend 根据 <code>cgroup.controllers</code> 和实际文件发现能力，不用内核版本号猜测。</li>
+<li>对照资源意图验证行为，而不是只检查文件存在：制造 CPU 竞争观察 weight，触发 quota 观察 throttling，在可回收内存与不可回收内存场景下分别验证 high/max，检查 buffered I/O 与 PID 上限。</li>
+<li>比较 status、统计和告警。重点检查单位、层级聚合、OOM 范围、swap 口径、CPU weight 转换和 pressure 指标。</li>
+<li>编排系统优先新增 v2 节点池、迁移工作负载再淘汰 v1 节点。直接切换已经运行节点的 cgroup driver，容易让 runtime 无法找到旧 sandbox 的层级。</li>
+</ol>
+<p>有 Linux 节点时，可以用下面的接口确认模式：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>stat -fc %T /sys/fs/cgroup/</span></span></code></pre></div><p>输出 <code>cgroup2fs</code> 表示 v2；v1 根通常显示 <code>tmpfs</code>。对程序来说，<code>statfs()</code> 的 <code>CGROUP2_SUPER_MAGIC</code> 比解析 <code>mount</code> 文本更可靠。还可以检查 <code>/sys/fs/cgroup/cgroup.controllers</code> 是否存在，并从 <code>/proc/$PID/cgroup</code> 读取进程路径；v2 条目固定形如：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>0::/team-video/transcode-7f3a/main</span></span></code></pre></div><p>这些命令只能确认接口版本和归属，不能证明资源策略正确。最终仍要观察 controller 文件、事件和负载行为。</p>
+<h2 id="5-回到最初的系统设计">5. 回到最初的系统设计<a class="anchor" href="#5-%e5%9b%9e%e5%88%b0%e6%9c%80%e5%88%9d%e7%9a%84%e7%b3%bb%e7%bb%9f%e8%ae%be%e8%ae%a1">#</a></h2>
+<p>如果现在要实现一个基于 cgroup 的软件系统，我会把边界定在下面四层：</p>
+<ol>
+<li><code>ResourceSpec</code> 只表达可移植的意图：调度承诺、竞争权重来源、降速边界、硬上限、OOM 范围和可观测状态。设备号、周期默认值和 cgroup 文件名不进入公开 API。</li>
+<li>admission/scheduler 负责全局承诺。CPU 和内存 request 是否超卖、memory protection 能否沿祖先兑现、独占 CPU 和 volume 放置，都不能交给 cgroup 临场解决。</li>
+<li>node agent 负责一棵有明确所有权的层级，通过可替换 backend 生成并执行 <code>ResourcePlan</code>。它要先构造空的内部节点，再让进程直接进入叶子，并持续 reconcile。</li>
+<li>反馈回路同时读取 usage、events 和 PSI。CPU throttle、memory high/OOM、I/O pressure 和 PID 拒绝要进入 workload status，供扩缩容、迁移、降级或终止策略使用。</li>
+</ol>
+<p>有几种设计应当直接拒绝：</p>
+<ul>
+<li>让每个插件都能在同一棵 cgroup 树里创建和移动节点。</li>
+<li>把 <code>memory.request</code> 宣传成硬预留，却不管理父级 <code>memory.min</code>/<code>memory.low</code> 预算。</li>
+<li>用 CPU 使用率替代 throttle/pressure，或用内存百分比替代 reclaim/OOM 事件。</li>
+<li>启动进程后过一段时间才迁入 cgroup。</li>
+<li>把 v1 文件名替换成 v2 文件名，却保留旧的 soft limit、swap、thread 和 delegation 假设。</li>
+<li>遇到不支持的 controller 时静默降级，同时仍把 workload 标成 Ready。</li>
+</ul>
+<p>到这里再看 Kubernetes 的四个数字，它们就不再神秘。API server 保存的是用户意图，scheduler 处理节点容量，kubelet 与 runtime 把意图翻译成本机层级和参数，Linux 的调度器、内存管理与块层才执行最后的竞争、回收、降速和拒绝。cgroup 是这条链上很低的一层，但系统能否给出可信的资源承诺，取决于上面的每一层有没有把自己的职责说清楚。</p>
+<h2 id="参考资料">参考资料<a class="anchor" href="#%e5%8f%82%e8%80%83%e8%b5%84%e6%96%99">#</a></h2>
+<p>规范与文档：</p>
+<ul>
+<li><a href="https://github.com/torvalds/linux/blob/v6.16/Documentation/admin-guide/cgroup-v2.rst">Linux v6.16 Control Group v2</a></li>
+<li><a href="https://github.com/torvalds/linux/blob/v6.16/Documentation/admin-guide/cgroup-v1/cgroups.rst">Linux v6.16 Control Group v1</a></li>
+<li><a href="https://man7.org/linux/man-pages/man7/cgroups.7.html">cgroups(7)</a></li>
+<li><a href="https://github.com/torvalds/linux/blob/v6.16/Documentation/accounting/psi.rst">Pressure Stall Information</a></li>
+<li><a href="https://www.freedesktop.org/software/systemd/man/257/systemd.resource-control.html">systemd.resource-control</a></li>
+<li><a href="https://systemd.io/CGROUP_DELEGATION/">systemd Control Group APIs and Delegation</a></li>
+<li><a href="https://github.com/opencontainers/runtime-spec/blob/v1.2.1/config-linux.md">OCI Runtime Spec v1.2.1: Linux configuration</a></li>
+<li><a href="https://developer.hashicorp.com/nomad/docs/job-specification/resources">Nomad resources stanza</a></li>
+<li><a href="https://kubernetes.io/docs/concepts/architecture/cgroups/">Kubernetes: About cgroup v2</a></li>
+<li><a href="https://kubernetes.io/blog/2024/08/14/kubernetes-1-31-moving-cgroup-v1-support-maintenance-mode/">Kubernetes 1.31: Moving cgroup v1 Support into Maintenance Mode</a></li>
+<li><a href="https://kubernetes.io/blog/2026/01/30/new-cgroup-v1-to-v2-cpu-conversion-formula/">New Conversion from cgroup v1 CPU Shares to v2 CPU Weight</a></li>
+</ul>
+<p>Linux v6.16 关键源码入口：</p>
+<ul>
+<li><strong>cgroup core</strong>：<a href="https://github.com/torvalds/linux/blob/v6.16/include/linux/cgroup-defs.h">数据结构</a>、<a href="https://github.com/torvalds/linux/blob/v6.16/include/linux/sched.h"><code>task_struct</code> 的 cgroup 关联</a>、<a href="https://github.com/torvalds/linux/blob/v6.16/kernel/cgroup/cgroup.c">层级、文件与进程迁移</a></li>
+<li><strong>CPU</strong>：<a href="https://github.com/torvalds/linux/blob/v6.16/kernel/sched/core.c">controller 文件与 <code>cpu_max_write()</code></a>、<a href="https://github.com/torvalds/linux/blob/v6.16/kernel/sched/fair.c">CFS bandwidth 记账与 throttle</a></li>
+<li><strong>Memory</strong>：<a href="https://github.com/torvalds/linux/blob/v6.16/mm/memcontrol.c">memcg charge、reclaim、high 与 OOM</a></li>
+<li><strong>I/O</strong>：<a href="https://github.com/torvalds/linux/blob/v6.16/block/blk-cgroup.c">blkcg 基础设施</a>、<a href="https://github.com/torvalds/linux/blob/v6.16/block/blk-throttle.c"><code>io.max</code> 对应的 throttle 路径</a></li>
+<li><strong>PIDs</strong>：<a href="https://github.com/torvalds/linux/blob/v6.16/kernel/cgroup/pids.c">层级计数与 <code>pids_can_fork()</code></a></li>
+</ul>
+</div>
+</article>
+
+
+<section class="comment">
+  <div id="gitalk-container"></div>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.css">
+  <script src="https://cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js"></script>
+  <script>
+      const gitalk = new Gitalk({
+          clientID: '7d8c8c91ae6aff3e46e7',
+          clientSecret: '0f0f2ea4fb6eb3067955823f06286e7d88509b9f',
+          repo: 'yeqown.github.io',
+          owner: 'yeqown',
+          admin: ['yeqown'],
+          id: "cgroup-top-down", 
+          distractionFreeMode: false 
+      });
+      (function () {
+          if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+              document.getElementById('gitalk-container').innerHTML = 'Gitalk comments not available by default when the website is previewed locally.';
+              return;
+          }
+          gitalk.render('gitalk-container');
+      })();
+  </script>
+</section>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+  <div>
+  
+    <a href="/2026/10/13/local-https-with-mkcert/" class="flex align-center">
+      <img src="/icons/backward.svg" class="book-icon" alt="Backward" />
+      <span>本地快速启用 HTTPS</span>
+    </a>
+  
+  </div>
+  <div>
+  
+    <a href="/2026/08/26/python-contextvars-design-and-implementation/" class="flex align-center">
+      <span>Python 的上下文管理</span>
+      <img src="/icons/forward.svg" class="book-icon" alt="Forward" />
+    </a>
+  
+  </div>
+</div>
+ 
+        
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+        
+<div class="flex align-center" style="margin-top: 1rem;">
+  <span id="busuanzi_container_site_pv" style="margin-right: 10px;">
+    访问量<span id="busuanzi_value_site_pv"></span>
+  </span>
+  <span id="busuanzi_container_site_uv" style="margin-right: 10px;">
+    访客数<span id="busuanzi_value_site_uv"></span>
+  </span>
+</div>
+        
+  
+ 
+        
+  
+  
+    <script>(function(){document.querySelectorAll("pre:has(code)").forEach(e=>{e.addEventListener("click",e.focus),e.addEventListener("copy",function(t){if(t.preventDefault(),navigator.clipboard){const t=window.getSelection().toString()||e.textContent;navigator.clipboard.writeText(t)}})})})()</script>
+  
+
+      </footer>
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+  
+  <aside class="book-toc">
+    <div class="book-toc-content">
+      
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#1-先站到-cgroup-上面">1. 先站到 cgroup 上面</a>
+      <ul>
+        <li><a href="#11-资源配置与职责边界">1.1 资源配置与职责边界</a></li>
+        <li><a href="#12-从-resourcespec-到-resourceplan">1.2 从 ResourceSpec 到 ResourcePlan</a></li>
+        <li><a href="#13-层级所有权与生命周期">1.3 层级、所有权与生命周期</a></li>
+      </ul>
+    </li>
+    <li><a href="#2-cgroup-在-linux-系统架构中的位置">2. cgroup 在 Linux 系统架构中的位置</a>
+      <ul>
+        <li><a href="#21-从-cgroupfs-到内核-controller">2.1 从 cgroupfs 到内核 controller</a></li>
+        <li><a href="#22-cpu权重和上限是两种模型">2.2 CPU：权重和上限是两种模型</a></li>
+        <li><a href="#23-内存保护回收与-oom">2.3 内存保护、回收与 OOM</a></li>
+        <li><a href="#24-io-限制与-writeback">2.4 I/O 限制与 writeback</a></li>
+        <li><a href="#25-pids在-fork-路径拒绝">2.5 pids：在 fork 路径拒绝</a></li>
+        <li><a href="#26-统计事件与-psi">2.6 统计、事件与 PSI</a></li>
+      </ul>
+    </li>
+    <li><a href="#3-从-v1-到-v2问题不只是文件名太乱">3. 从 v1 到 v2：问题不只是文件名太乱</a>
+      <ul>
+        <li><a href="#31-v1-为什么允许多层级">3.1 v1 为什么允许多层级</a></li>
+        <li><a href="#32-v1-的三类结构冲突">3.2 v1 的三类结构冲突</a></li>
+        <li><a href="#33-v2-如何收紧层级与委托">3.3 v2 如何收紧层级与委托</a></li>
+        <li><a href="#34-v2-的接口与语义变化">3.4 v2 的接口与语义变化</a></li>
+      </ul>
+    </li>
+    <li><a href="#4-怎样迁移一个真正使用-cgroup-的系统">4. 怎样迁移一个真正使用 cgroup 的系统</a>
+      <ul>
+        <li><a href="#41-盘点-cgroupfs-依赖">4.1 盘点 cgroupfs 依赖</a></li>
+        <li><a href="#42-分离所有权与接口版本迁移">4.2 分离所有权与接口版本迁移</a></li>
+      </ul>
+    </li>
+    <li><a href="#5-回到最初的系统设计">5. 回到最初的系统设计</a></li>
+    <li><a href="#参考资料">参考资料</a></li>
+  </ul>
+</nav>
+
+
+
+    </div>
+  </aside>
+  
+ 
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Mkcert on Yeqown</title>
+    <link>https://www.yeqown.xyz/tags/mkcert/</link>
+    <description>Recent content in Mkcert on Yeqown</description>
+    <generator>Hugo</generator>
+    <language>en-US</language>
+    <lastBuildDate>Tue, 13 Oct 2026 00:00:00 +0800</lastBuildDate>
+    <atom:link href="https://www.yeqown.xyz/tags/mkcert/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>本地快速启用 HTTPS</title>
+      <link>https://www.yeqown.xyz/2026/10/13/local-https-with-mkcert/</link>
+      <pubDate>Tue, 13 Oct 2026 00:00:00 +0800</pubDate>
+      <guid>https://www.yeqown.xyz/2026/10/13/local-https-with-mkcert/</guid>
+      <description>&lt;p&gt;在本地浏览器里调试前端时，有时需要模拟真实的线上部署：页面使用指定域名，并通过 HTTPS 访问。直接使用 &lt;code&gt;http://localhost:3000&lt;/code&gt; 或打开 HTML 文件，可能跑得通页面，却无法复现与域名、协议有关的行为。&lt;/p&gt;&#xA;&lt;p&gt;比如下面这些场景：&lt;/p&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;第三方登录的回调地址已经配置成 &lt;code&gt;https://xxx.com/callback&lt;/code&gt;。改用 localhost 后，协议、域名或端口与登记的地址不一致，登录流程会被拒绝。&lt;/li&gt;&#xA;&lt;li&gt;登录态 Cookie 设置了 &lt;code&gt;Domain=xxx.com&lt;/code&gt; 或 &lt;code&gt;.xxx.com&lt;/code&gt;，还带有 &lt;code&gt;Secure&lt;/code&gt; 属性。在 localhost 下无法按同样的域名规则使用这些 Cookie，普通 HTTP 也不满足它们的安全传输要求。&lt;/li&gt;&#xA;&lt;li&gt;地图、支付等前端 SDK 配置了域名白名单，或服务端校验页面的 Origin。localhost 与线上域名不同，调试时可能直接触发校验失败。&lt;/li&gt;&#xA;&lt;li&gt;Service Worker、摄像头和麦克风等浏览器能力要求安全上下文。localhost 通常有开发例外，但换成普通 HTTP 自定义域名后，就不能依赖这个例外。&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;p&gt;这时需要的是一个能快速打开的本地地址，例如 &lt;code&gt;https://xxx.com&lt;/code&gt;：浏览器使用目标域名和 HTTPS，页面资源文件仍由本机提供。&lt;/p&gt;&#xA;&lt;!-- more --&gt;&#xA;&lt;h2 id=&#34;快速启动&#34;&gt;快速启动&lt;a class=&#34;anchor&#34; href=&#34;#%e5%bf%ab%e9%80%9f%e5%90%af%e5%8a%a8&#34;&gt;#&lt;/a&gt;&lt;/h2&gt;&#xA;&lt;p&gt;下面以 macOS 和 Homebrew 为例，托管当前目录中的静态文件。先进入前端构建产物目录（例如 &lt;code&gt;dist/&lt;/code&gt;）或存放 HTML 的目录，再执行命令。服务使用 Python 3.14 及以上版本。&lt;/p&gt;&#xA;&lt;p&gt;&lt;code&gt;xxx.com&lt;/code&gt; 是示例域名，实际使用时，把 hosts 记录、证书命令和访问地址中的域名一起替换。首次使用先完成准备；如果 &lt;code&gt;/etc/hosts&lt;/code&gt; 已有这个域名的记录，应将它改为指向 &lt;code&gt;127.0.0.1&lt;/code&gt;，避免重复配置。&lt;/p&gt;&#xA;&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;&#34;&gt;&lt;code class=&#34;language-bash&#34; data-lang=&#34;bash&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# 首次准备：安装依赖、信任本地 CA，并将域名解析到本机&lt;/span&gt;&#xA;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;brew install mkcert python&#xA;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;mkcert -install&#xA;&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;printf &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;\n127.0.0.1 xxx.com\n&amp;#39;&lt;/span&gt; | sudo tee -a /etc/hosts&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;然后执行这一组命令：&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>
